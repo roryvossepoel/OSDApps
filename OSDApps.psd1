@@ -12,6 +12,7 @@
         'Get-OSDAppCatalog',
         'Get-OSDApp',
         'Get-OSDAppCache',
+    'Show-OSDAppUI',
         'Sync-OSDAppRepository',
         'Sync-OSDAppMicrosoft365Apps',
         'Sync-OSDAppMicrosoftTeams',
