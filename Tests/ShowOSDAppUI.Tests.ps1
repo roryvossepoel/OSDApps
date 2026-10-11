@@ -258,9 +258,9 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source | Should -Match 'Set-OSDAppUIColumnWidths'
         $source | Should -Match 'Add_ClientSizeChanged'
         $source | Should -Match 'Repository'
-        $source | Should -Match 'built-ins file check'
+        $source | Should -Match 'built-ins files'
         $source | Should -Match "Columns.Add\('Event'"
-        $source | Should -Match 'Catalog: Offline mode \(not queried\)'
+        $source | Should -Match "catalogStatus.Text = if \(\$Offline\)"
         $source | Should -Not -Match "Add_Click\(\{.*?Remove-OSDAppStaging"
     }
 
