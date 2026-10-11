@@ -15,7 +15,7 @@ repository URL or deployment profile presets.
 | Staged for device | Exactly what is queued for SetupComplete, in manifest order, including source and details | DeviceManifest.json on selected Windows target |
 | Applications | Built-in and repository applications, their availability and staged status | Get-OSDApp and the staged manifest |
 | Cache | Cached built-in and repository packages, sizes and validation status | Get-OSDAppCache on the OSDCloud volume |
-| Logs | Last 250 lines from available cache/client and selected Windows target log files | Existing log files only |
+| Logs | Last 500 lines from existing logs shown in a structured, read-only table | Existing log files only |
 
 The GUI never claims that **staged** means **installed**. Runtime logs for
 SetupComplete may not exist until after the deployment has executed.
@@ -77,3 +77,11 @@ manually validated on a WinPE device.
 
     try { Show-OSDAppUI -TestMode -Offline -ErrorAction Stop }
     catch { $_ | Format-List * -Force; $_.ScriptStackTrace }
+
+## Status and sorting guide
+
+Built-in application Version / policy always shows Current, meaning vendor-managed acquisition rather than an exact version or a claim that it is up to date. USB version shows a real recorded version only, where available and valid. A Current placeholder in cache metadata displays as Not recorded. Repository apps retain their explicit package versions.
+
+In Get-OSDApp, Cached means valid local repository cache plus an online catalog match. CachedOnly means valid local cache without a current online catalog match, which is expected when Offline is selected. The GUI explains both as OSDCloud USB cache states, not as different disks. The configured OSDCloud volume directory is separate from Windows target staging. Repository archives are SHA-256 checked; built-in cache validity checks required files, not full hashes.
+
+Search filters table contents without new downloads. Clicking column headers sorts the visible table only; it never changes DeviceManifest order or the actual setup sequence. Logs are shown with separate timestamp, severity, component and message columns, plus a details pane. All operations remain read-only.
