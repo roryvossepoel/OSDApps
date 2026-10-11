@@ -65,6 +65,7 @@ Each deployable package keeps its metadata directly beside `Package.zip`.
   "SchemaVersion": 1,
   "Id": "ExampleApp",
   "DisplayName": "Example App",
+  "Vendor": "Example Software",
   "Version": "1.0.0",
   "Architecture": "x64",
   "SuccessCodes": [
@@ -77,6 +78,19 @@ Each deployable package keeps its metadata directly beside `Package.zip`.
   }
 }
 ```
+
+The `Vendor` property is optional descriptive package metadata. It is set in
+each application's `manifest.json`, alongside `DisplayName`. If omitted,
+existing repositories remain fully compatible and the GUI shows a dash for an
+unknown vendor. The value is carried into USB `CacheCatalog.json` and the
+staged `DeviceManifest.json`; the GUI remains read-only.
+
+You can add or correct `Vendor` in an existing published package manifest
+without repackaging `Package.zip` or changing its SHA-256 hash. Publish the
+updated manifest and run `Sync-OSDAppRepository -Name <Id>` on the Windows
+development machine (or normal WinPE repository sync) to refresh its cached
+metadata. The existing cache archive is reused when its SHA-256 still matches.
+Previously staged `DeviceManifest.json` files are not silently rewritten.
 
 The package URL is derived from the manifest location. A separate `SourcePath` property is not used.
 
@@ -145,6 +159,7 @@ Publish it into the repository:
 Add-OSDAppPackage `
     -Id ExampleApp `
     -DisplayName 'Example App' `
+    -Vendor 'Example Software' `
     -Version 1.0.0 `
     -Architecture x64 `
     -PackagePath C:\OSDApps\Build\ExampleApp\Package.zip `

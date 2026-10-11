@@ -3,6 +3,7 @@ function Add-OSDAppPackage {
     param(
         [Parameter(Mandatory)][string]$Id,
         [Parameter(Mandatory)][string]$DisplayName,
+        [string]$Vendor,
         [Parameter(Mandatory)][string]$Version,
         [Parameter(Mandatory)][string]$PackagePath,
         [Parameter(Mandatory)][string]$RepositoryPath,
@@ -44,6 +45,12 @@ function Add-OSDAppPackage {
             FileName = 'Package.zip'
             Sha256   = $hash
         }
+    }
+
+    # Vendor is optional descriptive metadata, not an installer parameter.
+    # Older repositories remain compatible when it is absent.
+    if (-not [string]::IsNullOrWhiteSpace($Vendor)) {
+        $packageManifest['Vendor'] = $Vendor.Trim()
     }
 
     if ($PSCmdlet.ShouldProcess($targetManifest, 'Write package manifest')) {
@@ -89,6 +96,7 @@ function Add-OSDAppPackage {
         PSTypeName   = 'OSDApps.RepositoryPackage'
         Id           = $Id
         DisplayName  = $DisplayName
+        Vendor       = if ($Vendor) { $Vendor.Trim() } else { $null }
         Version      = $Version
         Architecture = $Architecture
         SuccessCodes = @($SuccessCodes)

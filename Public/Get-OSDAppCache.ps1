@@ -1,7 +1,9 @@
 function Get-OSDAppCache {
     [CmdletBinding()]
     param(
-        [string[]]$Name
+        [string[]]$Name,
+        [switch]$ResolveVersions,
+        [switch]$VerifySignatures
     )
 
     # Cache inspection is optional when no OSDCloud media is attached.
@@ -34,6 +36,8 @@ function Get-OSDAppCache {
                 $results.Add([pscustomobject]@{
                     PSTypeName   = 'OSDApps.CacheEntry'
                     Id           = [string]$package.Id
+                    DisplayName  = if ($package.DisplayName) { [string]$package.DisplayName } else { [string]$package.Id }
+                    Vendor       = if ($package.Vendor) { [string]$package.Vendor } else { $null }
                     Source       = 'Repository'
                     Version      = [string]$package.Version
                     Architecture = [string]$package.Architecture
@@ -45,6 +49,11 @@ function Get-OSDAppCache {
                     SizeMB       = $sizeMB
                     Valid        = $valid
                     CachePath    = if ($exists) { $archivePath } else { Join-Path $cachePath (Join-Path 'Packages' $package.Id) }
+                    SignatureStatus = 'Not assessed'
+                    SignatureScope = 'Repository ZIP (SHA-256 checked separately)'
+                    SignatureFile = $null
+                    SignatureSigner = $null
+                    SignatureDetail = 'Authenticode is not evaluated for custom repository ZIPs.'
                 })
             }
         }
@@ -90,11 +99,30 @@ function Get-OSDAppCache {
                     }
                 }
 
+                $cachedVersion = if ($null -ne $info.Version) { ([string]$info.Version).Trim() } else { $null }
+                $resolvedVersion = if ($cachedVersion -and $cachedVersion -ne 'Current') { $cachedVersion } else { $null }
+                $versionSource = if ($info.VersionSource) { [string]$info.VersionSource } else { $null }
+                if ($ResolveVersions -and $payloadValid -and -not (Test-OSDAppWinPE) -and -not $resolvedVersion) {
+                    $inspected = Get-OSDAppCachedPackageVersion -Id ([string]$info.Id) -CacheEntryPath $entryRoot
+                    if ($inspected.Version) {
+                        $resolvedVersion = [string]$inspected.Version
+                        $versionSource = [string]$inspected.VersionSource
+                    }
+                }
+
+                # Signature inspection is opt-in. It is separate from Valid:
+                # Valid still describes required file presence, never signer trust.
+                $signature = $null
+                if ($VerifySignatures -and $payloadValid) {
+                    $signature = Get-OSDAppBuiltInSignature -Id ([string]$info.Id) -CacheEntryPath $entryRoot -CheckPublisher
+                }
+
                 $results.Add([pscustomobject]@{
                     PSTypeName   = 'OSDApps.CacheEntry'
                     Id           = [string]$info.Id
                     Source       = 'BuiltIn'
-                    Version      = if ($info.Version) { [string]$info.Version } else { $null }
+                    Version      = if ($resolvedVersion) { $resolvedVersion } else { $cachedVersion }
+                    VersionSource = $versionSource
                     Architecture = if ($info.Architecture) { [string]$info.Architecture } else { $null }
                     Channel      = if ($info.Channel) { [string]$info.Channel } else { $null }
                     Language     = if ($info.Language -is [System.Collections.IEnumerable] -and $info.Language -isnot [string]) { @($info.Language) -join ',' } elseif ($info.Language) { [string]$info.Language } else { $null }
@@ -104,6 +132,11 @@ function Get-OSDAppCache {
                     SizeMB       = [math]::Round([double]$bytes / 1MB, 1)
                     Valid        = [bool]$payloadValid
                     CachePath    = $entryRoot
+                    SignatureStatus = if (-not $payloadValid) { 'File missing' } elseif ($signature) { [string]$signature.Status } else { 'Not checked' }
+                    SignatureScope = if ($signature) { [string]$signature.Scope } else { $null }
+                    SignatureFile = if ($signature) { $signature.File } else { $null }
+                    SignatureSigner = if ($signature) { $signature.Signer } else { $null }
+                    SignatureDetail = if ($signature) { $signature.Detail } else { $null }
                 })
             }
             catch {

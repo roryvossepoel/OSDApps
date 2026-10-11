@@ -72,14 +72,21 @@ function Sync-OSDAppMozillaFirefoxEnterprise {
         Write-Verbose "Cached Mozilla Firefox Enterprise $Channel $Architecture MSI is current. No download required."
     }
     else {
-        Save-OSDAppDownload -Uri $PackageUri -DestinationPath $packagePath -Activity "Downloading Mozilla Firefox Enterprise $Channel $Architecture MSI" | Out-Null
+        Save-OSDAppVerifiedBuiltInDownload -Id 'MozillaFirefoxEnterprise' -Uri $PackageUri -DestinationPath $packagePath -Activity "Downloading Mozilla Firefox Enterprise $Channel $Architecture MSI" | Out-Null
         $updated = $true
     }
 
-    [ordered]@{
+    # Also re-validate an existing cached MSI when HTTP metadata says unchanged.
+    Assert-OSDAppBuiltInSignature -Id 'MozillaFirefoxEnterprise' -FilePath $packagePath | Out-Null
+
+    $inspectedVersion = Get-OSDAppCachedPackageVersion -Id 'MozillaFirefoxEnterprise' -CacheEntryPath $root
+    $resolvedVersion = if ($inspectedVersion.Version) { [string]$inspectedVersion.Version } else { 'Current' }
+
+     [ordered]@{
         Id                  = 'MozillaFirefoxEnterprise'
         Cached              = $true
-        Version             = 'Current'
+        Version             = $resolvedVersion
+        VersionSource       = $inspectedVersion.VersionSource
         Channel             = $Channel
         Architecture        = $Architecture
         Language            = $Language
@@ -99,7 +106,7 @@ function Sync-OSDAppMozillaFirefoxEnterprise {
     [pscustomobject]@{
         PSTypeName='OSDApps.BuiltInCache'
         Id='MozillaFirefoxEnterprise'
-        Version='Current'
+        Version=$resolvedVersion
         Channel=$Channel
         Architecture=$Architecture
         Language=$Language

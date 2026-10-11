@@ -6,11 +6,51 @@ This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging succ
 
 | Scenario | Status | Evidence / expected behavior |
 | --- | --- | --- |
-| Empty OSDCloud USB cache, online | **Validated — 0.30.0 test 2** | USB cache populated during SetupComplete; six queued apps installed |
+| Empty OSDCloud USB cache, online | **Validated — 0.34.0 PC 1 (11 Oct 2026)** | Six built-ins freshly acquired and signed where supported; 8/8 installed. Earlier 0.30.0 six-app test also passed. |
 | Existing OSDCloud USB cache, online | **Validated — 0.30.0 tests 3 and 4** | Reuse/freshness checking; altered Office configuration tested separately |
 | No USB cache, online | **Validated — 0.30.0 test 1** | Built-ins acquired on Windows volume; repository apps staged in WinPE |
-| Existing OSDCloud USB cache, offline | **Validated — 0.30.0 test 5** | Network disconnected; warm USB cache recognized; six apps installed, each exit code 0 |
+| Existing OSDCloud USB cache, offline | **Validated — 0.34.0 PC 2 (11 Oct 2026)** | LAN disconnected; six BuiltInRefreshSkipped events, five built-in signer/publisher checks and 8/8 successful installations. Earlier 0.30.0 six-app test also passed. |
 | No USB, offline | **Not yet validated** | Without a complete staged fallback, PreInstall is expected to stop before Runner |
+
+## OSDApps 0.34.0 release-candidate physical validation — 11 October 2026
+
+These were **Windows SetupComplete executions on two freshly reinstalled x64 PCs**, not just WinPE staging or module unit tests. They exercised development commit `201595501b75875cfa316a989385cedb23ec28e9` from PR #14. The module's version label was still 0.33.0 in this prerelease commit; the tested feature code became the 0.34.0 release candidate after documentation and version preparation.
+
+### Application queue (same on both PCs)
+
+| Order | Id | Source | Variant |
+| ---: | --- | --- | --- |
+| 1 | `Microsoft365Apps` | Built-in | x64, MonthlyEnterprise, nl-nl |
+| 2 | `MicrosoftTeams` | Built-in | x64 |
+| 3 | `GoogleChromeEnterprise` | Built-in | x64 |
+| 4 | `MozillaFirefoxEnterprise` | Built-in | Rapid, x64, en-US |
+| 5 | `CiscoWebex` | Built-in | x64 |
+| 6 | `AdobeAcrobatUnified` | Built-in | x64 |
+| 7 | `NotepadPlusPlus` | Repository | 8.9.8.1, x64 |
+| 8 | `OmnissaHorizonClient` | Repository | 8.16.2.36295, x64 |
+
+The two repository apps are private-repository **test content**, not bundled built-ins. They were synchronized to the USB cache and staged in WinPE, with archive SHA-256 checks. The built-ins were acquired/refreshed by the independent `Invoke-OSDAppPreInstall.ps1` runtime in full Windows.
+
+### Measured results
+
+| Machine and network state | PreInstall | Runner | Measured Windows total | Installer outcome |
+| --- | ---: | ---: | ---: | --- |
+| PC 1 — online, initially empty OSDCloud USB cache | 551.9 s | 366.7 s | **918.6 s (15:19)** | **8/8**, successful |
+| PC 2 — fully offline, cache populated by PC 1 | 5.4 s | 394.2 s | **399.6 s (6:40)** | **8/8**, successful |
+
+The measured total is the sum of the two phases, **not** OSDCloud image application, WinPE download/staging, reboot or OOBE time. A single run on each machine is not a performance benchmark.
+
+**PC 1 — complete cold source acquisition.** ODT populated the Office cache (`Version=16.0.20326.20142`, `VersionChanged=True`). Teams, Chrome, Firefox, Cisco Webex and Adobe reported `PackageUpdated=True`. `BuiltInSignatureVerified` confirmed the expected publishers for Office ODT `setup.exe`, Teams `teamsbootstrapper.exe`, Google Chrome MSI, Firefox MSI and Cisco Webex MSI; the four downloaded MSI/bootstrapper candidates were also checked before the USB copy was accepted. `PreInstallComplete` recorded six built-ins and `InstallComplete` recorded eight successful installations with `CleanupMode=OnSuccess`.
+
+**PC 2 — no network.** LAN was physically disconnected before the first Windows boot and remained disconnected for SetupComplete. `CacheVolumeFound` confirmed `E:\OSDApps`, and `BuiltInRefreshSkipped` appeared **six times**, one for each built-in (Office, Teams, Chrome, Firefox, Cisco Webex and Adobe). The five signable staged MSI/EXE packages passed the expected-publisher gate while offline. All six built-in installs and both SHA-256-validated repository package installs returned code `0`, followed by `InstallComplete; ApplicationCount=8; CleanupMode=OnSuccess`.
+
+### Additional validation and boundaries
+
+- A separate warm-cache deployment completed four application installs successfully: Teams, Firefox, Notepad++ and Omnissa Horizon Client (`PreInstall 6.2 s`, `Runner 83.5 s`). A full-Windows Chrome cache sync retained an unchanged trusted MSI (`Updated=False`).
+- The Windows 11 OSDApps Viewer showed valid publisher signature states for the five signable built-in cache entries, separate from repository SHA-256 integrity; the two WinPE PCs exercised read-only inventory, app staging and cache inspection.
+- Authenticode coverage is intentionally **partial**: Teams MSIX and the Microsoft 365 Apps data tree are not cryptographically verified by the bootstrapper/ODT checks, and Adobe Acrobat's outer ZIP is `Not assessed`. No negative/tampered-package test was performed on hardware; such rejection behavior is covered by unit tests.
+- An `ExitCode=0` validates the installer/provisioning path, not product activation, all interactive features, or the effective installed Office update channel. Office's reported cold-cache build differs from the earlier cached build; neither result alone establishes channel correctness.
+- Raw device logs were reviewed during validation, but private machine logs and enterprise repository binaries are **not committed** into this public project.
 
 ## Real-world end-to-end validation — OSDApps 0.30.0
 

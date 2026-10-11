@@ -86,6 +86,7 @@ function Get-OSDAppCatalogPackages {
             $packages.Add([pscustomobject]@{
                 Id           = [string]$packageManifest.Id
                 DisplayName  = if ($packageManifest.DisplayName) { [string]$packageManifest.DisplayName } else { [string]$packageManifest.Id }
+                Vendor       = if ($packageManifest.Vendor) { ([string]$packageManifest.Vendor).Trim() } else { $null }
                 Version      = [string]$packageManifest.Version
                 Architecture = [string]$packageManifest.Architecture
                 SuccessCodes = @($packageManifest.SuccessCodes)
