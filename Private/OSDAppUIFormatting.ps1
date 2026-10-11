@@ -27,11 +27,18 @@ function Get-OSDAppUICachedVersion {
 
 function Get-OSDAppUIAvailabilityLabel {
     [CmdletBinding()]
-    param([string]$Availability)
+    param(
+        [string]$Availability,
+        [switch]$Offline
+    )
 
     switch ($Availability) {
         'Cached'       { 'USB cached'; break }
-        'CachedOnly'   { 'USB cached (offline)'; break }
+        'CachedOnly'   {
+            if ($Offline) { 'USB cached (offline)' }
+            else { 'USB cached (not in online catalog)' }
+            break
+        }
         'InvalidCache' { 'USB cache invalid'; break }
         'Online'       { 'Online only'; break }
         'Available'    { 'Vendor available'; break }
