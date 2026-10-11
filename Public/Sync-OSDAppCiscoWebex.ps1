@@ -57,10 +57,14 @@ function Sync-OSDAppCiscoWebex {
         $updated = $true
     }
 
-    [ordered]@{
+    $inspectedVersion = Get-OSDAppCachedPackageVersion -Id 'CiscoWebex' -CacheEntryPath $root
+    $resolvedVersion = if ($inspectedVersion.Version) { [string]$inspectedVersion.Version } else { 'Current' }
+
+     [ordered]@{
         Id = 'CiscoWebex'
         Cached = $true
-        Version = 'Current'
+        Version             = $resolvedVersion
+        VersionSource       = $inspectedVersion.VersionSource
         Architecture = $Architecture
         SourcePolicy = 'Evergreen'
         SyncMethod = 'HttpMetadata'
@@ -78,7 +82,7 @@ function Sync-OSDAppCiscoWebex {
     [pscustomobject]@{
         PSTypeName = 'OSDApps.BuiltInCache'
         Id = 'CiscoWebex'
-        Version = 'Current'
+        Version=$resolvedVersion
         Architecture = $Architecture
         CachePath = $root
         Cached = $true
