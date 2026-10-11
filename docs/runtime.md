@@ -1,232 +1,154 @@
 # Runtime and cleanup
 
+[Documentation](README.md) · [Architecture](architecture.md) · [Troubleshooting](faq.md)
+
+OSDApps uses standalone scripts during SetupComplete. The module itself does **not** need to be installed in the deployed Windows installation.
+
 ![Application queue and install order](images/application-queue.svg)
-
-
-OSD Apps uses standalone runtime scripts during SetupComplete.
-
-The OSDApps module itself does **not** need to be installed in deployed Windows.
 
 ## Runtime content
 
-The public Add cmdlets stage their runtime content under:
+The public Add cmdlets prepare the selected offline Windows target. Runtime source normally lives under:
 
 ```text
-%SystemRoot%\Temp\OSDApps
+<Windows target>\Windows\Temp\OSDApps\
+    DeviceManifest.json
+    Invoke-OSDAppPreInstall.ps1
+    Invoke-OSDAppRunner.ps1
+    Packages\
+    BuiltIn\
+    Work\
 ```
 
-Typical content:
-
-```text
-DeviceManifest.json
-Invoke-OSDAppPreInstall.ps1
-Invoke-OSDAppRunner.ps1
-Packages\
-BuiltIn\
-Work\
-```
+This is **device staging**, separate from the optional `\OSDApps` USB cache. `DeviceManifest.json` contains one ordered `Apps` array. PreInstall processes its built-ins; Runner processes the full queue in order.
 
 ## SetupComplete order
 
 ```text
 SetupComplete.cmd
 → Invoke-OSDAppPreInstall.ps1
+→ check PreInstall exit code
 → Invoke-OSDAppRunner.ps1
+→ check Runner exit code
 ```
+
+The CLI stages these scripts and updates its owned SetupComplete blocks. Do not replace the whole SetupComplete file to change OSDApps settings; other deployment tooling may have its own commands there.
 
 ### PreInstall
 
-PreInstall:
-- detects the optional USB cache volume using the configured `CacheVolumeLabel` (default `OSDCloud`);
-- detects network availability;
-- uses/updates the USB cache when present;
-- acquires built-ins directly to the local runtime when no USB cache is present;
-- restages current built-in content locally before installation;
-- falls back to a complete staged or USB-cached payload when refresh fails;
-- returns a fatal error only when no usable source exists.
+PreInstall runs in **full Windows**, not WinPE. It reads the manifest/runtime settings, detects the optional cache volume and reported network availability, then prepares each built-in's local source.
+
+When online it can acquire/refresh vendor content through the cache, or directly under the local runtime when no cache volume exists. When no network is reported, it can use complete content already staged from the cache. A failed refresh may also fall back to existing staged content.
+
+**An available file is not sufficient by itself.** Supported MSI/EXE files must pass Windows Authenticode and expected-publisher checks before they are used, including the fallback path. If there is no acceptable source, or a required trust/configuration/acquisition check fails without a usable fallback, PreInstall exits with an error and its SetupComplete block does not continue to Runner.
+
+The signature scope is deliberately limited: Office `setup.exe`, Teams `teamsbootstrapper.exe`, and Chrome/Firefox/Webex MSI files. It does not cover the Office data tree, Teams MSIX or Adobe's outer ZIP. See the [publisher policy](built-in-apps.md#authenticode-and-publisher-policy-0340).
+
+`NetworkInterface.GetIsNetworkAvailable()` reports interface availability; it is not proof that a vendor endpoint is reachable. The log distinguishes a directly skipped refresh from a failed refresh followed by fallback.
 
 ### Runner
 
-Runner:
-- reads `DeviceManifest.json`;
-- validates repository package integrity;
-- extracts repository packages;
-- executes `Install.ps1`;
-- installs built-ins;
-- extracts Adobe Acrobat Unified's cached ZIP locally before invoking Adobe Setup.exe;
-- installs vendor MSI built-ins such as Google Chrome Enterprise, Mozilla Firefox Enterprise and Cisco Webex through `msiexec.exe /i ... /qn /norestart`;
-- stops on unrecoverable installation failure;
-- schedules cleanup after full success.
+Runner reads the ordered queue and installs from **local staging**. For repository apps it validates the package SHA-256 again, extracts the ZIP and executes `Package/Install.ps1`. It does not synchronize the repository after boot.
+
+For built-ins it invokes the corresponding local installer/provisioning mechanism. Adobe's archive is extracted locally before Adobe Setup runs. Vendor MSI built-ins use Windows Installer with silent arguments. An unrecoverable app failure stops the run; complete success enables the configured cleanup behavior.
+
+Installer/provisioning success is not independent evidence of application activation, user sign-in or every interactive feature.
 
 ## Runtime configuration
 
-Runtime behavior is controlled through the general module configuration:
+**Set these values in the WinPE staging session before adding apps:**
 
 ```powershell
 Set-OSDAppConfiguration `
-    -CatalogUri 'https://example.blob.core.windows.net/osdapps/catalog.json' `
     -CleanupMode OnSuccess `
     -CacheVolumeLabel 'OSDCloud' `
     -LogPath '%ProgramData%\OSDApps\Logs\Runtime.log'
 ```
 
-The effective values are written into `DeviceManifest.json` when applications are staged, so SetupComplete does not depend on the PowerShell module being present in full Windows.
+Configure a real `CatalogUri` in the same session when staging online repository apps. It is not needed for built-ins-only deployment.
 
-`CleanupMode` supports:
+The session's `CleanupMode`, `CacheVolumeLabel` and `LogPath` are written into the device manifest by the Add commands. SetupComplete therefore does not depend on the preparation machine's session or on importing the module. Changing session configuration alone does not retroactively rewrite an existing device manifest.
 
-```text
-OnSuccess  remove %SystemRoot%\Temp\OSDApps after a successful run
-Never      retain the staged runtime, payloads, and Work directory
-```
+| CleanupMode | Behavior |
+| --- | --- |
+| `OnSuccess` | Schedule removal of temporary runtime source after a successful complete run. |
+| `Never` | Retain staging, payloads and Work for troubleshooting. |
 
 On failure, source is retained automatically.
 
 ## Cleanup policy
 
-With `CleanupMode OnSuccess`:
+With `OnSuccess`, Runner writes its final events, starts a cleanup helper and exits; the helper removes the staging directory and itself. With `Never`, cleanup is skipped and `CleanupSkipped` is logged.
 
-```text
-successful run
-→ write final log events
-→ start cleanup helper
-→ runner exits
-→ cleanup helper removes %SystemRoot%\Temp\OSDApps
-→ cleanup helper removes itself
-```
-
-With `CleanupMode Never`, cleanup is skipped and `CleanupSkipped` is logged.
+The USB cache is separate and is not deleted by local source cleanup. The persistent log should be outside the staging directory; the default ProgramData path is retained. A completion line containing `CleanupMode=OnSuccess` identifies the selected policy. Check cleanup events or filesystem state when you need to prove that cleanup itself finished.
 
 ## Logging
 
-Persistent runtime logs are written to the configured `LogPath`. The default is:
+The default persistent runtime log is:
 
 ```text
 %ProgramData%\OSDApps\Logs\Runtime.log
 ```
 
-Logs are CMTrace-compatible and remain after source cleanup.
-
-The log is rotated automatically:
-- active `Runtime.log`
-- `Runtime.log.1`
-- `Runtime.log.2`
-- `Runtime.log.3`
-
-Important events include:
+Module/cache actions with USB use:
 
 ```text
-RefreshStart
-DownloadStart
-DownloadComplete
-CacheVolumeFound
-CacheVolumeNotFound
-BuiltInCacheRestaged
-BuiltInRefreshStart
-BuiltInRefreshComplete
-BuiltInRefreshFailed
-RefreshComplete
-PreInstallComplete
-InstallStart
-PackageIntegrityValidated
-PackageInstallStart
-PackageInstallComplete
-BuiltInInstallStart
-BuiltInInstallWaiting
-BuiltInInstallTimeout
-BuiltInInstallComplete
-ApplicationInstallComplete
-ApplicationInstallFailed
-InstallFailed
-InstallComplete
-CleanupScheduled
-CleanupSkipped
+<cache volume>:\OSDApps\Logs\Client.log
 ```
 
+Runtime `LogPath` can be configured. The Viewer discovers known default locations, so custom paths may need to be read separately. Logs are CMTrace-compatible. The runtime rotates the active log and retains numbered `.1`, `.2` and `.3` archives.
 
-For built-in synchronization, completion data distinguishes synchronization from actual content changes:
+| Event | Interpretation |
+| --- | --- |
+| `CacheVolumeFound` / `CacheVolumeNotFound` | Whether the configured cache volume was found. |
+| `DownloadStart` / `DownloadComplete` | Acquisition activity, including size/duration data. |
+| `BuiltInCacheRestaged` | Existing USB content was copied into local staging. |
+| `BuiltInSignatureVerified` | The specified supported MSI/EXE and expected publisher passed validation. |
+| `BuiltInRefreshSkipped` | No network was reported; existing staged built-in content was selected. Recorded as a warning, not an installer failure. |
+| `BuiltInRefreshStart` / `BuiltInRefreshComplete` | Refresh/acquisition attempt and successful readiness of content. |
+| `BuiltInRefreshFailed` | A refresh failed and the existing local fallback was selected after applicable checks. |
+| `RefreshFailed` | PreInstall failed; inspect its failure type and original message. |
+| `PreInstallComplete` | The built-in preparation phase completed successfully. |
+| `PackageIntegrityValidated` | A repository package passed its integrity check. |
+| `BuiltInInstallComplete` / `PackageInstallComplete` | Individual installer/provisioning outcome. |
+| `ApplicationInstallComplete` | Complete processing duration for one queue entry. |
+| `ApplicationInstallFailed` / `InstallFailed` | Application or Runner failure; source remains for investigation. |
+| `InstallComplete` | Runner completed the full queue; check its application count and individual results. |
+| `CleanupScheduled` / `CleanupSkipped` | Cleanup was scheduled or intentionally skipped. |
 
-```text
-Microsoft 365 Apps: CacheSynchronized, VersionChanged
-Microsoft Teams:    CacheSynchronized, PackageUpdated
-```
+An offline installation is not demonstrated by a short runtime alone. Review `BuiltInRefreshSkipped`, signature checks and final installation outcomes. An online cache hit can also be fast.
 
-This prevents a successful cache synchronization from being misread as a new application version download.
+### Synchronization versus updated content
 
+`CacheSynchronized=True` means cache synchronization took place, not that a new version was downloaded. Microsoft 365 Apps reports `VersionChanged`; Teams and the HTTP-metadata-based packages report `PackageUpdated`. Read those values alongside the source path and version.
 
-Adobe Acrobat Unified uses a 15-minute installation timeout by default. The runner writes a heartbeat every 60 seconds while Adobe Setup is still running. If the timeout is reached, the Adobe setup process tree is terminated, `BuiltInInstallTimeout` is logged, the deployment fails, and the runtime source is retained for troubleshooting.
+### Downloads and timeouts
 
-The timeout can be overridden when staging:
+Large runtime downloads use streaming HttpClient and a temporary `.download` file before the completed file is moved into place. `DownloadComplete` reports bytes, size, duration and average throughput. Network/download completion is distinct from signature verification of a supported installer.
+
+Office's standalone refresh timeout is 20 minutes by default. Adobe installation defaults to 15 minutes; its runner emits a waiting heartbeat while the installer is running. A timeout is not success: the process handling stops the failed installation and retains source.
+
+To choose a different Adobe installation timeout, set it **when staging in WinPE**:
 
 ```powershell
 Add-OSDAppAdobeAcrobatUnified -InstallTimeoutMinutes 20
 ```
 
-
-Large built-in payloads are downloaded with the same streaming HttpClient approach used by the module cache downloader. Downloads are written to a temporary `.download` file and atomically moved into place only after success.
-
-Runtime download logging includes:
-
-```text
-DownloadStart
-DownloadComplete
-Bytes
-SizeMB
-DurationSeconds
-AverageMBps
-```
-
-This avoids the significant performance overhead observed with `Invoke-WebRequest -OutFile` for large payloads such as Adobe Acrobat Unified.
-
-
 ## Vendor MSI built-ins
 
-MSI-based built-ins (Google Chrome Enterprise, Mozilla Firefox Enterprise and Cisco Webex) use the generic `VendorMsi` runtime type. The MSI is always acquired directly from the vendor, staged locally, and installed with Windows Installer.
+Chrome Enterprise, Firefox Enterprise and Cisco Webex use the `VendorMsi` runtime type. The local MSI is installed through `msiexec.exe /i ... /qn /norestart`, with any validated built-in MSI properties appended.
 
-```text
-vendor MSI
-→ optional OSDCloud USB cache
-→ local Package.msi
-→ msiexec.exe /i Package.msi /qn /norestart
-```
-
-The generic MSI runner appends any validated built-in `MsiProperties` (for example, Cisco Webex per-machine, autostart and update settings) to the silent `msiexec` command. It uses a 10-minute default timeout, writes 60-second `BuiltInInstallWaiting` heartbeat events, accepts exit codes `0` and `3010`, and retains the runtime source if installation fails.
-
+The generic MSI runner uses a 10-minute default installation timeout, logs waiting heartbeats, accepts exit codes `0` and `3010`, and retains source on failure. Review app-specific options before changing properties; the Viewer does not edit them.
 
 ## Timing and failure diagnostics
 
-OSDApps writes explicit duration values so performance reporting does not need to infer every phase from timestamps.
+| Duration field | Scope |
+| --- | --- |
+| `PreInstallComplete.DurationSeconds` | Built-in preparation phase |
+| `BuiltInRefreshComplete.DurationSeconds` | One built-in's acquisition/refresh processing |
+| `ApplicationInstallComplete.DurationSeconds` | Complete queue-item processing, including validation/extraction where applicable |
+| `InstallComplete.DurationSeconds` | Full Runner phase |
 
-Key duration fields include:
+PreInstall failure types include `NetworkUnavailable`, `Timeout`, `CacheOrSourceMissing`, `RemoteAcquisition` and `PreInstallError`. Runner types include `HashMismatch`, `SourceMissing`, `Timeout`, `InstallerFailed` and `RuntimeError`. The original message remains alongside the category; use it to diagnose the actual cause.
 
-```text
-PreInstallComplete       DurationSeconds
-BuiltInRefreshComplete   DurationSeconds
-ApplicationInstallComplete DurationSeconds
-InstallComplete          DurationSeconds
-```
-
-`ApplicationInstallComplete` is written for both repository and built-in applications and measures the complete processing time for that queue item, including validation/extraction where applicable.
-
-Failures are also categorized for reporting and troubleshooting.
-
-PreInstall categories include:
-
-```text
-NetworkUnavailable
-Timeout
-CacheOrSourceMissing
-RemoteAcquisition
-PreInstallError
-```
-
-Runner categories include:
-
-```text
-HashMismatch
-SourceMissing
-Timeout
-InstallerFailed
-RuntimeError
-```
-
-The original error text remains in the log alongside the category.
+The [validation matrix](testing.md) and [performance history](performance.md) distinguish measured phases from image deployment, WinPE staging, boot and OOBE time.
