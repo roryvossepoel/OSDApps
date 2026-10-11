@@ -13,13 +13,13 @@ function Set-OSDAppUIColumnWidths {
     $fixed = switch ($Key) {
         'Staged'       { @(65,0,90,100,125,185,105) }
         'Applications' { @(0,75,90,110,175,100,100,90) }
-        'Cache'        { @(0,90,155,110,125,80,150) }
+        'Cache'        { @(0,75,88,175,95,115,74,122) }
         'Logs'         { @(185,78,135,125,0) }
     }
     $flexIndex = if ($Key -in @('Staged','Applications','Cache')) {
         if ($Key -eq 'Staged') { 1 } else { 0 }
     } else { 4 }
-    $minimumFlex = if ($Key -eq 'Logs') { 270 } elseif ($Key -eq 'Applications') { 180 } else { 200 }
+    $minimumFlex = if ($Key -eq 'Logs') { 270 } elseif ($Key -in @('Applications','Cache')) { 180 } else { 200 }
     $reserved = 0
     foreach ($width in $fixed) { $reserved += [int]$width }
     $available = [math]::Max(0,$list.ClientSize.Width - 22)
@@ -59,7 +59,7 @@ function Show-OSDAppUIRows {
                 if ($Key -eq 'Staged' -and $column -eq 0) {
                     [int]$value
                 }
-                elseif ($Key -eq 'Cache' -and $column -eq 5) {
+                elseif ($Key -eq 'Cache' -and $column -eq 6) {
                     $parsed = [double]0
                     $rawValue = $value.Replace(' MB','').Replace(',','.')
                     if ([double]::TryParse($rawValue,[System.Globalization.NumberStyles]::Float,
@@ -215,6 +215,7 @@ function Update-OSDAppUIReadOnlyView {
             $displayInfo = Get-OSDAppUIDisplayInfo -Application $entry -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
             $item = [System.Windows.Forms.ListViewItem]::new([string]$displayInfo.DisplayName)
             [void]$item.SubItems.Add($(if ($entry.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
+            [void]$item.SubItems.Add([string]$displayInfo.Vendor)
             $cacheVersion = [string]$entry.Version
             if ([string]::IsNullOrWhiteSpace($cacheVersion) -or $cacheVersion -eq 'Current') { $cacheVersion = 'Not recorded' }
             [void]$item.SubItems.Add($cacheVersion)
@@ -274,8 +275,11 @@ function Update-OSDAppUIReadOnlyView {
     } else {
         'USB cache: not connected / not found.'
     }
-    $State.UsbStatus.Text = if ($data.CachePath) { "USB: $($data.CachePath)" } else { 'USB: not connected' }
-    $State.UsbStatusToolTip.SetToolTip($State.UsbStatus, $(if ($data.CachePath) { [string]$data.CachePath } else { 'No OSDCloud cache volume detected' }))
+    $usbLabel = if ($data.CachePath) { [string]$data.CachePath } else { 'not connected' }
+    $State.ContextStatus.Text = "Target: $($State.TargetKind)  |  USB: $usbLabel  |  $($State.CatalogMode)"
+    $detail = "Target: $($State.TargetDescription)" + [Environment]::NewLine +
+        "USB: $usbLabel" + [Environment]::NewLine + $State.CatalogDescription
+    $State.ContextToolTip.SetToolTip($State.ContextStatus,$detail)
     # Show a real staged manifest entry by default instead of an empty panel.
     # This is only a UI selection; it does not change DeviceManifest ordering.
     if ($State.StagedList.Items.Count -gt 0) {
@@ -325,7 +329,7 @@ function Show-OSDAppUI {
     catch {
         throw "Windows Forms is unavailable in this Windows/WinPE image: $($_.Exception.Message)"
     }
-    if ($script:OSDAppUIState) { throw 'OSDApps Manager is already open.' }
+    if ($script:OSDAppUIState) { throw 'OSDApps Viewer is already open.' }
     if ($TestMode -and $PSBoundParameters.ContainsKey('WindowsPath')) {
         throw '-TestMode points to the existing isolated TEMP test folder. Do not also specify -WindowsPath.'
     }
@@ -362,7 +366,7 @@ function Show-OSDAppUI {
     }
 
     $form = [System.Windows.Forms.Form]::new()
-    $form.Text = 'OSDApps Manager - Read-only'
+    $form.Text = 'OSDApps Viewer - Read-only'
     $form.Size = [System.Drawing.Size]::new(980,710)
     $form.MinimumSize = [System.Drawing.Size]::new(800,580)
     $form.StartPosition = 'CenterScreen'
@@ -385,7 +389,7 @@ function Show-OSDAppUI {
     [void]$root.Controls.Add($header,0,0)
 
     $title = [System.Windows.Forms.Label]::new()
-    $title.Text = 'OSDApps Manager'
+    $title.Text = 'OSDApps Viewer'
     $title.Font = [System.Drawing.Font]::new('Segoe UI',17,[System.Drawing.FontStyle]::Bold)
     $title.ForeColor = [System.Drawing.Color]::White
     $title.SetBounds(18,9,670,37)
@@ -406,40 +410,33 @@ function Show-OSDAppUI {
     $readOnly.Anchor = 'Top,Right'
     $header.Controls.Add($readOnly)
 
-    $context = [System.Windows.Forms.TableLayoutPanel]::new()
+    $context = [System.Windows.Forms.Panel]::new()
     $context.Dock = 'Fill'
-    $context.ColumnCount = 3
-    $context.Padding = [System.Windows.Forms.Padding]::new(12,3,12,3)
     $context.BackColor = [System.Drawing.Color]::FromArgb(242,244,247)
-    [void]$context.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',48))
-    [void]$context.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',32))
-    [void]$context.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',20))
     [void]$root.Controls.Add($context,0,1)
 
-    $targetStatus = [System.Windows.Forms.Label]::new()
-    $targetStatus.Text = if ($TestMode) { 'Target: Test environment' } elseif ($winPE) { 'Target: Offline Windows' } else { 'Target: Windows' }
-    $targetStatus.Dock = 'Fill'
-    $targetStatus.AutoEllipsis = $true
-    $targetStatus.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
-    [void]$context.Controls.Add($targetStatus,0,0)
+    $targetKind = if ($TestMode) { 'Test environment' } elseif ($winPE) { 'Offline Windows' } else { 'Windows' }
+    $catalogUri = (Get-OSDAppConfiguration).CatalogUri
+    $catalogMode = if ($Offline) { 'Offline' } elseif ($catalogUri) { 'Online' } else { 'No catalog' }
+    $catalogDescription = if ($Offline) {
+        'Catalog lookup disabled (-Offline).'
+    } elseif ($catalogUri) {
+        "Catalog: $($catalogUri.AbsoluteUri)"
+    } else {
+        'Repository not configured in this PowerShell session.'
+    }
 
-    $usbStatus = [System.Windows.Forms.Label]::new()
-    $usbStatus.Text = 'USB: detecting...'
-    $usbStatus.Dock = 'Fill'
-    $usbStatus.AutoEllipsis = $true
-    $usbStatus.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
-    [void]$context.Controls.Add($usbStatus,1,0)
-
-    $catalogStatus = [System.Windows.Forms.Label]::new()
-    $catalogStatus.Text = if ($Offline) { 'Offline' } else { 'Catalog lookup' }
-    $catalogStatus.Dock = 'Fill'
-    $catalogStatus.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
-    [void]$context.Controls.Add($catalogStatus,2,0)
+    $contextStatus = [System.Windows.Forms.Label]::new()
+    $contextStatus.Dock = 'Fill'
+    $contextStatus.Padding = [System.Windows.Forms.Padding]::new(14,0,8,0)
+    $contextStatus.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+    $contextStatus.AutoEllipsis = $true
+    $contextStatus.Text = "Target: $targetKind  |  USB: detecting...  |  $catalogMode"
+    [void]$context.Controls.Add($contextStatus)
 
     $toolTip = [System.Windows.Forms.ToolTip]::new()
-    $toolTip.SetToolTip($targetStatus,$targetText)
-    $catalogUri = (Get-OSDAppConfiguration).CatalogUri
-    $toolTip.SetToolTip($catalogStatus, $(if ($Offline) { 'Catalog is not queried in offline mode.' } elseif ($catalogUri) { [string]$catalogUri.AbsoluteUri } else { 'No repository URL configured in this PowerShell session.' }))
+    $contextToolTip = "Target: $targetText" + [Environment]::NewLine + $catalogDescription
+    $toolTip.SetToolTip($contextStatus,$contextToolTip)
 
 
     $searchPanel = [System.Windows.Forms.TableLayoutPanel]::new()
@@ -544,8 +541,9 @@ function Show-OSDAppUI {
     $cacheList.GridLines = $true
     $cacheList.ShowItemToolTips = $true
     [void]$cacheList.Columns.Add('Display Name',265)
-    [void]$cacheList.Columns.Add('Source',105)
-    [void]$cacheList.Columns.Add('USB version',115)
+    [void]$cacheList.Columns.Add('Source',75)
+    [void]$cacheList.Columns.Add('Vendor',88)
+    [void]$cacheList.Columns.Add('USB version',175)
     [void]$cacheList.Columns.Add('Architecture',105)
     [void]$cacheList.Columns.Add('Integrity',145)
     [void]$cacheList.Columns.Add('Size',100)
@@ -615,7 +613,10 @@ function Show-OSDAppUI {
 
     $script:OSDAppUIState = @{
         Form=$form; Target=$target; Offline=[bool]$Offline; Search=$searchBox
-        VerifySignatures=[bool]$VerifySignatures; UsbStatus=$usbStatus; UsbStatusToolTip=$toolTip
+        VerifySignatures=[bool]$VerifySignatures
+        ContextStatus=$contextStatus; ContextToolTip=$toolTip
+        TargetKind=$targetKind; TargetDescription=$targetText
+        CatalogMode=$catalogMode; CatalogDescription=$catalogDescription
         StagedList=$stagedList; CatalogList=$catalogList; CacheList=$cacheList
         StagedInfo=$stagedInfo; CacheInfo=$cacheInfo; Details=$details
         LogFiles=$logFiles; LogList=$logList; LogDetails=$logDetails; LogInfo=$logInfo
