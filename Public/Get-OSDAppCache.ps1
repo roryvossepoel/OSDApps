@@ -2,7 +2,8 @@ function Get-OSDAppCache {
     [CmdletBinding()]
     param(
         [string[]]$Name,
-        [switch]$ResolveVersions
+        [switch]$ResolveVersions,
+        [switch]$VerifySignatures
     )
 
     # Cache inspection is optional when no OSDCloud media is attached.
@@ -46,6 +47,11 @@ function Get-OSDAppCache {
                     SizeMB       = $sizeMB
                     Valid        = $valid
                     CachePath    = if ($exists) { $archivePath } else { Join-Path $cachePath (Join-Path 'Packages' $package.Id) }
+                    SignatureStatus = 'Not assessed'
+                    SignatureScope = 'Repository ZIP (SHA-256 checked separately)'
+                    SignatureFile = $null
+                    SignatureSigner = $null
+                    SignatureDetail = 'Authenticode is not evaluated for custom repository ZIPs.'
                 })
             }
         }
@@ -102,6 +108,13 @@ function Get-OSDAppCache {
                     }
                 }
 
+                # Signature inspection is opt-in. It is separate from Valid:
+                # Valid still describes required file presence, never signer trust.
+                $signature = $null
+                if ($VerifySignatures -and $payloadValid) {
+                    $signature = Get-OSDAppBuiltInSignature -Id ([string]$info.Id) -CacheEntryPath $entryRoot
+                }
+
                 $results.Add([pscustomobject]@{
                     PSTypeName   = 'OSDApps.CacheEntry'
                     Id           = [string]$info.Id
@@ -117,6 +130,11 @@ function Get-OSDAppCache {
                     SizeMB       = [math]::Round([double]$bytes / 1MB, 1)
                     Valid        = [bool]$payloadValid
                     CachePath    = $entryRoot
+                    SignatureStatus = if (-not $payloadValid) { 'File missing' } elseif ($signature) { [string]$signature.Status } else { 'Not checked' }
+                    SignatureScope = if ($signature) { [string]$signature.Scope } else { $null }
+                    SignatureFile = if ($signature) { $signature.File } else { $null }
+                    SignatureSigner = if ($signature) { $signature.Signer } else { $null }
+                    SignatureDetail = if ($signature) { $signature.Detail } else { $null }
                 })
             }
             catch {
