@@ -226,6 +226,49 @@ function Test-LocalMsiSource {
     return (Test-Path -LiteralPath (Join-Path $Root 'Package.msi') -PathType Leaf)
 }
 
+function Assert-PreInstallSignedPayload {
+    param(
+        [Parameter(Mandatory)][string]$Id,
+        [Parameter(Mandatory)][string]$Path
+    )
+
+    # SetupComplete runs standalone: the private OSDApps module functions
+    # are not guaranteed to be installed on the target Windows machine.
+    $expected = switch ($Id) {
+        'Microsoft365Apps'         { 'Microsoft Corporation'; break }
+        'MicrosoftTeams'           { 'Microsoft Corporation'; break }
+        'GoogleChromeEnterprise'   { 'Google LLC'; break }
+        'CiscoWebex'               { 'Cisco Systems, Inc.'; break }
+        'MozillaFirefoxEnterprise' { 'Mozilla Corporation'; break }
+        default                    { $null }
+    }
+    if (-not $expected) {
+        throw "No trusted signer policy exists for built-in '$Id'."
+    }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "Required signed built-in file missing: $Path"
+    }
+
+    $signature = Get-AuthenticodeSignature -LiteralPath $Path -ErrorAction Stop
+    if ([string]$signature.Status -ne 'Valid' -or -not $signature.SignerCertificate) {
+        throw "Built-in '$Id' signature validation failed (status: $($signature.Status)): $Path"
+    }
+
+    $subject = [string]$signature.SignerCertificate.Subject
+    $orgMatch = [regex]::Match($subject, '(?:^|,\s*)O=(?:"(?<quoted>(?:[^"]|"")*)"|(?<plain>[^,]+))(?=,|$)')
+    $org = if ($orgMatch.Success) {
+        if ($orgMatch.Groups['quoted'].Success) {
+            $orgMatch.Groups['quoted'].Value.Replace('""','"')
+        } else {
+            $orgMatch.Groups['plain'].Value.Trim()
+        }
+    } else { $null }
+    if (-not [string]::Equals($org,$expected,[StringComparison]::OrdinalIgnoreCase)) {
+        throw "Built-in '$Id' publisher mismatch. Expected '$expected'; signer subject: $subject"
+    }
+    Write-PreInstallLog -Event 'BuiltInSignatureVerified' -Message 'Built-in MSI/EXE Authenticode and expected publisher validated.' -Data @{Id=$Id;File=$Path;Publisher=$expected}
+}
+
 function Sync-PreInstallVendorMsi {
     param(
         [Parameter(Mandatory)][psobject]$App,
@@ -242,6 +285,7 @@ function Sync-PreInstallVendorMsi {
     New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
 
     if ($usbRoot -and -not (Test-LocalMsiSource -Root $localRoot) -and (Test-LocalMsiSource -Root $acquireRoot)) {
+        Assert-PreInstallSignedPayload -Id $id -Path (Join-Path $acquireRoot 'Package.msi')
         Copy-Item -LiteralPath (Join-Path $acquireRoot 'Package.msi') -Destination (Join-Path $localRoot 'Package.msi') -Force
         if (Test-Path -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -PathType Leaf) {
             Copy-Item -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -Destination (Join-Path $localRoot 'CacheInfo.json') -Force
@@ -251,6 +295,7 @@ function Sync-PreInstallVendorMsi {
 
     if (-not $networkAvailable) {
         if (Test-LocalMsiSource -Root $localRoot) {
+            Assert-PreInstallSignedPayload -Id $id -Path (Join-Path $localRoot 'Package.msi')
             Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message "No network is available. Existing staged $DisplayName payload will be used." -Data @{ Id=$id }
             return
         }
@@ -288,10 +333,12 @@ function Sync-PreInstallVendorMsi {
             New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
             $tempPackage = Join-Path $tempRoot 'Package.msi'
             Save-PreInstallDownload -Uri $PackageUri -DestinationPath $tempPackage -Id $id -Description "$DisplayName MSI" -TimeoutMinutes 15
+            Assert-PreInstallSignedPayload -Id $id -Path $tempPackage
             Copy-Item -LiteralPath $tempPackage -Destination $packagePath -Force
             $updated = $true
         }
 
+        Assert-PreInstallSignedPayload -Id $id -Path $packagePath
         $cacheRecord = [ordered]@{
             Id                  = $id
             Cached              = [bool]$usbRoot
@@ -321,6 +368,7 @@ function Sync-PreInstallVendorMsi {
     }
     catch {
         if (Test-LocalMsiSource -Root $localRoot) {
+            Assert-PreInstallSignedPayload -Id $id -Path (Join-Path $localRoot 'Package.msi')
             Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{ Id=$id; Fallback='ExistingStagedPayload' }
             return
         }
@@ -371,7 +419,7 @@ try {
                 }
 
                 if(-not $networkAvailable){
-                    if(Test-LocalOfficeSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Office payload will be used.' -Data @{Id='Microsoft365Apps'}; continue}
+                    if(Test-LocalOfficeSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Office payload will be used.' -Data @{Id='Microsoft365Apps'}; continue}
                     throw 'Microsoft 365 Apps has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
 
@@ -381,6 +429,7 @@ try {
                     $setupPath=Join-Path $acquireRoot 'setup.exe'
                     $odtUri=if($app.OfficeDeploymentToolUri){[string]$app.OfficeDeploymentToolUri}else{'https://officecdn.microsoft.com/pr/wsus/setup.exe'}
                     if(-not (Test-Path -LiteralPath $setupPath -PathType Leaf)){Save-PreInstallDownload -Uri $odtUri -DestinationPath $setupPath -Id 'Microsoft365Apps' -Description 'Office Deployment Tool' -TimeoutMinutes 5}
+                    Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path $setupPath
                     if(-not (Test-InternetEndpoint -Uri $odtUri)){throw 'Microsoft 365 Apps CDN is not reachable.'}
                     $previous=Get-OfficeCacheVersion -OfficeRoot $acquireRoot
                     Write-PreInstallLog -Event 'BuiltInRefreshStart' -Message 'Synchronizing Microsoft 365 Apps content.' -Data @{Id='Microsoft365Apps';Target=if($usbRoot){'USB'}else{'Local'};PreviousVersion=$previous;TimeoutMinutes=$OfficeRefreshTimeoutMinutes}
@@ -402,7 +451,7 @@ try {
                     $versionChanged = ($previous -ne $version)
                     Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps content is ready for installation.' -Data @{Id='Microsoft365Apps';Version=$version;CacheSynchronized=[bool]$usbRoot;VersionChanged=$versionChanged;SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {
-                    if(Test-LocalOfficeSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Microsoft365Apps';Fallback='ExistingStagedPayload'};continue}
+                    if(Test-LocalOfficeSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Microsoft365Apps';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft 365 Apps acquisition failed and no staged fallback is available. $($_.Exception.Message)"
                 }
             }
@@ -410,6 +459,7 @@ try {
                 $localRoot=Join-Path $StagedPath 'BuiltIn\MicrosoftTeams'; New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
                 $acquireRoot=if($usbRoot){Join-Path $usbRoot 'BuiltIn\MicrosoftTeams'}else{$localRoot}; New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
                 if($usbRoot -and -not (Test-LocalMicrosoftTeamsSource -Root $localRoot) -and (Test-LocalMicrosoftTeamsSource -Root $acquireRoot)){
+                    Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $acquireRoot 'teamsbootstrapper.exe')
                     Copy-Item -LiteralPath (Join-Path $acquireRoot 'teamsbootstrapper.exe') -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force
                     Copy-Item -LiteralPath (Join-Path $acquireRoot 'teams.msix') -Destination (Join-Path $localRoot 'teams.msix') -Force
                     if(Test-Path -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -PathType Leaf){Copy-Item -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
@@ -417,7 +467,7 @@ try {
                 }
 
                 if(-not $networkAvailable){
-                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='MicrosoftTeams'};continue}
+                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='MicrosoftTeams'};continue}
                     throw 'Microsoft Teams has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
                 try {
@@ -430,14 +480,15 @@ try {
                     $remote=Get-RemoteMetadata -Uri $msixUri; $matches=$false
                     if((Test-Path -LiteralPath $msixPath -PathType Leaf) -and $cacheInfo){if($remote.ETag -and $cacheInfo.RemoteETag){$matches=$remote.ETag -eq [string]$cacheInfo.RemoteETag}elseif($remote.LastModified -and $cacheInfo.RemoteLastModified -and $remote.ContentLength -and $cacheInfo.RemoteContentLength){$matches=($remote.LastModified -eq [string]$cacheInfo.RemoteLastModified -and [int64]$remote.ContentLength -eq [int64]$cacheInfo.RemoteContentLength)}}
                     $tempRoot=Join-Path $StagedPath 'Work\Refresh\MicrosoftTeams'; New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
-                    $tempBootstrapper=Join-Path $tempRoot 'teamsbootstrapper.exe'; Save-PreInstallDownload -Uri $bootstrapperUri -DestinationPath $tempBootstrapper -Id 'MicrosoftTeams' -Description 'Microsoft Teams bootstrapper' -TimeoutMinutes 5; Copy-Item -LiteralPath $tempBootstrapper -Destination $bootstrapperPath -Force
+                    $tempBootstrapper=Join-Path $tempRoot 'teamsbootstrapper.exe'; Save-PreInstallDownload -Uri $bootstrapperUri -DestinationPath $tempBootstrapper -Id 'MicrosoftTeams' -Description 'Microsoft Teams bootstrapper' -TimeoutMinutes 5; Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path $tempBootstrapper; Copy-Item -LiteralPath $tempBootstrapper -Destination $bootstrapperPath -Force
+                    Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path $bootstrapperPath
                     $updated=$false
                     if(-not $matches){$tempMsix=Join-Path $tempRoot 'teams.msix';Save-PreInstallDownload -Uri $msixUri -DestinationPath $tempMsix -Id 'MicrosoftTeams' -Description "Microsoft Teams $architecture MSIX" -TimeoutMinutes 15;$version=Get-MicrosoftTeamsPackageVersion -Path $tempMsix;Copy-Item -LiteralPath $tempMsix -Destination $msixPath -Force;$updated=$true}else{$version=if($cacheInfo -and $cacheInfo.Version){[string]$cacheInfo.Version}else{Get-MicrosoftTeamsPackageVersion -Path $msixPath}}
                     [ordered]@{Id='MicrosoftTeams';Cached=[bool]$usbRoot;Version=$version;Architecture=$architecture;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';Updated=$updated;BootstrapperUri=$bootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified;RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
                     if($usbRoot){Copy-Item -LiteralPath $bootstrapperPath -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force;Copy-Item -LiteralPath $msixPath -Destination (Join-Path $localRoot 'teams.msix') -Force;Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
                     Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='MicrosoftTeams';Version=$version;PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {
-                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='MicrosoftTeams';Fallback='ExistingStagedPayload'};continue}
+                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='MicrosoftTeams';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft Teams acquisition failed and no staged fallback is available. $($_.Exception.Message)"
                 }
             }
