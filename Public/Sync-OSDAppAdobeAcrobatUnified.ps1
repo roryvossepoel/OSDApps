@@ -62,10 +62,14 @@ function Sync-OSDAppAdobeAcrobatUnified {
         $updated = $true
     }
 
-    [ordered]@{
+    $inspectedVersion = Get-OSDAppCachedPackageVersion -Id 'AdobeAcrobatUnified' -CacheEntryPath $root
+    $resolvedVersion = if ($inspectedVersion.Version) { [string]$inspectedVersion.Version } else { 'Current' }
+
+     [ordered]@{
         Id                  = 'AdobeAcrobatUnified'
         Cached              = $true
-        Version             = 'Current'
+        Version             = $resolvedVersion
+        VersionSource       = $inspectedVersion.VersionSource
         Architecture        = $Architecture
         SourcePolicy        = 'Evergreen'
         SyncMethod          = 'HttpMetadata'
@@ -87,7 +91,7 @@ function Sync-OSDAppAdobeAcrobatUnified {
     [pscustomobject]@{
         PSTypeName='OSDApps.BuiltInCache'
         Id='AdobeAcrobatUnified'
-        Version='Current'
+        Version=$resolvedVersion
         Architecture=$Architecture
         CachePath=$root
         Cached=$true
