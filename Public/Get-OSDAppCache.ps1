@@ -114,7 +114,7 @@ function Get-OSDAppCache {
                 # Valid still describes required file presence, never signer trust.
                 $signature = $null
                 if ($VerifySignatures -and $payloadValid) {
-                    $signature = Get-OSDAppBuiltInSignature -Id ([string]$info.Id) -CacheEntryPath $entryRoot
+                    $signature = Get-OSDAppBuiltInSignature -Id ([string]$info.Id) -CacheEntryPath $entryRoot -CheckPublisher
                 }
 
                 $results.Add([pscustomobject]@{
