@@ -154,3 +154,7 @@ Stage apps as usual using the OSDApps **CLI**, after OSDCloud has applied Window
 Replace the drive letter with the actual OSDCloud USB path. Do not use -TestMode in WinPE; it targets the previous Windows 11 temporary test folder and is intended only for full-Windows preview.
 
 Confirm that the target Windows volume is detected, that DeviceManifest.json and SetupComplete.cmd are present, that staged app count/source/order match the CLI, and that Cache and Logs can be opened without changing the device. Start without -VerifySignatures in WinPE, because Authenticode checks are not supported there and trust-provider dependencies may be unavailable. If a suitable WinPE image lacks Windows Forms, capture the error; the GUI requires Windows Forms, PowerShell and .NET optional components. Only proceed to reboot/install after closing the read-only inspection window.
+
+## Display terminology (GUI)
+
+The human-readable column is labeled **Display Name** in Staged for device, Apps, and Cache. The full application identifier (`Id`) remains unchanged in the manifest and CLI. The former Applications tab is now **Apps**; this is a presentation-only name change. **Vendor** is visible in both Staged for device and Apps and comes from the resolved built-in or repository metadata. The Cache tab remains compact, without an extra Vendor column. The original staging order in DeviceManifest.json is not modified, including when the screen table is sorted by a different column.
