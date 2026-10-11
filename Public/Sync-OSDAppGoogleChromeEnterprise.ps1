@@ -61,10 +61,14 @@ function Sync-OSDAppGoogleChromeEnterprise {
         $updated = $true
     }
 
-    [ordered]@{
+    $inspectedVersion = Get-OSDAppCachedPackageVersion -Id 'GoogleChromeEnterprise' -CacheEntryPath $root
+    $resolvedVersion = if ($inspectedVersion.Version) { [string]$inspectedVersion.Version } else { 'Current' }
+
+     [ordered]@{
         Id                  = 'GoogleChromeEnterprise'
         Cached              = $true
-        Version             = 'Current'
+        Version             = $resolvedVersion
+        VersionSource       = $inspectedVersion.VersionSource
         Architecture        = $Architecture
         SourcePolicy        = 'Evergreen'
         SyncMethod          = 'HttpMetadata'
@@ -82,7 +86,7 @@ function Sync-OSDAppGoogleChromeEnterprise {
     [pscustomobject]@{
         PSTypeName='OSDApps.BuiltInCache'
         Id='GoogleChromeEnterprise'
-        Version='Current'
+        Version=$resolvedVersion
         Architecture=$Architecture
         CachePath=$root
         Cached=$true
