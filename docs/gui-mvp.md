@@ -1,19 +1,18 @@
-# OSDApps Viewer – read-only device inspector (development preview)
+# OSDApps Viewer – read-only device inspector
 
 OSDApps is CLI-first. **All configuration, package acquisition, cache changes,
 staging, unstaging, and automation must be performed through PowerShell cmdlets
 and existing orchestration.** The GUI is a read-only inspection tool only.
 
-The GUI is available on the development branch in PR #14; it is not yet in
-the stable 0.33.0 PowerShell Gallery release. It has no organization-specific
-repository URL or deployment profile presets.
+The read-only Viewer is introduced with OSDApps 0.34.0. It has no
+organization-specific repository URL or deployment profile presets.
 
 ## Four read-only tabs
 
 | Tab | Purpose | Data source |
 | --- | --- | --- |
 | Staged for device | Exactly what is queued for SetupComplete, in manifest order, including source and details | DeviceManifest.json on selected Windows target |
-| Applications | Built-in and repository applications, their availability and staged status | Get-OSDApp and the staged manifest |
+| Apps | Built-in and repository applications, their availability and staged status | Get-OSDApp and the staged manifest |
 | Cache | Cached built-in and repository packages, sizes and validation status | Get-OSDAppCache on the OSDCloud volume |
 | Logs | Last 500 lines from existing logs shown in a structured, read-only table | Existing log files only |
 
@@ -50,15 +49,16 @@ reading existing logs and **Close**.
 ## On WinPE
 
 After the OSDCloud CLI deployment has applied Windows and staged applications,
-load the same development module and run:
+load OSDApps 0.34.0 and run:
 
     powershell.exe -STA -NoProfile
     Import-Module 'E:\Modules\OSDApps\OSDApps.psd1' -Force
     Show-OSDAppUI -Offline
 
 The exact USB drive letter can vary. A WinPE image must include the required
-PowerShell, Windows Forms and .NET components. This runtime must still be
-manually validated on a WinPE device.
+PowerShell, Windows Forms and .NET components. The read-only Viewer was
+validated on two x64 WinPE test PCs; other WinPE builds and architectures
+must provide the same prerequisites.
 
 ## Important distinctions
 
@@ -145,7 +145,7 @@ The Cache Architecture column is wide enough to show its full header at the stan
 
 ## Consistent application names and Vendor
 
-The GUI displays the human-readable DisplayName for staging, Applications and Cache, using the built-in metadata file when a cache entry only supplies a technical ID. The underlying CLI package Id and manifest order are never changed. Applications has a separate read-only Vendor column. For built-ins Vendor is sourced from metadata/builtins.json; for repository apps Vendor is only shown when the repository catalog/cache entry actually provides it. If unknown, it displays '-'. The Cache tab also shows Vendor, sourced from the same available built-in or repository metadata, using responsive widths and horizontal scrolling only when the viewport becomes too narrow. Staged application details show Vendor where known.
+The GUI displays the human-readable DisplayName for Staged for device, Apps and Cache, using the built-in metadata file when a cache entry only supplies a technical ID. The underlying CLI package Id and manifest order are never changed. Apps has a separate read-only Vendor column. For built-ins Vendor is sourced from metadata/builtins.json; for repository apps Vendor is only shown when the repository catalog/cache entry actually provides it. If unknown, it displays '-'. The Cache tab also shows Vendor, sourced from the same available built-in or repository metadata, using responsive widths and horizontal scrolling only when the viewport becomes too narrow. Staged application details show Vendor where known.
 
 ## First field test with two WinPE PCs
 
@@ -179,4 +179,4 @@ On full Windows, the built-in MSI/EXE synchronization cmdlets for Google Chrome,
 
 The standalone SetupComplete PreInstall script (which runs independently of the PowerShell module) now validates the MSI and EXE before refreshing or using cached payloads; it also rejects an unsigned or unexpected-publisher fallback. This is intentionally fail-closed for signable installer types: Windows trust-store or revocation problems can therefore prevent installation until a trustworthy package is available. These checks do **not** by themselves verify the entire Microsoft 365 Apps data tree or the Teams MSIX package. The outer Adobe Acrobat ZIP remains *Not assessed* for Authenticode and is not presented as signature-valid. Repository ZIPs remain SHA-256-validated against their manifests.
 
-The version of OSDApps Viewer is still a development preview until real Windows signature tests and full WinPE/SetupComplete regression tests are confirmed. Existing stable 0.33.0 remains unchanged.
+Release-candidate field validation on 11 October 2026 confirmed Windows 11 signature-status inspection, read-only WinPE Viewer behavior on two x64 PCs, and eight-app SetupComplete installations from both an initially empty online USB cache and an offline populated USB cache. See [validation details](testing.md#osdapps-0340-release-candidate-physical-validation--11-october-2026). These checks do not guarantee behavior on every WinPE image, hardware architecture or certificate trust configuration.
