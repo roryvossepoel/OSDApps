@@ -47,7 +47,10 @@ function Sync-OSDAppMicrosoftTeams {
     }
 
     Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Status 'Downloading bootstrapper...' -PercentComplete 10
-    Save-OSDAppDownload -Uri $BootstrapperUri -DestinationPath $bootstrapperPath -Activity 'Downloading Microsoft Teams bootstrapper' -ProgressId 11 -ParentProgressId 10 | Out-Null
+    Save-OSDAppVerifiedBuiltInDownload -Id 'MicrosoftTeams' -Uri $BootstrapperUri -DestinationPath $bootstrapperPath -Activity 'Downloading Microsoft Teams bootstrapper' -ProgressId 11 -ParentProgressId 10 | Out-Null
+
+    # Validate the cached installer before it can be launched or reused.
+    Assert-OSDAppBuiltInSignature -Id 'MicrosoftTeams' -FilePath $bootstrapperPath | Out-Null
 
     if ($metadataMatches) {
         $resolvedVersion = [string]$previousCacheInfo.Version
