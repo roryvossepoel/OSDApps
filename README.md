@@ -133,6 +133,39 @@ Module/cache log:
 <OSDCloud>:\OSDApps\Logs\Client.log
 ```
 
+## OSDApps Viewer (0.34.0 development preview)
+
+The optional `Show-OSDAppUI` opens a **read-only** Windows Forms viewer
+for staged deployment intent, built-in/repository app metadata, USB cache
+and recent client/runtime logs. The CLI remains responsible for application
+selection, configuration, acquisition, cache refresh, and staging.
+
+```powershell
+# Review the prepared offline Windows target in WinPE
+Show-OSDAppUI -Offline
+
+# Inspect the Windows 11 temporary test target without altering it
+Show-OSDAppUI -TestMode -Offline
+```
+
+On **full Windows**, the viewer now validates Authenticode signatures and expected
+publisher organization of supported built-in MSI/EXE files by default.
+In **WinPE** it reports that Windows signature verification is unavailable.
+`-Offline` disables online repository lookup but does not necessarily prevent
+certificate trust/revocation network traffic on full Windows; to disable
+signature checks deliberately use `-SkipSignatureVerification`.
+
+The public CLI `Get-OSDAppCache` still supports explicit
+`-VerifySignatures`, independent of normal file-presence and repository
+SHA-256 checks. Full-Windows built-in MSI/EXE sync and standalone SetupComplete
+PreInstall now enforce expected publisher signatures before promoting or using
+installer files. Scope: Office setup.exe and the Teams bootstrapper are checked,
+not the whole Office tree or Teams MSIX; Adobe's outer ZIP is not assessed.
+
+**This feature is currently in draft PR #14 and not yet in the stable 0.33.0
+PowerShell Gallery release.** See [Viewer documentation](docs/gui-mvp.md)
+for supported and unsupported trust checks and the release-validation plan.
+
 ## Built-in applications
 
 Current built-ins:
