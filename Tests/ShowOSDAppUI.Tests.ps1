@@ -153,4 +153,70 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
             (Get-OSDAppConfiguration).CatalogUri.AbsoluteUri | Should -Be 'https://example.org/catalog.json'
         }
     }
+    It 'shows Current for all built-in version policies regardless of cached version' {
+        InModuleScope OSDApps {
+            $builtin = [pscustomobject]@{ Id='Microsoft365Apps'; Source='BuiltIn'; Version='16.0.20430.20146' }
+            (Get-OSDAppUIDisplayVersion -Application $builtin) | Should -Be 'Current'
+            $staged = [pscustomobject]@{ Id='MicrosoftTeams'; Source='BuiltIn'; Version=$null }
+            (Get-OSDAppUIDisplayVersion -Application $staged) | Should -Be 'Current'
+            $repo = [pscustomobject]@{ Id='NotepadPlusPlus'; Source='Repository'; Version='8.9.8.1' }
+            (Get-OSDAppUIDisplayVersion -Application $repo) | Should -Be '8.9.8.1'
+        }
+    }
+
+    It 'displays an actual valid USB cache version without confusing it with Current' {
+        InModuleScope OSDApps {
+            $app = [pscustomobject]@{ Id='Microsoft365Apps';Source='BuiltIn' }
+            $cache = @([pscustomobject]@{Id='Microsoft365Apps';Source='BuiltIn';Version='16.0.20430.20146';Valid=$true})
+            (Get-OSDAppUICachedVersion -Application $app -CacheEntries $cache) | Should -Be '16.0.20430.20146'
+            $cache[0].Version = 'Current'
+            (Get-OSDAppUICachedVersion -Application $app -CacheEntries $cache) | Should -Be 'Not recorded'
+            $cache[0].Valid = $false
+            (Get-OSDAppUICachedVersion -Application $app -CacheEntries $cache) | Should -Be '-'
+        }
+    }
+
+    It 'uses non-ambiguous USB cache labels without altering the CLI output' {
+        InModuleScope OSDApps {
+            (Get-OSDAppUIAvailabilityLabel -Availability 'Cached') | Should -Be 'USB cached'
+            (Get-OSDAppUIAvailabilityLabel -Availability 'CachedOnly') | Should -Be 'USB cached (offline)'
+            (Get-OSDAppUIAvailabilityLabel -Availability 'InvalidCache') | Should -Be 'USB cache invalid'
+            (Get-OSDAppUIAvailabilityLabel -Availability 'Online') | Should -Be 'Online only'
+        }
+    }
+
+    It 'parses CMTrace OSDApps log line into timestamp, level, component and readable message' {
+        InModuleScope OSDApps {
+            $raw = '<![LOG[[StageComplete] Package staged. | Architecture=x64]LOG]!><time="05:44:09.324+00" date="10-10-2026" component="" context="" type="1" thread="" file="">'
+            $entry = ConvertFrom-OSDAppUILogLine -Line $raw
+            $entry.Timestamp | Should -Be '10-10-2026 05:44:09.324+00'
+            $entry.Level | Should -Be 'Info'
+            $entry.Component | Should -Be 'StageComplete'
+            $entry.Message | Should -Match 'Package staged'
+            $entry.Raw | Should -Be $raw
+        }
+    }
+
+    It 'preserves plain text log lines and recognizes warning and error severity' {
+        InModuleScope OSDApps {
+            $plain = ConvertFrom-OSDAppUILogLine -Line 'Plain text log'
+            $plain.Message | Should -Be 'Plain text log'
+            $plain.Timestamp | Should -Be ''
+            $warning = ConvertFrom-OSDAppUILogLine -Line '<![LOG[Disk nearly full]LOG]!><time="08:00:00" date="11-10-2026" component="Cache" type="2">'
+            $warning.Level | Should -Be 'Warning'
+            $warning.Component | Should -Be 'Cache'
+            $error = ConvertFrom-OSDAppUILogLine -Line '<![LOG[Failed]LOG]!><time="08:00:00" date="11-10-2026" component="Runner" type="3">'
+            $error.Level | Should -Be 'Error'
+        }
+    }
+
+    It 'read-only UI declares a search control and header-sort handlers without invoking staging' {
+        $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
+        $source | Should -Match 'Add_TextChanged'
+        $source | Should -Match 'Add_ColumnClick'
+        $source | Should -Match 'Show-OSDAppUIRows'
+        $source | Should -Not -Match '(?i)\bSet-OSDAppConfiguration\b'
+        $source | Should -Not -Match '(?i)\bRemove-OSDAppStaging\b'
+    }
+
 }
