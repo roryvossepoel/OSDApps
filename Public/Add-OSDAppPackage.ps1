@@ -19,18 +19,20 @@ function Add-OSDAppPackage {
         throw 'Package validation failed. Package.zip must contain Package/Install.ps1.'
     }
 
-    if (-not (Test-Path -LiteralPath (Join-Path $RepositoryPath 'catalog.json') -PathType Leaf)) {
-        New-OSDAppRepository -Path $RepositoryPath -Confirm:$false | Out-Null
-    }
-
     $targetFolder = Join-Path $RepositoryPath (Join-Path 'Apps' (Join-Path $Id (Join-Path $Version $Architecture)))
     $targetPackage = Join-Path $targetFolder 'Package.zip'
     $targetManifest = Join-Path $targetFolder 'manifest.json'
 
-    if ($PSCmdlet.ShouldProcess($targetFolder, "Publish $Id $Version ($Architecture)")) {
-        New-Item -ItemType Directory -Path $targetFolder -Force | Out-Null
-        Copy-Item -LiteralPath $PackagePath -Destination $targetPackage -Force
+    if (-not $PSCmdlet.ShouldProcess($targetFolder, "Publish $Id $Version ($Architecture)")) {
+        return
     }
+
+    if (-not (Test-Path -LiteralPath (Join-Path $RepositoryPath 'catalog.json') -PathType Leaf)) {
+        New-OSDAppRepository -Path $RepositoryPath -Confirm:$false | Out-Null
+    }
+
+    New-Item -ItemType Directory -Path $targetFolder -Force | Out-Null
+    Copy-Item -LiteralPath $PackagePath -Destination $targetPackage -Force
 
     $hash = (Get-FileHash -LiteralPath $targetPackage -Algorithm SHA256).Hash
 
@@ -53,11 +55,9 @@ function Add-OSDAppPackage {
         $packageManifest['Vendor'] = $Vendor.Trim()
     }
 
-    if ($PSCmdlet.ShouldProcess($targetManifest, 'Write package manifest')) {
-        $packageManifest |
-            ConvertTo-Json -Depth 20 |
-            Set-Content -LiteralPath $targetManifest -Encoding UTF8
-    }
+    $packageManifest |
+        ConvertTo-Json -Depth 20 |
+        Set-Content -LiteralPath $targetManifest -Encoding UTF8
 
     $catalog = Get-OSDAppRepositoryManifest -RepositoryPath $RepositoryPath
     $existingApplication = @($catalog.Applications | Where-Object { $_.Id -eq $Id } | Select-Object -First 1)
