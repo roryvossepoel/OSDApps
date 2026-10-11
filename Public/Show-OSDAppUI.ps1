@@ -12,14 +12,14 @@ function Set-OSDAppUIColumnWidths {
     # Application / Message absorb remaining space on window resize.
     $fixed = switch ($Key) {
         'Staged'       { @(65,0,100,128,190,100) }
-        'Applications' { @(0,84,100,108,190,82,124,92) }
+        'Applications' { @(0,75,90,110,175,100,100,90) }
         'Cache'        { @(0,90,155,110,125,80,150) }
         'Logs'         { @(185,78,135,125,0) }
     }
     $flexIndex = if ($Key -in @('Staged','Applications','Cache')) {
         if ($Key -eq 'Staged') { 1 } else { 0 }
     } else { 4 }
-    $minimumFlex = if ($Key -eq 'Logs') { 270 } else { 200 }
+    $minimumFlex = if ($Key -eq 'Logs') { 270 } elseif ($Key -eq 'Applications') { 180 } else { 200 }
     $reserved = 0
     foreach ($width in $fixed) { $reserved += [int]$width }
     $available = [math]::Max(0,$list.ClientSize.Width - 22)
