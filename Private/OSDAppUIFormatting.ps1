@@ -19,9 +19,26 @@ function Get-OSDAppUICachedVersion {
     $id = [string]$Application.Id
     $ids = if ($id -eq 'MicrosoftTeams') { @('MicrosoftTeams','Teams') } else { @($id) }
     $matches = @($CacheEntries | Where-Object { [string]$_.Id -in $ids -and $_.Valid -and -not [string]::IsNullOrWhiteSpace([string]$_.Version) })
+
+    # Never show the version from another architecture or channel as though
+    # it belongs to the staged application.
+    $architecture = [string]$Application.Architecture
+    if ($architecture -and $architecture -notin @('Auto','Any')) {
+        $matches = @($matches | Where-Object { [string]$_.Architecture -eq $architecture })
+    }
+    $channel = [string]$Application.Channel
+    if ($channel) {
+        $matches = @($matches | Where-Object { -not $_.Channel -or [string]$_.Channel -eq $channel })
+    }
     if ($matches.Count -eq 0) { return '-' }
+    if ($matches.Count -gt 1 -and $architecture -in @('','Auto','Any')) {
+        # Multiple architecture variants without an explicit target are ambiguous.
+        $variants = @($matches.Architecture | Sort-Object -Unique)
+        if ($variants.Count -gt 1) { return '-' }
+    }
     $version = [string]$matches[0].Version
     if ($version -eq 'Current') { return 'Not recorded' }
+    if ([string]$matches[0].VersionSource -eq 'AdobePatchFileName') { return "$version (MSP)" }
     return $version
 }
 
