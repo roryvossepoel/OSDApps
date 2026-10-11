@@ -142,4 +142,53 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
         $source | Should -Not -Match '(?i)\bSet-OSDAppConfiguration\b'
         $source | Should -Not -Match '(?i)\bRemove-OSDAppStaging\b'
     }
+    It 'automatically requests Authenticode verification for full Windows Viewer snapshots' {
+        InModuleScope OSDApps {
+            Mock Get-OSDApp { }
+            Mock Get-OSDAppCachePath { throw 'USB not attached' }
+            Mock Test-OSDAppWinPE { $false }
+            Mock Get-OSDAppCache { }
+            Get-OSDAppUIReadOnlySnapshot -Offline | Out-Null
+            Should -Invoke Get-OSDAppCache -Exactly 1 -ParameterFilter {
+                $VerifySignatures -eq $true -and $ResolveVersions -eq $true
+            }
+        }
+    }
+
+    It 'skips Authenticode only when explicitly requested, but still resolves cached versions' {
+        InModuleScope OSDApps {
+            Mock Get-OSDApp { }
+            Mock Get-OSDAppCachePath { throw 'USB not attached' }
+            Mock Test-OSDAppWinPE { $false }
+            Mock Get-OSDAppCache { }
+            Get-OSDAppUIReadOnlySnapshot -Offline -SkipSignatureVerification | Out-Null
+            Should -Invoke Get-OSDAppCache -Exactly 1 -ParameterFilter {
+                $VerifySignatures -eq $false -and $ResolveVersions -eq $true
+            }
+        }
+    }
+
+    It 'reports signatures as unavailable in WinPE without trying to resolve MSI versions' {
+        InModuleScope OSDApps {
+            Mock Get-OSDApp { }
+            Mock Get-OSDAppCachePath { throw 'USB not attached' }
+            Mock Test-OSDAppWinPE { $true }
+            Mock Get-OSDAppCache { }
+            Get-OSDAppUIReadOnlySnapshot -Offline | Out-Null
+            Should -Invoke Get-OSDAppCache -Exactly 1 -ParameterFilter {
+                $VerifySignatures -eq $true -and $ResolveVersions -eq $false
+            }
+        }
+    }
+
+    It 'shows an explicit warning for publisher mismatch in the read-only cache' {
+        InModuleScope OSDApps {
+            (Get-OSDAppUISignatureLabel -Status PublisherMismatch -Source BuiltIn) |
+                Should -Be 'Wrong publisher'
+        }
+        $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
+        $source | Should -Match "SignatureStatus -in @\('NotSigned'"
+        $source | Should -Match 'Firebrick'
+    }
+
 }
