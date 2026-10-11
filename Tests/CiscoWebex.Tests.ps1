@@ -177,6 +177,11 @@ Describe 'Cisco Webex built-in MSI integration' {
             Mock Save-OSDAppDownload {
                 Set-Content -LiteralPath $DestinationPath -Value 'Cisco Webex MSI fixture' -Encoding Ascii
             }
+            # Synthetic MSI fixtures are not authenticode-signed. Trust policy
+            # is exercised in TrustedPublisher.Tests.ps1 instead.
+            Mock Assert-OSDAppBuiltInSignature {
+                [pscustomobject]@{ Status='Valid'; PublisherMatches=$true }
+            }
 
             $cold = Sync-OSDAppCiscoWebex -Architecture x64
             $warm = Sync-OSDAppCiscoWebex -Architecture x64
