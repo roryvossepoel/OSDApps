@@ -1,3 +1,38 @@
+function Set-OSDAppUIColumnWidths {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][hashtable]$State,
+        [Parameter(Mandatory)][ValidateSet('Staged','Applications','Cache','Logs')][string]$Key
+    )
+
+    $list = $State.Lists[$Key]
+    if (-not $list -or $list.Columns.Count -eq 0) { return }
+
+    # Reserve enough room for Teams' four-part package version, and let
+    # Application / Message absorb remaining space on window resize.
+    $fixed = switch ($Key) {
+        'Staged'       { @(65,0,100,128,190,100) }
+        'Applications' { @(0,92,108,190,90,135,95) }
+        'Cache'        { @(0,105,190,95,155,100) }
+        'Logs'         { @(185,78,135,125,0) }
+    }
+    $flexIndex = if ($Key -in @('Staged','Applications','Cache')) {
+        if ($Key -eq 'Staged') { 1 } else { 0 }
+    } else { 4 }
+    $minimumFlex = if ($Key -eq 'Logs') { 270 } else { 200 }
+    $reserved = 0
+    foreach ($width in $fixed) { $reserved += [int]$width }
+    $available = [math]::Max(0,$list.ClientSize.Width - 22)
+    $flexWidth = [math]::Max($minimumFlex,$available - $reserved)
+
+    for ($i=0; $i -lt $fixed.Count -and $i -lt $list.Columns.Count; $i++) {
+        $width = if ($i -eq $flexIndex) { $flexWidth } else { [int]$fixed[$i] }
+        if ($width -gt 0 -and $list.Columns[$i].Width -ne $width) {
+            $list.Columns[$i].Width = $width
+        }
+    }
+}
+
 function Show-OSDAppUIRows {
     [CmdletBinding()]
     param(
@@ -80,6 +115,7 @@ function Update-OSDAppUILogViewer {
                 $item = [System.Windows.Forms.ListViewItem]::new([string]$entry.Timestamp)
                 [void]$item.SubItems.Add([string]$entry.Level)
                 [void]$item.SubItems.Add([string]$entry.Component)
+                [void]$item.SubItems.Add([string]$entry.Event)
                 [void]$item.SubItems.Add([string]$entry.Message)
                 if ($entry.Level -eq 'Error') {
                     $item.ForeColor = [System.Drawing.Color]::Firebrick
@@ -95,6 +131,7 @@ function Update-OSDAppUILogViewer {
         $State.Rows['Logs'] = $items
         $State.LogInfo.Text = "$($entries.Count) recent log lines | $path | Read-only"
         Show-OSDAppUIRows -State $State -Key Logs
+        Set-OSDAppUIColumnWidths -State $State -Key Logs
     }
     catch {
         $State.LogInfo.Text = "Cannot read log: $($_.Exception.Message)"
@@ -178,6 +215,7 @@ function Update-OSDAppUIReadOnlyView {
 
     foreach ($key in @('Staged','Applications','Cache')) {
         Show-OSDAppUIRows -State $State -Key $key
+        Set-OSDAppUIColumnWidths -State $State -Key $key
     }
 
     $State.LogFiles.Items.Clear()
@@ -201,7 +239,7 @@ function Update-OSDAppUIReadOnlyView {
     $setupStatus = if ($data.SetupCompleteExists) { 'Present' } else { 'Not found' }
     $State.StagedInfo.Text = "Pending SetupComplete: $stagedCount apps ($builtInCount built-in, $repositoryCount repository) | SetupComplete.cmd: $setupStatus | Sort: view only"
     $State.CacheInfo.Text = if ($data.CachePath) {
-        "USB volume: $($data.CachePath) | $(@($data.CacheEntries).Count) entries | Separate from device staging"
+        "USB: $($data.CachePath) | $(@($data.CacheEntries).Count) entries | Integrity: repo SHA-256 / built-ins file check"
     } else {
         'USB cache: not connected / not found. No cache files were changed.'
     }
@@ -329,7 +367,11 @@ function Show-OSDAppUI {
     $repositoryLabel.SetBounds(20,107,900,23)
     $repositoryLabel.Anchor = 'Top,Left,Right'
     $catalogUri = (Get-OSDAppConfiguration).CatalogUri
-    $repositoryLabel.Text = if ($catalogUri) { "Configured repository: $($catalogUri.AbsoluteUri)" } else { 'Repository not configured in the current PowerShell session' }
+    $repositoryLabel.Text = if ($Offline) {
+        'Catalog: Offline mode (not queried) | USB cache and local staging only'
+    }
+    elseif ($catalogUri) { "Configured repository: $($catalogUri.AbsoluteUri)" }
+    else { 'Repository not configured in the current PowerShell session' }
     $header.Controls.Add($repositoryLabel)
 
     $searchPanel = [System.Windows.Forms.TableLayoutPanel]::new()
@@ -463,10 +505,11 @@ function Show-OSDAppUI {
     $logList.MultiSelect = $false
     $logList.GridLines = $true
     $logList.ShowItemToolTips = $true
-    [void]$logList.Columns.Add('Timestamp',180)
-    [void]$logList.Columns.Add('Level',85)
-    [void]$logList.Columns.Add('Component',145)
-    [void]$logList.Columns.Add('Message',490)
+    [void]$logList.Columns.Add('Timestamp',185)
+    [void]$logList.Columns.Add('Level',78)
+    [void]$logList.Columns.Add('Component',135)
+    [void]$logList.Columns.Add('Event',125)
+    [void]$logList.Columns.Add('Message',420)
     [void]$logsLayout.Controls.Add($logList,0,2)
     $logDetails = [System.Windows.Forms.TextBox]::new()
     $logDetails.Multiline = $true
@@ -527,7 +570,7 @@ function Show-OSDAppUI {
         $state=$script:OSDAppUIState
         if (-not $state -or $state.LogList.SelectedItems.Count -eq 0) { return }
         $entry=$state.LogList.SelectedItems[0].Tag
-        $state.LogDetails.Text = "Time: $($entry.Timestamp) | Level: $($entry.Level) | Component: $($entry.Component)" +
+        $state.LogDetails.Text = "Time: $($entry.Timestamp) | Level: $($entry.Level) | Component: $($entry.Component) | Event: $($entry.Event)" +
             [Environment]::NewLine + [Environment]::NewLine + [string]$entry.Message
     })
     $searchBox.Add_TextChanged({
@@ -552,6 +595,22 @@ function Show-OSDAppUI {
     $logList.Add_ColumnClick({
         $state=$script:OSDAppUIState
         if ($state) { Set-OSDAppUIListSort -State $state -Key Logs -Column $_.Column }
+    })
+    $stagedList.Add_ClientSizeChanged({
+        $state = $script:OSDAppUIState
+        if ($state) { Set-OSDAppUIColumnWidths -State $state -Key Staged }
+    })
+    $catalogList.Add_ClientSizeChanged({
+        $state = $script:OSDAppUIState
+        if ($state) { Set-OSDAppUIColumnWidths -State $state -Key Applications }
+    })
+    $cacheList.Add_ClientSizeChanged({
+        $state = $script:OSDAppUIState
+        if ($state) { Set-OSDAppUIColumnWidths -State $state -Key Cache }
+    })
+    $logList.Add_ClientSizeChanged({
+        $state = $script:OSDAppUIState
+        if ($state) { Set-OSDAppUIColumnWidths -State $state -Key Logs }
     })
     $refresh.Add_Click({
         $state = $script:OSDAppUIState
