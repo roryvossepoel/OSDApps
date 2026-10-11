@@ -232,6 +232,10 @@ function Update-OSDAppUIReadOnlyView {
             [void]$item.SubItems.Add($integrity)
             [void]$item.SubItems.Add($(if ($null -ne $entry.SizeMB) { "$($entry.SizeMB) MB" } else { '-' }))
             [void]$item.SubItems.Add((Get-OSDAppUISignatureLabel -Status ([string]$entry.SignatureStatus) -Source ([string]$entry.Source)))
+            if ([string]$entry.Source -eq 'BuiltIn' -and
+                [string]$entry.SignatureStatus -in @('NotSigned','NotTrusted','HashMismatch','PublisherMismatch','Check failed','File missing','UnknownError')) {
+                $item.ForeColor = [System.Drawing.Color]::Firebrick
+            }
             $item.ToolTipText = @(
                 "Integrity: $integrity"
                 "Signature: $($entry.SignatureStatus)"
