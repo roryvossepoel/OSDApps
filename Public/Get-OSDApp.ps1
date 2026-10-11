@@ -85,6 +85,7 @@ function Get-OSDApp {
             Name          = $id
             DisplayName   = if ($onlinePackage -and $onlinePackage.DisplayName) { $onlinePackage.DisplayName } elseif ($cachedPackage) { $cachedPackage.DisplayName } else { $id }
             Source        = 'Repository'
+            Vendor        = if ($onlinePackage -and $onlinePackage.Vendor) { [string]$onlinePackage.Vendor } elseif ($cachedPackage -and $cachedPackage.Vendor) { [string]$cachedPackage.Vendor } else { $null }
             OnlineVersion = if ($onlinePackage) { $onlinePackage.Version } else { $null }
             CachedVersion = if ($cachedPackage) { $cachedPackage.Version } else { $null }
             Version       = if ($cachedPackage) { $cachedPackage.Version } elseif ($onlinePackage) { $onlinePackage.Version } else { $null }
