@@ -45,22 +45,40 @@ function Get-OSDAppUIDisplayInfo {
     $id = [string]$Application.Id
     $display = [string]$Application.DisplayName
     $vendor = [string]$Application.Vendor
-    $matched = @($CatalogApps | Where-Object { [string]$_.Id -eq $id } | Select-Object -First 1)
-    $builtIn = if ([string]$Application.Source -eq 'BuiltIn') {
-        @($BuiltInMetadata | Where-Object { [string]$_.Id -eq $id } | Select-Object -First 1)
-    } else { @() }
 
-    if ($matched.Count -gt 0) {
-        if (-not $display -or $display -eq $id) {
-            $display = [string]$matched[0].DisplayName
+    # PowerShell 5.1 can unwrap a single pipeline result to a scalar object.
+    # Do not depend on .Count and [0] on those results: a scalar PSCustomObject
+    # is not an array. Resolve candidates as objects with a plain foreach.
+    $catalogMatch = $null
+    foreach ($candidate in $CatalogApps) {
+        if ($null -ne $candidate -and
+            [string]::Equals([string]$candidate.Id, $id, [StringComparison]::OrdinalIgnoreCase)) {
+            $catalogMatch = $candidate
+            break
         }
-        if (-not $vendor) { $vendor = [string]$matched[0].Vendor }
     }
-    if ($builtIn.Count -gt 0) {
+
+    if ($null -ne $catalogMatch) {
         if (-not $display -or $display -eq $id) {
-            $display = [string]$builtIn[0].DisplayName
+            $candidateName = [string]$catalogMatch.DisplayName
+            if ($candidateName) { $display = $candidateName }
         }
-        if (-not $vendor) { $vendor = [string]$builtIn[0].Vendor }
+        if (-not $vendor) { $vendor = [string]$catalogMatch.Vendor }
+    }
+
+    if ([string]$Application.Source -eq 'BuiltIn') {
+        foreach ($candidate in $BuiltInMetadata) {
+            if ($null -eq $candidate -or
+                -not [string]::Equals([string]$candidate.Id, $id, [StringComparison]::OrdinalIgnoreCase)) {
+                continue
+            }
+            if (-not $display -or $display -eq $id) {
+                $candidateName = [string]$candidate.DisplayName
+                if ($candidateName) { $display = $candidateName }
+            }
+            if (-not $vendor) { $vendor = [string]$candidate.Vendor }
+            break
+        }
     }
 
     if (-not $display) { $display = $id }
