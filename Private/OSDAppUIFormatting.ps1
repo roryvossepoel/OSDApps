@@ -1,3 +1,56 @@
+function Get-OSDAppUIBuiltInMetadata {
+    [CmdletBinding()]
+    param()
+
+    $metadataPath = Join-Path $script:moduleRoot 'metadata\builtins.json'
+    if (-not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) { return @() }
+    try {
+        $metadata = Get-Content -LiteralPath $metadataPath -Raw -Encoding UTF8 |
+            ConvertFrom-Json -ErrorAction Stop
+        return @($metadata.Applications)
+    }
+    catch {
+        Write-Verbose "Built-in display metadata unavailable: $($_.Exception.Message)"
+        return @()
+    }
+}
+
+function Get-OSDAppUIDisplayInfo {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]$Application,
+        [object[]]$CatalogApps = @(),
+        [object[]]$BuiltInMetadata = @()
+    )
+
+    $id = [string]$Application.Id
+    $display = [string]$Application.DisplayName
+    $vendor = [string]$Application.Vendor
+    $matched = @($CatalogApps | Where-Object { [string]$_.Id -eq $id } | Select-Object -First 1)
+    $builtIn = if ([string]$Application.Source -eq 'BuiltIn') {
+        @($BuiltInMetadata | Where-Object { [string]$_.Id -eq $id } | Select-Object -First 1)
+    } else { @() }
+
+    if ($matched.Count -gt 0) {
+        if (-not $display -or $display -eq $id) {
+            $display = [string]$matched[0].DisplayName
+        }
+        if (-not $vendor) { $vendor = [string]$matched[0].Vendor }
+    }
+    if ($builtIn.Count -gt 0) {
+        if (-not $display -or $display -eq $id) {
+            $display = [string]$builtIn[0].DisplayName
+        }
+        if (-not $vendor) { $vendor = [string]$builtIn[0].Vendor }
+    }
+
+    if (-not $display) { $display = $id }
+    [pscustomobject]@{
+        DisplayName = $display
+        Vendor = if ($vendor) { $vendor } else { '-' }
+    }
+}
+
 function Get-OSDAppUIDisplayVersion {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Application)
