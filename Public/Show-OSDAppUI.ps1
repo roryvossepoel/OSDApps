@@ -157,7 +157,6 @@ function Update-OSDAppUIReadOnlyView {
             [void]$item.SubItems.Add($(if ($entry.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
             $cacheVersion = [string]$entry.Version
             if ([string]::IsNullOrWhiteSpace($cacheVersion) -or $cacheVersion -eq 'Current') { $cacheVersion = 'Not recorded' }
-            elseif ([string]$entry.VersionSource -eq 'AdobePatchFileName') { $cacheVersion += ' (MSP)' }
             [void]$item.SubItems.Add($cacheVersion)
             [void]$item.SubItems.Add([string]$entry.Architecture)
             $integrity = if (-not $entry.Valid) {
