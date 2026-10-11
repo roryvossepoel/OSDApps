@@ -179,7 +179,8 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
     It 'uses non-ambiguous USB cache labels without altering the CLI output' {
         InModuleScope OSDApps {
             (Get-OSDAppUIAvailabilityLabel -Availability 'Cached') | Should -Be 'USB cached'
-            (Get-OSDAppUIAvailabilityLabel -Availability 'CachedOnly') | Should -Be 'USB cached (offline)'
+            (Get-OSDAppUIAvailabilityLabel -Availability 'CachedOnly' -Offline) | Should -Be 'USB cached (offline)'
+            (Get-OSDAppUIAvailabilityLabel -Availability 'CachedOnly') | Should -Be 'USB cached (not in online catalog)'
             (Get-OSDAppUIAvailabilityLabel -Availability 'InvalidCache') | Should -Be 'USB cache invalid'
             (Get-OSDAppUIAvailabilityLabel -Availability 'Online') | Should -Be 'Online only'
         }
