@@ -1,3 +1,107 @@
+function Show-OSDAppUIRows {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][hashtable]$State,
+        [Parameter(Mandatory)][ValidateSet('Staged','Applications','Cache','Logs')][string]$Key
+    )
+
+    $view = $State.Lists[$Key]
+    $rows = @($State.Rows[$Key])
+    $needle = [string]$State.Search.Text
+    if (-not [string]::IsNullOrWhiteSpace($needle)) {
+        $rows = @($rows | Where-Object {
+            $searchable = @($_.SubItems | ForEach-Object { [string]$_.Text }) -join ' '
+            $searchable.IndexOf($needle,[StringComparison]::OrdinalIgnoreCase) -ge 0
+        })
+    }
+
+    $sorting = $State.Sorts[$Key]
+    if ($sorting.Column -ge 0) {
+        $column = [int]$sorting.Column
+        $rows = @($rows | Sort-Object -Property @{
+            Expression = {
+                $value = [string]$_.SubItems[$column].Text
+                if ($Key -eq 'Staged' -and $column -eq 0) {
+                    [int]$value
+                }
+                elseif ($Key -eq 'Cache' -and $column -eq 5) {
+                    $parsed = [double]0
+                    $rawValue = $value.Replace(' MB','').Replace(',','.')
+                    if ([double]::TryParse($rawValue,[System.Globalization.NumberStyles]::Float,
+                        [System.Globalization.CultureInfo]::InvariantCulture,[ref]$parsed)) { $parsed } else { -1.0 }
+                }
+                else { $value.ToLowerInvariant() }
+            }
+        } -Descending:([bool]$sorting.Descending))
+    }
+
+    $view.BeginUpdate()
+    try {
+        $view.Items.Clear()
+        foreach ($item in $rows) {
+            [void]$view.Items.Add($item)
+        }
+    }
+    finally { $view.EndUpdate() }
+}
+
+function Set-OSDAppUIListSort {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][hashtable]$State,
+        [Parameter(Mandatory)][ValidateSet('Staged','Applications','Cache','Logs')][string]$Key,
+        [Parameter(Mandatory)][int]$Column
+    )
+
+    $previous = $State.Sorts[$Key]
+    $descending = if ($previous.Column -eq $Column) { -not [bool]$previous.Descending } else { $false }
+    $State.Sorts[$Key] = @{ Column=$Column; Descending=$descending }
+    Show-OSDAppUIRows -State $State -Key $Key
+}
+
+function Update-OSDAppUILogViewer {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][hashtable]$State)
+
+    $State.Rows['Logs'] = @()
+    $State.LogDetails.Text = ''
+    $selected = $State.LogFiles.SelectedIndex
+    if ($selected -lt 0 -or $selected -ge @($State.LogEntries).Count) {
+        $State.LogInfo.Text = 'Select an available log file.'
+        Show-OSDAppUIRows -State $State -Key Logs
+        return
+    }
+
+    $path = [string]$State.LogEntries[$selected].Path
+    try {
+        $entries = @(Get-OSDAppUILogRows -Path $path -Tail 500)
+        $items = @(
+            foreach ($entry in $entries) {
+                $item = [System.Windows.Forms.ListViewItem]::new([string]$entry.Timestamp)
+                [void]$item.SubItems.Add([string]$entry.Level)
+                [void]$item.SubItems.Add([string]$entry.Component)
+                [void]$item.SubItems.Add([string]$entry.Message)
+                if ($entry.Level -eq 'Error') {
+                    $item.ForeColor = [System.Drawing.Color]::Firebrick
+                }
+                elseif ($entry.Level -eq 'Warning') {
+                    $item.ForeColor = [System.Drawing.Color]::DarkOrange
+                }
+                $item.Tag = $entry
+                $item.ToolTipText = [string]$entry.Raw
+                $item
+            }
+        )
+        $State.Rows['Logs'] = $items
+        $State.LogInfo.Text = "$($entries.Count) recent log lines | $path | Read-only"
+        Show-OSDAppUIRows -State $State -Key Logs
+    }
+    catch {
+        $State.LogInfo.Text = "Cannot read log: $($_.Exception.Message)"
+        Show-OSDAppUIRows -State $State -Key Logs
+    }
+}
+
 function Update-OSDAppUIReadOnlyView {
     [CmdletBinding()]
     param([Parameter(Mandatory)][hashtable]$State)
@@ -5,94 +109,99 @@ function Update-OSDAppUIReadOnlyView {
     $data = Get-OSDAppUIReadOnlySnapshot -WindowsPath $State.Target -Offline:$State.Offline
     $State.Snapshot = $data
 
-    $State.StagedList.BeginUpdate()
-    try {
-        $State.StagedList.Items.Clear()
+    $stagedItems = @(
         $number = 0
         foreach ($app in @($data.StagedApps)) {
             $number++
             $item = [System.Windows.Forms.ListViewItem]::new([string]$number)
             [void]$item.SubItems.Add($(if ($app.DisplayName) { [string]$app.DisplayName } else { [string]$app.Id }))
             [void]$item.SubItems.Add($(if ($app.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
-            [void]$item.SubItems.Add([string]$app.Version)
+            [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -Application $app))
+            [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
             [void]$item.SubItems.Add([string]$app.Architecture)
             $item.Tag = $app
-            [void]$State.StagedList.Items.Add($item)
+            $item
         }
-    }
-    finally { $State.StagedList.EndUpdate() }
+    )
+    $State.Rows['Staged'] = $stagedItems
 
-    $State.CatalogList.BeginUpdate()
-    try {
-        $State.CatalogList.Items.Clear()
+    $appItems = @(
         foreach ($app in @($data.CatalogApps | Sort-Object Source,DisplayName)) {
             $item = [System.Windows.Forms.ListViewItem]::new([string]$app.DisplayName)
             [void]$item.SubItems.Add($(if ($app.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
-            [void]$item.SubItems.Add([string]$app.Version)
+            [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -Application $app))
+            [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
             [void]$item.SubItems.Add([string]$app.Architecture)
-            [void]$item.SubItems.Add([string]$app.Availability)
+            [void]$item.SubItems.Add((Get-OSDAppUIAvailabilityLabel -Availability $app.Availability))
             [void]$item.SubItems.Add($(if ([string]$app.Id -in @($data.StagedApps.Id)) { 'Staged' } else { '-' }))
-            [void]$State.CatalogList.Items.Add($item)
+            $item
         }
-        # A package may still be staged even if it has disappeared from the
-        # online repository or the removable cache. Show it here too.
+        # Staged apps absent from the current catalog/cache remain visible.
         foreach ($app in @($data.StagedApps)) {
             if ([string]$app.Id -in @($data.CatalogApps.Id)) { continue }
             $item = [System.Windows.Forms.ListViewItem]::new($(if ($app.DisplayName) { [string]$app.DisplayName } else { [string]$app.Id }))
             [void]$item.SubItems.Add($(if ($app.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
-            [void]$item.SubItems.Add([string]$app.Version)
+            [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -Application $app))
+            [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
             [void]$item.SubItems.Add([string]$app.Architecture)
             [void]$item.SubItems.Add('Not in current catalog/cache')
             [void]$item.SubItems.Add('Staged')
-            [void]$State.CatalogList.Items.Add($item)
+            $item
         }
-    }
-    finally { $State.CatalogList.EndUpdate() }
+    )
+    $State.Rows['Applications'] = $appItems
 
-    $State.CacheList.BeginUpdate()
-    try {
-        $State.CacheList.Items.Clear()
+    $cacheItems = @(
         foreach ($entry in @($data.CacheEntries)) {
             $item = [System.Windows.Forms.ListViewItem]::new([string]$entry.Id)
             [void]$item.SubItems.Add($(if ($entry.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
-            [void]$item.SubItems.Add([string]$entry.Version)
+            $cacheVersion = [string]$entry.Version
+            if ([string]::IsNullOrWhiteSpace($cacheVersion) -or $cacheVersion -eq 'Current') { $cacheVersion = 'Not recorded' }
+            [void]$item.SubItems.Add($cacheVersion)
             [void]$item.SubItems.Add([string]$entry.Architecture)
             [void]$item.SubItems.Add($(if ($entry.Valid) { 'Valid' } else { 'Missing / invalid' }))
             [void]$item.SubItems.Add($(if ($null -ne $entry.SizeMB) { "$($entry.SizeMB) MB" } else { '-' }))
             $item.Tag = $entry
-            [void]$State.CacheList.Items.Add($item)
+            $item
         }
-    }
-    finally { $State.CacheList.EndUpdate() }
+    )
+    $State.Rows['Cache'] = $cacheItems
 
-    $State.Logs.Items.Clear()
+    foreach ($key in @('Staged','Applications','Cache')) {
+        Show-OSDAppUIRows -State $State -Key $key
+    }
+
+    $State.LogFiles.Items.Clear()
     $State.LogEntries = @($data.Logs)
     foreach ($entry in $State.LogEntries) {
-        [void]$State.Logs.Items.Add([string]$entry.Label)
+        [void]$State.LogFiles.Items.Add([string]$entry.Label)
     }
-    if ($State.Logs.Items.Count -gt 0) {
-        $State.Logs.SelectedIndex = 0
+    if ($State.LogFiles.Items.Count -gt 0) {
+        $State.LogFiles.SelectedIndex = 0
     }
     else {
-        $State.LogText.Text = 'No OSDApps log files found in the selected Windows target or the connected OSDCloud cache.'
+        $State.Rows['Logs'] = @()
+        $State.LogInfo.Text = 'No existing OSDApps log files found on the device or USB cache.'
+        $State.LogDetails.Text = ''
+        Show-OSDAppUIRows -State $State -Key Logs
     }
 
     $stagedCount = @($data.StagedApps).Count
     $builtInCount = @($data.StagedApps | Where-Object Source -eq 'BuiltIn').Count
     $repositoryCount = @($data.StagedApps | Where-Object Source -eq 'Repository').Count
     $setupStatus = if ($data.SetupCompleteExists) { 'Present' } else { 'Not found' }
-    $State.StagedInfo.Text = "Pending SetupComplete: $stagedCount apps ($builtInCount built-in, $repositoryCount repository) | SetupComplete.cmd: $setupStatus"
+    $State.StagedInfo.Text = "Pending SetupComplete: $stagedCount apps ($builtInCount built-in, $repositoryCount repository) | SetupComplete.cmd: $setupStatus | Sort: view only"
     $State.CacheInfo.Text = if ($data.CachePath) {
-        "USB cache: $($data.CachePath) | $(@($data.CacheEntries).Count) entries (not the device staging directory)"
+        "USB volume: $($data.CachePath) | $(@($data.CacheEntries).Count) entries | Separate from device staging"
     } else {
         'USB cache: not connected / not found. No cache files were changed.'
     }
     $State.Details.Text = if ($stagedCount) {
-        'Select an application to view its actual staged configuration from DeviceManifest.json.'
+        'Select an app to view its actual staged configuration. Current means vendor-managed; USB version is separate.'
     } else {
-        'No staged DeviceManifest.json entries were found at this target. Run the OSDApps CLI staging commands first.'
+        'No staged DeviceManifest.json entries found at this target. Run the OSDApps CLI staging commands first.'
     }
-    $State.Status.Text = "Read-only | $stagedCount staged | $(@($data.CacheEntries).Count) cache entries | $(@($data.Logs).Count) logs"
+    $State.Status.Text = "Read-only | $stagedCount staged | $(@($data.CacheEntries).Count) USB cache entries | $(@($data.Logs).Count) logs"
 }
 
 function Show-OSDAppUI {
