@@ -2,6 +2,19 @@
 
 OSDApps includes explicit runtime timing so cold-cache and warm-cache deployments can be compared without manually reconstructing every phase from timestamps.
 
+## OSDApps 0.34.0 — full eight-app deployment comparison (11 October 2026)
+
+On two freshly installed x64 test PCs, the same six built-ins and two repository apps completed through SetupComplete with `CleanupMode=OnSuccess`. Built-in installer signatures and expected publishers were enforced on Office `setup.exe`, Teams `teamsbootstrapper.exe`, Chrome, Firefox and Cisco Webex; Adobe's outer ZIP remains outside the Authenticode scope.
+
+| Scenario | PreInstall | Runner | Measured Windows total | Results |
+| --- | ---: | ---: | ---: | --- |
+| PC 1 — initially empty OSDCloud USB cache, online | 551.9 s | 366.7 s | **918.6 s (15:19)** | **8/8** installed |
+| PC 2 — populated USB cache, LAN disconnected | 5.4 s | 394.2 s | **399.6 s (6:40)** | **8/8** installed |
+
+The offline PreInstall phase was **546.5 s shorter**; the overall measured Windows phase was **519.0 s shorter**. PC 1 downloaded vendor content (including Office/Adobe), while PC 2 recorded six `BuiltInRefreshSkipped` events and used signed local content. The two devices and their network/cache conditions differed, so these are observed times, **not a controlled hardware speed comparison or guaranteed throughput**. WinPE staging, OSDCloud OS application, boot and OOBE are excluded.
+
+See the [0.34.0 validation matrix](testing.md#osdapps-0340-release-candidate-physical-validation--11-october-2026) for app order, package variants and verification boundaries.
+
 ## End-to-end measurements — OSDApps 0.30.0 (9 October 2026)
 
 Four fresh OSDCloud v2 deployments validated the same six-application queue: Microsoft 365 Apps, Teams, Chrome Enterprise, Adobe Acrobat Unified, Omnissa Horizon Client (repository), and Notepad++ (repository). The fourth run changed the Office XML to MonthlyEnterprise / nl-nl with Visio and Project.
