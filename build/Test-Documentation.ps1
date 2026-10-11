@@ -25,11 +25,12 @@ if (Test-Path -LiteralPath $manifestPath) {
 
 function Get-MarkdownAnchorSet {
     param([string]$Path)
-    if ($anchorCache.ContainsKey($Path)) { return $anchorCache[$Path] }
+    if ($anchorCache.ContainsKey($Path)) { return ,$anchorCache[$Path] }
     $text = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+    $text = [regex]::Replace($text,'(?ms)^[ \t]*```[^\r\n]*\r?\n.*?^[ \t]*```[ \t]*\r?$','')
     $anchors = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $seen = @{}
-    foreach ($heading in [regex]::Matches($text,'(?m)^#{1,6}\s+(.+?)\s*#*\s*$')) {
+    foreach ($heading in [regex]::Matches($text,'(?m)^#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*\r?$')) {
         $value = [regex]::Replace($heading.Groups[1].Value.ToLowerInvariant(),'[^\p{L}\p{N}_\-\s]','')
         $value = [regex]::Replace($value,'\s','-')
         $base = $value
@@ -58,7 +59,7 @@ foreach ($file in $Files) {
         $ast = [System.Management.Automation.Language.Parser]::ParseInput($block.Groups['code'].Value,[ref]$tokens,[ref]$parseErrors)
         $checkedBlocks++
         foreach ($parseError in @($parseErrors)) { $problems.Add("${relative}: PowerShell syntax: $($parseError.Message)") }
-        # Historic release evidence retains the historical command vocabulary.
+        # Historical release evidence retains its historical command vocabulary.
         if ($relative -in @('CHANGELOG.md','docs/testing.md','docs/performance.md')) { continue }
         foreach ($call in $ast.FindAll({param($node) $node -is [System.Management.Automation.Language.CommandAst]},$true)) {
             $name = $call.GetCommandName()
