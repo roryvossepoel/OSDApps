@@ -123,7 +123,14 @@ function Get-OSDAppUILogRows {
 
 function Get-OSDAppUISignatureLabel {
     [CmdletBinding()]
-    param([string]$Status)
+    param(
+        [string]$Status,
+        [string]$Source
+    )
+
+    # Repository ZIPs are validated using their manifest SHA-256 and are not
+    # part of the built-in Authenticode signature-check scope.
+    if ($Source -eq 'Repository') { return 'N/A' }
 
     switch ($Status) {
         'Valid'                { 'Signature valid'; break }
