@@ -13,7 +13,7 @@ function Set-OSDAppUIColumnWidths {
     $fixed = switch ($Key) {
         'Staged'       { @(65,0,100,128,190,100) }
         'Applications' { @(0,92,108,190,90,135,95) }
-        'Cache'        { @(0,105,190,95,155,100) }
+        'Cache'        { @(0,90,155,75,125,80,150) }
         'Logs'         { @(185,78,135,125,0) }
     }
     $flexIndex = if ($Key -in @('Staged','Applications','Cache')) {
@@ -143,7 +143,7 @@ function Update-OSDAppUIReadOnlyView {
     [CmdletBinding()]
     param([Parameter(Mandatory)][hashtable]$State)
 
-    $data = Get-OSDAppUIReadOnlySnapshot -WindowsPath $State.Target -Offline:$State.Offline
+    $data = Get-OSDAppUIReadOnlySnapshot -WindowsPath $State.Target -Offline:$State.Offline -VerifySignatures:$State.VerifySignatures
     $State.Snapshot = $data
 
     $stagedItems = @(
@@ -207,6 +207,14 @@ function Update-OSDAppUIReadOnlyView {
             }
             [void]$item.SubItems.Add($integrity)
             [void]$item.SubItems.Add($(if ($null -ne $entry.SizeMB) { "$($entry.SizeMB) MB" } else { '-' }))
+            [void]$item.SubItems.Add((Get-OSDAppUISignatureLabel -Status ([string]$entry.SignatureStatus)))
+            $item.ToolTipText = @(
+                "Integrity: $integrity"
+                "Signature: $($entry.SignatureStatus)"
+                "Scope: $($entry.SignatureScope)"
+                "Signed file: $($entry.SignatureFile)"
+                "Signer: $($entry.SignatureSigner)"
+            ) -join [Environment]::NewLine
             $item.Tag = $entry
             $item
         }
@@ -239,10 +247,12 @@ function Update-OSDAppUIReadOnlyView {
     $setupStatus = if ($data.SetupCompleteExists) { 'Present' } else { 'Not found' }
     $State.StagedInfo.Text = "Pending SetupComplete: $stagedCount apps ($builtInCount built-in, $repositoryCount repository) | SetupComplete.cmd: $setupStatus | Sort: view only"
     $State.CacheInfo.Text = if ($data.CachePath) {
-        "USB: $($data.CachePath) | $(@($data.CacheEntries).Count) entries | Integrity: repo SHA-256 / built-ins file check"
+        "USB: $($data.CachePath) | $(@($data.CacheEntries).Count) entries | Integrity: repo SHA-256 / built-ins files | Signature: $(if ($State.VerifySignatures) { 'checked where supported' } else { 'not checked' })"
     } else {
         'USB cache: not connected / not found. No cache files were changed.'
     }
+    $State.UsbStatus.Text = if ($data.CachePath) { "USB: $($data.CachePath)" } else { 'USB: not connected' }
+    $State.UsbStatusToolTip.SetToolTip($State.UsbStatus, $(if ($data.CachePath) { [string]$data.CachePath } else { 'No OSDCloud cache volume detected' }))
     $State.Details.Text = if ($stagedCount) {
         'Select an app to view its actual staged configuration. Current means vendor-managed; USB version is separate.'
     } else {
@@ -268,7 +278,8 @@ function Show-OSDAppUI {
         [string]$WindowsPath,
         [switch]$Offline,
         [switch]$PreviewOnly,
-        [switch]$TestMode
+        [switch]$TestMode,
+        [switch]$VerifySignatures
     )
 
     if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne [System.Threading.ApartmentState]::STA) {
@@ -327,8 +338,9 @@ function Show-OSDAppUI {
 
     $root = [System.Windows.Forms.TableLayoutPanel]::new()
     $root.Dock = 'Fill'
-    $root.RowCount = 4
-    [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',138))
+    $root.RowCount = 5
+    [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',80))
+    [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',34))
     [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',42))
     [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',100))
     [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',45))
@@ -343,36 +355,59 @@ function Show-OSDAppUI {
     $title.Text = 'OSDApps Manager'
     $title.Font = [System.Drawing.Font]::new('Segoe UI',17,[System.Drawing.FontStyle]::Bold)
     $title.ForeColor = [System.Drawing.Color]::White
-    $title.SetBounds(18,8,750,36)
+    $title.SetBounds(18,9,670,37)
+    $title.Anchor = 'Top,Left,Right'
     $header.Controls.Add($title)
 
     $subtitle = [System.Windows.Forms.Label]::new()
-    $subtitle.Text = 'READ ONLY  |  Inspect after CLI staging  |  No changes to the device'
-    $subtitle.ForeColor = [System.Drawing.Color]::White
-    $subtitle.SetBounds(20,48,900,23)
-    $subtitle.Anchor = 'Top,Left,Right'
+    $subtitle.Text = 'Deployment overview'
+    $subtitle.ForeColor = [System.Drawing.Color]::Gainsboro
+    $subtitle.SetBounds(20,49,560,23)
     $header.Controls.Add($subtitle)
 
-    $targetLabel = [System.Windows.Forms.Label]::new()
-    $targetLabel.Text = $targetText
-    $targetLabel.ForeColor = [System.Drawing.Color]::White
-    $targetLabel.AutoEllipsis = $true
-    $targetLabel.SetBounds(20,76,900,23)
-    $targetLabel.Anchor = 'Top,Left,Right'
-    $header.Controls.Add($targetLabel)
+    $readOnly = [System.Windows.Forms.Label]::new()
+    $readOnly.Text = 'Read-only'
+    $readOnly.ForeColor = [System.Drawing.Color]::White
+    $readOnly.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
+    $readOnly.SetBounds(811,22,110,28)
+    $readOnly.Anchor = 'Top,Right'
+    $header.Controls.Add($readOnly)
 
-    $repositoryLabel = [System.Windows.Forms.Label]::new()
-    $repositoryLabel.ForeColor = [System.Drawing.Color]::Gainsboro
-    $repositoryLabel.AutoEllipsis = $true
-    $repositoryLabel.SetBounds(20,107,900,23)
-    $repositoryLabel.Anchor = 'Top,Left,Right'
+    $context = [System.Windows.Forms.TableLayoutPanel]::new()
+    $context.Dock = 'Fill'
+    $context.ColumnCount = 3
+    $context.Padding = [System.Windows.Forms.Padding]::new(12,3,12,3)
+    $context.BackColor = [System.Drawing.Color]::FromArgb(242,244,247)
+    [void]$context.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',48))
+    [void]$context.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',32))
+    [void]$context.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',20))
+    [void]$root.Controls.Add($context,0,1)
+
+    $targetStatus = [System.Windows.Forms.Label]::new()
+    $targetStatus.Text = if ($TestMode) { 'Target: Test environment' } elseif ($winPE) { 'Target: Offline Windows' } else { 'Target: Windows' }
+    $targetStatus.Dock = 'Fill'
+    $targetStatus.AutoEllipsis = $true
+    $targetStatus.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+    [void]$context.Controls.Add($targetStatus,0,0)
+
+    $usbStatus = [System.Windows.Forms.Label]::new()
+    $usbStatus.Text = 'USB: detecting...'
+    $usbStatus.Dock = 'Fill'
+    $usbStatus.AutoEllipsis = $true
+    $usbStatus.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+    [void]$context.Controls.Add($usbStatus,1,0)
+
+    $catalogStatus = [System.Windows.Forms.Label]::new()
+    $catalogStatus.Text = if ($Offline) { 'Offline' } else { 'Catalog lookup' }
+    $catalogStatus.Dock = 'Fill'
+    $catalogStatus.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
+    [void]$context.Controls.Add($catalogStatus,2,0)
+
+    $toolTip = [System.Windows.Forms.ToolTip]::new()
+    $toolTip.SetToolTip($targetStatus,$targetText)
     $catalogUri = (Get-OSDAppConfiguration).CatalogUri
-    $repositoryLabel.Text = if ($Offline) {
-        'Catalog: Offline mode (not queried) | USB cache and local staging only'
-    }
-    elseif ($catalogUri) { "Configured repository: $($catalogUri.AbsoluteUri)" }
-    else { 'Repository not configured in the current PowerShell session' }
-    $header.Controls.Add($repositoryLabel)
+    $toolTip.SetToolTip($catalogStatus, $(if ($Offline) { 'Catalog is not queried in offline mode.' } elseif ($catalogUri) { [string]$catalogUri.AbsoluteUri } else { 'No repository URL configured in this PowerShell session.' }))
+
 
     $searchPanel = [System.Windows.Forms.TableLayoutPanel]::new()
     $searchPanel.Dock = 'Fill'
@@ -380,7 +415,7 @@ function Show-OSDAppUI {
     $searchPanel.Padding = [System.Windows.Forms.Padding]::new(8,5,8,5)
     [void]$searchPanel.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Absolute',73))
     [void]$searchPanel.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',100))
-    [void]$root.Controls.Add($searchPanel,0,1)
+    [void]$root.Controls.Add($searchPanel,0,2)
     $searchLabel = [System.Windows.Forms.Label]::new()
     $searchLabel.Text = 'Search'
     $searchLabel.Dock = 'Fill'
@@ -392,7 +427,7 @@ function Show-OSDAppUI {
 
     $tabs = [System.Windows.Forms.TabControl]::new()
     $tabs.Dock = 'Fill'
-    [void]$root.Controls.Add($tabs,0,2)
+    [void]$root.Controls.Add($tabs,0,3)
     $stagedTab = [System.Windows.Forms.TabPage]::new('Staged for device')
     $catalogTab = [System.Windows.Forms.TabPage]::new('Applications')
     $cacheTab = [System.Windows.Forms.TabPage]::new('Cache')
@@ -472,12 +507,14 @@ function Show-OSDAppUI {
     $cacheList.View = 'Details'
     $cacheList.FullRowSelect = $true
     $cacheList.GridLines = $true
+    $cacheList.ShowItemToolTips = $true
     [void]$cacheList.Columns.Add('Application',265)
     [void]$cacheList.Columns.Add('Source',105)
     [void]$cacheList.Columns.Add('USB version',115)
     [void]$cacheList.Columns.Add('Architecture',105)
     [void]$cacheList.Columns.Add('Integrity',145)
     [void]$cacheList.Columns.Add('Size',100)
+    [void]$cacheList.Columns.Add('Signature',145)
     [void]$cacheLayout.Controls.Add($cacheList,0,1)
 
     $logsLayout = [System.Windows.Forms.TableLayoutPanel]::new()
@@ -526,7 +563,7 @@ function Show-OSDAppUI {
     [void]$footer.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',100))
     [void]$footer.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Absolute',120))
     [void]$footer.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Absolute',100))
-    [void]$root.Controls.Add($footer,0,3)
+    [void]$root.Controls.Add($footer,0,4)
     $status = [System.Windows.Forms.Label]::new()
     $status.Text = 'Loading read-only inventory...'
     $status.Dock = 'Fill'
@@ -543,6 +580,7 @@ function Show-OSDAppUI {
 
     $script:OSDAppUIState = @{
         Form=$form; Target=$target; Offline=[bool]$Offline; Search=$searchBox
+        VerifySignatures=[bool]$VerifySignatures; UsbStatus=$usbStatus; UsbStatusToolTip=$toolTip
         StagedList=$stagedList; CatalogList=$catalogList; CacheList=$cacheList
         StagedInfo=$stagedInfo; CacheInfo=$cacheInfo; Details=$details
         LogFiles=$logFiles; LogList=$logList; LogDetails=$logDetails; LogInfo=$logInfo
