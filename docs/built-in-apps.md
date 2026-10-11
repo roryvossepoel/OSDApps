@@ -43,7 +43,7 @@ This rule is absolute for built-ins: if a product cannot be obtained directly an
 
 Repository applications are different. Repository content is controlled by the repository owner, and OSDApps does not prescribe where that organization obtains or hosts those packages.
 
-## Authenticode and publisher policy (planned 0.34.0)
+## Authenticode and publisher policy (0.34.0)
 
 On full Windows, built-in cache synchronization for Microsoft 365 Apps,
 Microsoft Teams, Google Chrome Enterprise, Cisco Webex and Mozilla Firefox
