@@ -109,7 +109,7 @@ The Cache tab shows two different checks by design:
 
 Both report a local USB cache, not Windows target staging. No GUI action modifies the cache or SetupComplete.
 
-## Optional built-in digital signature inspection
+## Built-in digital signature inspection
 
 Full Windows, Windows PowerShell 5.1:
 
@@ -117,21 +117,25 @@ Full Windows, Windows PowerShell 5.1:
         Select-Object Id, Valid, SignatureStatus, SignatureScope, SignatureSigner, SignatureFile |
         Format-Table -AutoSize
 
-Show the optional Signature column in the read-only GUI:
+Signature verification is **on by default in OSDApps Viewer on full Windows**:
 
-    Show-OSDAppUI -TestMode -Offline -VerifySignatures
+    Show-OSDAppUI -TestMode -Offline
 
-- Signature checking is opt-in and never changes USB package files, cache metadata, DeviceManifest or SetupComplete.
+To deliberately skip OS trust verification in an isolated test:
+
+    Show-OSDAppUI -TestMode -Offline -SkipSignatureVerification
+
+- The **CLI** retains opt-in Get-OSDAppCache -VerifySignatures for fast inventory scripts. The **Viewer** performs checks by default; it never changes USB package files, cache metadata, DeviceManifest or SetupComplete.
 - Chrome, Cisco Webex and Firefox: inspect the cached Package.msi using Windows Authenticode.
 - Microsoft 365 Apps: inspect setup.exe only, not the entire Office data tree.
 - Microsoft Teams: inspect teamsbootstrapper.exe only, not the MSIX. The GUI identifies the exact scope in the cache-row tooltip.
 - Adobe Acrobat Unified: not assessed, because a ZIP container is not equivalent to a signed executable.
 - Custom repository ZIPs display Signature N/A in the GUI; their integrity is instead checked separately against the repository manifest SHA-256.
 - The signature result is separate from Valid, which still reports package file-presence checks or repository archive SHA-256 validation.
-- Signature Valid means the specified file's Authenticode signature was trusted by Windows during inspection. It does not attest the entire bundled application, freshness, absence of malware or guaranteed revocation freshness.
+- For signable built-ins, OSDApps now checks both Windows Authenticode trust and the expected certificate **organization**, such as Microsoft Corporation, Google LLC, Cisco Systems, Inc. or Mozilla Corporation. PublisherMismatch is a separate warning/error. This is organization-name allowlisting rather than certificate thumbprint pinning; it does not attest the entire bundled application, freshness, absence of malware or guaranteed revocation freshness.
 - Other results including NotSigned, NotTrusted, HashMismatch, UnknownError and Check failed are reported distinctly.
-- WinPE does not run the Windows Authenticode checker; it reports Unavailable in WinPE.
-- Windows signature verification may involve certificate trust or revocation network traffic, even when -Offline disables online repository lookup. Do not use -VerifySignatures if strict network isolation is required.
+- WinPE does not run the Windows Authenticode checker; in the Viewer, the signable built-ins report Unavailable in WinPE. It is not silently marked valid.
+- Windows signature verification may involve certificate trust or revocation network traffic, even when -Offline disables online repository lookup. For a strictly network-isolated Viewer on full Windows, use -SkipSignatureVerification. The CLI only checks signatures when -VerifySignatures is requested.
 
 ## Compact header
 
@@ -153,7 +157,7 @@ Stage apps as usual using the OSDApps **CLI**, after OSDCloud has applied Window
 
 Replace the drive letter with the actual OSDCloud USB path. Do not use -TestMode in WinPE; it targets the previous Windows 11 temporary test folder and is intended only for full-Windows preview.
 
-Confirm that the target Windows volume is detected, that DeviceManifest.json and SetupComplete.cmd are present, that staged app count/source/order match the CLI, and that Cache and Logs can be opened without changing the device. Start without -VerifySignatures in WinPE, because Authenticode checks are not supported there and trust-provider dependencies may be unavailable. If a suitable WinPE image lacks Windows Forms, capture the error; the GUI requires Windows Forms, PowerShell and .NET optional components. Only proceed to reboot/install after closing the read-only inspection window.
+Confirm that the target Windows volume is detected, that DeviceManifest.json and SetupComplete.cmd are present, that staged app count/source/order match the CLI, and that Cache and Logs can be opened without changing the device. Run normally without extra signature parameters in WinPE; the Viewer reports that signature checks are unavailable without invoking Windows trust providers. If a suitable WinPE image lacks Windows Forms, capture the error; the GUI requires Windows Forms, PowerShell and .NET optional components. Only proceed to reboot/install after closing the read-only inspection window.
 
 ## Display terminology (GUI)
 
@@ -168,3 +172,11 @@ The supplementary descriptions above the Apps, Cache and Staged tables and the f
 ## Final Viewer labeling
 
 The Windows title and dark header use **OSDApps Viewer**; the public entry point is still `Show-OSDAppUI`. The compact target strip displays **Target | USB | Offline/Online** on one line. **Vendor** appears in Staged for device, Apps and Cache when metadata supplies it. The Cache tab retains its independent integrity and signature checks; numeric Size sorting uses the updated column index and never modifies the original cache or manifest.
+
+## Cache sync and SetupComplete enforcement
+
+On full Windows, the built-in MSI/EXE synchronization cmdlets for Google Chrome, Cisco Webex, Mozilla Firefox, Microsoft 365 Apps (setup.exe) and Microsoft Teams (bootstrapper EXE) now require a valid Authenticode signature **and** a certificate organization matching the expected publisher. Downloads are saved to a temporary candidate on the same disk and validated before promoting them to the cache. A rejected candidate does **not** overwrite the existing cached file. Existing cache hits are also rechecked before being reported as current. Synchronization errors are not suppressed or silently downgraded to success.
+
+The standalone SetupComplete PreInstall script (which runs independently of the PowerShell module) now validates the MSI and EXE before refreshing or using cached payloads; it also rejects an unsigned or unexpected-publisher fallback. This is intentionally fail-closed for signable installer types: Windows trust-store or revocation problems can therefore prevent installation until a trustworthy package is available. These checks do **not** by themselves verify the entire Microsoft 365 Apps data tree or the Teams MSIX package. The outer Adobe Acrobat ZIP remains *Not assessed* for Authenticode and is not presented as signature-valid. Repository ZIPs remain SHA-256-validated against their manifests.
+
+The version of OSDApps Viewer is still a development preview until real Windows signature tests and full WinPE/SetupComplete regression tests are confirmed. Existing stable 0.33.0 remains unchanged.
