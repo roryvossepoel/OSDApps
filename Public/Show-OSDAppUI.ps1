@@ -280,8 +280,9 @@ function Show-OSDAppUI {
 
     $root = [System.Windows.Forms.TableLayoutPanel]::new()
     $root.Dock = 'Fill'
-    $root.RowCount = 3
+    $root.RowCount = 4
     [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',138))
+    [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',42))
     [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',100))
     [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',45))
     $form.Controls.Add($root)
@@ -322,9 +323,25 @@ function Show-OSDAppUI {
     $repositoryLabel.Text = if ($catalogUri) { "Configured repository: $($catalogUri.AbsoluteUri)" } else { 'Repository not configured in the current PowerShell session' }
     $header.Controls.Add($repositoryLabel)
 
+    $searchPanel = [System.Windows.Forms.TableLayoutPanel]::new()
+    $searchPanel.Dock = 'Fill'
+    $searchPanel.ColumnCount = 2
+    $searchPanel.Padding = [System.Windows.Forms.Padding]::new(8,5,8,5)
+    [void]$searchPanel.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Absolute',73))
+    [void]$searchPanel.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',100))
+    [void]$root.Controls.Add($searchPanel,0,1)
+    $searchLabel = [System.Windows.Forms.Label]::new()
+    $searchLabel.Text = 'Search'
+    $searchLabel.Dock = 'Fill'
+    $searchLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+    [void]$searchPanel.Controls.Add($searchLabel,0,0)
+    $searchBox = [System.Windows.Forms.TextBox]::new()
+    $searchBox.Dock = 'Fill'
+    [void]$searchPanel.Controls.Add($searchBox,1,0)
+
     $tabs = [System.Windows.Forms.TabControl]::new()
     $tabs.Dock = 'Fill'
-    [void]$root.Controls.Add($tabs,0,1)
+    [void]$root.Controls.Add($tabs,0,2)
     $stagedTab = [System.Windows.Forms.TabPage]::new('Staged for device')
     $catalogTab = [System.Windows.Forms.TabPage]::new('Applications')
     $cacheTab = [System.Windows.Forms.TabPage]::new('Cache')
@@ -351,8 +368,9 @@ function Show-OSDAppUI {
     [void]$stagedList.Columns.Add('Order',65)
     [void]$stagedList.Columns.Add('Application',285)
     [void]$stagedList.Columns.Add('Source',125)
-    [void]$stagedList.Columns.Add('Version',155)
-    [void]$stagedList.Columns.Add('Architecture',115)
+    [void]$stagedList.Columns.Add('Version / policy',145)
+    [void]$stagedList.Columns.Add('USB version',135)
+    [void]$stagedList.Columns.Add('Architecture',110)
     [void]$stagedLayout.Controls.Add($stagedList,0,1)
     $details = [System.Windows.Forms.TextBox]::new()
     $details.Multiline = $true
@@ -380,10 +398,11 @@ function Show-OSDAppUI {
     $catalogList.GridLines = $true
     [void]$catalogList.Columns.Add('Application',260)
     [void]$catalogList.Columns.Add('Source',115)
-    [void]$catalogList.Columns.Add('Version',120)
-    [void]$catalogList.Columns.Add('Architecture',100)
-    [void]$catalogList.Columns.Add('Availability',145)
-    [void]$catalogList.Columns.Add('Deployment',100)
+    [void]$catalogList.Columns.Add('Version / policy',130)
+    [void]$catalogList.Columns.Add('USB version',115)
+    [void]$catalogList.Columns.Add('Architecture',95)
+    [void]$catalogList.Columns.Add('Availability',160)
+    [void]$catalogList.Columns.Add('Deployment',95)
     [void]$catalogLayout.Controls.Add($catalogList,0,1)
 
     $cacheLayout = [System.Windows.Forms.TableLayoutPanel]::new()
@@ -404,7 +423,7 @@ function Show-OSDAppUI {
     $cacheList.GridLines = $true
     [void]$cacheList.Columns.Add('Application',265)
     [void]$cacheList.Columns.Add('Source',105)
-    [void]$cacheList.Columns.Add('Version',115)
+    [void]$cacheList.Columns.Add('USB version',115)
     [void]$cacheList.Columns.Add('Architecture',105)
     [void]$cacheList.Columns.Add('Integrity',145)
     [void]$cacheList.Columns.Add('Size',100)
@@ -412,24 +431,42 @@ function Show-OSDAppUI {
 
     $logsLayout = [System.Windows.Forms.TableLayoutPanel]::new()
     $logsLayout.Dock = 'Fill'
-    $logsLayout.RowCount = 2
+    $logsLayout.RowCount = 4
     [void]$logsLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',43))
+    [void]$logsLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',30))
     [void]$logsLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',100))
+    [void]$logsLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',110))
     $logsTab.Controls.Add($logsLayout)
     $logFiles = [System.Windows.Forms.ComboBox]::new()
     $logFiles.Dock = 'Fill'
     $logFiles.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
     $logFiles.Margin = [System.Windows.Forms.Padding]::new(7,8,7,4)
     [void]$logsLayout.Controls.Add($logFiles,0,0)
-    $logText = [System.Windows.Forms.TextBox]::new()
-    $logText.Multiline = $true
-    $logText.ReadOnly = $true
-    $logText.ScrollBars = [System.Windows.Forms.ScrollBars]::Both
-    $logText.WordWrap = $false
-    $logText.Dock = 'Fill'
-    $logText.BackColor = [System.Drawing.Color]::White
-    $logText.Font = [System.Drawing.Font]::new('Consolas',9)
-    [void]$logsLayout.Controls.Add($logText,0,1)
+    $logInfo = [System.Windows.Forms.Label]::new()
+    $logInfo.Text = 'Select a log file. Structured rows are read-only; choose an event for details.'
+    $logInfo.Dock = 'Fill'
+    $logInfo.AutoEllipsis = $true
+    [void]$logsLayout.Controls.Add($logInfo,0,1)
+    $logList = [System.Windows.Forms.ListView]::new()
+    $logList.View = 'Details'
+    $logList.Dock = 'Fill'
+    $logList.FullRowSelect = $true
+    $logList.MultiSelect = $false
+    $logList.GridLines = $true
+    $logList.ShowItemToolTips = $true
+    [void]$logList.Columns.Add('Timestamp',180)
+    [void]$logList.Columns.Add('Level',85)
+    [void]$logList.Columns.Add('Component',145)
+    [void]$logList.Columns.Add('Message',490)
+    [void]$logsLayout.Controls.Add($logList,0,2)
+    $logDetails = [System.Windows.Forms.TextBox]::new()
+    $logDetails.Multiline = $true
+    $logDetails.ReadOnly = $true
+    $logDetails.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical
+    $logDetails.Dock = 'Fill'
+    $logDetails.BackColor = [System.Drawing.Color]::White
+    $logDetails.Font = [System.Drawing.Font]::new('Consolas',9)
+    [void]$logsLayout.Controls.Add($logDetails,0,3)
 
     $footer = [System.Windows.Forms.TableLayoutPanel]::new()
     $footer.Dock = 'Fill'
@@ -437,7 +474,7 @@ function Show-OSDAppUI {
     [void]$footer.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',100))
     [void]$footer.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Absolute',120))
     [void]$footer.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Absolute',100))
-    [void]$root.Controls.Add($footer,0,2)
+    [void]$root.Controls.Add($footer,0,3)
     $status = [System.Windows.Forms.Label]::new()
     $status.Text = 'Loading read-only inventory...'
     $status.Dock = 'Fill'
@@ -453,30 +490,59 @@ function Show-OSDAppUI {
     [void]$footer.Controls.Add($close,2,0)
 
     $script:OSDAppUIState = @{
-        Form=$form; Target=$target; Offline=[bool]$Offline
+        Form=$form; Target=$target; Offline=[bool]$Offline; Search=$searchBox
         StagedList=$stagedList; CatalogList=$catalogList; CacheList=$cacheList
         StagedInfo=$stagedInfo; CacheInfo=$cacheInfo; Details=$details
-        Logs=$logFiles; LogText=$logText; LogEntries=@()
-        Status=$status; Snapshot=$null
+        LogFiles=$logFiles; LogList=$logList; LogDetails=$logDetails; LogInfo=$logInfo
+        LogEntries=@(); Status=$status; Snapshot=$null
+        Lists=@{ Staged=$stagedList; Applications=$catalogList; Cache=$cacheList; Logs=$logList }
+        Rows=@{ Staged=@(); Applications=@(); Cache=@(); Logs=@() }
+        Sorts=@{
+            Staged=@{Column=-1;Descending=$false}
+            Applications=@{Column=-1;Descending=$false}
+            Cache=@{Column=-1;Descending=$false}
+            Logs=@{Column=-1;Descending=$false}
+        }
     }
 
     $stagedList.Add_SelectedIndexChanged({
-        $state = $script:OSDAppUIState
+        $state=$script:OSDAppUIState
         if (-not $state -or $state.StagedList.SelectedItems.Count -eq 0) { return }
         $state.Details.Text = Format-OSDAppUIStagedDetails -Application $state.StagedList.SelectedItems[0].Tag
     })
     $logFiles.Add_SelectedIndexChanged({
-        $state = $script:OSDAppUIState
+        $state=$script:OSDAppUIState
+        if ($state) { Update-OSDAppUILogViewer -State $state }
+    })
+    $logList.Add_SelectedIndexChanged({
+        $state=$script:OSDAppUIState
+        if (-not $state -or $state.LogList.SelectedItems.Count -eq 0) { return }
+        $entry=$state.LogList.SelectedItems[0].Tag
+        $state.LogDetails.Text = "Time: $($entry.Timestamp) | Level: $($entry.Level) | Component: $($entry.Component)" +
+            [Environment]::NewLine + [Environment]::NewLine + [string]$entry.Message
+    })
+    $searchBox.Add_TextChanged({
+        $state=$script:OSDAppUIState
         if (-not $state) { return }
-        $index = $state.Logs.SelectedIndex
-        if ($index -lt 0 -or $index -ge @($state.LogEntries).Count) { return }
-        $file = $state.LogEntries[$index].Path
-        try {
-            $state.LogText.Text = (Get-Content -LiteralPath $file -Tail 250 -ErrorAction Stop) -join [Environment]::NewLine
+        foreach ($key in @('Staged','Applications','Cache','Logs')) {
+            Show-OSDAppUIRows -State $state -Key $key
         }
-        catch {
-            $state.LogText.Text = "Cannot read log $($file): $($_.Exception.Message)"
-        }
+    })
+    $stagedList.Add_ColumnClick({
+        $state=$script:OSDAppUIState
+        if ($state) { Set-OSDAppUIListSort -State $state -Key Staged -Column $_.Column }
+    })
+    $catalogList.Add_ColumnClick({
+        $state=$script:OSDAppUIState
+        if ($state) { Set-OSDAppUIListSort -State $state -Key Applications -Column $_.Column }
+    })
+    $cacheList.Add_ColumnClick({
+        $state=$script:OSDAppUIState
+        if ($state) { Set-OSDAppUIListSort -State $state -Key Cache -Column $_.Column }
+    })
+    $logList.Add_ColumnClick({
+        $state=$script:OSDAppUIState
+        if ($state) { Set-OSDAppUIListSort -State $state -Key Logs -Column $_.Column }
     })
     $refresh.Add_Click({
         $state = $script:OSDAppUIState
