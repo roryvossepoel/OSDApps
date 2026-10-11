@@ -158,3 +158,9 @@ Confirm that the target Windows volume is detected, that DeviceManifest.json and
 ## Display terminology (GUI)
 
 The human-readable column is labeled **Display Name** in Staged for device, Apps, and Cache. The full application identifier (`Id`) remains unchanged in the manifest and CLI. The former Applications tab is now **Apps**; this is a presentation-only name change. **Vendor** is visible in both Staged for device and Apps and comes from the resolved built-in or repository metadata. The Cache tab remains compact, without an extra Vendor column. The original staging order in DeviceManifest.json is not modified, including when the screen table is sorted by a different column.
+
+## Final read-only presentation polish
+
+The GUI now selects the first visible staged application after an inventory refresh and immediately shows its *actual* manifest configuration in the details panel. In Logs it selects the most recent visible entry on initial load and displays its full parsed message in the details pane. Selecting another row changes only what is displayed; it does not modify files, staging or cache. When no staged apps or log rows are visible, the respective pane explains why it is empty.
+
+The supplementary descriptions above the Apps, Cache and Staged tables and the footer are shorter and avoid repeating Read-only/CLI-only everywhere. The dark header continues to indicate Read-only. Log line component and event names can still be truncated in the table at lower display resolutions; selecting a row shows their full values in its details, and raw data remain available on the row tooltip.
