@@ -273,6 +273,24 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         }
     }
 
+    It 'loads built-in Vendor metadata from the real module location even if script root is changed' {
+        InModuleScope OSDApps {
+            $originalRoot = $script:moduleRoot
+            try {
+                $script:moduleRoot = Join-Path $TestDrive 'InvalidModuleRoot'
+                $metadata = @(Get-OSDAppUIBuiltInMetadata -ErrorAction Stop)
+                $metadata.Count | Should -Be 6
+                @($metadata | Where-Object Id -eq 'MicrosoftTeams')[0].Vendor |
+                    Should -Be 'Microsoft'
+                @($metadata | Where-Object Id -eq 'MozillaFirefoxEnterprise')[0].Vendor |
+                    Should -Be 'Mozilla'
+            }
+            finally {
+                $script:moduleRoot = $originalRoot
+            }
+        }
+    }
+
     It 'uses human-readable built-in metadata instead of technical cache IDs' {
         InModuleScope OSDApps {
             $definitions = @(Get-OSDAppUIBuiltInMetadata)
