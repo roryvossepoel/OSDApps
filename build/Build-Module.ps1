@@ -36,6 +36,10 @@ foreach ($item in $items) {
 $builtManifest = Join-Path $moduleOutput 'OSDApps.psd1'
 Test-ModuleManifest -Path $builtManifest -ErrorAction Stop | Out-Null
 
+# Generate external MAML help in the package, without editing source functions.
+# PowerShell 5+ discovers <ModuleName>-help.xml for exported module functions.
+& (Join-Path $PSScriptRoot 'New-CommandHelp.ps1') -ModulePath $moduleOutput | Out-Null
+
 Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
 Import-Module $builtManifest -Force -ErrorAction Stop
 
