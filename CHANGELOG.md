@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased (planned 0.34.0)
+
+### Added
+
+- Added read-only `Show-OSDAppUI` (**OSDApps Viewer**) with Staged for device, Apps, Cache and Logs views, responsive columns, search, sorting, Vendor information and actual staged configuration details. Windows PowerShell 5.1/WinPE compatibility has been exercised on two x64 PCs.
+- Added optional `Vendor` metadata in per-app repository manifests, propagated to USB cache and staging without repackaging ZIPs.
+- Added precise built-in cache versions where available (MSI ProductVersion and Acrobat patch filename), while keeping vendor-managed version policy distinct.
+
+### Security
+
+- Viewer now checks Windows Authenticode trust and the expected certificate **organization** for signable built-in MSI/EXE packages by default on full Windows. WinPE reports that checks are unavailable rather than implying they passed. Strictly offline Viewer inspections can explicitly use `-SkipSignatureVerification`.
+- The CLI `Get-OSDAppCache` retains fast inspection by default and explicit `-VerifySignatures`; signature state remains distinct from file-presence and repository SHA-256 integrity.
+- Full-Windows built-in MSI/EXE synchronization validates downloaded candidate files before replacing an existing cache, checks saved cache hits again, and rejects unsigned, untrusted or unexpected-publisher files.
+- Standalone SetupComplete PreInstall now checks corresponding installer signatures before refresh, installation or fallback. A failed trust check can stop a deployment rather than silently using an untrusted cache.
+- **Scope limitations:** Office checks `setup.exe` but not the complete Office content tree; Teams checks the bootstrapper but not `teams.msix`; Adobe's outer `Package.zip` remains Not assessed for Authenticode. Repository ZIPs continue using manifest SHA-256 validation. Certificate chain and revocation checks may need network access even when repository lookup is offline.
+
+### Validation
+
+- Automated Windows CI and Windows PowerShell 5.1 signer-policy tests run in the draft PR. Physical WinPE Viewer read-only rendering and mixed staging were validated on two x64 PCs **before the new default signature gates**.
+- **Release hold:** repeat a full-Windows signature verification against actual vendor payloads, a built-in cache synchronization and a SetupComplete online/offline regression before publishing 0.34.0.
+
+
 ## 0.33.0
 
 ### Added
