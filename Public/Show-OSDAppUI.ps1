@@ -13,7 +13,7 @@ function Set-OSDAppUIColumnWidths {
     $fixed = switch ($Key) {
         'Staged'       { @(65,0,100,128,190,100) }
         'Applications' { @(0,92,108,190,90,135,95) }
-        'Cache'        { @(0,90,155,75,125,80,150) }
+        'Cache'        { @(0,90,155,110,125,80,150) }
         'Logs'         { @(185,78,135,125,0) }
     }
     $flexIndex = if ($Key -in @('Staged','Applications','Cache')) {
@@ -207,7 +207,7 @@ function Update-OSDAppUIReadOnlyView {
             }
             [void]$item.SubItems.Add($integrity)
             [void]$item.SubItems.Add($(if ($null -ne $entry.SizeMB) { "$($entry.SizeMB) MB" } else { '-' }))
-            [void]$item.SubItems.Add((Get-OSDAppUISignatureLabel -Status ([string]$entry.SignatureStatus)))
+            [void]$item.SubItems.Add((Get-OSDAppUISignatureLabel -Status ([string]$entry.SignatureStatus) -Source ([string]$entry.Source)))
             $item.ToolTipText = @(
                 "Integrity: $integrity"
                 "Signature: $($entry.SignatureStatus)"
