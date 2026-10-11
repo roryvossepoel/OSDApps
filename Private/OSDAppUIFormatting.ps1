@@ -226,6 +226,7 @@ function Get-OSDAppUISignatureLabel {
         'Valid'                { 'Signature valid'; break }
         'NotSigned'            { 'Not signed'; break }
         'HashMismatch'         { 'Hash mismatch'; break }
+        'PublisherMismatch'    { 'Wrong publisher'; break }
         'NotTrusted'           { 'Not trusted'; break }
         'UnknownError'         { 'Trust unknown'; break }
         'Check failed'         { 'Check failed'; break }
