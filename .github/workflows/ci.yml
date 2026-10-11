@@ -68,6 +68,24 @@ jobs:
                   throw 'Repository app was incorrectly assigned a vendor.'
               }
               Write-Host "Windows PowerShell $($PSVersionTable.PSVersion): 6/6 built-in Vendors resolved."
+
+              # Trust policy must also work under the Windows PowerShell
+              # version used by SetupComplete and WinPE.
+              $publishers = @(
+                  @{ Id='MicrosoftTeams'; Subject='CN=Microsoft Corporation, O=Microsoft Corporation, C=US' },
+                  @{ Id='CiscoWebex'; Subject='CN="Cisco Systems, Inc.", O="Cisco Systems, Inc.", C=US' },
+                  @{ Id='GoogleChromeEnterprise'; Subject='CN=Google LLC, O=Google LLC, C=US' },
+                  @{ Id='MozillaFirefoxEnterprise'; Subject='CN=Mozilla Corporation, O=Mozilla Corporation, C=US' }
+              )
+              foreach ($publisher in $publishers) {
+                  if (-not (Test-OSDAppExpectedPublisher -Id $publisher.Id -SignerSubject $publisher.Subject)) {
+                      throw "Windows PowerShell 5.1 signer policy failed for $($publisher.Id)."
+                  }
+                  if (Test-OSDAppExpectedPublisher -Id $publisher.Id -SignerSubject 'CN=Other, O=Other Vendor LLC, C=US') {
+                      throw "Windows PowerShell 5.1 accepted an unrelated signer for $($publisher.Id)."
+                  }
+              }
+              Write-Host 'Windows PowerShell 5.1: expected publisher policy checks passed.'
           }
 
       - name: Run analyzer and Pester
