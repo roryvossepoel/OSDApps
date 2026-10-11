@@ -20,7 +20,9 @@ function Get-OSDAppUICachedVersion {
     $ids = if ($id -eq 'MicrosoftTeams') { @('MicrosoftTeams','Teams') } else { @($id) }
     $matches = @($CacheEntries | Where-Object { [string]$_.Id -in $ids -and $_.Valid -and -not [string]::IsNullOrWhiteSpace([string]$_.Version) })
     if ($matches.Count -eq 0) { return '-' }
-    return [string]$matches[0].Version
+    $version = [string]$matches[0].Version
+    if ($version -eq 'Current') { return 'Not recorded' }
+    return $version
 }
 
 function Get-OSDAppUIAvailabilityLabel {
