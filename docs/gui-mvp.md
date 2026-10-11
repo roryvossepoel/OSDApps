@@ -1,4 +1,4 @@
-# OSDApps Manager – read-only device inspector (development preview)
+# OSDApps Viewer – read-only device inspector (development preview)
 
 OSDApps is CLI-first. **All configuration, package acquisition, cache changes,
 staging, unstaging, and automation must be performed through PowerShell cmdlets
@@ -135,13 +135,13 @@ Show the optional Signature column in the read-only GUI:
 
 ## Compact header
 
-The header now occupies approximately 80 pixels, showing OSDApps Manager, Deployment overview and Read-only. A neutral strip underneath contains Target, USB and Offline/catalog status. Tooltips retain full target/cache/repository context. No editable controls have been introduced.
+The header occupies approximately 80 pixels, showing OSDApps Viewer, Deployment overview and Read-only. A single compact row underneath displays Target, USB and Offline/catalog status separated by vertical dividers (for example: Target: Test environment | USB: G:\\OSDApps | Offline). A tooltip retains full target, USB and catalog details. No editable controls have been introduced.
 
 The Cache Architecture column is wide enough to show its full header at the standard desktop window size. On narrower screens, scrolling can still be necessary.
 
 ## Consistent application names and Vendor
 
-The GUI displays the human-readable DisplayName for staging, Applications and Cache, using the built-in metadata file when a cache entry only supplies a technical ID. The underlying CLI package Id and manifest order are never changed. Applications has a separate read-only Vendor column. For built-ins Vendor is sourced from metadata/builtins.json; for repository apps Vendor is only shown when the repository catalog/cache entry actually provides it. If unknown, it displays '-'. The Cache tab stays narrow and intentionally has no Vendor column. Staged application details show Vendor where known.
+The GUI displays the human-readable DisplayName for staging, Applications and Cache, using the built-in metadata file when a cache entry only supplies a technical ID. The underlying CLI package Id and manifest order are never changed. Applications has a separate read-only Vendor column. For built-ins Vendor is sourced from metadata/builtins.json; for repository apps Vendor is only shown when the repository catalog/cache entry actually provides it. If unknown, it displays '-'. The Cache tab also shows Vendor, sourced from the same available built-in or repository metadata, using responsive widths and horizontal scrolling only when the viewport becomes too narrow. Staged application details show Vendor where known.
 
 ## First field test with two WinPE PCs
 
@@ -157,10 +157,14 @@ Confirm that the target Windows volume is detected, that DeviceManifest.json and
 
 ## Display terminology (GUI)
 
-The human-readable column is labeled **Display Name** in Staged for device, Apps, and Cache. The full application identifier (`Id`) remains unchanged in the manifest and CLI. The former Applications tab is now **Apps**; this is a presentation-only name change. **Vendor** is visible in both Staged for device and Apps and comes from the resolved built-in or repository metadata. The Cache tab remains compact, without an extra Vendor column. The original staging order in DeviceManifest.json is not modified, including when the screen table is sorted by a different column.
+The human-readable column is labeled **Display Name** in Staged for device, Apps, and Cache. The full application identifier (`Id`) remains unchanged in the manifest and CLI. The former Applications tab is now **Apps**; this is a presentation-only name change. **Vendor** is visible in both Staged for device and Apps and comes from the resolved built-in or repository metadata. The Cache tab includes Vendor as well, with widths rebalanced to keep full Teams versions visible in the normal desktop window. The original staging order in DeviceManifest.json is not modified, including when the screen table is sorted by a different column.
 
 ## Final read-only presentation polish
 
 The GUI now selects the first visible staged application after an inventory refresh and immediately shows its *actual* manifest configuration in the details panel. In Logs it selects the most recent visible entry on initial load and displays its full parsed message in the details pane. Selecting another row changes only what is displayed; it does not modify files, staging or cache. When no staged apps or log rows are visible, the respective pane explains why it is empty.
 
 The supplementary descriptions above the Apps, Cache and Staged tables and the footer are shorter and avoid repeating Read-only/CLI-only everywhere. The dark header continues to indicate Read-only. Log line component and event names can still be truncated in the table at lower display resolutions; selecting a row shows their full values in its details, and raw data remain available on the row tooltip.
+
+## Final Viewer labeling
+
+The Windows title and dark header use **OSDApps Viewer**; the public entry point is still `Show-OSDAppUI`. The compact target strip displays **Target | USB | Offline/Online** on one line. **Vendor** appears in Staged for device, Apps and Cache when metadata supplies it. The Cache tab retains its independent integrity and signature checks; numeric Size sorting uses the updated column index and never modifies the original cache or manifest.
