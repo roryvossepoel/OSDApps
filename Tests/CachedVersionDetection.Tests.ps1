@@ -144,4 +144,73 @@ Describe 'Built-in cache version detection (read-only)' {
             Should -Invoke Get-OSDAppCachedPackageVersion -Exactly 0
         }
     }
+    It 'returns exactly one trimmed MSI version when COM Execute and Close emit whitespace' {
+        InModuleScope OSDApps {
+            $file = Join-Path $TestDrive 'Mock.msi'
+            Set-Content -LiteralPath $file -Value 'test' -Encoding ASCII
+            Mock Test-OSDAppWinPE { $false }
+            Mock New-Object {
+                $record = [pscustomobject]@{}
+                $record | Add-Member -MemberType ScriptMethod -Name StringData -Value {
+                    param([int]$column)
+                    ' 157.0.1.0 '
+                }
+                $view = [pscustomobject]@{ Record = $record }
+                $view | Add-Member -MemberType ScriptMethod -Name Execute -Value { '' }
+                $view | Add-Member -MemberType ScriptMethod -Name Fetch -Value { $this.Record }
+                $view | Add-Member -MemberType ScriptMethod -Name Close -Value { '' }
+                $db = [pscustomobject]@{ View = $view }
+                $db | Add-Member -MemberType ScriptMethod -Name OpenView -Value {
+                    param([string]$sql)
+                    $this.View
+                }
+                $installer = [pscustomobject]@{ Database = $db }
+                $installer | Add-Member -MemberType ScriptMethod -Name OpenDatabase -Value {
+                    param([string]$path,[int]$mode)
+                    $this.Database
+                }
+                $installer
+            } -ParameterFilter { $ComObject -eq 'WindowsInstaller.Installer' }
+
+            $result = @(Get-OSDAppMsiProductVersion -Path $file)
+            $result.Count | Should -Be 1
+            $result[0] | Should -Be '157.0.1.0'
+            $result[0][0] | Should -Be '1'
+            $result[0].EndsWith(' ') | Should -BeFalse
+        }
+    }
+
+    It 'trims whitespace from old built-in cache metadata without modifying USB files' {
+        InModuleScope OSDApps {
+            $cache = Join-Path $TestDrive 'WhitespaceUsb\OSDApps'
+            $entry = Join-Path $cache 'BuiltIn\CiscoWebex\x64'
+            New-Item -ItemType Directory -Path $entry -Force | Out-Null
+            Set-Content -LiteralPath (Join-Path $entry 'Package.msi') -Value 'mock' -Encoding ASCII
+            $infoPath = Join-Path $entry 'CacheInfo.json'
+            '{"Id":"CiscoWebex","Version":" 46.9.0.35800 ","Architecture":"x64","VersionSource":"MsiProductVersion"}' |
+                Set-Content -LiteralPath $infoPath -Encoding UTF8
+            $hash = (Get-FileHash -LiteralPath $infoPath -Algorithm SHA256).Hash
+            $script:FixtureCachePath = $cache
+            Mock Get-OSDAppCachePath { $script:FixtureCachePath }
+            Mock Get-OSDAppCachedPackageVersion { throw 'Should use existing cache metadata' }
+
+            $found = @(Get-OSDAppCache -ResolveVersions)
+            $found.Count | Should -Be 1
+            $found[0].Version | Should -Be '46.9.0.35800'
+            $found[0].VersionSource | Should -Be 'MsiProductVersion'
+            (Get-FileHash -LiteralPath $infoPath -Algorithm SHA256).Hash | Should -Be $hash
+            Should -Invoke Get-OSDAppCachedPackageVersion -Exactly 0
+        }
+    }
+
+    It 'trims a vendor version returned by the MSI reader before exposing it' {
+        InModuleScope OSDApps {
+            $entry = Join-Path $TestDrive 'MsiSpaces'
+            New-Item -ItemType Directory -Path $entry -Force | Out-Null
+            Mock Get-OSDAppMsiProductVersion { ' 155.0.8059.40 ' }
+            $result = Get-OSDAppCachedPackageVersion -Id GoogleChromeEnterprise -CacheEntryPath $entry
+            $result.Version | Should -Be '155.0.8059.40'
+        }
+    }
+
 }
