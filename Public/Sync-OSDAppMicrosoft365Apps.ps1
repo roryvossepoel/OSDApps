@@ -52,7 +52,7 @@ function Sync-OSDAppMicrosoft365Apps {
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'Microsoft 365 Apps cache synchronization' -LogPath $clientLogPath | Out-Null
     Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft 365 Apps built-in cache.'
 
-    Save-OSDAppDownload -Uri $OfficeDeploymentToolUri -DestinationPath $setupPath -Activity 'Downloading Office Deployment Tool' | Out-Null
+    Save-OSDAppVerifiedBuiltInDownload -Id 'Microsoft365Apps' -Uri $OfficeDeploymentToolUri -DestinationPath $setupPath -Activity 'Downloading Office Deployment Tool' | Out-Null
 
     if ($ConfigurationXml) {
         Test-OSDAppOfficeConfigurationXml -Path $ConfigurationXml | Out-Null
@@ -67,6 +67,9 @@ function Sync-OSDAppMicrosoft365Apps {
     }
 
     Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeCacheDownloadStart' -Message 'Running Office Deployment Tool in download mode.' -Data @{ Configuration = $configPath }
+
+    # Validate the cached installer before it can be launched or reused.
+    Assert-OSDAppBuiltInSignature -Id 'Microsoft365Apps' -FilePath $setupPath | Out-Null
 
     $process = Start-Process -FilePath $setupPath -ArgumentList @('/download', $configPath) -WorkingDirectory $root -PassThru
     try {
