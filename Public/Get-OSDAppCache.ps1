@@ -1,7 +1,8 @@
 function Get-OSDAppCache {
     [CmdletBinding()]
     param(
-        [string[]]$Name
+        [string[]]$Name,
+        [switch]$ResolveVersions
     )
 
     # Cache inspection is optional when no OSDCloud media is attached.
@@ -90,11 +91,22 @@ function Get-OSDAppCache {
                     }
                 }
 
+                $resolvedVersion = if ($info.Version -and [string]$info.Version -ne 'Current') { [string]$info.Version } else { $null }
+                $versionSource = if ($info.VersionSource) { [string]$info.VersionSource } else { $null }
+                if ($ResolveVersions -and $payloadValid -and -not (Test-OSDAppWinPE) -and -not $resolvedVersion) {
+                    $inspected = Get-OSDAppCachedPackageVersion -Id ([string]$info.Id) -CacheEntryPath $entryRoot
+                    if ($inspected.Version) {
+                        $resolvedVersion = [string]$inspected.Version
+                        $versionSource = [string]$inspected.VersionSource
+                    }
+                }
+
                 $results.Add([pscustomobject]@{
                     PSTypeName   = 'OSDApps.CacheEntry'
                     Id           = [string]$info.Id
                     Source       = 'BuiltIn'
-                    Version      = if ($info.Version) { [string]$info.Version } else { $null }
+                    Version      = if ($resolvedVersion) { $resolvedVersion } else { [string]$info.Version }
+                    VersionSource = $versionSource
                     Architecture = if ($info.Architecture) { [string]$info.Architecture } else { $null }
                     Channel      = if ($info.Channel) { [string]$info.Channel } else { $null }
                     Language     = if ($info.Language -is [System.Collections.IEnumerable] -and $info.Language -isnot [string]) { @($info.Language) -join ',' } elseif ($info.Language) { [string]$info.Language } else { $null }
