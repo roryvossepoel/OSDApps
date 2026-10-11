@@ -412,7 +412,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
         $source | Should -Match "'Cache'\s+\{ @\(0,75,88,175,95,115,74,122\) \}"
         $source | Should -Match "cacheList.Columns.Add\('Vendor',88\)"
-        $source | Should -Match "elseif \(\$Key -eq 'Cache' -and \$column -eq 6\)"
+        $source | Should -Match 'elseif \(\$Key -eq ''Cache'' -and \$column -eq 6\)'
         $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$entry'
         $source | Should -Match '\$item.SubItems.Add\(\[string\]\$displayInfo.Vendor\)'
         $source | Should -Not -Match '(?i)\bRemove-OSDAppStaging\b'
