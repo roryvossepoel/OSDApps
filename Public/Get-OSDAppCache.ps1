@@ -91,7 +91,8 @@ function Get-OSDAppCache {
                     }
                 }
 
-                $resolvedVersion = if ($info.Version -and [string]$info.Version -ne 'Current') { [string]$info.Version } else { $null }
+                $cachedVersion = if ($null -ne $info.Version) { ([string]$info.Version).Trim() } else { $null }
+                $resolvedVersion = if ($cachedVersion -and $cachedVersion -ne 'Current') { $cachedVersion } else { $null }
                 $versionSource = if ($info.VersionSource) { [string]$info.VersionSource } else { $null }
                 if ($ResolveVersions -and $payloadValid -and -not (Test-OSDAppWinPE) -and -not $resolvedVersion) {
                     $inspected = Get-OSDAppCachedPackageVersion -Id ([string]$info.Id) -CacheEntryPath $entryRoot
@@ -105,7 +106,7 @@ function Get-OSDAppCache {
                     PSTypeName   = 'OSDApps.CacheEntry'
                     Id           = [string]$info.Id
                     Source       = 'BuiltIn'
-                    Version      = if ($resolvedVersion) { $resolvedVersion } else { [string]$info.Version }
+                    Version      = if ($resolvedVersion) { $resolvedVersion } else { $cachedVersion }
                     VersionSource = $versionSource
                     Architecture = if ($info.Architecture) { [string]$info.Architecture } else { $null }
                     Channel      = if ($info.Channel) { [string]$info.Channel } else { $null }
