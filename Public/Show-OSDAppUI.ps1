@@ -132,7 +132,7 @@ function Update-OSDAppUIReadOnlyView {
             [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -Application $app))
             [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
             [void]$item.SubItems.Add([string]$app.Architecture)
-            [void]$item.SubItems.Add((Get-OSDAppUIAvailabilityLabel -Availability $app.Availability))
+            [void]$item.SubItems.Add((Get-OSDAppUIAvailabilityLabel -Availability $app.Availability -Offline:$State.Offline))
             [void]$item.SubItems.Add($(if ([string]$app.Id -in @($data.StagedApps.Id)) { 'Staged' } else { '-' }))
             $item
         }
@@ -159,7 +159,16 @@ function Update-OSDAppUIReadOnlyView {
             if ([string]::IsNullOrWhiteSpace($cacheVersion) -or $cacheVersion -eq 'Current') { $cacheVersion = 'Not recorded' }
             [void]$item.SubItems.Add($cacheVersion)
             [void]$item.SubItems.Add([string]$entry.Architecture)
-            [void]$item.SubItems.Add($(if ($entry.Valid) { 'Valid' } else { 'Missing / invalid' }))
+            $integrity = if (-not $entry.Valid) {
+                'Missing / invalid'
+            }
+            elseif ($entry.Source -eq 'Repository') {
+                'SHA-256 verified'
+            }
+            else {
+                'Files present'
+            }
+            [void]$item.SubItems.Add($integrity)
             [void]$item.SubItems.Add($(if ($null -ne $entry.SizeMB) { "$($entry.SizeMB) MB" } else { '-' }))
             $item.Tag = $entry
             $item
