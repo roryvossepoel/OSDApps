@@ -1,185 +1,110 @@
 # Architecture
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Runtime](runtime.md)
+
+OSDApps separates content ownership, acquisition, device staging, installation and inspection. The CLI writes deployment state; the Viewer reads it. SetupComplete runs independently of the module.
+
 ![OSDApps end-to-end architecture](images/osdapps-architecture.svg)
-
-![Source ownership and sync moments](images/source-ownership-sync.svg)
-
-OSDApps separates application ownership, acquisition, staging, freshness checks, installation, and cleanup.
 
 ## End-to-end flow
 
-```mermaid
-flowchart TB
-    A[OSDCloud v2 in WinPE]
-    B[Repository sync/cache in WinPE]
-    C[Stage ordered Apps queue and available payload]
-    D[Windows Temp runtime]
-    E[First boot / full Windows]
-    F{OSDCloud USB cache present?}
-    G[Use / refresh USB cache]
-    H[Acquire built-ins directly to local runtime]
-    I[OSDApps Runner]
-    J{CleanupMode}
-    K[Remove runtime source]
-    L[Retain runtime source]
-    M[OOBE / Autopilot]
+```text
+Full Windows preparation (optional)
+    save module and prepare reusable USB content
 
-    A --> B --> C --> D --> E --> F
-    F -->|Yes| G --> I
-    F -->|No| H --> I
-    I --> J
-    J -->|OnSuccess| K --> M
-    J -->|Never| L --> M
+WinPE after OSDCloud applies Windows
+    synchronize selected repository packages when online
+    stage built-in intent and available fallback content
+    write one ordered device queue and standalone runtime
+
+First Windows boot / SetupComplete
+    PreInstall prepares built-ins and enforces applicable installer trust checks
+    Runner validates repository hashes and installs the full local queue
+    apply cleanup policy; retain persistent logs
+
+OOBE / Autopilot continues
 ```
+
+The Viewer can inspect an existing Windows target and cache in full Windows or supported WinPE. It does not perform any of the acquisition, staging, installation or cleanup steps above.
 
 ## Two source models
 
 ### Repository applications
 
-Repository applications are organization-managed packages.
+A repository is organization-managed static content: `catalog.json`, per-app manifests and package archives. During WinPE staging the module resolves a compatible variant, downloads or reuses its `Package.zip`, checks the manifest SHA-256 and copies it to local device staging.
 
-```text
-repository
-→ catalog.json
-→ Apps/<AppId>/<Version>/<Architecture>/manifest.json
-→ resolve compatible package in WinPE
-→ download/copy Package.zip
-→ validate SHA-256
-→ update optional OSDCloud cache
-→ stage Package.zip to Windows Temp
-→ Runner validates SHA-256 again
-→ extract
-→ run Package/Install.ps1
-```
+Runner checks the staged archive hash again before extraction and `Package/Install.ps1` execution. It does not contact the repository to refresh packages during SetupComplete.
 
-Repository freshness is determined by the self-maintained repository metadata and SHA-256.
+Full-Windows `Sync-OSDAppRepository` can also prepare media ahead of deployment. Repository variants are selected for the synchronization host's architecture; preparation on a different architecture needs explicit care. Repository content, licensing and hosting remain the repository owner's responsibility.
 
 ### Built-in applications
 
-Built-ins are vendor-native integrations maintained by OSDApps.
+Built-ins are vendor-native integrations maintained by OSDApps. The module does not ship their installer payloads.
 
-```text
-WinPE
-→ stage built-in deployment intent
-→ stage existing cache as fallback when available
+WinPE stages deployment intent and copies matching existing cache content as fallback when available. Full-Windows Sync commands or standalone PreInstall perform acquisition/refresh. Microsoft 365 Apps uses the Office Deployment Tool; Teams, Adobe, Chrome, Firefox and Webex use their integrated vendor acquisition paths.
 
-Full Windows / PreInstall
-→ detect optional OSDCloud USB cache
-→ check vendor freshness
-→ refresh/download only when required
-→ ensure complete local payload
-→ Runner installs
-```
-
-Built-ins refresh in full Windows so every vendor integration can use one consistent acquisition, fallback, logging, and troubleshooting model.
-
-Microsoft 365 Apps uses the Office Deployment Tool for synchronization. Teams, Adobe Acrobat Unified, Google Chrome Enterprise, Mozilla Firefox Enterprise, and Cisco Webex use vendor-native sources with lightweight freshness checks where applicable.
+Supported installer files are checked for Windows Authenticode trust and the expected publisher organization. This covers Office `setup.exe`, Teams `teamsbootstrapper.exe` and Chrome/Firefox/Webex MSI files, not every nested payload. See the [publisher policy](built-in-apps.md#authenticode-and-publisher-policy-0340).
 
 ## Why Office refreshes in full Windows
 
-The Office Deployment Tool used by the Microsoft 365 Apps built-in is not treated as a WinPE acquisition mechanism. OSDApps deliberately runs the ODT synchronization step in full Windows, where the vendor-supported deployment runtime is available.
+OSDApps does not treat the Office Deployment Tool as a WinPE acquisition mechanism. It uses the full-Windows runtime for Office synchronization. The same phase boundary is used for all built-ins; public built-in Sync commands are not the WinPE staging interface.
 
-If an organization prefers to control the Office package and version entirely in WinPE, Microsoft 365 Apps can instead be delivered as a normal repository application.
+An organization can instead supply Office as a repository package when it needs to own the package/version. Repository acquisition then happens in WinPE, but installation still runs in Windows.
 
 ## Optional OSDCloud USB cache
 
-A connected volume with the configured cache label (default `OSDCloud`) is detected automatically.
+The CLI identifies a visible volume by `CacheVolumeLabel` (default `OSDCloud`), not a fixed drive letter. Its cache root is `\OSDApps`.
 
-```text
-USB + online
-→ use complete cache as fallback
-→ check/refresh current content
-→ stage locally
-→ install
+| Condition | Acquisition path |
+| --- | --- |
+| USB + online | Stage available cache as fallback, check vendor freshness and refresh where needed. |
+| USB + offline | Use matching, complete local content staged from the cache, subject to applicable trust/hash checks. |
+| No USB + online | Repository staging can use a temporary cache on the offline Windows disk; built-ins can be acquired directly to the local runtime after boot. |
+| No USB + offline | Requires sufficient acceptable content already staged on the device. Without it, acquisition/installation cannot succeed. |
 
-USB + offline
-→ use complete cached content
-→ stage locally
-→ install
+The cache changes where content is acquired and reused. Runner consumes local staging; it does not execute installers directly from the USB cache. Keep media attached while the deployment is using it.
 
-No USB + online
-→ acquire built-ins directly to Windows Temp
-→ install
-```
-
-No USB + offline requires a usable payload to have been staged already. Otherwise PreInstall stops before the Runner starts.
-
-A cache hit changes acquisition performance, not installation semantics. The Runner always installs from local staged content.
+![Source ownership and synchronization phases](images/source-ownership-sync.svg)
 
 ## Runtime locations
 
-Temporary runtime:
+| Location | Contents |
+| --- | --- |
+| `<cache volume>:\OSDApps` | Reusable repository/built-in cache and cache-operation logs |
+| `<Windows target>\Windows\Temp\OSDApps` | Per-device manifest, PreInstall/Runner, staged packages and Work |
+| `%ProgramData%\OSDApps\Logs\Runtime.log` | Default persistent PreInstall/Runner log in deployed Windows |
 
-```text
-%SystemRoot%\Temp\OSDApps
-```
+Typical local staging contains `DeviceManifest.json`, `Invoke-OSDAppPreInstall.ps1`, `Invoke-OSDAppRunner.ps1`, `Packages`, `BuiltIn` and `Work`.
 
-Default persistent runtime log:
-
-```text
-%ProgramData%\OSDApps\Logs\Runtime.log
-```
-
-Module/cache operations use:
-
-```text
-<OSDCloud>:\OSDApps\Logs\Client.log
-```
-
-Typical runtime content:
-
-```text
-DeviceManifest.json
-Invoke-OSDAppPreInstall.ps1
-Invoke-OSDAppRunner.ps1
-Packages\
-BuiltIn\
-Work\
-```
-
-With `CleanupMode OnSuccess`, the runtime source is removed after a successful run. With `CleanupMode Never`, it is retained. On failure, source is retained automatically for troubleshooting.
+`CleanupMode OnSuccess` schedules removal of temporary device source after a successful run; `Never` retains it. A failed run retains source for investigation. The persistent log and reusable USB cache are separate from that staging directory.
 
 ## Source resolution rules
 
-Built-in acquisition follows one resolver:
+For built-ins, the deployment first identifies the optional cache and available local fallback, then attempts freshness/acquisition when network availability permits. Content must be locally available and pass the checks applicable to its format before installation.
 
-```text
-1. Detect optional OSDCloud cache
-2. Stage complete cached content as fallback when available
-3. Check vendor freshness when online
-4. Refresh or acquire only when required
-5. Ensure complete payload under Windows Temp
-6. Start the Runner
-```
+A refresh failure is not automatically fatal if an acceptable staged fallback exists. Conversely, a complete-looking fallback is not automatically acceptable: a supported MSI/EXE signature or publisher failure can still stop deployment. `GetIsNetworkAvailable()` reports interface availability, not verified access to every vendor endpoint.
 
-A refresh failure is non-fatal when a complete staged fallback exists. It is fatal when no usable payload is available.
+The explicit log events distinguish cache discovery, refresh skipped, refresh failed with fallback, signature verification and installer results. See [Runtime logging](runtime.md#logging).
 
 ## Metadata model
 
-```text
-catalog.json                                         online repository index
-Apps/<AppId>/<Version>/<Architecture>/manifest.json package metadata
-CacheCatalog.json                                    local repository-cache snapshot
-CacheInfo.json                                       built-in cache metadata
-DeviceManifest.json                                  per-device ordered Apps queue
-```
+| File | Role |
+| --- | --- |
+| `catalog.json` | Online repository index |
+| `Apps/<Id>/<Version>/<Architecture>/manifest.json` | Per-repository-package metadata and archive hash |
+| `CacheCatalog.json` | Local repository-cache snapshot |
+| `CacheInfo.json` | Per-built-in cache metadata |
+| `DeviceManifest.json` | Selected Windows target's ordered `Apps` queue and runtime settings |
+| `metadata/builtins.json` | Public built-in definitions for discovery and external consumers; not the organization's package catalog |
+
+Optional repository Vendor metadata is descriptive. It is not a signing certificate, a signature verification result or an authorization decision.
 
 ## Device manifest
 
-`DeviceManifest.json` contains one ordered `Apps` array for repository and built-in applications.
+The manifest has one ordered `Apps` array containing `Source=BuiltIn` or `Source=Repository` entries. PreInstall filters the built-ins for preparation; Runner processes the full array from top to bottom.
 
-`Source` identifies the execution path:
+Adding a new Id appends it. Re-adding an existing Id replaces its entry and moves it to the end, rather than creating a duplicate. Viewer sorting changes only the screen order; it never writes the manifest.
 
-```text
-Repository
-BuiltIn
-```
+`Set-OSDAppConfiguration` is session-scoped. Add commands capture runtime settings in the manifest so SetupComplete does not need the module or the original PowerShell session.
 
-Every `Add-*` operation appends or moves the complete application entry to the end of the queue. PreInstall filters the built-in entries for acquisition; the Runner executes the complete `Apps[]` array from top to bottom.
-
-See also:
-
-- [Built-in applications](built-in-apps.md)
-- [Repository applications](repository.md)
-- [Runtime and cleanup](runtime.md)
-- [Validation matrix](testing.md)
+For exact package fields, see [Repository applications](repository.md), [Built-in applications](built-in-apps.md) and the [public metadata contract](public-metadata.md). For proven scenarios and remaining limitations, see [Validation matrix](testing.md).
