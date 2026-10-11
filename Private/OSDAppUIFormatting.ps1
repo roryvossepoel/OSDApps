@@ -38,7 +38,6 @@ function Get-OSDAppUICachedVersion {
     }
     $version = [string]$matches[0].Version
     if ($version -eq 'Current') { return 'Not recorded' }
-    if ([string]$matches[0].VersionSource -eq 'AdobePatchFileName') { return "$version (MSP)" }
     return $version
 }
 
@@ -58,7 +57,7 @@ function Get-OSDAppUIAvailabilityLabel {
         }
         'InvalidCache' { 'USB cache invalid'; break }
         'Online'       { 'Online only'; break }
-        'Available'    { 'Vendor available'; break }
+        'Available'    { 'Not on USB'; break }
         'Unavailable'  { 'Not available'; break }
         default        { if ($Availability) { $Availability } else { '-' } }
     }
