@@ -53,9 +53,12 @@ function Sync-OSDAppCiscoWebex {
         Write-Verbose "Cached Cisco Webex $Architecture MSI is current. No download required."
     }
     else {
-        Save-OSDAppDownload -Uri $PackageUri -DestinationPath $packagePath -Activity "Downloading Cisco Webex $Architecture MSI" | Out-Null
+        Save-OSDAppVerifiedBuiltInDownload -Id 'CiscoWebex' -Uri $PackageUri -DestinationPath $packagePath -Activity "Downloading Cisco Webex $Architecture MSI" | Out-Null
         $updated = $true
     }
+
+    # Also re-validate an existing cached MSI when HTTP metadata says unchanged.
+    Assert-OSDAppBuiltInSignature -Id 'CiscoWebex' -FilePath $packagePath | Out-Null
 
     $inspectedVersion = Get-OSDAppCachedPackageVersion -Id 'CiscoWebex' -CacheEntryPath $root
     $resolvedVersion = if ($inspectedVersion.Version) { [string]$inspectedVersion.Version } else { 'Current' }
