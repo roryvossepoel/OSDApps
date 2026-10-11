@@ -119,3 +119,22 @@ function Get-OSDAppUILogRows {
         ConvertFrom-OSDAppUILogLine -Line ([string]$line)
     }
 }
+
+
+function Get-OSDAppUISignatureLabel {
+    [CmdletBinding()]
+    param([string]$Status)
+
+    switch ($Status) {
+        'Valid'                { 'Signature valid'; break }
+        'NotSigned'            { 'Not signed'; break }
+        'HashMismatch'         { 'Hash mismatch'; break }
+        'NotTrusted'           { 'Not trusted'; break }
+        'UnknownError'         { 'Trust unknown'; break }
+        'Check failed'         { 'Check failed'; break }
+        'File missing'         { 'File missing'; break }
+        'Unavailable in WinPE' { 'WinPE: not checked'; break }
+        'Not assessed'         { 'Not assessed'; break }
+        default                { 'Not checked' }
+    }
+}
