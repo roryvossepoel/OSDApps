@@ -11,7 +11,7 @@ function Set-OSDAppUIColumnWidths {
     # Reserve enough room for Teams' four-part package version, and let
     # Application / Message absorb remaining space on window resize.
     $fixed = switch ($Key) {
-        'Staged'       { @(65,0,100,128,190,100) }
+        'Staged'       { @(65,0,90,100,125,185,105) }
         'Applications' { @(0,75,90,110,175,100,100,90) }
         'Cache'        { @(0,90,155,110,125,80,150) }
         'Logs'         { @(185,78,135,125,0) }
@@ -155,6 +155,7 @@ function Update-OSDAppUIReadOnlyView {
             $displayInfo = Get-OSDAppUIDisplayInfo -Application $app -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
             [void]$item.SubItems.Add([string]$displayInfo.DisplayName)
             [void]$item.SubItems.Add($(if ($app.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
+            [void]$item.SubItems.Add([string]$displayInfo.Vendor)
             [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -Application $app))
             [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
             [void]$item.SubItems.Add([string]$app.Architecture)
@@ -436,7 +437,7 @@ function Show-OSDAppUI {
     $tabs.Dock = 'Fill'
     [void]$root.Controls.Add($tabs,0,3)
     $stagedTab = [System.Windows.Forms.TabPage]::new('Staged for device')
-    $catalogTab = [System.Windows.Forms.TabPage]::new('Applications')
+    $catalogTab = [System.Windows.Forms.TabPage]::new('Apps')
     $cacheTab = [System.Windows.Forms.TabPage]::new('Cache')
     $logsTab = [System.Windows.Forms.TabPage]::new('Logs')
     foreach ($tab in @($stagedTab,$catalogTab,$cacheTab,$logsTab)) { [void]$tabs.TabPages.Add($tab) }
@@ -459,11 +460,12 @@ function Show-OSDAppUI {
     $stagedList.GridLines = $true
     $stagedList.MultiSelect = $false
     [void]$stagedList.Columns.Add('Order',65)
-    [void]$stagedList.Columns.Add('Application',285)
-    [void]$stagedList.Columns.Add('Source',125)
-    [void]$stagedList.Columns.Add('Version / policy',145)
-    [void]$stagedList.Columns.Add('USB version',135)
-    [void]$stagedList.Columns.Add('Architecture',110)
+    [void]$stagedList.Columns.Add('Display Name',270)
+    [void]$stagedList.Columns.Add('Source',90)
+    [void]$stagedList.Columns.Add('Vendor',100)
+    [void]$stagedList.Columns.Add('Version / policy',125)
+    [void]$stagedList.Columns.Add('USB version',185)
+    [void]$stagedList.Columns.Add('Architecture',105)
     [void]$stagedLayout.Controls.Add($stagedList,0,1)
     $details = [System.Windows.Forms.TextBox]::new()
     $details.Multiline = $true
@@ -489,7 +491,7 @@ function Show-OSDAppUI {
     $catalogList.View = 'Details'
     $catalogList.FullRowSelect = $true
     $catalogList.GridLines = $true
-    [void]$catalogList.Columns.Add('Application',260)
+    [void]$catalogList.Columns.Add('Display Name',260)
     [void]$catalogList.Columns.Add('Source',90)
     [void]$catalogList.Columns.Add('Vendor',100)
     [void]$catalogList.Columns.Add('Version / policy',110)
@@ -516,7 +518,7 @@ function Show-OSDAppUI {
     $cacheList.FullRowSelect = $true
     $cacheList.GridLines = $true
     $cacheList.ShowItemToolTips = $true
-    [void]$cacheList.Columns.Add('Application',265)
+    [void]$cacheList.Columns.Add('Display Name',265)
     [void]$cacheList.Columns.Add('Source',105)
     [void]$cacheList.Columns.Add('USB version',115)
     [void]$cacheList.Columns.Add('Architecture',105)
