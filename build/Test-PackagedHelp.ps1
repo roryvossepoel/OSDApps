@@ -27,7 +27,9 @@ foreach ($name in $manifest.FunctionsToExport) {
     if ($description -notlike '*Execution environment:*') {
         $problems.Add("${name}: execution environment missing from actual Get-Help output.")
     }
-    $documentedParameters = @($topic.Parameters.Parameter | ForEach-Object { [string]$_.Name })
+    $documentedParameters = @($topic.Parameters.Parameter |
+        Where-Object { $null -ne $_ -and -not [string]::IsNullOrWhiteSpace([string]$_.Name) } |
+        ForEach-Object { [string]$_.Name })
     $excluded = @('Verbose','Debug','ErrorAction','WarningAction','InformationAction','ProgressAction',
         'ErrorVariable','WarningVariable','InformationVariable','OutVariable','OutBuffer','PipelineVariable')
     $actualParameters = @($module.ExportedFunctions[$name].Parameters.Keys | Where-Object { $_ -notin $excluded })
@@ -37,7 +39,7 @@ foreach ($name in $manifest.FunctionsToExport) {
     foreach ($parameter in $documentedParameters) {
         if ($parameter -notin $actualParameters) { $problems.Add("${name}: stale parameter $parameter.") }
     }
-    $examples = @(($topic.Examples.Example))
+    $examples = @($topic.Examples.Example)
     if ($examples.Count -ne @($spec.Examples).Count) { $problems.Add("${name}: example count mismatch.") }
     if (@($topic.Syntax.SyntaxItem).Count -ne @($module.ExportedFunctions[$name].ParameterSets).Count) {
         $problems.Add("${name}: parameter-set syntax count mismatch.")
