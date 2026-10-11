@@ -76,10 +76,14 @@ function Sync-OSDAppMozillaFirefoxEnterprise {
         $updated = $true
     }
 
-    [ordered]@{
+    $inspectedVersion = Get-OSDAppCachedPackageVersion -Id 'MozillaFirefoxEnterprise' -CacheEntryPath $root
+    $resolvedVersion = if ($inspectedVersion.Version) { [string]$inspectedVersion.Version } else { 'Current' }
+
+     [ordered]@{
         Id                  = 'MozillaFirefoxEnterprise'
         Cached              = $true
-        Version             = 'Current'
+        Version             = $resolvedVersion
+        VersionSource       = $inspectedVersion.VersionSource
         Channel             = $Channel
         Architecture        = $Architecture
         Language            = $Language
@@ -99,7 +103,7 @@ function Sync-OSDAppMozillaFirefoxEnterprise {
     [pscustomobject]@{
         PSTypeName='OSDApps.BuiltInCache'
         Id='MozillaFirefoxEnterprise'
-        Version='Current'
+        Version=$resolvedVersion
         Channel=$Channel
         Architecture=$Architecture
         Language=$Language
