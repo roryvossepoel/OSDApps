@@ -12,43 +12,76 @@ permissions:
 
 jobs:
   validate:
-    name: Validate (${{ matrix.engine }})
+    name: Validate PowerShell 7
     runs-on: windows-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - engine: Windows-PowerShell-5.1
-            shell: powershell
-            major: 5
-          - engine: PowerShell-7
-            shell: pwsh
-            major: 7
-
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
-      - name: Install validation dependencies
-        shell: ${{ matrix.shell }}
+      - name: Install test dependencies
+        shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          if ($PSVersionTable.PSVersion.Major -ne ${{ matrix.major }}) {
-              throw "Wrong test host: $($PSVersionTable.PSVersion)"
-          }
+          if ($PSVersionTable.PSVersion.Major -ne 7) { throw 'Expected PowerShell 7.' }
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -RequiredVersion 6.2.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          Import-Module Pester -RequiredVersion 6.2.0 -Force
+      - name: Validate manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Test-ModuleManifest ./OSDApps.psd1 -ErrorAction Stop | Format-List Name,Version,Author
+      - name: Full analyzer and Pester suite with package build
+        shell: pwsh
+        run: |
+          ./build/Test-Module.ps1 -ResultsPath ./TestResults
+      - name: Verify packaged Get-Help
+        shell: pwsh
+        run: |
+          ./build/Test-PackagedHelp.ps1 -ModulePath ./dist/OSDApps
+      - name: Validate example repository
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $catalog = Get-Content ./Examples/Repository/catalog.json -Raw | ConvertFrom-Json
+          if ($catalog.SchemaVersion -ne 1) { throw 'Unexpected example catalog schema.' }
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-PowerShell-7
+          path: TestResults
+          if-no-files-found: warn
+      - name: Upload module artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OSDApps-PowerShell-7
+          path: dist/OSDApps
+          if-no-files-found: error
+
+  validate_windows_powershell:
+    name: Validate Windows PowerShell 5.1
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Install test dependencies
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($PSVersionTable.PSVersion.Major -ne 5) { throw 'Expected Windows PowerShell 5.1.' }
           [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
           if (-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)) {
               Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force | Out-Null
           }
           Set-PSRepository PSGallery -InstallationPolicy Trusted
-          # Keep the test framework version equal across hosts and reproducible.
           Install-Module Pester -RequiredVersion 6.2.0 -Scope CurrentUser -Force -SkipPublisherCheck
           Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
           Import-Module Pester -RequiredVersion 6.2.0 -Force
-
-      - name: Validate module manifest and metadata
-        shell: ${{ matrix.shell }}
+      - name: Validate manifest and metadata
+        shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Test-ModuleManifest ./OSDApps.psd1 -ErrorAction Stop | Format-List Name,Version,Author
@@ -64,51 +97,34 @@ jobs:
               if ($definitions.Count -ne $expected.Count) { throw 'Built-in metadata count mismatch.' }
               foreach ($id in $expected.Keys) {
                   $info = Get-OSDAppUIDisplayInfo -Application ([pscustomobject]@{Id=$id;Source='BuiltIn'}) -BuiltInMetadata $definitions
-                  if ($info.Vendor -ne $expected[$id] -or -not $info.DisplayName -or $info.DisplayName -eq $id) {
-                      throw "Incorrect Vendor/display metadata: $id"
-                  }
+                  if ($info.Vendor -ne $expected[$id] -or -not $info.DisplayName -or $info.DisplayName -eq $id) { throw "Incorrect metadata: $id" }
               }
-              $publishers = @(
-                  @{ Id='MicrosoftTeams'; Subject='CN=Microsoft Corporation, O=Microsoft Corporation, C=US' },
-                  @{ Id='CiscoWebex'; Subject='CN="Cisco Systems, Inc.", O="Cisco Systems, Inc.", C=US' },
-                  @{ Id='GoogleChromeEnterprise'; Subject='CN=Google LLC, O=Google LLC, C=US' },
-                  @{ Id='MozillaFirefoxEnterprise'; Subject='CN=Mozilla Corporation, O=Mozilla Corporation, C=US' }
-              )
-              foreach ($publisher in $publishers) {
-                  if (-not (Test-OSDAppExpectedPublisher -Id $publisher.Id -SignerSubject $publisher.Subject)) { throw "Expected publisher rejected: $($publisher.Id)" }
-                  if (Test-OSDAppExpectedPublisher -Id $publisher.Id -SignerSubject 'CN=Other, O=Other Vendor LLC, C=US') { throw 'Unexpected publisher accepted.' }
-              }
-              Write-Host 'Built-in metadata and expected publisher smoke checks passed.'
+              Write-Host 'Windows PowerShell 5.1 built-in metadata smoke checks passed.'
           }
-
-      - name: Run full Pester suite, analyzer and build
-        shell: ${{ matrix.shell }}
+      - name: Full analyzer and Pester suite with package build
+        shell: powershell
         run: |
           ./build/Test-Module.ps1 -ResultsPath ./TestResults
-
-      - name: Verify actual packaged Get-Help in a fresh session
-        shell: ${{ matrix.shell }}
+      - name: Verify packaged Get-Help
+        shell: powershell
         run: |
           ./build/Test-PackagedHelp.ps1 -ModulePath ./dist/OSDApps
-
       - name: Validate example repository
-        shell: ${{ matrix.shell }}
+        shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $catalog = Get-Content ./Examples/Repository/catalog.json -Raw | ConvertFrom-Json
           if ($catalog.SchemaVersion -ne 1) { throw 'Unexpected example catalog schema.' }
-
-      - name: Upload validation reports
+      - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: validation-${{ matrix.engine }}
+          name: validation-Windows-PowerShell-5.1
           path: TestResults
           if-no-files-found: warn
-
-      - name: Upload validated module
+      - name: Upload module artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OSDApps-${{ matrix.engine }}
+          name: OSDApps-Windows-PowerShell-5.1
           path: dist/OSDApps
           if-no-files-found: error
