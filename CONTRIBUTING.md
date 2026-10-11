@@ -2,13 +2,67 @@
 
 Contributions, issue reports, and built-in application requests are welcome.
 
+## Development and validation
+
+Use a Windows development machine, not a device waiting to run SetupComplete. Clone the repository, use a separate branch and keep unrelated behavior changes in separate pull requests. Never commit private device logs, credentials, repository tokens or vendor installers.
+
+The CI suite runs independently in **Windows PowerShell 5.1** and **PowerShell 7**. Both hosts run the complete Pester suite, analyzer, distribution build and a fresh-process check of actual packaged `Get-Help`. These Windows CI hosts are not WinPE; physical WinPE and installation regressions remain separate evidence.
+
+Install the current CI test-framework version and analyzer in the host you intend to use:
+
+```powershell
+Install-Module Pester -RequiredVersion 6.2.0 -Scope CurrentUser -Force -SkipPublisherCheck
+Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+```
+
+From the repository root:
+
+```powershell
+./build/Test-Module.ps1 -ResultsPath ./TestResults
+```
+
+The build fails on analyzer errors, failed/discovery-failed/empty/incomplete Pester runs and missing or stale help metadata. Warnings are retained, not silently suppressed. `TestResults` includes NUnit-format Pester results, a complete analyzer JSON report and the exact tool versions. CI uploads reports even when a later check fails, and uploads module artifacts only after successful validation.
+
+Run local documentation checks separately when editing Markdown:
+
+```powershell
+./build/Test-Documentation.ps1
+```
+
+This checks local inline-link targets and section anchors, parses fenced PowerShell and validates literal public OSDApps command/parameter names. It does not run examples or crawl external websites. A passing parser test does not establish that an example deployed software successfully.
+
+## Command help
+
+Edit reviewed descriptions and examples in `help/CommandHelp.psd1`. Build-generated MAML uses actual exported command parameter sets, types, defaults and validation choices. Do not execute commands to discover sample output.
+
+Build and then open a fresh PowerShell session to inspect the **built** package:
+
+```powershell
+./build/Build-Module.ps1
+```
+
+In the new session, from the repository root:
+
+```powershell
+Import-Module ./dist/OSDApps/OSDApps.psd1 -Force
+Get-Help Show-OSDAppUI -Full
+Get-Help Add-OSDApp -Examples
+./build/Test-PackagedHelp.ps1 -ModulePath ./dist/OSDApps
+```
+
+A raw source import does not generate the external help. Existing comment-based help is connected to MAML only in distribution copies, with executable-token equivalence checked. See [Maintaining command help](help/README.md) for the authoring contract and packaging boundary.
+
+## Review boundaries
+
+Describe behavior changes, execution environment, destructive effects and validation limits in every PR. Keep public parameter contracts, metadata consumers and standalone runtime requirements in mind. Do not call code safe merely because the analyzer is green; retain focused tests for failure paths. Do not fix a warning by weakening a security check or changing deployment defaults as a side effect of documentation work.
+
+Normal CI never publishes to the Gallery. Version bumps and immutable release publication follow [Releasing](docs/releasing.md). Help and build improvements require a later approved module release before Gallery consumers receive them; merging the tooling PR alone does not replace a published package.
+
 ## Built-in application requests
 
 Built-in applications are product-specific integrations maintained inside OSDApps. They are intentionally reserved for broadly used software with a stable, vendor-supported acquisition and unattended installation path. Built-in payloads must always be acquired directly from the software vendor; installers may never be bundled with, mirrored by, or redistributed through OSDApps.
 
-Before requesting a built-in, review the criteria in:
-
-- [Built-in application request policy](docs/built-in-apps.md#requesting-a-new-built-in-application)
+Before requesting a built-in, review the [Built-in application request policy](docs/built-in-apps.md#requesting-a-new-built-in-application).
 
 The installer source must be the vendor itself. Third-party mirrors, community package feeds, repackaged binaries, and module-hosted installer payloads are not accepted for built-ins.
 

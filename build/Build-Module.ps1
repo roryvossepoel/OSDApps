@@ -36,6 +36,12 @@ foreach ($item in $items) {
 $builtManifest = Join-Path $moduleOutput 'OSDApps.psd1'
 Test-ModuleManifest -Path $builtManifest -ErrorAction Stop | Out-Null
 
+# External help is generated in the package; source functions are unchanged.
+& (Join-Path $PSScriptRoot 'New-CommandHelp.ps1') -ModulePath $moduleOutput | Out-Null
+# Existing comment-based help otherwise takes precedence. Annotate only built
+# copies, proving their non-comment token streams remain byte-for-byte equal.
+& (Join-Path $PSScriptRoot 'Connect-PackagedHelp.ps1') -ModulePath $moduleOutput
+
 Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
 Import-Module $builtManifest -Force -ErrorAction Stop
 
