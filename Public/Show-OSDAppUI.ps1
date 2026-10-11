@@ -271,7 +271,7 @@ function Update-OSDAppUIReadOnlyView {
     $setupStatus = if ($data.SetupCompleteExists) { 'Present' } else { 'Not found' }
     $State.StagedInfo.Text = "$stagedCount staged for SetupComplete | $builtInCount built-in, $repositoryCount repository | SetupComplete.cmd: $setupStatus"
     $State.CacheInfo.Text = if ($data.CachePath) {
-        "USB cache: $($data.CachePath) | $(@($data.CacheEntries).Count) entries | Signatures: $(if ($State.VerifySignatures) { 'checked where supported' } else { 'not checked' })"
+        "USB cache: $($data.CachePath) | $(@($data.CacheEntries).Count) entries | Signatures: $(if ($State.WinPE) { 'unavailable in WinPE' } else { 'checked where supported' })"
     } else {
         'USB cache: not connected / not found.'
     }
@@ -613,7 +613,7 @@ function Show-OSDAppUI {
 
     $script:OSDAppUIState = @{
         Form=$form; Target=$target; Offline=[bool]$Offline; Search=$searchBox
-        VerifySignatures=[bool]$VerifySignatures
+        VerifySignatures=[bool]$VerifySignatures; WinPE=[bool]$winPE
         ContextStatus=$contextStatus; ContextToolTip=$toolTip
         TargetKind=$targetKind; TargetDescription=$targetText
         CatalogMode=$catalogMode; CatalogDescription=$catalogDescription
