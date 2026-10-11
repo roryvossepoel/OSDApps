@@ -129,12 +129,27 @@ function Update-OSDAppUILogViewer {
             }
         )
         $State.Rows['Logs'] = $items
-        $State.LogInfo.Text = "$($entries.Count) recent log lines | $path | Read-only"
+        $State.LogInfo.Text = "$($entries.Count) recent lines | $path"
         Show-OSDAppUIRows -State $State -Key Logs
         Set-OSDAppUIColumnWidths -State $State -Key Logs
+
+        # The log details pane should be useful immediately after opening.
+        # Select the most recent visible entry without changing log order.
+        $visible = $State.Lists['Logs']
+        if ($visible.Items.Count -gt 0) {
+            $last = $visible.Items[$visible.Items.Count - 1]
+            $last.Selected = $true
+            $entry = $last.Tag
+            $State.LogDetails.Text = "Time: $($entry.Timestamp) | Level: $($entry.Level) | Component: $($entry.Component) | Event: $($entry.Event)" +
+                [Environment]::NewLine + [Environment]::NewLine + [string]$entry.Message
+        }
+        else {
+            $State.LogDetails.Text = 'No log entries match the current search.'
+        }
     }
     catch {
         $State.LogInfo.Text = "Cannot read log: $($_.Exception.Message)"
+        $State.LogDetails.Text = 'Unable to load the selected log file.'
         Show-OSDAppUIRows -State $State -Key Logs
     }
 }
@@ -253,20 +268,30 @@ function Update-OSDAppUIReadOnlyView {
     $builtInCount = @($data.StagedApps | Where-Object Source -eq 'BuiltIn').Count
     $repositoryCount = @($data.StagedApps | Where-Object Source -eq 'Repository').Count
     $setupStatus = if ($data.SetupCompleteExists) { 'Present' } else { 'Not found' }
-    $State.StagedInfo.Text = "Pending SetupComplete: $stagedCount apps ($builtInCount built-in, $repositoryCount repository) | SetupComplete.cmd: $setupStatus | Sort: view only"
+    $State.StagedInfo.Text = "$stagedCount staged for SetupComplete | $builtInCount built-in, $repositoryCount repository | SetupComplete.cmd: $setupStatus"
     $State.CacheInfo.Text = if ($data.CachePath) {
-        "USB: $($data.CachePath) | $(@($data.CacheEntries).Count) entries | Integrity: repo SHA-256 / built-ins files | Signature: $(if ($State.VerifySignatures) { 'checked where supported' } else { 'not checked' })"
+        "USB cache: $($data.CachePath) | $(@($data.CacheEntries).Count) entries | Signatures: $(if ($State.VerifySignatures) { 'checked where supported' } else { 'not checked' })"
     } else {
-        'USB cache: not connected / not found. No cache files were changed.'
+        'USB cache: not connected / not found.'
     }
     $State.UsbStatus.Text = if ($data.CachePath) { "USB: $($data.CachePath)" } else { 'USB: not connected' }
     $State.UsbStatusToolTip.SetToolTip($State.UsbStatus, $(if ($data.CachePath) { [string]$data.CachePath } else { 'No OSDCloud cache volume detected' }))
-    $State.Details.Text = if ($stagedCount) {
-        'Select an app to view its actual staged configuration. Current means vendor-managed; USB version is separate.'
-    } else {
-        'No staged DeviceManifest.json entries found at this target. Run the OSDApps CLI staging commands first.'
+    # Show a real staged manifest entry by default instead of an empty panel.
+    # This is only a UI selection; it does not change DeviceManifest ordering.
+    if ($State.StagedList.Items.Count -gt 0) {
+        $first = $State.StagedList.Items[0]
+        $first.Selected = $true
+        $selected = $first.Tag
+        $State.Details.Text = Format-OSDAppUIStagedDetails -Application $selected.Application -Vendor $selected.Vendor
     }
-    $State.Status.Text = "Read-only | $stagedCount staged | $(@($data.CacheEntries).Count) USB cache entries | $(@($data.Logs).Count) logs"
+    else {
+        $State.Details.Text = if ($stagedCount) {
+            'No staged applications match the current search.'
+        } else {
+            'No staged applications found. Stage apps using the PowerShell CLI first.'
+        }
+    }
+    $State.Status.Text = "$stagedCount staged | $(@($data.CacheEntries).Count) USB cache entries | $(@($data.Logs).Count) logs"
 }
 
 function Show-OSDAppUI {
@@ -482,7 +507,7 @@ function Show-OSDAppUI {
     [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',100))
     $catalogTab.Controls.Add($catalogLayout)
     $catalogInfo = [System.Windows.Forms.Label]::new()
-    $catalogInfo.Text = 'Read-only: built-in and repository applications. Configuration and staging are CLI-only.'
+    $catalogInfo.Text = 'Built-in and repository apps | Configure and stage using PowerShell CLI'
     $catalogInfo.Dock = 'Fill'
     $catalogInfo.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
     [void]$catalogLayout.Controls.Add($catalogInfo,0,0)
@@ -541,7 +566,7 @@ function Show-OSDAppUI {
     $logFiles.Margin = [System.Windows.Forms.Padding]::new(7,8,7,4)
     [void]$logsLayout.Controls.Add($logFiles,0,0)
     $logInfo = [System.Windows.Forms.Label]::new()
-    $logInfo.Text = 'Select a log file. Structured rows are read-only; choose an event for details.'
+    $logInfo.Text = 'Select a log entry to view its full details below.'
     $logInfo.Dock = 'Fill'
     $logInfo.AutoEllipsis = $true
     [void]$logsLayout.Controls.Add($logInfo,0,1)
@@ -575,7 +600,7 @@ function Show-OSDAppUI {
     [void]$footer.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Absolute',100))
     [void]$root.Controls.Add($footer,0,4)
     $status = [System.Windows.Forms.Label]::new()
-    $status.Text = 'Loading read-only inventory...'
+    $status.Text = 'Loading inventory...'
     $status.Dock = 'Fill'
     $status.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
     [void]$footer.Controls.Add($status,0,0)
@@ -664,7 +689,7 @@ function Show-OSDAppUI {
     $refresh.Add_Click({
         $state = $script:OSDAppUIState
         if (-not $state) { return }
-        $state.Status.Text = 'Refreshing read-only inventory...'
+        $state.Status.Text = 'Refreshing inventory...'
         $state.Form.Refresh()
         try {
             Update-OSDAppUIReadOnlyView -State $state
