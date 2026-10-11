@@ -82,9 +82,9 @@ manually validated on a WinPE device.
 
 Built-in application Version / policy always shows Current, meaning vendor-managed acquisition rather than an exact version or a claim that it is up to date. USB version shows a real recorded version only, where available and valid. A Current placeholder in cache metadata displays as Not recorded. Repository apps retain their explicit package versions.
 
-In Get-OSDApp, Cached means valid local repository cache plus an online catalog match. CachedOnly means valid local cache without a current online catalog match, which is expected when Offline is selected. The GUI explains both as OSDCloud USB cache states, not as different disks. The configured OSDCloud volume directory is separate from Windows target staging. Repository archives are SHA-256 checked; built-in cache validity checks required files, not full hashes.
+In Get-OSDApp, Cached means valid local repository cache plus an online catalog match. CachedOnly means valid local cache without a current online catalog match, which is expected when Offline is selected. The GUI deliberately shows both as USB cached, because valid local availability is identical. The header separately displays Catalog: Offline mode (not queried) when -Offline is used. The CLI statuses are unchanged. The configured OSDCloud volume directory is separate from Windows target staging. Repository archives are SHA-256 checked; built-in cache validity checks required files, not full hashes.
 
-Search filters table contents without new downloads. Clicking column headers sorts the visible table only; it never changes DeviceManifest order or the actual setup sequence. Logs are shown with separate timestamp, severity, component and message columns, plus a details pane. All operations remain read-only.
+Search filters table contents without new downloads. Clicking column headers sorts the visible table only; it never changes DeviceManifest order or the actual setup sequence. The GUI resizes table columns with the window (while keeping space for long versions, including Teams). Logs are shown with separate timestamp, severity, component, event, and message columns, plus a details pane. Events such as CacheDetection are extracted from the log message into their own column. All operations remain read-only.
 
 ## Inspect cached vendor versions without downloads
 
@@ -98,4 +98,13 @@ The optional `-ResolveVersions` switch inspects **existing, valid** cached packa
 
 If a package has no discoverable version, the UI shows `Not recorded` rather than inventing one. The GUI automatically requests this inspection on full Windows, while in WinPE it reads the saved `CacheInfo.json` version because Windows Installer COM is not guaranteed to be available. The four built-in sync commands for Acrobat, Chrome, Webex and Firefox now persist extracted versions and their `VersionSource` into `CacheInfo.json` during **future** synchronizations. Existing caches can be inspected today with `-ResolveVersions` without a sync or download, but their metadata files are left untouched.
 
-For the GUI, Adobe's discovered version is marked `(MSP)` to distinguish the patch version from the base MSI version. All staging and cache actions remain CLI-only.
+The GUI displays Adobe's version without an extra MSP suffix. The metadata field VersionSource=AdobePatchFileName still records that it came from the included patch filename. All staging and cache actions remain CLI-only.
+
+### Cache integrity meaning
+
+The Cache tab shows two different checks by design:
+
+- **SHA-256 verified** on a repository application means its ZIP hash matches the package manifest.
+- **Files present** on a built-in application means OSDApps checked that its required files and directories exist. This is not a cryptographic integrity or code-signature check.
+
+Both report a local USB cache, not Windows target staging. No GUI action modifies the cache or SetupComplete.
