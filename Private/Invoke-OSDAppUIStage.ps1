@@ -94,7 +94,8 @@ function Get-OSDAppUIReadOnlySnapshot {
     $catalog = @(Get-OSDApp -Offline:$Offline -ErrorAction Stop)
     # On full Windows inspect any legacy built-in cache with Version=Current
     # without writing metadata or downloading anything. WinPE uses CacheInfo.json.
-    $cache = @(Get-OSDAppCache -ResolveVersions:(-not (Test-OSDAppWinPE)) -VerifySignatures:$VerifySignatures -ErrorAction Stop)
+    $fullWindows = -not (Test-OSDAppWinPE)
+    $cache = @(Get-OSDAppCache -ResolveVersions:$fullWindows -VerifySignatures:$fullWindows -ErrorAction Stop)
     $cachePath = $null
     try { $cachePath = Get-OSDAppCachePath } catch { }
 
