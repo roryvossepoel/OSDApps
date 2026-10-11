@@ -129,11 +129,12 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
         }
     }
 
-    It 'keeps the compact header and signature checks optional in the read-only GUI' {
+    It 'checks signatures by default in the compact GUI with explicit skip option' {
         $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
         $source | Should -Match "RowStyle\]::new\('Absolute',80\)"
         $source | Should -Match 'Deployment overview'
-        $source | Should -Match 'VerifySignatures'
+        $source | Should -Match 'SkipSignatureVerification'
+        $source | Should -Match 'SkipSignatureVerification:\$State.SkipSignatureVerification'
         $source | Should -Match "Columns.Add\('Signature'"
         $source | Should -Match "'Cache'\s+\{ @\(0,75,88,175,95,115,74,122\) \}"
         $source | Should -Match 'Get-OSDAppUISignatureLabel -Status'
