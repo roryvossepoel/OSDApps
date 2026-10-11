@@ -2,16 +2,35 @@ function Get-OSDAppUIBuiltInMetadata {
     [CmdletBinding()]
     param()
 
-    $metadataPath = Join-Path $script:moduleRoot 'metadata\builtins.json'
-    if (-not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) { return @() }
+    # Resolve metadata from the *loaded module*, not a mutable script-scoped
+    # variable. The latter can differ in WinPE PowerShell 5.1 after dot-sourcing
+    # private functions via the module loader.
+    $moduleInfo = $MyInvocation.MyCommand.Module
+    $moduleBase = if ($moduleInfo -and $moduleInfo.ModuleBase) {
+        [string]$moduleInfo.ModuleBase
+    }
+    else {
+        [string]$script:moduleRoot
+    }
+    if ([string]::IsNullOrWhiteSpace($moduleBase)) {
+        Write-Warning 'OSDApps built-in metadata: cannot resolve the module location.'
+        return
+    }
+
+    $metadataPath = Join-Path $moduleBase 'metadata\builtins.json'
+    if (-not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) {
+        Write-Warning "OSDApps built-in metadata not found: $metadataPath"
+        return
+    }
     try {
         $metadata = Get-Content -LiteralPath $metadataPath -Raw -Encoding UTF8 |
             ConvertFrom-Json -ErrorAction Stop
-        return @($metadata.Applications)
+        foreach ($app in @($metadata.Applications)) {
+            if ($app -and $app.Id) { $app }
+        }
     }
     catch {
-        Write-Verbose "Built-in display metadata unavailable: $($_.Exception.Message)"
-        return @()
+        Write-Warning "OSDApps built-in metadata could not be read from '$metadataPath': $($_.Exception.Message)"
     }
 }
 
