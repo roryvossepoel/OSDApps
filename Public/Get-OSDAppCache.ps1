@@ -36,6 +36,8 @@ function Get-OSDAppCache {
                 $results.Add([pscustomobject]@{
                     PSTypeName   = 'OSDApps.CacheEntry'
                     Id           = [string]$package.Id
+                    DisplayName  = if ($package.DisplayName) { [string]$package.DisplayName } else { [string]$package.Id }
+                    Vendor       = if ($package.Vendor) { [string]$package.Vendor } else { $null }
                     Source       = 'Repository'
                     Version      = [string]$package.Version
                     Architecture = [string]$package.Architecture
