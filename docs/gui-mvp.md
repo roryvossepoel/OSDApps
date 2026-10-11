@@ -85,3 +85,17 @@ Built-in application Version / policy always shows Current, meaning vendor-manag
 In Get-OSDApp, Cached means valid local repository cache plus an online catalog match. CachedOnly means valid local cache without a current online catalog match, which is expected when Offline is selected. The GUI explains both as OSDCloud USB cache states, not as different disks. The configured OSDCloud volume directory is separate from Windows target staging. Repository archives are SHA-256 checked; built-in cache validity checks required files, not full hashes.
 
 Search filters table contents without new downloads. Clicking column headers sorts the visible table only; it never changes DeviceManifest order or the actual setup sequence. Logs are shown with separate timestamp, severity, component and message columns, plus a details pane. All operations remain read-only.
+
+## Inspect cached vendor versions without downloads
+
+From Windows PowerShell 5.1 on **full Windows** with the OSDCloud USB cache attached:
+
+    Get-OSDAppCache -ResolveVersions |
+        Select-Object Id, Source, Version, VersionSource, Valid, CachePath |
+        Format-Table -AutoSize
+
+The optional `-ResolveVersions` switch inspects **existing, valid** cached packages without writing to cache metadata or downloading payloads. It reads Windows Installer `ProductVersion` from Google Chrome, Webex and Firefox MSI packages through read-only MSI COM APIs. It reads the `PATCH=` entry from `Adobe Acrobat/setup.ini` **inside** the Acrobat ZIP without extracting the entire ZIP. Example `AcrobatDCx64Upd2600221931.msp` is reported as `26.002.21931`, with `VersionSource=AdobePatchFileName`. This is a patch build, not necessarily the version of the base AcroPro.msi. Microsoft 365 Apps and Teams continue to use their existing cache metadata. Repository apps use their catalog package versions.
+
+If a package has no discoverable version, the UI shows `Not recorded` rather than inventing one. The GUI automatically requests this inspection on full Windows, while in WinPE it reads the saved `CacheInfo.json` version because Windows Installer COM is not guaranteed to be available. The four built-in sync commands for Acrobat, Chrome, Webex and Firefox now persist extracted versions and their `VersionSource` into `CacheInfo.json` during **future** synchronizations. Existing caches can be inspected today with `-ResolveVersions` without a sync or download, but their metadata files are left untouched.
+
+For the GUI, Adobe's discovered version is marked `(MSP)` to distinguish the patch version from the base MSI version. All staging and cache actions remain CLI-only.
