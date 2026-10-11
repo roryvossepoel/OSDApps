@@ -258,7 +258,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source | Should -Match 'Set-OSDAppUIColumnWidths'
         $source | Should -Match 'Add_ClientSizeChanged'
         $source | Should -Match 'Repository'
-        $source | Should -Match 'built-ins files'
+        $source | Should -Match "USB cache:"
         $source | Should -Match "Columns.Add\('Event'"
         $source | Should -Match '\$catalogStatus\.Text = if \(\$Offline\)'
         $source | Should -Not -Match "Add_Click\(\{.*?Remove-OSDAppStaging"
@@ -375,6 +375,26 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source | Should -Match "cacheList.Columns.Add\('Display Name'"
         $source | Should -Match "'Staged'\s+\{ @\(65,0,90,100,125,185,105\) \}"
         $source | Should -Not -Match '(?i)\bInvoke-OSDAppUIStage\b'
+    }
+
+    It 'preselects staged manifest details and the latest log entry on initial read-only load' {
+        $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
+
+        # Both detail panes must be populated from actual read-only row data.
+        $source | Should -Match '\$State\.StagedList\.Items\[0\]'
+        $source | Should -Match '\$visible\.Items\[\$visible\.Items\.Count - 1\]'
+        $source | Should -Match 'Format-OSDAppUIStagedDetails -Application \$selected\.Application'
+        $source | Should -Match '\$State\.LogDetails\.Text = "Time:'
+        $source | Should -Not -Match '\bSet-OSDAppConfiguration\b'
+        $source | Should -Not -Match '\bRemove-OSDAppStaging\b'
+    }
+
+    It 'keeps cache integrity descriptions but shortens redundant read-only prose' {
+        $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
+        $source | Should -Match "USB cache: \`\$\(\$data.CachePath\)"
+        $source | Should -Match 'built-in and repository'
+        $source | Should -Not -Match 'Sort: view only'
+        $source | Should -Not -Match 'Read-only: built-in'
     }
 
 }
