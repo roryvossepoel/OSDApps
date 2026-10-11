@@ -361,13 +361,19 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         }
     }
 
-    It 'keeps the Vendor column exclusive to Applications and Cache ID readably formatted' {
+    It 'shows Vendor in both Staged and Apps, keeps Cache compact, and names columns Display Name' {
         $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
+        $source | Should -Match "catalogTab = \[System.Windows.Forms.TabPage\]::new\('Apps'\)"
         $source | Should -Match "catalogList.Columns.Add\('Vendor'"
+        $source | Should -Match "stagedList.Columns.Add\('Vendor'"
         $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$entry'
         $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$app'
         $source | Should -Not -Match "cacheList.Columns.Add\('Vendor'"
-        $source | Should -Not -Match "stagedList.Columns.Add\('Vendor'"
+        $source | Should -Not -Match "Columns.Add\('Application'"
+        $source | Should -Match "stagedList.Columns.Add\('Display Name'"
+        $source | Should -Match "catalogList.Columns.Add\('Display Name'"
+        $source | Should -Match "cacheList.Columns.Add\('Display Name'"
+        $source | Should -Match "'Staged'\s+\{ @\(65,0,90,100,125,185,105\) \}"
         $source | Should -Not -Match '(?i)\bInvoke-OSDAppUIStage\b'
     }
 
