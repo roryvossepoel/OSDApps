@@ -260,7 +260,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source | Should -Match 'Repository'
         $source | Should -Match 'built-ins files'
         $source | Should -Match "Columns.Add\('Event'"
-        $source | Should -Match "catalogStatus.Text = if \(\$Offline\)"
+        $source | Should -Match '\$catalogStatus\.Text = if \(\$Offline\)'
         $source | Should -Not -Match "Add_Click\(\{.*?Remove-OSDAppStaging"
     }
 
