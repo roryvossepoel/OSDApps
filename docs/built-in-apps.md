@@ -43,6 +43,45 @@ This rule is absolute for built-ins: if a product cannot be obtained directly an
 
 Repository applications are different. Repository content is controlled by the repository owner, and OSDApps does not prescribe where that organization obtains or hosts those packages.
 
+## Authenticode and publisher policy (planned 0.34.0)
+
+On full Windows, built-in cache synchronization for Microsoft 365 Apps,
+Microsoft Teams, Google Chrome Enterprise, Cisco Webex and Mozilla Firefox
+Enterprise requires:
+
+1. a valid Windows Authenticode signature on the selected MSI/EXE;
+2. the signer certificate's `O=` organization to match the expected publisher.
+
+| Built-in | Signable file checked | Expected organization |
+| --- | --- | --- |
+| Microsoft 365 Apps | `setup.exe` | Microsoft Corporation |
+| Microsoft Teams | `teamsbootstrapper.exe` | Microsoft Corporation |
+| Google Chrome Enterprise | `Package.msi` | Google LLC |
+| Cisco Webex | `Package.msi` | Cisco Systems, Inc. |
+| Mozilla Firefox Enterprise | `Package.msi` | Mozilla Corporation |
+| Adobe Acrobat Unified | Outer `Package.zip` not assessed | N/A |
+
+For MSI/EXE synchronization, candidate downloads are checked **before**
+replacing an existing cached file. A rejected candidate leaves the previous
+cache package in place and raises an error. An existing cache hit is also
+verified even when its remote ETag matches. The standalone SetupComplete
+PreInstall runtime validates the corresponding files when refreshing, using
+a staged cache, or falling back after a network error. This can cause
+deployment to fail closed when the trust chain cannot be established.
+
+This is a publisher organization allowlist, not certificate thumbprint
+pinning. It does not prove that every nested payload is signed or malware-free;
+the Teams MSIX and Microsoft 365 Apps content tree are **not covered** by
+the limited bootstrapper/ODT EXE checks. Adobe ZIP is **not** reported as
+having a verified Authenticode signature. Certificate trust/revocation
+may require network access independently of vendor URL availability.
+
+The read-only OSDApps Viewer enables signature inspection by default on
+full Windows, reports it as unavailable in WinPE, and permits the optional
+`-SkipSignatureVerification` for isolated viewing only. This flag does not
+relax built-in sync or SetupComplete security policy. The existing
+`Get-OSDAppCache` CLI remains opt-in with `-VerifySignatures`.
+
 ## Configuration and synchronization
 
 Each built-in has its own cmdlet and parameter set.
