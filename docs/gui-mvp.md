@@ -108,3 +108,30 @@ The Cache tab shows two different checks by design:
 - **Files present** on a built-in application means OSDApps checked that its required files and directories exist. This is not a cryptographic integrity or code-signature check.
 
 Both report a local USB cache, not Windows target staging. No GUI action modifies the cache or SetupComplete.
+
+## Optional built-in digital signature inspection
+
+Full Windows, Windows PowerShell 5.1:
+
+    Get-OSDAppCache -VerifySignatures |
+        Select-Object Id, Valid, SignatureStatus, SignatureScope, SignatureSigner, SignatureFile |
+        Format-Table -AutoSize
+
+Show the optional Signature column in the read-only GUI:
+
+    Show-OSDAppUI -TestMode -Offline -VerifySignatures
+
+- Signature checking is opt-in and never changes USB package files, cache metadata, DeviceManifest or SetupComplete.
+- Chrome, Cisco Webex and Firefox: inspect the cached Package.msi using Windows Authenticode.
+- Microsoft 365 Apps: inspect setup.exe only, not the entire Office data tree.
+- Microsoft Teams: inspect teamsbootstrapper.exe only, not the MSIX. The GUI identifies the exact scope in the cache-row tooltip.
+- Adobe Acrobat Unified: not assessed, because a ZIP container is not equivalent to a signed executable.
+- The signature result is separate from Valid, which still reports package file-presence checks or repository archive SHA-256 validation.
+- Signature Valid means the specified file's Authenticode signature was trusted by Windows during inspection. It does not attest the entire bundled application, freshness, absence of malware or guaranteed revocation freshness.
+- Other results including NotSigned, NotTrusted, HashMismatch, UnknownError and Check failed are reported distinctly.
+- WinPE does not run the Windows Authenticode checker; it reports Unavailable in WinPE.
+- Windows signature verification may involve certificate trust or revocation network traffic, even when -Offline disables online repository lookup. Do not use -VerifySignatures if strict network isolation is required.
+
+## Compact header
+
+The header now occupies approximately 80 pixels, showing OSDApps Manager, Deployment overview and Read-only. A neutral strip underneath contains Target, USB and Offline/catalog status. Tooltips retain full target/cache/repository context. No editable controls have been introduced.
