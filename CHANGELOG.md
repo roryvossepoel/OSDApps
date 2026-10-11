@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (planned 0.34.0)
+## 0.34.0
 
 ### Added
 
@@ -18,8 +18,13 @@
 
 ### Validation
 
-- Automated Windows CI and Windows PowerShell 5.1 signer-policy tests run in the draft PR. Physical WinPE Viewer read-only rendering and mixed staging were validated on two x64 PCs **before the new default signature gates**.
-- **Release hold:** repeat a full-Windows signature verification against actual vendor payloads, a built-in cache synchronization and a SetupComplete online/offline regression before publishing 0.34.0.
+- **Automated:** release-candidate CI passed **145/145 Pester tests** with Windows PowerShell 5.1 signer/publisher smoke tests, module build, and no blocking PSScriptAnalyzer findings (commit `201595501b75875cfa316a989385cedb23ec28e9`). Re-run CI after the version/documentation release-preparation changes.
+- **Viewer on real devices:** Windows 11 read-only UI, default built-in signature status and expected publishers, cache metadata/version inspection, and WinPE Viewer/staging on two x64 PCs validated. The Viewer never changed the USB cache or deployment manifest.
+- **Windows cache synchronization:** real Chrome Enterprise x64 warm-cache sync succeeded with `Updated=False`, after validating the cached signed package. Real cached MSI/EXE signatures from Microsoft, Google, Cisco and Mozilla passed with their expected organizations.
+- **Warm SetupComplete:** a four-app deployment installed Teams, Firefox, Notepad++ and Omnissa Horizon Client successfully (PreInstall **6.2 s**, Runner **83.5 s**, `ApplicationCount=4`, `CleanupMode=OnSuccess`).
+- **Cold online SetupComplete (PC 1, 11 October 2026):** empty OSDCloud USB cache; six built-ins newly acquired and two repository packages synced and SHA-256-validated in WinPE. Five signable built-in MSI/EXE payloads passed expected-publisher Authenticode gates. All **8/8** installations returned success (`PreInstallComplete` **551.9 s**; `InstallComplete` **366.7 s**; `CleanupMode=OnSuccess`). Microsoft 365 Apps reported build `16.0.20326.20142`, `VersionChanged=True`; the earlier cache had `16.0.20430.20146`. These are source/cache versions, not independently checked installed Office update-channel settings.
+- **Fully offline SetupComplete (PC 2, 11 October 2026):** LAN disconnected, populated OSDCloud USB cache attached. The runtime recorded `CacheVolumeFound` and `BuiltInRefreshSkipped` for **all six built-ins**, with no vendor refresh required. All **five** signable cached built-in installers passed Authenticode and expected-publisher validation. All **8/8** installations returned success (`PreInstallComplete` **5.4 s**; `InstallComplete` **394.2 s**; `CleanupMode=OnSuccess`).
+- **Limits:** installer/provisioning exit code `0` does not prove licensing, user sign-in, or every application's later interactive functionality. Adobe's outer ZIP, Teams MSIX and the Office data tree are outside the specific MSI/EXE signature scope; publisher signing is not full payload-chain verification. No malicious/invalid signed payload was intentionally deployed on test hardware.
 
 
 ## 0.33.0
