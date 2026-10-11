@@ -220,4 +220,25 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source | Should -Not -Match '(?i)\bRemove-OSDAppStaging\b'
     }
 
+    It 'displays the Adobe cached version without an MSP suffix' {
+        InModuleScope OSDApps {
+            $app = [pscustomobject]@{Id='AdobeAcrobatUnified';Source='BuiltIn';Architecture='x64'}
+            $cache = @([pscustomobject]@{
+                Id='AdobeAcrobatUnified';Source='BuiltIn';Architecture='x64'
+                Version='26.002.21931';VersionSource='AdobePatchFileName';Valid=$true
+            })
+            (Get-OSDAppUICachedVersion -Application $app -CacheEntries $cache) |
+                Should -Be '26.002.21931'
+        }
+        $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
+        $source | Should -Not -Match "cacheVersion \+= ' \(MSP\)'"
+    }
+
+    It 'clearly identifies missing Firefox USB cache without implying installation' {
+        InModuleScope OSDApps {
+            (Get-OSDAppUIAvailabilityLabel -Availability 'Available') |
+                Should -Be 'Not on USB'
+        }
+    }
+
 }
