@@ -88,14 +88,18 @@ function ConvertFrom-OSDAppUILogLine {
             default { 'Info' }
         }
     }
-    if (-not $component -and $message -match '^\[(?<event>[^\]]+)\]\s*') {
-        $component = $Matches['event']
+    $eventName = ''
+    if ($message -match '^\[(?<event>[^\]]+)\]\s*') {
+        $eventName = $Matches['event']
         $message = $message.Substring($Matches[0].Length)
+        # Keep the event name even when a separate CMTrace component exists.
+        if (-not $component) { $component = $eventName }
     }
     [pscustomobject]@{
         Timestamp = $time
         Level = $level
         Component = $component
+        Event = $eventName
         Message = $message
         Raw = $Line
     }
