@@ -391,7 +391,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
 
     It 'keeps cache integrity descriptions but shortens redundant read-only prose' {
         $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
-        $source | Should -Match "USB cache: \`\$\(\$data.CachePath\)"
+        $source | Should -Match 'USB cache: \$\(\$data\.CachePath\)'
         $source | Should -Match 'built-in and repository'
         $source | Should -Not -Match 'Sort: view only'
         $source | Should -Not -Match 'Read-only: built-in'
