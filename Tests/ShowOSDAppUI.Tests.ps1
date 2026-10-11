@@ -179,8 +179,8 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
     It 'uses non-ambiguous USB cache labels without altering the CLI output' {
         InModuleScope OSDApps {
             (Get-OSDAppUIAvailabilityLabel -Availability 'Cached') | Should -Be 'USB cached'
-            (Get-OSDAppUIAvailabilityLabel -Availability 'CachedOnly' -Offline) | Should -Be 'USB cached (offline)'
-            (Get-OSDAppUIAvailabilityLabel -Availability 'CachedOnly') | Should -Be 'USB cached (not in online catalog)'
+            (Get-OSDAppUIAvailabilityLabel -Availability 'CachedOnly' -Offline) | Should -Be 'USB cached'
+            (Get-OSDAppUIAvailabilityLabel -Availability 'CachedOnly') | Should -Be 'USB cached'
             (Get-OSDAppUIAvailabilityLabel -Availability 'InvalidCache') | Should -Be 'USB cache invalid'
             (Get-OSDAppUIAvailabilityLabel -Availability 'Online') | Should -Be 'Online only'
         }
@@ -193,7 +193,8 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
             $entry.Timestamp | Should -Be '10-10-2026 05:44:09.324+00'
             $entry.Level | Should -Be 'Info'
             $entry.Component | Should -Be 'StageComplete'
-            $entry.Message | Should -Match 'Package staged'
+            $entry.Event | Should -Be 'StageComplete'
+            $entry.Message | Should -Be 'Package staged. | Architecture=x64'
             $entry.Raw | Should -Be $raw
         }
     }
@@ -238,6 +239,37 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         InModuleScope OSDApps {
             (Get-OSDAppUIAvailabilityLabel -Availability 'Available') |
                 Should -Be 'Not on USB'
+        }
+    }
+
+    It 'keeps CMTrace component and event as separate fields' {
+        InModuleScope OSDApps {
+            $raw = '<![LOG[[CacheDetection] USB cache available]LOG]!><time="05:44:09.324+00" date="10-10-2026" component="Microsoft365Apps" type="1">'
+            $entry = ConvertFrom-OSDAppUILogLine -Line $raw
+            $entry.Component | Should -Be 'Microsoft365Apps'
+            $entry.Event | Should -Be 'CacheDetection'
+            $entry.Message | Should -Be 'USB cache available'
+            $entry.Raw | Should -Be $raw
+        }
+    }
+
+    It 'uses readable statuses, responsive headers and explains the cache validation scope' {
+        $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
+        $source | Should -Match 'Set-OSDAppUIColumnWidths'
+        $source | Should -Match 'Add_ClientSizeChanged'
+        $source | Should -Match 'Repository'
+        $source | Should -Match 'built-ins file check'
+        $source | Should -Match "Columns.Add\('Event'"
+        $source | Should -Match 'Catalog: Offline mode \(not queried\)'
+        $source | Should -Not -Match "Add_Click\(\{.*?Remove-OSDAppStaging"
+    }
+
+    It 'does not conflate USB cache availability with online lookup status' {
+        InModuleScope OSDApps {
+            (Get-OSDAppUIAvailabilityLabel -Availability 'Cached') | Should -Be 'USB cached'
+            (Get-OSDAppUIAvailabilityLabel -Availability 'CachedOnly' -Offline) | Should -Be 'USB cached'
+            (Get-OSDAppUIAvailabilityLabel -Availability 'CachedOnly') | Should -Be 'USB cached'
+            (Get-OSDAppUIAvailabilityLabel -Availability 'InvalidCache') | Should -Be 'USB cache invalid'
         }
     }
 
