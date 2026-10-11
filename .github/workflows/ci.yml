@@ -32,6 +32,44 @@ jobs:
           $ErrorActionPreference = 'Stop'
           Test-ModuleManifest -Path ./OSDApps.psd1 -ErrorAction Stop | Format-List Name,Version,Author,Description
 
+      - name: WinPE-compatible UI metadata smoke test (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($PSVersionTable.PSVersion.Major -ne 5) {
+              throw "Expected Windows PowerShell 5.1, got $($PSVersionTable.PSVersion)."
+          }
+          Import-Module ./OSDApps.psd1 -Force -ErrorAction Stop
+          $module = Get-Module OSDApps -ErrorAction Stop
+          & $module {
+              $definitions = @(Get-OSDAppUIBuiltInMetadata -ErrorAction Stop)
+              if ($definitions.Count -ne 6) {
+                  throw "Expected 6 built-in metadata entries; got $($definitions.Count)."
+              }
+              $expected = @{
+                  Microsoft365Apps='Microsoft'
+                  MicrosoftTeams='Microsoft'
+                  AdobeAcrobatUnified='Adobe'
+                  GoogleChromeEnterprise='Google'
+                  MozillaFirefoxEnterprise='Mozilla'
+                  CiscoWebex='Cisco'
+              }
+              foreach ($key in $expected.Keys) {
+                  $app = [pscustomobject]@{ Id=$key; Source='BuiltIn' }
+                  $resolved = Get-OSDAppUIDisplayInfo -Application $app -BuiltInMetadata $definitions
+                  if ($resolved.Vendor -ne $expected[$key] -or
+                      -not $resolved.DisplayName -or $resolved.DisplayName -eq $key) {
+                      throw "PowerShell 5.1 Vendor/display resolution failed for $key : $($resolved | Out-String)"
+                  }
+              }
+              $repoApp = [pscustomobject]@{ Id='ExampleRepoApp'; Source='Repository' }
+              $repo = Get-OSDAppUIDisplayInfo -Application $repoApp -BuiltInMetadata $definitions
+              if ($repo.Vendor -ne '-' -or $repo.DisplayName -ne 'ExampleRepoApp') {
+                  throw 'Repository app was incorrectly assigned a vendor.'
+              }
+              Write-Host "Windows PowerShell $($PSVersionTable.PSVersion): 6/6 built-in Vendors resolved."
+          }
+
       - name: Run analyzer and Pester
         shell: pwsh
         run: |
