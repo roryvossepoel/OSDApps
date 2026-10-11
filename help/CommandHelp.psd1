@@ -286,19 +286,19 @@
         }
         'New-OSDAppPackage' = @{
             Synopsis = 'Build Package.zip from a local installer source folder.'
-            Description = 'Requires Install.ps1 at source root. Wraps files under Package/ and replaces OutputPath/Package.zip. Cleans temporary work. Does not execute installer scripts or assess safety. Use disposable output: this implementation can remove an existing output ZIP before its WhatIf decision.'
+            Description = 'Requires Install.ps1 at source root. Wraps files under Package/ and replaces OutputPath/Package.zip on normal execution. Cleans temporary work and never executes installer scripts. Use a disposable build output. The implementation computes the output hash after its ShouldProcess decision, so a WhatIf preview can encounter a missing output or inspect an already existing output; it is not a successful new package build.'
             Environment = 'Repository preparation machine with source and writable build/TEMP directories.'
             Output = 'OSDApps.Package with Id, Version, PackagePath and Sha256.'
             Parameters = @{
                 SourcePath = 'Existing folder containing Install.ps1 and payload.'
-                OutputPath = 'Build directory; Package.zip may be replaced. Do not use the only copy of an existing package.'
+                OutputPath = 'Build directory; Package.zip may be replaced during normal execution. Do not use the only copy of an existing package.'
             }
             Examples = @(@{ Code = 'New-OSDAppPackage -Id ExampleApp -Version 1.0.0 -SourcePath ''C:\Work\ExampleApp'' -OutputPath ''C:\Work\Build\ExampleApp'''; Remarks = 'Provide your own unattended installer script and payload.' })
             Link = 'docs/repository.md'
         }
         'Add-OSDAppPackage' = @{
             Synopsis = 'Publish an existing package into a local repository.'
-            Description = 'Validates structure, copies archive, writes manifest and updates the Id/architecture catalog reference. Older folders may remain. Does not upload or install. Current catalog side effects extend beyond individual ShouldProcess blocks: WhatIf is not a transaction guarantee. Use a controlled local repository copy.'
+            Description = 'Validates structure, copies archive, writes manifest and updates the Id/architecture catalog reference. Older folders may remain. Does not upload or install. Validation, destination hashing and catalog processing are outside the explicit copy/manifest ShouldProcess blocks; do not interpret a WhatIf result as a completed publication. Use a controlled local repository copy and inspect the validation result.'
             Environment = 'Repository preparation machine with writable local repository.'
             Output = 'OSDApps.RepositoryPackage with archive SHA-256 and manifest reference.'
             Examples = @(@{ Code = 'Add-OSDAppPackage -Id ExampleApp -DisplayName ''Example App'' -Vendor ''Example Publisher'' -Version 1.0.0 -Architecture x64 -PackagePath ''C:\Work\Build\ExampleApp\Package.zip'' -RepositoryPath ''C:\Work\Repository'''; Remarks = 'Update local content; upload to your HTTP host separately.' })
