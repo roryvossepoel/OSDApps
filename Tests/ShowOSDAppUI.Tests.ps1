@@ -361,14 +361,14 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         }
     }
 
-    It 'shows Vendor in both Staged and Apps, keeps Cache compact, and names columns Display Name' {
+    It 'shows Vendor in Staged, Apps and Cache and names columns Display Name' {
         $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
         $source | Should -Match "catalogTab = \[System.Windows.Forms.TabPage\]::new\('Apps'\)"
         $source | Should -Match "catalogList.Columns.Add\('Vendor'"
         $source | Should -Match "stagedList.Columns.Add\('Vendor'"
         $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$entry'
         $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$app'
-        $source | Should -Not -Match "cacheList.Columns.Add\('Vendor'"
+        $source | Should -Match "cacheList.Columns.Add\('Vendor'"
         $source | Should -Not -Match "Columns.Add\('Application'"
         $source | Should -Match "stagedList.Columns.Add\('Display Name'"
         $source | Should -Match "catalogList.Columns.Add\('Display Name'"
@@ -395,6 +395,28 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source | Should -Match 'built-in and repository'
         $source | Should -Not -Match 'Sort: view only'
         $source | Should -Not -Match 'Read-only: built-in'
+    }
+
+    It 'renders the compact Target, USB and Offline status in a single label' {
+        $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
+        $source | Should -Match "form.Text = 'OSDApps Viewer - Read-only'"
+        $source | Should -Match "title.Text = 'OSDApps Viewer'"
+        $source | Should -Match '\$contextStatus\.Text = "Target:'
+        $source | Should -Match 'Target: \$\(\$State\.TargetKind\)\s+\|\s+USB: \$usbLabel\s+\|\s+\$\(\$State\.CatalogMode\)'
+        $source | Should -Not -Match '\$targetStatus = \[System.Windows.Forms.Label\]'
+        $source | Should -Not -Match '\$catalogStatus = \[System.Windows.Forms.Label\]'
+        $source | Should -Match '\$State\.ContextToolTip\.SetToolTip'
+    }
+
+    It 'adds cache Vendor after Source without breaking numeric Size sorting' {
+        $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
+        $source | Should -Match "'Cache'\s+\{ @\(0,75,88,175,95,115,74,122\) \}"
+        $source | Should -Match "cacheList.Columns.Add\('Vendor',88\)"
+        $source | Should -Match "elseif \(\$Key -eq 'Cache' -and \$column -eq 6\)"
+        $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$entry'
+        $source | Should -Match '\$item.SubItems.Add\(\[string\]\$displayInfo.Vendor\)'
+        $source | Should -Not -Match '(?i)\bRemove-OSDAppStaging\b'
+        $source | Should -Not -Match '(?i)\bSet-OSDAppConfiguration\b'
     }
 
 }
