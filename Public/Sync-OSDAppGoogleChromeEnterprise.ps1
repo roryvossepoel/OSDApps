@@ -57,9 +57,12 @@ function Sync-OSDAppGoogleChromeEnterprise {
         Write-Verbose "Cached Google Chrome Enterprise $Architecture MSI is current. No download required."
     }
     else {
-        Save-OSDAppDownload -Uri $PackageUri -DestinationPath $packagePath -Activity "Downloading Google Chrome Enterprise $Architecture MSI" | Out-Null
+        Save-OSDAppVerifiedBuiltInDownload -Id 'GoogleChromeEnterprise' -Uri $PackageUri -DestinationPath $packagePath -Activity "Downloading Google Chrome Enterprise $Architecture MSI" | Out-Null
         $updated = $true
     }
+
+    # Also re-validate an existing cached MSI when HTTP metadata says unchanged.
+    Assert-OSDAppBuiltInSignature -Id 'GoogleChromeEnterprise' -FilePath $packagePath | Out-Null
 
     $inspectedVersion = Get-OSDAppCachedPackageVersion -Id 'GoogleChromeEnterprise' -CacheEntryPath $root
     $resolvedVersion = if ($inspectedVersion.Version) { [string]$inspectedVersion.Version } else { 'Current' }
