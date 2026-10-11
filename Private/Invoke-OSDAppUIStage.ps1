@@ -40,9 +40,13 @@ function Get-OSDAppUITestWindowsPath {
 
 function Format-OSDAppUIStagedDetails {
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Application)
+    param(
+        [Parameter(Mandatory)]$Application,
+        [string]$Vendor
+    )
 
     $lines = [System.Collections.Generic.List[string]]::new()
+    if ($Vendor -and $Vendor -ne '-') { $lines.Add("Vendor: $Vendor") }
     # Whitelist descriptive manifest fields; do not display arbitrary scripts,
     # custom arguments, installer command lines or authenticated download URLs.
     foreach ($key in @(
