@@ -273,4 +273,84 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         }
     }
 
+    It 'uses human-readable built-in metadata instead of technical cache IDs' {
+        InModuleScope OSDApps {
+            $definitions = @(Get-OSDAppUIBuiltInMetadata)
+            $definitions.Count | Should -BeGreaterThan 0
+            $cache = [pscustomobject]@{Id='GoogleChromeEnterprise';Source='BuiltIn'}
+            $display = Get-OSDAppUIDisplayInfo -Application $cache -BuiltInMetadata $definitions
+            $display.DisplayName | Should -Be 'Google Chrome Enterprise'
+            $display.Vendor | Should -Be 'Google'
+
+            $office = Get-OSDAppUIDisplayInfo -Application ([pscustomobject]@{Id='Microsoft365Apps';Source='BuiltIn'}) -BuiltInMetadata $definitions
+            $office.DisplayName | Should -Be 'Microsoft 365 Apps'
+            $office.Vendor | Should -Be 'Microsoft'
+        }
+    }
+
+    It 'uses optional repository DisplayName and Vendor without guessing absent values' {
+        InModuleScope OSDApps {
+            $repository = @([pscustomobject]@{
+                Id='NotepadPlusPlus';Source='Repository';DisplayName='Notepad++';Vendor='Example Publisher'
+            })
+            $cached = [pscustomobject]@{Id='NotepadPlusPlus';Source='Repository'}
+            $info = Get-OSDAppUIDisplayInfo -Application $cached -CatalogApps $repository
+            $info.DisplayName | Should -Be 'Notepad++'
+            $info.Vendor | Should -Be 'Example Publisher'
+
+            $withoutVendor = Get-OSDAppUIDisplayInfo -Application ([pscustomobject]@{Id='CustomTool';Source='Repository'})
+            $withoutVendor.DisplayName | Should -Be 'CustomTool'
+            $withoutVendor.Vendor | Should -Be '-'
+        }
+    }
+
+    It 'honors the staged display name while resolving Vendor from catalog metadata' {
+        InModuleScope OSDApps {
+            $staged = [pscustomobject]@{
+                Id='NotepadPlusPlus';Source='Repository';DisplayName='Notepad++';Version='8.9.8.1'
+            }
+            $catalog = @([pscustomobject]@{
+                Id='NotepadPlusPlus';Source='Repository';DisplayName='Some other name';Vendor='Publisher Ltd.'
+            })
+            $info = Get-OSDAppUIDisplayInfo -Application $staged -CatalogApps $catalog
+            $info.DisplayName | Should -Be 'Notepad++'
+            $info.Vendor | Should -Be 'Publisher Ltd.'
+            $details = Format-OSDAppUIStagedDetails -Application $staged -Vendor $info.Vendor
+            $details | Should -Match 'Vendor: Publisher Ltd.'
+            $details | Should -Match 'Version: 8.9.8.1'
+        }
+    }
+
+    It 'exposes a repository Vendor from catalog metadata in Get-OSDApp' {
+        InModuleScope OSDApps {
+            Mock Get-OSDAppCachePath { throw 'No USB' }
+            Mock Get-OSDAppHostArchitecture { 'x64' }
+            Mock Get-OSDAppConfiguration {
+                [pscustomobject]@{ CatalogUri=[uri]'https://example.org/catalog.json' }
+            }
+            Mock Get-OSDAppCatalogPackages {
+                [pscustomobject]@{
+                    Packages=@([pscustomobject]@{
+                        Id='SampleApp';Architecture='x64';Version='1.2.3'
+                        DisplayName='Sample App';Vendor='Example Publisher'
+                    })
+                }
+            }
+            $app = @(Get-OSDApp | Where-Object Id -eq 'SampleApp')
+            $app.Count | Should -Be 1
+            $app[0].DisplayName | Should -Be 'Sample App'
+            $app[0].Vendor | Should -Be 'Example Publisher'
+        }
+    }
+
+    It 'keeps the Vendor column exclusive to Applications and Cache ID readably formatted' {
+        $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
+        $source | Should -Match "catalogList.Columns.Add\('Vendor'"
+        $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$entry'
+        $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$app'
+        $source | Should -Not -Match "cacheList.Columns.Add\('Vendor'"
+        $source | Should -Not -Match "stagedList.Columns.Add\('Vendor'"
+        $source | Should -Not -Match '(?i)\bInvoke-OSDAppUIStage\b'
+    }
+
 }
