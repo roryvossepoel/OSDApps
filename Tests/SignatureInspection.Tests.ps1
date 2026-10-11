@@ -123,6 +123,9 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
             (Get-OSDAppUISignatureLabel -Status NotSigned) | Should -Be 'Not signed'
             (Get-OSDAppUISignatureLabel -Status 'Not assessed') | Should -Be 'Not assessed'
             (Get-OSDAppUISignatureLabel -Status UnknownError) | Should -Be 'Trust unknown'
+            (Get-OSDAppUISignatureLabel -Status 'Not assessed' -Source Repository) | Should -Be 'N/A'
+            (Get-OSDAppUISignatureLabel -Status 'Not assessed' -Source BuiltIn) | Should -Be 'Not assessed'
+            (Get-OSDAppUISignatureLabel -Status Valid -Source BuiltIn) | Should -Be 'Signature valid'
         }
     }
 
@@ -132,6 +135,9 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
         $source | Should -Match 'Deployment overview'
         $source | Should -Match 'VerifySignatures'
         $source | Should -Match "Columns.Add\('Signature'"
+        $source | Should -Match "'Cache'\s+\{ @\(0,90,155,110,125,80,150\) \}"
+        $source | Should -Match 'Get-OSDAppUISignatureLabel -Status'
+        $source | Should -Match '-Source \(\[string\]\$entry.Source\)'
         $source | Should -Not -Match '(?i)\bSet-OSDAppConfiguration\b'
         $source | Should -Not -Match '(?i)\bRemove-OSDAppStaging\b'
     }
