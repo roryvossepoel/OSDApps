@@ -126,6 +126,7 @@ Show the optional Signature column in the read-only GUI:
 - Microsoft 365 Apps: inspect setup.exe only, not the entire Office data tree.
 - Microsoft Teams: inspect teamsbootstrapper.exe only, not the MSIX. The GUI identifies the exact scope in the cache-row tooltip.
 - Adobe Acrobat Unified: not assessed, because a ZIP container is not equivalent to a signed executable.
+- Custom repository ZIPs display Signature N/A in the GUI; their integrity is instead checked separately against the repository manifest SHA-256.
 - The signature result is separate from Valid, which still reports package file-presence checks or repository archive SHA-256 validation.
 - Signature Valid means the specified file's Authenticode signature was trusted by Windows during inspection. It does not attest the entire bundled application, freshness, absence of malware or guaranteed revocation freshness.
 - Other results including NotSigned, NotTrusted, HashMismatch, UnknownError and Check failed are reported distinctly.
@@ -135,3 +136,5 @@ Show the optional Signature column in the read-only GUI:
 ## Compact header
 
 The header now occupies approximately 80 pixels, showing OSDApps Manager, Deployment overview and Read-only. A neutral strip underneath contains Target, USB and Offline/catalog status. Tooltips retain full target/cache/repository context. No editable controls have been introduced.
+
+The Cache Architecture column is wide enough to show its full header at the standard desktop window size. On narrower screens, scrolling can still be necessary.
