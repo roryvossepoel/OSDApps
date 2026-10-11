@@ -138,3 +138,19 @@ Show the optional Signature column in the read-only GUI:
 The header now occupies approximately 80 pixels, showing OSDApps Manager, Deployment overview and Read-only. A neutral strip underneath contains Target, USB and Offline/catalog status. Tooltips retain full target/cache/repository context. No editable controls have been introduced.
 
 The Cache Architecture column is wide enough to show its full header at the standard desktop window size. On narrower screens, scrolling can still be necessary.
+
+## Consistent application names and Vendor
+
+The GUI displays the human-readable DisplayName for staging, Applications and Cache, using the built-in metadata file when a cache entry only supplies a technical ID. The underlying CLI package Id and manifest order are never changed. Applications has a separate read-only Vendor column. For built-ins Vendor is sourced from metadata/builtins.json; for repository apps Vendor is only shown when the repository catalog/cache entry actually provides it. If unknown, it displays '-'. The Cache tab stays narrow and intentionally has no Vendor column. Staged application details show Vendor where known.
+
+## First field test with two WinPE PCs
+
+Stage apps as usual using the OSDApps **CLI**, after OSDCloud has applied Windows but before the first boot into SetupComplete. Run the read-only GUI with the same module build on both PCs:
+
+    powershell.exe -STA -NoProfile
+    Import-Module 'E:\Modules\OSDApps\OSDApps.psd1' -Force
+    Show-OSDAppUI -Offline
+
+Replace the drive letter with the actual OSDCloud USB path. Do not use -TestMode in WinPE; it targets the previous Windows 11 temporary test folder and is intended only for full-Windows preview.
+
+Confirm that the target Windows volume is detected, that DeviceManifest.json and SetupComplete.cmd are present, that staged app count/source/order match the CLI, and that Cache and Logs can be opened without changing the device. Start without -VerifySignatures in WinPE, because Authenticode checks are not supported there and trust-provider dependencies may be unavailable. If a suitable WinPE image lacks Windows Forms, capture the error; the GUI requires Windows Forms, PowerShell and .NET optional components. Only proceed to reboot/install after closing the read-only inspection window.
