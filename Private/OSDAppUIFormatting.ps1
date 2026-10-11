@@ -48,13 +48,11 @@ function Get-OSDAppUIAvailabilityLabel {
         [switch]$Offline
     )
 
+    # The cache location and validity are independent of catalog connectivity.
+    # The header shows whether online discovery was enabled, not each row.
     switch ($Availability) {
         'Cached'       { 'USB cached'; break }
-        'CachedOnly'   {
-            if ($Offline) { 'USB cached (offline)' }
-            else { 'USB cached (not in online catalog)' }
-            break
-        }
+        'CachedOnly'   { 'USB cached'; break }
         'InvalidCache' { 'USB cache invalid'; break }
         'Online'       { 'Online only'; break }
         'Available'    { 'Not on USB'; break }
