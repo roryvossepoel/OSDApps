@@ -158,7 +158,7 @@ function Update-OSDAppUIReadOnlyView {
     [CmdletBinding()]
     param([Parameter(Mandatory)][hashtable]$State)
 
-    $data = Get-OSDAppUIReadOnlySnapshot -WindowsPath $State.Target -Offline:$State.Offline -VerifySignatures:$State.VerifySignatures
+    $data = Get-OSDAppUIReadOnlySnapshot -WindowsPath $State.Target -Offline:$State.Offline -SkipSignatureVerification:$State.SkipSignatureVerification
     $State.Snapshot = $data
     $builtInMetadata = @(Get-OSDAppUIBuiltInMetadata)
 
@@ -271,7 +271,7 @@ function Update-OSDAppUIReadOnlyView {
     $setupStatus = if ($data.SetupCompleteExists) { 'Present' } else { 'Not found' }
     $State.StagedInfo.Text = "$stagedCount staged for SetupComplete | $builtInCount built-in, $repositoryCount repository | SetupComplete.cmd: $setupStatus"
     $State.CacheInfo.Text = if ($data.CachePath) {
-        "USB cache: $($data.CachePath) | $(@($data.CacheEntries).Count) entries | Signatures: $(if ($State.WinPE) { 'unavailable in WinPE' } else { 'checked where supported' })"
+        "USB cache: $($data.CachePath) | $(@($data.CacheEntries).Count) entries | Signatures: $(if ($State.SkipSignatureVerification) { 'skipped' } elseif ($State.WinPE) { 'unavailable in WinPE' } else { 'checked where supported' })"
     } else {
         'USB cache: not connected / not found.'
     }
@@ -316,7 +316,7 @@ function Show-OSDAppUI {
         [switch]$Offline,
         [switch]$PreviewOnly,
         [switch]$TestMode,
-        [switch]$VerifySignatures
+        [switch]$SkipSignatureVerification
     )
 
     if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne [System.Threading.ApartmentState]::STA) {
@@ -613,7 +613,7 @@ function Show-OSDAppUI {
 
     $script:OSDAppUIState = @{
         Form=$form; Target=$target; Offline=[bool]$Offline; Search=$searchBox
-        VerifySignatures=[bool]$VerifySignatures; WinPE=[bool]$winPE
+        SkipSignatureVerification=[bool]$SkipSignatureVerification; WinPE=[bool]$winPE
         ContextStatus=$contextStatus; ContextToolTip=$toolTip
         TargetKind=$targetKind; TargetDescription=$targetText
         CatalogMode=$catalogMode; CatalogDescription=$catalogDescription
