@@ -1,3 +1,55 @@
+function Get-OSDAppExpectedPublisher {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Id)
+
+    # Expected certificate organization. No thumbprint pinning: vendor
+    # signing certificates rotate. Treat a changed publisher as a release
+    # blocker requiring review, not a reason to silently trust a new one.
+    switch ($Id) {
+        'Microsoft365Apps'         { 'Microsoft Corporation'; break }
+        'MicrosoftTeams'           { 'Microsoft Corporation'; break }
+        'GoogleChromeEnterprise'   { 'Google LLC'; break }
+        'CiscoWebex'               { 'Cisco Systems, Inc.'; break }
+        'MozillaFirefoxEnterprise' { 'Mozilla Corporation'; break }
+        default                    { $null }
+    }
+}
+
+function Test-OSDAppExpectedPublisher {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Id,
+        [string]$SignerSubject
+    )
+
+    $expected = Get-OSDAppExpectedPublisher -Id $Id
+    if (-not $expected -or [string]::IsNullOrWhiteSpace($SignerSubject)) { return $false }
+
+    # Extract the O= organization attribute, accepting quoted commas in an
+    # RFC 2253-style subject such as Cisco Systems, Inc. Other attributes
+    # including OU and CN do NOT grant publisher approval.
+    $match = [regex]::Match($SignerSubject, '(?:^|,\s*)O=(?:"(?<quoted>(?:[^"]|"")*)"|(?<plain>[^,]+))(?=,|$)')
+    if (-not $match.Success) { return $false }
+    $org = if ($match.Groups['quoted'].Success) {
+        $match.Groups['quoted'].Value.Replace('""','"')
+    } else { $match.Groups['plain'].Value.Trim() }
+    return [string]::Equals($org,$expected,[StringComparison]::OrdinalIgnoreCase)
+}
+
+function Assert-OSDAppBuiltInSignature {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Id,
+        [Parameter(Mandatory)][string]$FilePath
+    )
+
+    $signature = Get-OSDAppBuiltInSignature -Id $Id -FilePath $FilePath -CheckPublisher
+    if ($signature.Status -ne 'Valid') {
+        throw "Built-in '$Id' was rejected: signature status '$($signature.Status)' for '$FilePath'. Expected publisher: $(Get-OSDAppExpectedPublisher -Id $Id). Actual signer: $($signature.Signer)."
+    }
+    return $signature
+}
+
 function Get-OSDAppBuiltInSignature {
     <#
     .SYNOPSIS
@@ -10,7 +62,9 @@ function Get-OSDAppBuiltInSignature {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$Id,
-        [Parameter(Mandatory)][string]$CacheEntryPath
+        [string]$CacheEntryPath,
+        [string]$FilePath,
+        [switch]$CheckPublisher
     )
 
     $relativeFile = switch ($Id) {
@@ -39,7 +93,10 @@ function Get-OSDAppBuiltInSignature {
         'EXE file'
     }
 
-    $path = Join-Path $CacheEntryPath $relativeFile
+    if (-not $FilePath -and -not $CacheEntryPath) {
+        throw 'Specify -CacheEntryPath or -FilePath.'
+    }
+    $path = if ($FilePath) { $FilePath } else { Join-Path $CacheEntryPath $relativeFile }
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         return [pscustomobject]@{
             Status='File missing';Scope=$scope;File=$path;Signer=$null
@@ -61,12 +118,25 @@ function Get-OSDAppBuiltInSignature {
         $signer = if ($signature.SignerCertificate) {
             [string]$signature.SignerCertificate.Subject
         } else { $null }
+        $expectedPublisher = Get-OSDAppExpectedPublisher -Id $Id
+        $publisherMatches = if ($signer -and $expectedPublisher) {
+            Test-OSDAppExpectedPublisher -Id $Id -SignerSubject $signer
+        } else { $false }
+        if ($CheckPublisher -and $status -eq 'Valid' -and $expectedPublisher -and -not $publisherMatches) {
+            $status = 'PublisherMismatch'
+        }
         return [pscustomobject]@{
             Status=$status
             Scope=$scope
             File=$path
             Signer=$signer
-            Detail=if ($signature.StatusMessage) { [string]$signature.StatusMessage } else { $status }
+            ExpectedPublisher=$expectedPublisher
+            PublisherMatches=$publisherMatches
+            Detail=if ($status -eq 'PublisherMismatch') {
+                "The valid signature was not issued to expected publisher '$expectedPublisher'."
+            } elseif ($signature.StatusMessage) {
+                [string]$signature.StatusMessage
+            } else { $status }
         }
     }
     catch {
