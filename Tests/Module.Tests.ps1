@@ -25,6 +25,7 @@ Describe 'OSDApps module' {
     It 'uses the Runtime.log default' {
         $configuration = Get-OSDAppConfiguration
         $configuration.LogPath | Should -Be '%ProgramData%\OSDApps\Logs\Runtime.log'
+        $configuration.ResultPath | Should -Be '%ProgramData%\OSDApps\Results\Latest.json'
     }
 
     It 'uses safe default runtime configuration' {

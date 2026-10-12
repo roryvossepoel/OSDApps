@@ -8,6 +8,7 @@ function Get-OSDAppConfiguration {
             CleanupMode      = 'OnSuccess'
             CacheVolumeLabel = 'OSDCloud'
             LogPath          = '%ProgramData%\OSDApps\Logs\Runtime.log'
+            ResultPath       = '%ProgramData%\OSDApps\Results\Latest.json'
         }
     }
 
@@ -17,6 +18,7 @@ function Get-OSDAppConfiguration {
         CleanupMode      = $script:OSDAppConfiguration.CleanupMode
         CacheVolumeLabel = $script:OSDAppConfiguration.CacheVolumeLabel
         LogPath          = $script:OSDAppConfiguration.LogPath
+        ResultPath       = $script:OSDAppConfiguration.ResultPath
         Scope            = 'Session'
     }
 }

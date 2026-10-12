@@ -1,4 +1,4 @@
-function Test-OSDAppCache {
+function Test-OSDAppRepositoryCache {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

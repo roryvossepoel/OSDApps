@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added `Test-OSDAppDeployment` for pre-reboot validation of the manifest, ordered queue, SetupComplete integration, staged runtime version, repository SHA-256, built-in definitions, free space and optional hard offline readiness.
+- Added `Test-OSDAppCache` for one aggregate cache-readiness result with entry counts, payload validity and optional supported signature checks. `Get-OSDAppCache` also accepts an explicit `-CachePath`.
+- Added atomic `%ProgramData%\OSDApps\Results\Latest.json` reporting with a stable deployment ID, PreInstall context, top-level outcome and per-application status, exit code, duration, integrity and cache/update metadata. `Get-OSDAppDeploymentResult` reads the result.
+- Added configurable `ResultPath`; it is persisted with the other standalone runtime settings.
+
+### Validation
+
+- Added file-backed preflight, online/offline readiness, repository tamper, runtime mismatch, cache aggregation, result parsing and standalone Runner result tests for Windows PowerShell 5.1 and PowerShell 7 CI.
+- OSDApps 0.34.1 separately passed a physical cold/warm eight-app pair on 12 October 2026. That evidence predates these Unreleased commands and does not claim this development change has already completed a physical deployment.
+
 ## 0.34.1
 
 ### Fixed

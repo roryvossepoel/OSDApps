@@ -62,12 +62,13 @@ Installer/provisioning success is not independent evidence of application activa
 Set-OSDAppConfiguration `
     -CleanupMode OnSuccess `
     -CacheVolumeLabel 'OSDCloud' `
-    -LogPath '%ProgramData%\OSDApps\Logs\Runtime.log'
+    -LogPath '%ProgramData%\OSDApps\Logs\Runtime.log' `
+    -ResultPath '%ProgramData%\OSDApps\Results\Latest.json'
 ```
 
 Configure a real `CatalogUri` in the same session when staging online repository apps. It is not needed for built-ins-only deployment.
 
-The session's `CleanupMode`, `CacheVolumeLabel` and `LogPath` are written into the device manifest by the Add commands. SetupComplete therefore does not depend on the preparation machine's session or on importing the module. Changing session configuration alone does not retroactively rewrite an existing device manifest.
+The session's `CleanupMode`, `CacheVolumeLabel`, `LogPath` and `ResultPath` are written into the device manifest by the Add commands. A unique `DeploymentId` is also added when the manifest is first staged. SetupComplete therefore does not depend on the preparation machine's session or on importing the module. Changing session configuration alone does not retroactively rewrite an existing device manifest.
 
 | CleanupMode | Behavior |
 | --- | --- |
@@ -75,6 +76,26 @@ The session's `CleanupMode`, `CacheVolumeLabel` and `LogPath` are written into t
 | `Never` | Retain staging, payloads and Work for troubleshooting. |
 
 On failure, source is retained automatically.
+
+## Machine-readable deployment result
+
+PreInstall writes a phase record, and Runner atomically replaces `Latest.json` as the queue progresses. The final result is outside the staging directory by default and therefore survives `CleanupMode OnSuccess`:
+
+```text
+%ProgramData%\OSDApps\Results\Latest.json
+```
+
+```powershell
+$Result = Get-OSDAppDeploymentResult
+$Result.Status
+$Result.Applications | Select-Object Id, Status, ExitCode, Version, DurationSeconds, Integrity, CacheUsed, PackageUpdated
+```
+
+The top-level status is `Running`, `Succeeded` or `Failed`. The final record includes the deployment ID, timestamps, duration, expected/success/failed counts, configured cleanup/log paths, the PreInstall phase record and one entry per attempted application. Runner updates through a temporary file and rename so readers do not observe partially written JSON.
+
+`Integrity` records the check actually performed by Runner. Repository archives report SHA-256 validation; supported built-in publishers are validated in PreInstall and carried as phase context. `CacheUsed` and `PackageUpdated` come from built-in `CacheInfo.json` when available. Null means the fact was not available for that source, not false.
+
+Result writing is best effort so an evidence-path problem does not convert an otherwise successful installer run into a failed deployment. A `ResultWriteFailed` warning in `Runtime.log` means the JSON is incomplete or unavailable; use the log as the authoritative fallback. A successful JSON status remains installer/provisioning evidence, not proof of activation, user sign-in or later interactive health.
 
 ## Cleanup policy
 

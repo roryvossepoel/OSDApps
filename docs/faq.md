@@ -24,7 +24,7 @@ See [Architecture](architecture.md) and [Microsoft 365 Apps options](built-in-ap
 
 ## Teams sync works in WinPE. Why is it also deferred?
 
-The public `Sync-OSDAppMicrosoftTeams` command in 0.34.0 **rejects WinPE**. Downloading Teams files may be technically possible there, but that is not the supported OSDApps built-in synchronization path.
+The public `Sync-OSDAppMicrosoftTeams` command in 0.34.1 **rejects WinPE**. Downloading Teams files may be technically possible there, but that is not the supported OSDApps built-in synchronization path.
 
 All built-ins follow the same division: stage in WinPE; refresh through full-Windows Sync commands or standalone PreInstall. The MSI/EXE signature policy is enforced in full Windows, not bypassed by treating WinPE as another Sync environment.
 

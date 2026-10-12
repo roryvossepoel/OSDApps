@@ -29,7 +29,7 @@ function Copy-OSDAppContent {
         throw "Requested package(s) not found in cache catalog: $($missing -join ', ')"
     }
 
-    $invalid = @(Test-OSDAppCache -CachePath $CachePath -Name $Name | Where-Object { -not $_.Valid })
+    $invalid = @(Test-OSDAppRepositoryCache -CachePath $CachePath -Name $Name | Where-Object { -not $_.Valid })
     if ($invalid.Count -gt 0) {
         throw "Cache validation failed for: $((@($invalid.Id | Select-Object -Unique)) -join ', ')"
     }

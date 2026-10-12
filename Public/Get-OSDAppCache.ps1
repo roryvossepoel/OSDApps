@@ -3,16 +3,26 @@ function Get-OSDAppCache {
     param(
         [string[]]$Name,
         [switch]$ResolveVersions,
-        [switch]$VerifySignatures
+        [switch]$VerifySignatures,
+        [ValidateNotNullOrEmpty()]
+        [string]$CachePath
     )
 
     # Cache inspection is optional when no OSDCloud media is attached.
-    try {
-        $cachePath = Get-OSDAppCachePath
+    if ($PSBoundParameters.ContainsKey('CachePath')) {
+        $cachePath = [IO.Path]::GetFullPath([Environment]::ExpandEnvironmentVariables($CachePath))
+        if (-not (Test-Path -LiteralPath $cachePath -PathType Container)) {
+            throw "OSDApps cache path does not exist: $cachePath"
+        }
     }
-    catch {
-        Write-Verbose 'No OSDCloud cache volume is available.'
-        return
+    else {
+        try {
+            $cachePath = Get-OSDAppCachePath
+        }
+        catch {
+            Write-Verbose 'No OSDCloud cache volume is available.'
+            return
+        }
     }
     $results = [System.Collections.Generic.List[object]]::new()
 

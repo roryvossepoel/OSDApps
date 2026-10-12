@@ -10,6 +10,13 @@ $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
 $logPath = [Environment]::ExpandEnvironmentVariables('%ProgramData%\OSDApps\Logs\Runtime.log')
 $logDirectory = Split-Path -Path $logPath -Parent
 $preInstallStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+$preInstallStartedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
+$resultPath = [IO.Path]::GetFullPath([Environment]::ExpandEnvironmentVariables('%ProgramData%\OSDApps\Results\Latest.json'))
+$preInstallResultPath = Join-Path (Split-Path -Path $resultPath -Parent) 'PreInstall.json'
+$manifest = $null
+$builtInApps = @()
+$usbRoot = $null
+$networkAvailable = $null
 
 function Write-PreInstallLog {
     param([string]$Event,[ValidateSet('Info','Warning','Error')][string]$Level='Info',[string]$Message,[hashtable]$Data)
@@ -42,6 +49,44 @@ function Write-PreInstallLog {
     $now=(Get-Date).ToUniversalTime(); $time=$now.ToString('HH:mm:ss.fff') + '+000'; $date=$now.ToString('MM-dd-yyyy'); $thread=[System.Threading.Thread]::CurrentThread.ManagedThreadId
     $line='<![LOG[{0}]LOG]!><time="{1}" date="{2}" component="PreInstall" context="" type="{3}" thread="{4}" file="">' -f $msg,$time,$date,$type,$thread
     Add-Content -LiteralPath $logPath -Value $line -Encoding UTF8
+}
+
+function Write-PreInstallResult {
+    param(
+        [Parameter(Mandatory)][ValidateSet('Succeeded','Failed')][string]$Status,
+        [string]$FailureType,
+        [string]$ErrorMessage
+    )
+
+    $directory = Split-Path -Path $preInstallResultPath -Parent
+    New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    $temporaryPath = "$preInstallResultPath.$([guid]::NewGuid().ToString('N')).tmp"
+    $record = [ordered]@{
+        SchemaVersion           = '1.0'
+        DeploymentId           = if ($manifest -and $manifest.DeploymentId) { [string]$manifest.DeploymentId } else { $null }
+        Phase                   = 'PreInstall'
+        Status                  = $Status
+        StartedAtUtc            = $preInstallStartedAtUtc
+        CompletedAtUtc          = (Get-Date).ToUniversalTime().ToString('o')
+        DurationSeconds         = [math]::Round($preInstallStopwatch.Elapsed.TotalSeconds, 1)
+        BuiltInApplicationCount = @($builtInApps).Count
+        CacheUsed               = [bool]$usbRoot
+        CachePath               = $usbRoot
+        NetworkAvailable        = $networkAvailable
+        FailureType             = $FailureType
+        Error                   = $ErrorMessage
+    }
+
+    try {
+        $record | ConvertTo-Json -Depth 10 |
+            Set-Content -LiteralPath $temporaryPath -Encoding UTF8 -ErrorAction Stop
+        Move-Item -LiteralPath $temporaryPath -Destination $preInstallResultPath -Force -ErrorAction Stop
+    }
+    finally {
+        if (Test-Path -LiteralPath $temporaryPath -PathType Leaf) {
+            Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 function Test-InternetEndpoint {
@@ -380,6 +425,10 @@ try {
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw "Device manifest not found: $manifestPath" }
     $manifest=Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if (-not $manifest.Runtime) { throw 'Device manifest Runtime configuration is missing.' }
+    if ($manifest.Runtime.ResultPath) {
+        $resultPath = [IO.Path]::GetFullPath([Environment]::ExpandEnvironmentVariables([string]$manifest.Runtime.ResultPath))
+        $preInstallResultPath = Join-Path (Split-Path -Path $resultPath -Parent) 'PreInstall.json'
+    }
     if (-not $manifest.Runtime.CacheVolumeLabel) { throw 'Device manifest Runtime.CacheVolumeLabel is missing.' }
     if (-not $manifest.Runtime.LogPath) { throw 'Device manifest Runtime.LogPath is missing.' }
 
@@ -389,7 +438,12 @@ try {
 
     $apps=if($manifest.PSObject.Properties.Name -contains 'Apps'){@($manifest.Apps)}else{@()}
     $builtInApps=@($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' })
-    if($builtInApps.Count -eq 0){Write-PreInstallLog -Event 'RefreshSkipped' -Message 'No built-in applications are staged. Nothing to refresh.'; exit 0}
+    if($builtInApps.Count -eq 0){
+        $preInstallStopwatch.Stop()
+        Write-PreInstallLog -Event 'RefreshSkipped' -Message 'No built-in applications are staged. Nothing to refresh.'
+        try { Write-PreInstallResult -Status Succeeded } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
+        exit 0
+    }
 
     $cacheVolume=Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.FileSystemLabel -eq $cacheVolumeLabel -and $_.DriveLetter } | Select-Object -First 1
     $usbRoot=if($cacheVolume){"$($cacheVolume.DriveLetter):\OSDApps"}else{$null}
@@ -627,6 +681,7 @@ try {
     $preInstallStopwatch.Stop()
     Write-PreInstallLog -Event 'RefreshComplete' -Message 'Built-in acquisition and refresh completed. Installation will continue.' -Data @{CacheUsed=[bool]$usbRoot;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
     Write-PreInstallLog -Event 'PreInstallComplete' -Message 'PreInstall completed successfully.' -Data @{BuiltInAppCount=@($builtInApps).Count;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
+    try { Write-PreInstallResult -Status Succeeded } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
     exit 0
 } catch {
     if ($preInstallStopwatch.IsRunning) { $preInstallStopwatch.Stop() }
@@ -648,5 +703,6 @@ try {
     }
 
     Write-PreInstallLog -Event 'RefreshFailed' -Level 'Error' -Message $failureMessage -Data @{FailureType=$failureType;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
+    try { Write-PreInstallResult -Status Failed -FailureType $failureType -ErrorMessage $failureMessage } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
     exit 1
 }

@@ -6,11 +6,22 @@ This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging succ
 
 | Scenario | Status | Evidence / expected behavior |
 | --- | --- | --- |
-| Empty OSDCloud USB cache, online | **Validated — 0.34.0 PC 1 (11 Oct 2026)** | Six built-ins freshly acquired and signed where supported; 8/8 installed. Earlier 0.30.0 six-app test also passed. |
-| Existing OSDCloud USB cache, online | **Validated — 0.30.0 tests 3 and 4** | Reuse/freshness checking; altered Office configuration tested separately |
+| Empty OSDCloud USB cache, online | **Validated — 0.34.1 cold run (12 Oct 2026)** | Six built-ins refreshed and two repository packages installed; 8/8 successful and cleanup completed. |
+| Existing OSDCloud USB cache, online | **Validated — 0.34.1 warm run (12 Oct 2026)** | Same cache reused; zero acquisitions, zero updated packages, 8/8 successful and cleanup completed. |
 | No USB cache, online | **Validated — 0.30.0 test 1** | Built-ins acquired on Windows volume; repository apps staged in WinPE |
 | Existing OSDCloud USB cache, offline | **Validated — 0.34.0 PC 2 (11 Oct 2026)** | LAN disconnected; six BuiltInRefreshSkipped events, five built-in signer/publisher checks and 8/8 successful installations. Earlier 0.30.0 six-app test also passed. |
 | No USB, offline | **Not yet validated** | Without a complete staged fallback, PreInstall is expected to stop before Runner |
+
+## OSDApps 0.34.1 cold/warm physical validation — 12 October 2026
+
+This pair used the same eight-app queue documented for the 0.34.0 release candidate and reused the populated removable cache between runs. Both were real SetupComplete executions. The new `Test-OSDAppDeployment` and `Latest.json` contract in the Unreleased section were added afterward, so the evidence here comes from the 0.34.1 runtime log and filesystem outcome.
+
+| Cache state | PreInstall | Runner | Measured Windows total | Cache observation | Outcome |
+| --- | ---: | ---: | ---: | --- | --- |
+| Cold/cleared | 229.8 s | 366.9 s | **596.7 s (9:57)** | Built-in content populated/refreshed | **8/8**, cleanup succeeded |
+| Warm/reused | 43.0 s | 370.2 s | **413.2 s (6:53)** | `AcquireCount=0`; `UpdatedPackageCount=0` | **8/8**, cleanup succeeded |
+
+The phase total excludes image deployment, WinPE staging, reboot and OOBE. The warm observation establishes cache reuse for this run; it is not a general performance benchmark. Installer/provisioning success still does not prove licensing, later user sign-in or every interactive feature.
 
 ## OSDApps 0.34.0 release-candidate physical validation — 11 October 2026
 
@@ -147,17 +158,24 @@ Still requiring separate end-to-end checks:
 ## Success criteria and logs
 
 1. WinPE stages the intended `DeviceManifest.json` queue and any available repository payload.
-2. USB cache is detected only when connected, or a local no-USB path is selected.
-3. Repository `Package.zip` files validate against their SHA-256 metadata.
-4. `SetupComplete.cmd` starts `Invoke-OSDAppPreInstall.ps1`; `PreInstallComplete` reports success.
-5. `Invoke-OSDAppRunner.ps1` installs the six queued applications; each expected `*InstallComplete` has an accepted exit code.
-6. The final `InstallComplete` reports the expected application count.
-7. The configured `CleanupMode` is honored; for these tests `Never` retained the staged runtime.
+2. `Test-OSDAppDeployment` reports `Valid=True`; an intentionally offline run also requires `OfflineReady=True`.
+3. USB cache is detected only when connected, or a local no-USB path is selected.
+4. Repository `Package.zip` files validate against their SHA-256 metadata.
+5. `SetupComplete.cmd` starts `Invoke-OSDAppPreInstall.ps1`; `PreInstallComplete` reports success.
+6. `Invoke-OSDAppRunner.ps1` installs the queued applications; each expected `*InstallComplete` has an accepted exit code.
+7. `Latest.json` and the final `InstallComplete` agree on final status and application counts.
+8. The configured `CleanupMode` is honored; local cleanup does not delete persistent logs or results.
 
 Windows runtime log:
 
 ```text
 %ProgramData%\OSDApps\Logs\Runtime.log
+```
+
+Machine-readable result:
+
+```text
+%ProgramData%\OSDApps\Results\Latest.json
 ```
 
 Module/cache log when USB is attached:
