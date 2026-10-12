@@ -7,6 +7,13 @@ function Test-OSDAppPackage {
     $resolved = (Resolve-Path -LiteralPath $PackagePath -ErrorAction Stop).Path
     $temp = Join-Path ([System.IO.Path]::GetTempPath()) ("OSDApps-" + [guid]::NewGuid().Guid)
 
+    # Validation reads the input and owns only this unique temporary directory.
+    # A caller's WhatIf/Confirm must not skip its cleanup or prompt for scratch
+    # operations. These preferences are local to this function: the caller still
+    # decides whether its destination changes are approved via ShouldProcess.
+    $WhatIfPreference = $false
+    $ConfirmPreference = 'None'
+
     try {
         New-Item -ItemType Directory -Path $temp -Force | Out-Null
         Expand-Archive -LiteralPath $resolved -DestinationPath $temp -Force

@@ -286,9 +286,9 @@
         }
         'New-OSDAppPackage' = @{
             Synopsis = 'Build Package.zip from a local installer source folder.'
-            Description = 'Requires Install.ps1 at source root. Wraps files under Package/ and replaces OutputPath/Package.zip on normal execution. Cleans temporary work and never executes installer scripts. Use a disposable build output. The implementation computes the output hash after its ShouldProcess decision, so a WhatIf preview can encounter a missing output or inspect an already existing output; it is not a successful new package build.'
+            Description = 'Requires Install.ps1 at source root. After source validation, WhatIf or declined confirmation returns without destination changes or a package-success object. Normal execution wraps files under Package/ and replaces OutputPath/Package.zip. Temporary work is cleaned in finally; installer scripts are never executed. Use a disposable build output; publication/build failures are not transactional rollback.'
             Environment = 'Repository preparation machine with source and writable build/TEMP directories.'
-            Output = 'OSDApps.Package with Id, Version, PackagePath and Sha256.'
+            Output = 'OSDApps.Package with Id, Version, PackagePath and Sha256 after building; no package-success object when previewed or declined.'
             Parameters = @{
                 SourcePath = 'Existing folder containing Install.ps1 and payload.'
                 OutputPath = 'Build directory; Package.zip may be replaced during normal execution. Do not use the only copy of an existing package.'
@@ -298,15 +298,15 @@
         }
         'Add-OSDAppPackage' = @{
             Synopsis = 'Publish an existing package into a local repository.'
-            Description = 'Validates structure, copies archive, writes manifest and updates the Id/architecture catalog reference. Older folders may remain. Does not upload or install. Validation, destination hashing and catalog processing are outside the explicit copy/manifest ShouldProcess blocks; do not interpret a WhatIf result as a completed publication. Use a controlled local repository copy and inspect the validation result.'
+            Description = 'Validates input structure in owned temporary storage before asking for destination approval. Only after ShouldProcess approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. WhatIf or declined confirmation leaves the destination unchanged and returns no package-success object; input validation can still create and clean temporary files. Older folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
             Environment = 'Repository preparation machine with writable local repository.'
-            Output = 'OSDApps.RepositoryPackage with archive SHA-256 and manifest reference.'
+            Output = 'OSDApps.RepositoryPackage with archive SHA-256 and manifest reference after publication; no package-success object when previewed or declined.'
             Examples = @(@{ Code = 'Add-OSDAppPackage -Id ExampleApp -DisplayName ''Example App'' -Vendor ''Example Publisher'' -Version 1.0.0 -Architecture x64 -PackagePath ''C:\Work\Build\ExampleApp\Package.zip'' -RepositoryPath ''C:\Work\Repository'''; Remarks = 'Update local content; upload to your HTTP host separately.' })
             Link = 'docs/repository.md'
         }
         'Test-OSDAppPackage' = @{
             Synopsis = 'Validate repository archive structure and report SHA-256.'
-            Description = 'Extracts into temporary storage, checks Package/Install.ps1, computes hash and cleans temporary files. Never executes Install.ps1. Valid is structural, not malware scanning or installation success.'
+            Description = 'Extracts into owned temporary storage, checks Package/Install.ps1, computes hash and cleans temporary files. Local preview/confirmation preferences allow validation and its cleanup to finish without approving caller destination changes. Never executes Install.ps1. Valid is structural, not malware scanning or installation success.'
             Environment = 'Preparation machine or suitable PowerShell with archive support and writable TEMP.'
             Output = 'OSDApps.PackageValidation with structure flags, Sha256 and Valid.'
             Examples = @(@{ Code = 'Test-OSDAppPackage -PackagePath ''C:\Work\Build\ExampleApp\Package.zip'''; Remarks = 'Inspect an existing package before repository publication.' })
