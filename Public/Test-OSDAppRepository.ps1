@@ -14,7 +14,10 @@ function Test-OSDAppRepository {
         $drive = Get-PSDrive -Name $driveRoot.TrimEnd('\').TrimEnd(':') -ErrorAction Stop
         $repositoryFreeSpaceGB = [math]::Round($drive.Free / 1GB, 2)
     }
-    catch { }
+    catch {
+        # Capacity is optional reporting data, not a package validity requirement.
+        Write-Verbose "Repository free space could not be determined for '$resolvedRepository': $($_.Exception.Message)"
+    }
 
     $allRefs = @()
     foreach ($application in @($catalog.Applications)) {
@@ -98,7 +101,7 @@ function Test-OSDAppRepository {
             $successCodes = @($manifest.SuccessCodes)
             $successCodesValid = (
                 $successCodes.Count -gt 0 -and
-                @($successCodes | Where-Object { ($_ -as [int]) -eq $null }).Count -eq 0
+                @($successCodes | Where-Object { $null -eq ($_ -as [int]) }).Count -eq 0
             )
 
             [pscustomobject]@{
@@ -138,7 +141,11 @@ function Test-OSDAppRepository {
             $fullPath = [IO.Path]::GetFullPath($manifestFile.FullName)
             if (-not $referencedManifestPaths.Contains($fullPath)) {
                 $orphanManifest = $null
-                try { $orphanManifest = Get-Content -LiteralPath $manifestFile.FullName -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+                try { $orphanManifest = Get-Content -LiteralPath $manifestFile.FullName -Raw -Encoding UTF8 | ConvertFrom-Json }
+                catch {
+                    # Keep reporting the orphan as invalid, even when its JSON is unreadable.
+                    Write-Verbose "Orphan manifest could not be read from '$($manifestFile.FullName)': $($_.Exception.Message)"
+                }
                 $orphanPackage = Join-Path $manifestFile.DirectoryName 'Package.zip'
 
                 [pscustomobject]@{
