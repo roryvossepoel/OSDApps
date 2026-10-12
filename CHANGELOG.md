@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.35.0
 
 ### Added
 
@@ -12,7 +12,15 @@
 ### Validation
 
 - Added file-backed preflight, online/offline readiness, repository tamper, runtime mismatch, cache aggregation, result parsing and standalone Runner result tests for Windows PowerShell 5.1 and PowerShell 7 CI.
-- OSDApps 0.34.1 separately passed a physical cold/warm eight-app pair on 12 October 2026. That evidence predates these Unreleased commands and does not claim this development change has already completed a physical deployment.
+- The release candidate passed **205/205 tests on each PowerShell engine**, with **30/30 packaged command-help topics** verified and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38284146281)). Publication validates the merged source again.
+- The 0.35.0 release candidate passed a physical online deployment from a populated USB cache on 12 October 2026. `Test-OSDAppDeployment -RequireOfflineReady` passed before reboot; correlated PreInstall and final JSON results recorded **8/8 successful installations**, `PreInstall` in **53.9 s**, Runner in **369.0 s**, and the expected `OnSuccess` cleanup outcome. All six built-ins used cached content, Cisco Webex refreshed, the five signable built-ins passed expected-publisher validation, and both repository packages passed SHA-256 validation.
+- OSDApps 0.34.1 separately passed a physical cold/warm eight-app pair on the same date; it remains historical evidence for the earlier runtime.
+
+### Compatibility and scope
+
+- Windows PowerShell 5.1 remains the minimum supported version. The built-in application set, repository contract, cleanup policy and installer success-code handling are unchanged from 0.34.1.
+- Preflight and cache validation are read-only. Result writing is best effort so a result-path problem does not change an otherwise successful installation into a failure; `Runtime.log` remains the authoritative fallback.
+- A successful result records installer/provisioning evidence. It does not prove licensing, user sign-in or later interactive application health.
 
 ## 0.34.1
 
