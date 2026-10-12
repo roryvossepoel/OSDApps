@@ -154,6 +154,19 @@ Describe 'Authoring acceptance coverage for issue #17' {
         (Get-AcceptanceTreeSnapshot -Path $script:sourcePath) | Should -Be $sourceBefore
     }
 
+    It 'does not overwrite caller preview or confirmation preferences while validating input' {
+        $package = New-OSDAppPackage -Id ExampleApp -Version 1.0.0 -SourcePath $script:sourcePath -OutputPath $script:buildPath -Confirm:$false
+        $result = & {
+            $WhatIfPreference = $true
+            $ConfirmPreference = 'Low'
+            $validation = Test-OSDAppPackage -PackagePath $package.PackagePath -ErrorAction Stop
+            [pscustomobject]@{ Valid=$validation.Valid; Preview=$WhatIfPreference; Confirmation=[string]$ConfirmPreference }
+        }
+        $result.Valid | Should -BeTrue
+        $result.Preview | Should -BeTrue
+        $result.Confirmation | Should -Be 'Low'
+    }
+
     It 'cleans validation scratch and leaves the repository untouched when input lacks Package/Install.ps1' {
         $invalidSource = Join-Path $script:caseRoot 'InvalidSource'
         New-Item -ItemType Directory -Path $invalidSource -Force | Out-Null
@@ -171,14 +184,16 @@ Describe 'Authoring acceptance coverage for issue #17' {
     It 'removes actual build scratch after an injected compression failure without executing the installer' {
         Mock Compress-Archive {
             param($Path,$DestinationPath)
-            $script:Issue17BuildScratch = [string]$Path
+            # Persist the observation inside this case's isolated scratch, rather
+            # than assuming Pester's mock script scope is the module script scope.
+            [IO.File]::WriteAllText((Join-Path ([IO.Path]::GetTempPath()) 'compression-observation.txt'), [string]$Path)
             if (-not (Test-Path -LiteralPath (Join-Path $Path 'Install.ps1'))) { throw 'Build fixture was not copied.' }
             throw 'Issue17 simulated compression failure'
         } -ModuleName OSDApps
         $sourceBefore = Get-AcceptanceTreeSnapshot -Path $script:sourcePath
         { New-OSDAppPackage -Id ExampleApp -Version 1.0.0 -SourcePath $script:sourcePath -OutputPath $script:buildPath -Confirm:$false -ErrorAction Stop } | Should -Throw '*Issue17 simulated compression failure*'
         Should -Invoke Compress-Archive -ModuleName OSDApps -Exactly 1
-        $observed = & (Get-Module OSDApps) { $script:Issue17BuildScratch }
+        $observed = [IO.File]::ReadAllText((Join-Path $script:scratchPath 'compression-observation.txt'))
         $observed.StartsWith($script:scratchPath + '\', [StringComparison]::OrdinalIgnoreCase) | Should -BeTrue
         Test-Path -LiteralPath $observed | Should -BeFalse
         (Get-AcceptanceTreeSnapshot -Path $script:sourcePath) | Should -Be $sourceBefore
@@ -189,14 +204,14 @@ Describe 'Authoring acceptance coverage for issue #17' {
         $before = (Get-FileHash -LiteralPath $package.PackagePath).Hash
         Mock Expand-Archive {
             param($LiteralPath,$DestinationPath)
-            $script:Issue17ValidationScratch = $DestinationPath
+            [IO.File]::WriteAllText((Join-Path ([IO.Path]::GetTempPath()) 'extraction-observation.txt'), $DestinationPath)
             [void][IO.Directory]::CreateDirectory($DestinationPath)
             [IO.File]::WriteAllText((Join-Path $DestinationPath 'partial.txt'), 'Partially extracted test content')
             throw 'Issue17 simulated extraction failure'
         } -ModuleName OSDApps
         { Test-OSDAppPackage -PackagePath $package.PackagePath -ErrorAction Stop } | Should -Throw '*Issue17 simulated extraction failure*'
         Should -Invoke Expand-Archive -ModuleName OSDApps -Exactly 1
-        $observed = & (Get-Module OSDApps) { $script:Issue17ValidationScratch }
+        $observed = [IO.File]::ReadAllText((Join-Path $script:scratchPath 'extraction-observation.txt'))
         $observed.StartsWith($script:scratchPath + '\', [StringComparison]::OrdinalIgnoreCase) | Should -BeTrue
         Test-Path -LiteralPath $observed | Should -BeFalse
         (Get-FileHash -LiteralPath $package.PackagePath).Hash | Should -Be $before
