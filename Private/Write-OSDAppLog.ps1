@@ -8,7 +8,8 @@ function Write-OSDAppLog {
         [string]$Component,
 
         [Parameter(Mandatory)]
-        [string]$Event,
+        [Alias('Event')]
+        [string]$EventName,
 
         [ValidateSet('Debug','Info','Warning','Error')]
         [string]$Level = 'Info',
@@ -69,7 +70,7 @@ function Write-OSDAppLog {
         }
     }
 
-    $logMessage = if ($Message) { "[$Event] $Message" } else { "[$Event]" }
+    $logMessage = if ($Message) { "[$EventName] $Message" } else { "[$EventName]" }
     if ($details.Count -gt 0) {
         $logMessage += ' | ' + ($details -join '; ')
     }
