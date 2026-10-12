@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.34.1
+
+### Fixed
+
+- `New-OSDAppPackage` and `Add-OSDAppPackage` now stop before destination changes when `-WhatIf` is used or confirmation is declined. Preview no longer returns a success object for an archive or publication that was not created.
+- Package validation completes its own temporary extraction and cleanup without inheriting the caller's preview/confirmation preferences. The caller's preferences and destination approval remain intact; input validation can still create temporary files before approval.
+- Improved nonfatal MSI inventory and repository-validation diagnostics, and removed automatic-variable name collisions in client logging and Viewer cache selection while preserving existing callers and selection behavior.
+
+### Help and documentation
+
+- Ship offline `Get-Help` for all 27 exported commands, including parameters, execution environments and examples, with packaged help verified in fresh PowerShell processes.
+- Reworked onboarding, the Viewer guide, troubleshooting, and Windows preparation / online and offline WinPE examples.
+
+### Validation
+
+- CI runs the full Pester suite, analyzer, distribution build and packaged-help checks separately on Windows PowerShell 5.1 and PowerShell 7. Empty, incomplete and discovery-failed test runs now fail the gate; detailed test and analyzer reports are retained.
+- Added file-backed tests for actual declined confirmations, new/existing destinations, same-version replacement previews, temporary-file cleanup, invalid input and simulated compression/extraction failures. Fixture installers must never execute.
+- The reviewed authoring candidate passed **194/194 tests on each PowerShell engine**, with **27/27 packaged command-help topics** verified ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38217563557)). Release-preparation and publication workflows validate their own source again; this earlier result is not a claim that a later release has already passed.
+- Analyzer warning/informational findings remain; the validation gate reports no blocking errors for that candidate.
+
+### Compatibility and scope
+
+- Windows PowerShell 5.1 remains the minimum supported version. Public command parameters, built-in applications, deployment defaults, signature policy and the standalone SetupComplete runtime are unchanged from 0.34.0.
+- Normal package build/publication is not transactional rollback. This maintenance release adds no new physical WinPE or application-installation validation; the hardware evidence recorded under 0.34.0 remains specific to that version.
+
 ## 0.34.0
 
 ### Added
