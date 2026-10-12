@@ -29,10 +29,19 @@ function Get-OSDAppMsiProductVersion {
         Write-Verbose "MSI ProductVersion could not be read from '$Path': $($_.Exception.Message)"
     }
     finally {
-        if ($view) { try { [void]$view.Close() } catch { } }
+        if ($view) {
+            try { [void]$view.Close() }
+            catch {
+                # Cleanup remains best-effort; do not discard a version already read.
+                Write-Verbose "MSI view cleanup failed for '$Path': $($_.Exception.Message)"
+            }
+        }
         foreach ($comObject in @($record,$view,$database,$installer)) {
             if ($null -ne $comObject -and [System.Runtime.InteropServices.Marshal]::IsComObject($comObject)) {
-                try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($comObject) } catch { }
+                try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($comObject) }
+                catch {
+                    Write-Verbose "MSI COM reference cleanup failed for '$Path': $($_.Exception.Message)"
+                }
             }
         }
     }
