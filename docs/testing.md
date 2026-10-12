@@ -14,7 +14,7 @@ This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging succ
 
 ## OSDApps 0.34.1 cold/warm physical validation — 12 October 2026
 
-This pair used the same eight-app queue documented for the 0.34.0 release candidate and reused the populated removable cache between runs. Both were real SetupComplete executions. The new `Test-OSDAppDeployment` and `Latest.json` contract in the Unreleased section were added afterward, so the evidence here comes from the 0.34.1 runtime log and filesystem outcome.
+This pair used the same eight-app queue documented for the 0.34.0 release candidate and reused the populated removable cache between runs. Both were real SetupComplete executions. The `Test-OSDAppDeployment` and `Latest.json` contract first included in 0.35.0 were added afterward, so the evidence here comes from the 0.34.1 runtime log and filesystem outcome and does not validate those newer features.
 
 | Cache state | PreInstall | Runner | Measured Windows total | Cache observation | Outcome |
 | --- | ---: | ---: | ---: | --- | --- |

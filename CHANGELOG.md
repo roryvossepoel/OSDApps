@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.35.0
 
 ### Added
 
@@ -12,7 +12,14 @@
 ### Validation
 
 - Added file-backed preflight, online/offline readiness, repository tamper, runtime mismatch, cache aggregation, result parsing and standalone Runner result tests for Windows PowerShell 5.1 and PowerShell 7 CI.
-- OSDApps 0.34.1 separately passed a physical cold/warm eight-app pair on 12 October 2026. That evidence predates these Unreleased commands and does not claim this development change has already completed a physical deployment.
+- The reviewed feature candidate passed **205/205 tests on each PowerShell engine**, with **30/30 packaged command-help topics** verified and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38279910273)). Release-preparation and publication workflows validate their own source again.
+- OSDApps 0.34.1 separately passed a physical cold/warm eight-app pair on 12 October 2026. That evidence predates the 0.35.0 runtime changes and is not presented as physical 0.35.0 validation.
+
+### Compatibility and scope
+
+- Windows PowerShell 5.1 remains the minimum supported version. The built-in application set, repository contract, cleanup policy and installer success-code handling are unchanged from 0.34.1.
+- Preflight and cache validation are read-only. Result writing is best effort so a result-path problem does not change an otherwise successful installation into a failure; `Runtime.log` remains the authoritative fallback.
+- A successful result records installer/provisioning evidence. It does not prove licensing, user sign-in or later interactive application health.
 
 ## 0.34.1
 

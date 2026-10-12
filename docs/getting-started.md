@@ -8,9 +8,7 @@ This guide separates the three environments used by OSDApps. The commands you ru
 
 Use an OSDCloud v2 deployment that leaves time to stage applications after the Windows image has been applied and before the first Windows boot. OSDApps does not replace Windows image deployment.
 
-The examples target x64 and pin the published OSDApps **0.34.1** release. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
-
-The operational preflight and machine-result commands described below are in the **Unreleased** development source; they are not available in the published 0.34.1 package until the next feature release.
+The examples target x64 and pin the published OSDApps **0.35.0** release. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
 
 Decide which source types you need:
 
@@ -27,8 +25,8 @@ For an online deployment, vendor/repository access must be available when acquis
 **Environment: full Windows.** This phase can write module files and USB cache content. It must not stage applications against the preparation machine's Windows installation.
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.34.1 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.34.1 -Force
+Install-Module OSDApps -RequiredVersion 0.35.0 -Scope CurrentUser -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.35.0 -Force
 ```
 
 An OSDCloud cache volume is identified by its label, `OSDCloud` by default; its drive letter can change between machines. The cache is stored in `\OSDApps` on that volume. Storing the PowerShell module in `\Modules` keeps the module separate from installer content.

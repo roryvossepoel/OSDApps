@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.34.1'
+    ModuleVersion     = '0.35.0'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -46,7 +46,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.34.1: Correct package-authoring WhatIf and declined-confirmation behavior, reliable validation scratch cleanup, offline Get-Help for all 27 exported commands, refreshed onboarding, and full Windows PowerShell 5.1/PowerShell 7 validation. Deployment defaults and SetupComplete runtime are unchanged.'
+            ReleaseNotes = '0.35.0: Add staged-deployment preflight and aggregate cache validation, atomic machine-readable SetupComplete results with per-app outcomes, explicit cache/result paths, stable deployment IDs, and offline help for all 30 exported commands.'
             RequireLicenseAcceptance = $false
         }
     }
