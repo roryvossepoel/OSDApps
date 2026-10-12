@@ -79,7 +79,7 @@ Describe 'Transactional multi-app repository synchronization' {
             $newCatalog = New-Snapshot -Root (Join-Path $TestDrive 'New') -Version '2.0.0'
             Sync-OSDAppCache -CatalogPath $oldCatalog -CachePath $cache -Confirm:$false | Out-Null
             Sync-OSDAppCache -CatalogPath $newCatalog -CachePath $cache -Confirm:$false | Out-Null
-            $entries = @(Test-OSDAppCache -CachePath $cache)
+            $entries = @(Test-OSDAppRepositoryCache -CachePath $cache)
             $entries.Count | Should -Be 2
             @($entries.Version | Select-Object -Unique) | Should -Be @('2.0.0')
             @($entries | Where-Object { -not $_.Valid }).Count | Should -Be 0

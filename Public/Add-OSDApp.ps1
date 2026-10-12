@@ -65,7 +65,7 @@ function Add-OSDApp {
                 $validCache = @()
                 if (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf) {
                     try {
-                        $validCache = @(Test-OSDAppCache -CachePath $cachePath -Name $apps -ErrorAction Stop)
+                        $validCache = @(Test-OSDAppRepositoryCache -CachePath $cachePath -Name $apps -ErrorAction Stop)
                     }
                     catch {
                         Write-Verbose "Offline cache validation failed: $($_.Exception.Message)"
@@ -93,7 +93,7 @@ function Add-OSDApp {
                 throw 'No cached repository catalog is available. Configure CatalogUri and synchronize first, or attach a USB drive with a populated OSDApps cache.'
             }
 
-            $cachedPackages = @(Test-OSDAppCache -CachePath $cachePath -Name $apps)
+            $cachedPackages = @(Test-OSDAppRepositoryCache -CachePath $cachePath -Name $apps)
             $unavailable = @($apps | Where-Object {
                 $requestedName = $_
                 @($cachedPackages | Where-Object { $_.Id -ieq $requestedName -and $_.Valid }).Count -ne 1

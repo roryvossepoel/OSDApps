@@ -47,6 +47,7 @@
                 CleanupMode = 'OnSuccess schedules local staging cleanup after installation success; Never retains it. Failures retain source. Does not clear USB cache.'
                 CacheVolumeLabel = 'Label used to find the cache volume; default configuration is OSDCloud. Does not rename or format a volume.'
                 LogPath = 'Runtime log path recorded during staging. Default configuration is %ProgramData%\OSDApps\Logs\Runtime.log.'
+                ResultPath = 'Machine-readable final deployment result path recorded during staging. Default configuration is %ProgramData%\OSDApps\Results\Latest.json.'
                 PassThru = 'Return effective configuration after updating it.'
             }
             Examples = @(
@@ -57,7 +58,7 @@
         }
         'Get-OSDAppConfiguration' = @{
             Synopsis = 'Read the effective session configuration.'
-            Description = 'Returns CatalogUri, CleanupMode, CacheVolumeLabel, LogPath and Scope. Initializes in-memory defaults when needed. Does not read a device manifest or persist configuration.'
+            Description = 'Returns CatalogUri, CleanupMode, CacheVolumeLabel, LogPath, ResultPath and Scope. Initializes in-memory defaults when needed. Does not read a device manifest or persist configuration.'
             Environment = 'Full Windows or WinPE; current module session.'
             Output = 'OSDApps.Configuration with Scope=Session.'
             Examples = @(@{ Code = 'Get-OSDAppConfiguration | Format-List'; Remarks = 'Inspect effective settings before staging.' })
@@ -95,12 +96,60 @@
                 Name = 'Optional Id wildcard filters; does not match DisplayName.'
                 ResolveVersions = 'Inspect supported existing packages for exact versions on full Windows. WinPE uses recorded metadata. Does not write CacheInfo or download.'
                 VerifySignatures = 'Opt in to MSI/EXE Authenticode and expected-publisher inspection. May use certificate/revocation networking. Office checks setup.exe only; Teams checks bootstrapper only. Adobe and repository ZIPs are not assessed by this path. WinPE reports unavailability.'
+                CachePath = 'Explicit OSDApps cache root to inspect instead of auto-detecting a volume labeled OSDCloud. The directory must already exist.'
             }
             Examples = @(
                 @{ Code = 'Get-OSDAppCache'; Remarks = 'Inventory with repository hashes but no requested signature inspection.' },
                 @{ Code = 'Get-OSDAppCache -ResolveVersions -VerifySignatures | Select-Object Id, Version, Valid, SignatureStatus, SignatureScope'; Remarks = 'Full Windows: independently inspect versions, integrity and supported signatures.' }
             )
             Link = 'docs/viewer.md'
+        }
+        'Get-OSDAppDeploymentResult' = @{
+            Synopsis = 'Read the latest machine-readable SetupComplete deployment result.'
+            Description = 'Reads and minimally validates the final JSON written atomically by the standalone runner. It reports phase context and per-app outcomes; it does not infer licensing, sign-in or later application health.'
+            Environment = 'Full Windows after or during SetupComplete; any host with access to a copied result file can use Path.'
+            Output = 'OSDApps.DeploymentResult with status, timing, PreInstall context and application results.'
+            Parameters = @{
+                Path = 'Optional explicit result JSON path. Omit it to use the current session ResultPath configuration.'
+            }
+            Examples = @(
+                @{ Code = 'Get-OSDAppDeploymentResult | Select-Object Status, SuccessfulApplicationCount, FailedApplicationCount'; Remarks = 'Read the configured Latest.json after first boot.' },
+                @{ Code = 'Get-OSDAppDeploymentResult -Path ''C:\Evidence\Latest.json'''; Remarks = 'Inspect a result copied from another device.' }
+            )
+            Link = 'docs/runtime.md'
+        }
+        'Test-OSDAppCache' = @{
+            Synopsis = 'Summarize cache integrity and optional signature readiness.'
+            Description = 'Validates repository SHA-256 and built-in payload presence, then returns one aggregate result plus entry details. Optional signature checks cover only supported MSI/EXE scope; this command does not download, repair or clear cache content.'
+            Environment = 'Full Windows or WinPE; signature inspection is incomplete in WinPE and can require certificate/revocation networking.'
+            Output = 'One OSDApps.CacheValidation object with counts, Entries and Valid.'
+            Parameters = @{
+                Name = 'Optional Id wildcard filters applied before the aggregate status is calculated.'
+                ResolveVersions = 'Inspect supported cached packages for exact versions on full Windows without modifying cache metadata.'
+                VerifySignatures = 'Require all supported, signable cache candidates in the result to pass expected-publisher validation. Non-signable formats remain explicitly outside this scope.'
+                CachePath = 'Explicit OSDApps cache root to validate instead of auto-detecting a volume labeled OSDCloud. A missing path returns CacheAvailable=False.'
+            }
+            Examples = @(
+                @{ Code = '$cache = Test-OSDAppCache -VerifySignatures; $cache.Valid'; Remarks = 'Full Windows: validate payloads and supported signatures.' },
+                @{ Code = 'Test-OSDAppCache -CachePath ''E:\OSDApps'' | Select-Object Valid, EntryCount, InvalidEntryCount'; Remarks = 'Validate a known cache root directly.' }
+            )
+            Link = 'docs/getting-started.md'
+        }
+        'Test-OSDAppDeployment' = @{
+            Synopsis = 'Preflight staged OSDApps deployment intent before reboot.'
+            Description = 'Validates DeviceManifest.json, queue identity, SetupComplete integration, staged runtime version, repository hashes, built-in definitions and optional complete offline payload readiness. It does not install applications or contact vendors.'
+            Environment = 'WinPE after all Add commands and before reboot; can also inspect a mounted offline Windows tree.'
+            Output = 'One OSDApps.DeploymentValidation object with required checks and per-application readiness.'
+            Parameters = @{
+                RequireOfflineReady = 'Fail validation unless every repository and built-in payload required by the queue is already staged locally. Alias: RequireCache.'
+                MinimumFreeSpaceGB = 'Optional minimum free space required on the offline Windows volume. Zero records available space without enforcing a threshold.'
+                ThrowOnFailure = 'Throw one aggregate terminating error when a required check fails instead of returning only Valid=False.'
+            }
+            Examples = @(
+                @{ Code = 'Test-OSDAppDeployment -WindowsPath ''C:\'' | Format-List Valid, OfflineReady, NetworkRequired'; Remarks = 'WinPE: preflight a deployment that may acquire built-ins online.' },
+                @{ Code = 'Test-OSDAppDeployment -WindowsPath ''C:\'' -RequireOfflineReady -ThrowOnFailure'; Remarks = 'Stop the workflow unless all queued payloads are local.' }
+            )
+            Link = 'docs/getting-started.md'
         }
         'Show-OSDAppUI' = @{
             Synopsis = 'Open the read-only OSDApps Viewer.'

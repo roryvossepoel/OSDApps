@@ -8,7 +8,9 @@ This guide separates the three environments used by OSDApps. The commands you ru
 
 Use an OSDCloud v2 deployment that leaves time to stage applications after the Windows image has been applied and before the first Windows boot. OSDApps does not replace Windows image deployment.
 
-The examples target x64 and pin OSDApps **0.34.0**. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
+The examples target x64 and pin the published OSDApps **0.34.1** release. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
+
+The operational preflight and machine-result commands described below are in the **Unreleased** development source; they are not available in the published 0.34.1 package until the next feature release.
 
 Decide which source types you need:
 
@@ -25,8 +27,8 @@ For an online deployment, vendor/repository access must be available when acquis
 **Environment: full Windows.** This phase can write module files and USB cache content. It must not stage applications against the preparation machine's Windows installation.
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.34.0 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.34.0 -Force
+Install-Module OSDApps -RequiredVersion 0.34.1 -Scope CurrentUser -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.34.1 -Force
 ```
 
 An OSDCloud cache volume is identified by its label, `OSDCloud` by default; its drive letter can change between machines. The cache is stored in `\OSDApps` on that volume. Storing the PowerShell module in `\Modules` keeps the module separate from installer content.
@@ -42,7 +44,7 @@ Load the saved module, identify the offline Windows target and then add the inte
 - [Online WinPE deployment](../Examples/WinPE-Online.md): prepare built-ins for vendor acquisition and optionally synchronize repository packages.
 - [Offline WinPE deployment](../Examples/WinPE-Offline.md): validate the expected cache entries, stage them locally and skip repository refresh explicitly.
 
-`Set-OSDAppConfiguration` applies to the **current PowerShell session**. Set the required values in the same session before adding apps. Runtime values such as `CleanupMode`, `CacheVolumeLabel` and `LogPath` are copied into the device manifest during staging; changing the session later does not rewrite an already staged manifest by itself.
+`Set-OSDAppConfiguration` applies to the **current PowerShell session**. Set the required values in the same session before adding apps. Runtime values such as `CleanupMode`, `CacheVolumeLabel`, `LogPath` and `ResultPath` are copied into the device manifest during staging; changing the session later does not rewrite an already staged manifest by itself.
 
 ```powershell
 # WinPE staging session, after importing OSDApps:
@@ -55,7 +57,25 @@ For repository apps, configure your actual catalog URL and use app IDs that it c
 
 ## 3. Inspect before reboot
 
-**Environment: the same WinPE session.** Optional read-only inspection:
+**Environment: the same WinPE session.** Run the deployment preflight after the last Add command:
+
+```powershell
+$Preflight = Test-OSDAppDeployment -WindowsPath 'C:\'
+$Preflight | Format-List Valid, OfflineReady, NetworkRequired, ApplicationCount
+
+if (-not $Preflight.Valid) {
+    $Preflight.Checks | Where-Object { $_.Required -and -not $_.Passed }
+    throw 'OSDApps staging did not pass preflight.'
+}
+```
+
+`Valid=True` means the manifest, queue, SetupComplete integration, staged runtime and required repository packages passed. `OfflineReady=False` is allowed for an online cold deployment: it means PreInstall must acquire one or more built-ins. For a deliberately disconnected deployment, make that a hard requirement:
+
+```powershell
+Test-OSDAppDeployment -WindowsPath 'C:\' -RequireOfflineReady -ThrowOnFailure
+```
+
+Optional read-only visual inspection:
 
 ```powershell
 Show-OSDAppUI -Offline
@@ -94,7 +114,17 @@ A successful staging command is not a successful installation. PreInstall or Run
 %ProgramData%\OSDApps\Logs\Runtime.log
 ```
 
-Read the events in a PowerShell window:
+When the OSDApps module is available, read the atomic machine result first:
+
+```powershell
+$Result = Get-OSDAppDeploymentResult
+$Result | Format-List Status, DeploymentId, SuccessfulApplicationCount, FailedApplicationCount, DurationSeconds
+$Result.Applications | Format-Table Id, Status, ExitCode, Version, DurationSeconds
+```
+
+The default file is `%ProgramData%\OSDApps\Results\Latest.json`. It remains outside local staging, so `CleanupMode OnSuccess` does not remove it. Without the module, the JSON can be read with `Get-Content -Raw | ConvertFrom-Json`.
+
+Read detailed events in a PowerShell window:
 
 ```powershell
 $Log = Join-Path $env:ProgramData 'OSDApps\Logs\Runtime.log'

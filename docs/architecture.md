@@ -20,7 +20,7 @@ WinPE after OSDCloud applies Windows
 First Windows boot / SetupComplete
     PreInstall prepares built-ins and enforces applicable installer trust checks
     Runner validates repository hashes and installs the full local queue
-    apply cleanup policy; retain persistent logs
+    write persistent result; apply cleanup policy; retain logs
 
 OOBE / Autopilot continues
 ```
@@ -73,10 +73,11 @@ The cache changes where content is acquired and reused. Runner consumes local st
 | `<cache volume>:\OSDApps` | Reusable repository/built-in cache and cache-operation logs |
 | `<Windows target>\Windows\Temp\OSDApps` | Per-device manifest, PreInstall/Runner, staged packages and Work |
 | `%ProgramData%\OSDApps\Logs\Runtime.log` | Default persistent PreInstall/Runner log in deployed Windows |
+| `%ProgramData%\OSDApps\Results\Latest.json` | Default atomic final deployment result and per-app outcomes |
 
 Typical local staging contains `DeviceManifest.json`, `Invoke-OSDAppPreInstall.ps1`, `Invoke-OSDAppRunner.ps1`, `Packages`, `BuiltIn` and `Work`.
 
-`CleanupMode OnSuccess` schedules removal of temporary device source after a successful run; `Never` retains it. A failed run retains source for investigation. The persistent log and reusable USB cache are separate from that staging directory.
+`CleanupMode OnSuccess` schedules removal of temporary device source after a successful run; `Never` retains it. A failed run retains source for investigation. The persistent log, result and reusable USB cache are separate from that staging directory.
 
 ## Source resolution rules
 
@@ -101,7 +102,7 @@ Optional repository Vendor metadata is descriptive. It is not a signing certific
 
 ## Device manifest
 
-The manifest has one ordered `Apps` array containing `Source=BuiltIn` or `Source=Repository` entries. PreInstall filters the built-ins for preparation; Runner processes the full array from top to bottom.
+The manifest has a stable per-staging `DeploymentId` and one ordered `Apps` array containing `Source=BuiltIn` or `Source=Repository` entries. PreInstall filters the built-ins for preparation; Runner processes the full array from top to bottom and uses the identity to correlate phase results.
 
 Adding a new Id appends it. Re-adding an existing Id replaces its entry and moves it to the end, rather than creating a duplicate. Viewer sorting changes only the screen order; it never writes the manifest.
 

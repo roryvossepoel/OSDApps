@@ -12,6 +12,9 @@ function Set-OSDAppConfiguration {
         [ValidateNotNullOrEmpty()]
         [string]$LogPath,
 
+        [ValidateNotNullOrEmpty()]
+        [string]$ResultPath,
+
         [switch]$PassThru
     )
 
@@ -36,11 +39,16 @@ function Set-OSDAppConfiguration {
         $current.LogPath = $LogPath
     }
 
+    if ($PSBoundParameters.ContainsKey('ResultPath')) {
+        $current.ResultPath = $ResultPath
+    }
+
     $script:OSDAppConfiguration = [pscustomobject]@{
         CatalogUri       = $current.CatalogUri
         CleanupMode      = $current.CleanupMode
         CacheVolumeLabel = $current.CacheVolumeLabel
         LogPath          = $current.LogPath
+        ResultPath       = $current.ResultPath
     }
 
     if ($PassThru) {

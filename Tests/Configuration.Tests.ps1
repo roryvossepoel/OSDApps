@@ -11,9 +11,10 @@ Describe 'OSDApps configuration' {
     }
 
     It 'returns the effective configuration with PassThru' {
-        $result = Set-OSDAppConfiguration -CleanupMode Never -CacheVolumeLabel TestCache -PassThru
+        $result = Set-OSDAppConfiguration -CleanupMode Never -CacheVolumeLabel TestCache -ResultPath 'C:\OSDApps\Latest.json' -PassThru
         $result.CleanupMode | Should -Be 'Never'
         $result.CacheVolumeLabel | Should -Be 'TestCache'
+        $result.ResultPath | Should -Be 'C:\OSDApps\Latest.json'
     }
 
     It 'preserves values that were not changed' {
@@ -26,5 +27,17 @@ Describe 'OSDApps configuration' {
 
     It 'rejects non-http catalog schemes' {
         { Set-OSDAppConfiguration -CatalogUri 'file:///C:/catalog.json' } | Should -Throw '*HTTP or HTTPS*'
+    }
+
+    It 'adds and preserves one deployment identity with complete runtime settings' {
+        InModuleScope OSDApps {
+            $manifest = Set-OSDAppManifestRuntimeConfiguration -Manifest ([pscustomobject]@{})
+            $deploymentId = [guid]::Empty
+            [guid]::TryParse([string]$manifest.DeploymentId, [ref]$deploymentId) | Should -BeTrue
+            $manifest.Runtime.ResultPath | Should -Be '%ProgramData%\OSDApps\Results\Latest.json'
+
+            $second = Set-OSDAppManifestRuntimeConfiguration -Manifest $manifest
+            $second.DeploymentId | Should -Be $deploymentId.Guid
+        }
     }
 }

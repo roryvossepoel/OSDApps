@@ -21,20 +21,22 @@ OSDApps adds application deployment to OSDCloud v2: vendor-native built-ins, org
 | Prepare cache, optionally | Full Windows | `Sync-OSDApp*` downloads content to an OSDCloud cache volume. |
 | Stage | WinPE, after Windows is applied | `Add-OSDApp*` writes the device queue, copies available content and prepares SetupComplete. Repository packages are synchronized here when requested. |
 | Acquire and install | First Windows boot | Standalone PreInstall refreshes built-ins or uses a usable local fallback; Runner installs the queue from local staging. |
-| Inspect | Windows or supported WinPE | `Show-OSDAppUI` displays staging, apps, cache and logs without changing deployment state. |
+| Validate and inspect | WinPE or Windows | `Test-OSDAppDeployment` checks staged readiness before reboot; `Show-OSDAppUI` displays state; `Get-OSDAppDeploymentResult` reads the final machine result. |
 
 The CLI owns configuration and automation. The Viewer does not add or remove apps. The OSDApps module does **not** need to be installed in the deployed Windows installation: the required runtime scripts are staged automatically.
 
 ## Install from PowerShell Gallery
 
-**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin the field-validated **0.34.0** release:
+**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin the published **0.34.1** release:
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.34.0 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.34.0 -Force
+Install-Module OSDApps -RequiredVersion 0.34.1 -Scope CurrentUser -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.34.1 -Force
 ```
 
 For offline WinPE, save the module to USB first; see [Prepare a USB cache](Examples/Prepare-UsbCache.md). PowerShellGet is the documented WinPE/Windows PowerShell 5.1 installation path. `Install-PSResource` is an alternative only on a machine where PSResourceGet is already available.
+
+`Test-OSDAppDeployment`, `Test-OSDAppCache` and `Get-OSDAppDeploymentResult` are currently documented from the Unreleased development source and are not part of the published 0.34.1 package yet.
 
 ## Quick start
 
@@ -98,11 +100,11 @@ Read the [built-in publisher policy](docs/built-in-apps.md#authenticode-and-publ
 
 ## Results and troubleshooting
 
-The 0.34.0 release candidate completed **8/8 installations on each of two x64 PCs**: one cold-cache online deployment and one fully offline deployment using the resulting cache. Five supported built-in signer/publisher checks passed in both runs. This is installer/provisioning evidence, not proof of licensing or every application's interactive behavior.
+OSDApps 0.34.1 completed a new cold/warm physical pair on 12 October 2026 with **8/8 successful installations in both runs**. The cold run populated the cache; the warm run recorded zero acquisitions and zero updated packages. Both runs completed `OnSuccess` cleanup. This is installer/provisioning evidence, not proof of licensing or every application's interactive behavior.
 
 Detailed results, timing limitations and older release history are preserved in the [validation matrix](docs/testing.md), [performance measurements](docs/performance.md) and [changelog](CHANGELOG.md).
 
-The default persistent log is `%ProgramData%\OSDApps\Logs\Runtime.log`. Look for `PreInstallComplete`, individual installer exit codes and `InstallComplete`; a successful staging command is not the final installation result. See [Runtime and cleanup](docs/runtime.md).
+The default persistent log is `%ProgramData%\OSDApps\Logs\Runtime.log`. The runtime also writes an atomic machine-readable result to `%ProgramData%\OSDApps\Results\Latest.json`; read it with `Get-OSDAppDeploymentResult`. Look for individual app outcomes and the final status—a successful staging command is not the final installation result. See [Runtime and cleanup](docs/runtime.md).
 
 ## Documentation and contribution
 
