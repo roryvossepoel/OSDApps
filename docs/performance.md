@@ -2,6 +2,18 @@
 
 OSDApps includes explicit runtime timing so cold-cache and warm-cache deployments can be compared without manually reconstructing every phase from timestamps.
 
+## OSDApps 0.35.0 release candidate — populated USB cache, online (12 October 2026)
+
+A freshly reinstalled x64 PC completed the eight-app queue after hard offline-readiness preflight passed in WinPE. The populated USB cache remained attached and networking was available. All six built-ins recorded cache use; Cisco Webex refreshed while the other five cached packages were retained.
+
+| Phase | Duration | Result |
+| --- | ---: | --- |
+| PreInstall | 53.9 s | Succeeded; six built-ins |
+| Runner | 369.0 s | 8/8 successful |
+| **Measured Windows total** | **422.9 s (7:03)** | **Succeeded** |
+
+The total excludes image deployment, WinPE staging, reboot and OOBE. It is one release-candidate field observation, not a controlled cache-speed comparison or performance guarantee. See the [0.35.0 validation record](testing.md#osdapps-0350-release-candidate-physical-validation--12-october-2026) for integrity, result-correlation and cleanup evidence.
+
 ## OSDApps 0.34.0 — full eight-app deployment comparison (11 October 2026)
 
 On two freshly installed x64 test PCs, the same six built-ins and two repository apps completed through SetupComplete with `CleanupMode=OnSuccess`. Built-in installer signatures and expected publishers were enforced on Office `setup.exe`, Teams `teamsbootstrapper.exe`, Chrome, Firefox and Cisco Webex; Adobe's outer ZIP remains outside the Authenticode scope.

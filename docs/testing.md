@@ -7,10 +7,33 @@ This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging succ
 | Scenario | Status | Evidence / expected behavior |
 | --- | --- | --- |
 | Empty OSDCloud USB cache, online | **Validated — 0.34.1 cold run (12 Oct 2026)** | Six built-ins refreshed and two repository packages installed; 8/8 successful and cleanup completed. |
-| Existing OSDCloud USB cache, online | **Validated — 0.34.1 warm run (12 Oct 2026)** | Same cache reused; zero acquisitions, zero updated packages, 8/8 successful and cleanup completed. |
+| Existing OSDCloud USB cache, online | **Validated — 0.35.0 release candidate (12 Oct 2026)** | Hard offline-readiness preflight passed; correlated JSON reported 8/8 successful and cleanup was confirmed. |
 | No USB cache, online | **Validated — 0.30.0 test 1** | Built-ins acquired on Windows volume; repository apps staged in WinPE |
 | Existing OSDCloud USB cache, offline | **Validated — 0.34.0 PC 2 (11 Oct 2026)** | LAN disconnected; six BuiltInRefreshSkipped events, five built-in signer/publisher checks and 8/8 successful installations. Earlier 0.30.0 six-app test also passed. |
 | No USB, offline | **Not yet validated** | Without a complete staged fallback, PreInstall is expected to stop before Runner |
+
+## OSDApps 0.35.0 release-candidate physical validation — 12 October 2026
+
+PC 1 was freshly reinstalled and staged in WinPE with the 0.35.0 release-candidate module loaded from `E:\Modules\OSDApps\0.35.0`. The populated USB cache remained attached and the machine remained online. Before reboot, `Test-OSDAppDeployment -RequireOfflineReady -MinimumFreeSpaceGB 10` passed for the complete eight-app queue.
+
+The first Windows boot then exercised the standalone PreInstall and Runner scripts plus the new result contract. The standalone and nested PreInstall records shared deployment ID `8d5a26e6-0ddd-46f4-8666-b4234097d20b`; both phases and the final result reported `Succeeded`.
+
+| Order | Application | Source | Integrity result | Install duration | Outcome |
+| ---: | --- | --- | --- | ---: | --- |
+| 1 | Microsoft 365 Apps | Built-in | Expected publisher | 147.6 s | Exit code 0 |
+| 2 | Microsoft Teams | Built-in | Expected publisher | 1.1 s | Exit code 0 |
+| 3 | Google Chrome Enterprise | Built-in | Expected publisher | 18.1 s | Exit code 0 |
+| 4 | Mozilla Firefox Enterprise | Built-in | Expected publisher | 20.1 s | Exit code 0 |
+| 5 | Cisco Webex | Built-in | Expected publisher | 8.0 s | Exit code 0 |
+| 6 | Adobe Acrobat Unified | Built-in | Not assessed, by design | 110.1 s | Exit code 0 |
+| 7 | Notepad++ | Repository | SHA-256 | 9.2 s | Exit code 0 |
+| 8 | Omnissa Horizon Client | Repository | SHA-256 | 54.2 s | Exit code 0 |
+
+PreInstall completed in **53.9 s** and recorded `CacheUsed=True` for all six built-ins. Cisco Webex was the only built-in with `PackageUpdated=True`; the other five retained their cached packages. Runner completed in **369.0 s**, giving a measured Windows phase total of **422.9 s (7:03)**. The final result recorded eight expected, eight successful and zero failed applications.
+
+After SetupComplete and OOBE, the `OnSuccess` cleanup contract was checked separately: `C:\Windows\Temp\OSDApps` no longer existed, no `OSDApps-Cleanup-*.cmd` helper remained, and `%ProgramData%\OSDApps\Results\Latest.json` plus `%ProgramData%\OSDApps\Logs\Runtime.log` were preserved. The runtime log contained no warning or error entries.
+
+This is one physical release-candidate execution, not a performance benchmark. It validates preflight, staging, cache use, installer exit codes, correlated result reporting and cleanup. It does not prove licensing, user sign-in or every application's later interactive behavior. Raw device logs were reviewed but are not committed to the public repository.
 
 ## OSDApps 0.34.1 cold/warm physical validation — 12 October 2026
 

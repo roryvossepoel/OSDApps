@@ -98,7 +98,7 @@ Read the [built-in publisher policy](docs/built-in-apps.md#authenticode-and-publ
 
 ## Results and troubleshooting
 
-OSDApps 0.34.1 completed a new cold/warm physical pair on 12 October 2026 with **8/8 successful installations in both runs**. The cold run populated the cache; the warm run recorded zero acquisitions and zero updated packages. Both runs completed `OnSuccess` cleanup. This is installer/provisioning evidence, not proof of licensing or every application's interactive behavior.
+The OSDApps 0.35.0 release candidate completed a physical online deployment from a populated USB cache on 12 October 2026. Hard offline-readiness preflight passed before reboot, the correlated PreInstall and final JSON results reported **8/8 successful installations**, and `OnSuccess` removed temporary staging while preserving the result and log. This is installer/provisioning evidence, not proof of licensing or every application's interactive behavior.
 
 Detailed results, timing limitations and older release history are preserved in the [validation matrix](docs/testing.md), [performance measurements](docs/performance.md) and [changelog](CHANGELOG.md).
 
