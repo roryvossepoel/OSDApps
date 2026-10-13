@@ -20,18 +20,18 @@ OSDApps adds application deployment to OSDCloud v2: vendor-native built-ins, org
 | --- | --- | --- |
 | Prepare cache, optionally | Full Windows | `Sync-OSDApp*` downloads content to an OSDCloud cache volume. |
 | Stage | WinPE, after Windows is applied | `Add-OSDApp*` writes the device queue, copies available content and prepares SetupComplete. Repository packages are synchronized here when requested. |
-| Acquire and install | First Windows boot | Standalone PreInstall refreshes built-ins or uses a usable local fallback; Runner installs the queue from local staging. |
+| Acquire and install | First Windows boot | Standalone PreInstall refreshes built-ins or uses a usable local fallback; Runner attempts each independent queue entry once and records partial failures. |
 | Validate and inspect | WinPE or Windows | `Test-OSDAppDeployment` checks staged readiness before reboot; `Show-OSDAppUI` displays state; `Get-OSDAppDeploymentResult` reads the final machine result. |
 
 The CLI owns configuration and automation. The Viewer does not add or remove apps. The OSDApps module does **not** need to be installed in the deployed Windows installation: the required runtime scripts are staged automatically.
 
 ## Install from PowerShell Gallery
 
-**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin the published **0.36.0** release:
+**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin **0.37.0**:
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.36.0 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.36.0 -Force
+Install-Module OSDApps -RequiredVersion 0.37.0 -Scope CurrentUser -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.37.0 -Force
 ```
 
 For offline WinPE, save the module to USB first; see [Prepare a USB cache](Examples/Prepare-UsbCache.md). PowerShellGet is the documented WinPE/Windows PowerShell 5.1 installation path. `Install-PSResource` is an alternative only on a machine where PSResourceGet is already available.
@@ -59,6 +59,8 @@ Show-OSDAppUI -Offline
 ```
 
 The Add cmdlets discover the offline Windows target, or accept an explicit `-WindowsPath`. They prepare installation; they do **not** install these apps in WinPE. Keep the cache USB attached through SetupComplete when it is being used, and close the Viewer before rebooting.
+
+SetupComplete is intentionally one-shot. OSDApps does not install a retry task or RunOnce entry. A normal installer/source failure is recorded per application and independent remaining entries continue; a manifest, repository-integrity or supported-publisher trust failure aborts the queue. Any unsuccessful entry retains local staging and makes the final machine result `Failed`.
 
 For a complete workflow, use the [online WinPE example](Examples/WinPE-Online.md) or the [offline WinPE example](Examples/WinPE-Offline.md). Neither example formats a disk or reboots automatically.
 

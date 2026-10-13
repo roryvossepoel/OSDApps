@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.37.0
+
+### Added
+
+- Added one-shot, per-application fault isolation to the standalone SetupComplete runtime. A normal acquisition, source, timeout or installer failure is recorded for that application while independent queue entries continue exactly once.
+- PreInstall now writes per-built-in outcomes and can finish as `CompletedWithErrors`. Runner skips only built-ins that PreInstall could not prepare, continues repository and unaffected built-in applications, and records `SkippedApplicationCount` and `UnsuccessfulApplicationCount` in `Latest.json`.
+- Added explicit `ApplicationRefreshFailed`, `RefreshCompletedWithErrors`, `ApplicationInstallSkipped` and `InstallCompletedWithErrors` events for partial outcomes.
+
+### Safety and execution contract
+
+- SetupComplete remains a single execution path. OSDApps does not create RunOnce entries, scheduled tasks, services or any other automatic retry mechanism.
+- Repository SHA-256 checks now run for every available selected archive before the first installer starts. A hash mismatch, invalid manifest/queue or supported-publisher trust failure remains fatal and prevents further application execution.
+- Installer exit-code failures, timeouts and missing app-local source do not block unrelated applications. The final deployment still reports `Failed`, returns a nonzero Runner exit code, retains staging and suppresses `OnSuccess` cleanup whenever any application failed or was skipped.
+
+### Validation
+
+- Added Windows runtime tests proving continuation after a controlled installer exit code, continuation after a recorded PreInstall acquisition failure, all-installer blocking on a repository hash mismatch, staging retention after partial failure and absence of persistence-based retry mechanisms.
+- The release candidate passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, with **31/31 packaged command-help topics** verified on each engine and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38405028071)).
+- Two freshly applied x64 PCs passed a physical SetupComplete pair using the same eight-app queue and USB cache. A controlled repository installer failure on PC 1 was recorded once (exit code `42`), did not prevent the following Omnissa package from succeeding, produced a final failed result with 7 succeeded / 1 failed / 0 skipped, retained staging and created no retry persistence. PC 2 then completed the unchanged normal queue with **8/8 succeeded**, zero failed or skipped, correlated successful phase records, successful `OnSuccess` cleanup and no scheduled task, service or RunOnce entry.
+
 ## 0.36.0
 
 ### Added

@@ -12,6 +12,32 @@ This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging succ
 | Existing OSDCloud USB cache, offline | **Validated — 0.34.0 PC 2 (11 Oct 2026)** | LAN disconnected; six BuiltInRefreshSkipped events, five built-in signer/publisher checks and 8/8 successful installations. Earlier 0.30.0 six-app test also passed. |
 | No USB, offline | **Not yet validated** | Without a complete staged fallback, PreInstall is expected to stop before Runner |
 
+## OSDApps 0.37.0 release-candidate validation — 13 October 2026
+
+The 0.37.0 candidate from [PR #25](https://github.com/roryvossepoel/OSDApps/pull/25) was built from commit `2a2b5f364de1efd9341a9728a975e4fe7428d841`. GitHub Actions passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38405028071)).
+
+### Automated fault-isolation coverage
+
+Five new file-backed scenarios validate the one-shot partial-failure contract:
+
+- an installer exit-code failure is recorded while the next independent repository application still runs once;
+- a built-in acquisition failure recorded by PreInstall causes only that built-in to be skipped by Runner while an independent repository application proceeds;
+- a selected repository SHA-256 mismatch aborts before any installer executes and marks remaining work skipped;
+- a normal PreInstall acquisition failure produces `CompletedWithErrors` without blocking Runner or creating retry state;
+- generated SetupComplete integration calls each phase once and contains no RunOnce, scheduled-task or service persistence.
+
+These automated tests also confirm that partial or fatal failure retains staging and suppresses `OnSuccess` cleanup.
+
+### Physical one-shot failure and normal-control pair
+
+Two freshly applied x64 PCs used the same online OSDCloud USB stick and the same ordered eight-app queue as the 0.36.0 pair. Both machines loaded the exact 0.37.0 release-candidate module in WinPE, passed pre-reboot validation and retained the USB and network connection through SetupComplete.
+
+On PC 1, only the staged `NotepadPlusPlus` queue slot was replaced with a controlled repository-style failure probe whose installer wrote a marker and exited with code `42`. SetupComplete recorded that entry once as `Failed` with `FailureType=InstallerFailed`, then continued to the following `OmnissaHorizonClient` entry, which succeeded. The final record contained eight results: seven succeeded, one failed and none were skipped. It reported final status `Failed` with `FailureType=ApplicationFailures`; staging and the probe archive were retained, and no scheduled task, service or RunOnce retry was created. Runtime evidence included `ApplicationInstallFailed`, the later Omnissa completion, `InstallCompletedWithErrors` and `CleanupSkipped`.
+
+PC 2 ran the unchanged eight-app queue as a normal control. Correlated PreInstall and Runner records shared deployment ID `4474a976-162c-49b3-8ab3-945b24316ebe` and both reported `Succeeded`. PreInstall completed in **217.1 seconds** and Runner in **359.1 seconds**. All eight applications succeeded, with zero failed and zero skipped. `OnSuccess` removed `C:\Windows\Temp\OSDApps`, the temporary cleanup helper removed itself, and the post-OOBE check found no OSDApps scheduled task, service or RunOnce entry.
+
+Together, these physical runs validate the intended one-shot boundary: an ordinary installer failure is isolated, later independent work still executes during the same SetupComplete pass, the unsuccessful deployment preserves evidence without arranging a retry, and the normal path retains its successful cleanup behavior. This pair does not simulate a power interruption and does not prove licensing, user sign-in or every application's later interactive behavior. Raw device logs and the controlled test package are not committed to the public repository.
+
 ## OSDApps 0.36.0 release-candidate validation — 13 October 2026
 
 The 0.36.0 candidate from [PR #24](https://github.com/roryvossepoel/OSDApps/pull/24) was built from commit `03bbd8a2304a4c6f72d1253c0d2c5c4ac9637229` and installed as `E:\Modules\OSDApps\0.36.0`. Its source tree matched the locally reviewed and tested feature tree. GitHub Actions passed **235/235 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38364310573)).

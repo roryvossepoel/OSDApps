@@ -25,7 +25,7 @@ powershell.exe -STA -NoProfile
 In the new PowerShell session:
 
 ```powershell
-Import-Module OSDApps -RequiredVersion 0.36.0 -Force
+Import-Module OSDApps -RequiredVersion 0.37.0 -Force
 Show-OSDAppUI -Offline
 ```
 

@@ -19,7 +19,8 @@ WinPE after OSDCloud applies Windows
 
 First Windows boot / SetupComplete
     PreInstall prepares built-ins and enforces applicable installer trust checks
-    Runner validates repository hashes and installs the full local queue
+    Runner validates all selected repository hashes before installer execution
+    each independent app is attempted once; ordinary app failures do not block the rest
     write persistent result; apply cleanup policy; retain logs
 
 OOBE / Autopilot continues
@@ -33,7 +34,7 @@ The Viewer can inspect an existing Windows target and cache in full Windows or s
 
 A repository is organization-managed static content: `catalog.json`, per-app manifests and package archives. During WinPE staging the module resolves a compatible variant, downloads or reuses its `Package.zip`, checks the manifest SHA-256 and copies it to local device staging.
 
-Runner checks the staged archive hash again before extraction and `Package/Install.ps1` execution. It does not contact the repository to refresh packages during SetupComplete.
+Runner checks every available selected staged archive before starting the first installer, then extracts it for `Package/Install.ps1` execution. A hash mismatch is a queue-blocking trust failure. Runner does not contact the repository to refresh packages during SetupComplete.
 
 Full-Windows `Sync-OSDAppRepository` can also prepare media ahead of deployment. Repository variants are selected for the synchronization host's architecture; preparation on a different architecture needs explicit care. Repository content, licensing and hosting remain the repository owner's responsibility.
 
@@ -82,13 +83,15 @@ The cache changes where content is acquired and reused. Runner consumes local st
 
 Typical local staging contains `DeviceManifest.json`, `Invoke-OSDAppPreInstall.ps1`, `Invoke-OSDAppRunner.ps1`, `Packages`, `BuiltIn` and `Work`.
 
-`CleanupMode OnSuccess` schedules removal of temporary device source after a successful run; `Never` retains it. A failed run retains source for investigation. The persistent log, result and reusable USB cache are separate from that staging directory.
+`CleanupMode OnSuccess` schedules removal of temporary device source only after every selected application succeeded; `Never` retains it. A failed or skipped application retains source for investigation. The persistent log, result and reusable USB cache are separate from that staging directory.
+
+SetupComplete is a one-shot Windows Setup phase. OSDApps deliberately creates no scheduled task, RunOnce value, service or other retry persistence. PreInstall and Runner therefore isolate ordinary app-local failures and continue independent entries during that one execution. Manifest, hash and supported-publisher trust failures remain blocking safety boundaries.
 
 ## Source resolution rules
 
 For built-ins, the deployment first identifies the optional cache and available local fallback, then attempts freshness/acquisition when network availability permits. Content must be locally available and pass the checks applicable to its format before installation.
 
-A refresh failure is not automatically fatal if an acceptable staged fallback exists. Conversely, a complete-looking fallback is not automatically acceptable: a supported MSI/EXE signature or publisher failure can still stop deployment. `GetIsNetworkAvailable()` reports interface availability, not verified access to every vendor endpoint.
+A refresh failure is not automatically fatal if an acceptable staged fallback exists. Without a usable fallback, that built-in is recorded as failed and its installer is skipped while independent entries can continue. Conversely, a complete-looking fallback is not automatically acceptable: a supported MSI/EXE signature or publisher failure stops deployment. `GetIsNetworkAvailable()` reports interface availability, not verified access to every vendor endpoint.
 
 The explicit log events distinguish cache discovery, refresh skipped, refresh failed with fallback, signature verification and installer results. See [Runtime logging](runtime.md#logging).
 
