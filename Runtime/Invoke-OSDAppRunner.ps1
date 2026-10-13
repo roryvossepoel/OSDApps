@@ -16,6 +16,7 @@ $apps = @()
 $cleanupMode = $null
 $logPath = $null
 $applicationResults = [System.Collections.Generic.List[object]]::new()
+$validatedRepositoryHashes = @{}
 
 function Initialize-RunnerLog {
     param(
@@ -134,6 +135,128 @@ function Get-RunnerCacheInfo {
     }
 }
 
+function New-RunnerFailureException {
+    param(
+        [Parameter(Mandatory)][string]$Message,
+        [Parameter(Mandatory)][string]$FailureType,
+        [string]$ApplicationId,
+        [switch]$Fatal
+    )
+
+    $exception = [System.InvalidOperationException]::new($Message)
+    $exception.Data['OSDAppsFailureType'] = $FailureType
+    $exception.Data['OSDAppsFatal'] = [bool]$Fatal
+    if ($ApplicationId) {
+        $exception.Data['OSDAppsApplicationId'] = $ApplicationId
+    }
+    $exception
+}
+
+function Get-RunnerFailureInfo {
+    param(
+        [Parameter(Mandatory)][System.Management.Automation.ErrorRecord]$ErrorRecord,
+        [string]$ApplicationId
+    )
+
+    $exception = $ErrorRecord.Exception
+    $message = $exception.Message
+    $failureType = $null
+    $fatal = $false
+
+    if ($exception.Data -and $exception.Data.Contains('OSDAppsFailureType')) {
+        $failureType = [string]$exception.Data['OSDAppsFailureType']
+        $fatal = [bool]$exception.Data['OSDAppsFatal']
+        if ($exception.Data.Contains('OSDAppsApplicationId')) {
+            $ApplicationId = [string]$exception.Data['OSDAppsApplicationId']
+        }
+    }
+    elseif ($message -match 'SHA-256') {
+        $failureType = 'HashMismatch'
+        $fatal = $true
+    }
+    elseif ($message -match 'timeout|exceeded') {
+        $failureType = 'Timeout'
+    }
+    elseif ($message -match 'exit code') {
+        $failureType = 'InstallerFailed'
+    }
+    elseif ($message -match 'not found|does not contain|missing') {
+        $failureType = 'SourceMissing'
+    }
+    elseif ($message -match 'unsupported .*application|invalid .*manifest|duplicate .*Id') {
+        $failureType = 'ManifestInvalid'
+        $fatal = $true
+    }
+    elseif ($ApplicationId) {
+        $failureType = 'ApplicationError'
+    }
+    else {
+        $failureType = 'RuntimeError'
+        $fatal = $true
+    }
+
+    [pscustomobject]@{
+        FailureType  = $failureType
+        Fatal        = $fatal
+        ApplicationId= $ApplicationId
+        Message      = $message
+    }
+}
+
+function New-RunnerApplicationResult {
+    param(
+        [Parameter(Mandatory)]$App,
+        [Parameter(Mandatory)][ValidateSet('Succeeded','Failed','Skipped')][string]$Status,
+        [double]$DurationSeconds = 0,
+        $Execution,
+        [string]$FailureType,
+        [string]$ErrorMessage
+    )
+
+    $cacheInfo = Get-RunnerCacheInfo -App $App
+    [pscustomobject]@{
+        Id              = [string]$App.Id
+        DisplayName     = if ($App.DisplayName) { [string]$App.DisplayName } else { [string]$App.Id }
+        Source          = [string]$App.Source
+        Type            = if ($App.Type) { [string]$App.Type } else { $null }
+        Version         = if ($App.Version) { [string]$App.Version } elseif ($cacheInfo -and $cacheInfo.Version) { [string]$cacheInfo.Version } else { $null }
+        Architecture    = if ($App.Architecture) { [string]$App.Architecture } elseif ($cacheInfo -and $cacheInfo.Architecture) { [string]$cacheInfo.Architecture } else { $null }
+        Status          = $Status
+        ExitCode        = if ($Execution -and $null -ne $Execution.ExitCode) { [int]$Execution.ExitCode } else { $null }
+        DurationSeconds = [math]::Round($DurationSeconds, 1)
+        Integrity       = if ($Execution -and $Execution.Integrity) { [string]$Execution.Integrity } else { $null }
+        CacheUsed       = if ($cacheInfo -and $null -ne $cacheInfo.Cached) { [bool]$cacheInfo.Cached } else { $null }
+        PackageUpdated  = if ($cacheInfo -and $null -ne $cacheInfo.Updated) { [bool]$cacheInfo.Updated } else { $null }
+        FailureType     = $FailureType
+        Error           = $ErrorMessage
+    }
+}
+
+function Complete-RunnerAbortedResults {
+    param([Parameter(Mandatory)]$Failure)
+
+    $recordedIds = @($applicationResults | ForEach-Object { [string]$_.Id })
+    foreach ($app in $apps) {
+        $id = [string]$app.Id
+        if ($id -in $recordedIds) { continue }
+
+        $isFailureSource = (
+            $Failure.ApplicationId -and
+            [string]::Equals($id, [string]$Failure.ApplicationId, [StringComparison]::OrdinalIgnoreCase)
+        )
+        $status = if ($isFailureSource) { 'Failed' } else { 'Skipped' }
+        $type = if ($isFailureSource) { [string]$Failure.FailureType } else { 'ExecutionAborted' }
+        $message = if ($isFailureSource) {
+            [string]$Failure.Message
+        }
+        else {
+            "Not attempted because execution stopped after a critical $($Failure.FailureType) failure."
+        }
+        $applicationResults.Add((New-RunnerApplicationResult -App $app -Status $status -FailureType $type -ErrorMessage $message))
+        $recordedIds += $id
+    }
+}
+
 function Write-RunnerResult {
     param(
         [Parameter(Mandatory)][ValidateSet('Running','Succeeded','Failed')][string]$Status,
@@ -146,6 +269,7 @@ function Write-RunnerResult {
     $temporaryPath = "$resultPath.$([guid]::NewGuid().ToString('N')).tmp"
     $completed = @($applicationResults | Where-Object { $_.Status -eq 'Succeeded' }).Count
     $failed = @($applicationResults | Where-Object { $_.Status -eq 'Failed' }).Count
+    $skipped = @($applicationResults | Where-Object { $_.Status -eq 'Skipped' }).Count
     $record = [ordered]@{
         SchemaVersion              = '1.0'
         DeploymentId              = if ($manifest -and $manifest.DeploymentId) { [string]$manifest.DeploymentId } else { $null }
@@ -159,6 +283,8 @@ function Write-RunnerResult {
         ExpectedApplicationCount  = @($apps).Count
         SuccessfulApplicationCount= $completed
         FailedApplicationCount    = $failed
+        SkippedApplicationCount   = $skipped
+        UnsuccessfulApplicationCount = ($failed + $skipped)
         PreInstall                = $preInstallResult
         Applications              = @($applicationResults | ForEach-Object { $_ })
         FailureType               = $FailureType
@@ -236,7 +362,66 @@ try {
 
     $apps = if ($manifest.PSObject.Properties.Name -contains 'Apps') { @($manifest.Apps) } else { @() }
     if ($Name) { $apps = @($apps | Where-Object { $_.Id -in $Name }) }
+
+    $deploymentId = [guid]::Empty
+    if (-not [guid]::TryParse([string]$manifest.DeploymentId, [ref]$deploymentId)) {
+        throw (New-RunnerFailureException -Message 'Device manifest DeploymentId is missing or invalid.' -FailureType 'ManifestInvalid' -Fatal)
+    }
+
+    $applicationIds = @($apps | ForEach-Object { [string]$_.Id })
+    $invalidIds = @($applicationIds | Where-Object {
+        $_ -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $_ -match '\.\.'
+    })
+    if ($invalidIds.Count -gt 0 -or @($applicationIds | Select-Object -Unique).Count -ne $applicationIds.Count) {
+        throw (New-RunnerFailureException -Message 'Device manifest contains an invalid or duplicate application Id.' -FailureType 'ManifestInvalid' -Fatal)
+    }
+
+    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi')
+    foreach ($app in $apps) {
+        $id = [string]$app.Id
+        $source = [string]$app.Source
+        if ($source -notin @('Repository','BuiltIn')) {
+            throw (New-RunnerFailureException -Message "Unsupported application source '$source' for '$id'." -FailureType 'ManifestInvalid' -ApplicationId $id -Fatal)
+        }
+        if ($source -eq 'BuiltIn' -and [string]$app.Type -notin $supportedBuiltInTypes) {
+            throw (New-RunnerFailureException -Message "Unsupported built-in application type '$($app.Type)' for '$id'." -FailureType 'ManifestInvalid' -ApplicationId $id -Fatal)
+        }
+        if ($source -eq 'Repository' -and
+            (-not $app.Archive -or [string]$app.Archive.Sha256 -notmatch '^[A-Fa-f0-9]{64}$')) {
+            throw (New-RunnerFailureException -Message "Repository package '$id' has no valid SHA-256 in the device manifest." -FailureType 'ManifestInvalid' -ApplicationId $id -Fatal)
+        }
+    }
+
+    if ($preInstallResult -and [string]$preInstallResult.Status -eq 'Failed') {
+        $failedPreInstallApplication = @($preInstallResult.Applications | Where-Object { [string]$_.Status -eq 'Failed' } | Select-Object -First 1)
+        $message = if ($preInstallResult.Error) {
+            "PreInstall failed: $($preInstallResult.Error)"
+        }
+        else {
+            'PreInstall failed before application installation could start.'
+        }
+        $failedPreInstallId = if ($failedPreInstallApplication.Count -gt 0) { [string]$failedPreInstallApplication[0].Id } else { $null }
+        throw (New-RunnerFailureException -Message $message -FailureType 'PreInstallFailed' -ApplicationId $failedPreInstallId -Fatal)
+    }
+
     Save-RunnerResult -Status Running
+
+    # Validate every available repository archive before starting the first
+    # installer. A trust failure aborts the queue; a missing archive remains an
+    # application-local source failure so independent applications can run.
+    foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'Repository' })) {
+        $archivePath = Join-Path $StagedPath (Join-Path 'Packages' (Join-Path ([string]$app.Id) 'Package.zip'))
+        if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) { continue }
+
+        $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
+        if ($actualHash -ne [string]$app.Archive.Sha256) {
+            Write-RunnerLog -LogPath $logPath -Event 'PackageIntegrityFailed' -Level 'Error' -Message 'Staged package SHA-256 validation failed before application execution.' -Data @{ Id=$app.Id; ExpectedSha256=$app.Archive.Sha256; ActualSha256=$actualHash; Archive=$archivePath }
+            throw (New-RunnerFailureException -Message "SHA-256 validation failed for staged package '$($app.Id)'." -FailureType 'HashMismatch' -ApplicationId ([string]$app.Id) -Fatal)
+        }
+
+        $validatedRepositoryHashes[[string]$app.Id] = $actualHash
+        Write-RunnerLog -LogPath $logPath -Event 'PackageIntegrityValidated' -Message 'Staged package SHA-256 validation succeeded before application execution.' -Data @{ Id=$app.Id; Sha256=$actualHash; Archive=$archivePath }
+    }
 
     New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
 
@@ -249,13 +434,14 @@ try {
             throw "Package.zip not found for '$($package.Id)': $archivePath"
         }
 
-        if ($package.Archive -and $package.Archive.Sha256) {
+        if (-not $validatedRepositoryHashes.ContainsKey([string]$package.Id)) {
             $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
             if ($actualHash -ne $package.Archive.Sha256) {
                 Write-RunnerLog -LogPath $logPath -Event 'PackageIntegrityFailed' -Level 'Error' -Message 'Staged package SHA-256 validation failed.' -Data @{ Id = $package.Id; ExpectedSha256 = $package.Archive.Sha256; ActualSha256 = $actualHash; Archive = $archivePath }
-                throw "SHA-256 validation failed for staged package '$($package.Id)'."
+                throw (New-RunnerFailureException -Message "SHA-256 validation failed for staged package '$($package.Id)'." -FailureType 'HashMismatch' -ApplicationId ([string]$package.Id) -Fatal)
             }
 
+            $validatedRepositoryHashes[[string]$package.Id] = $actualHash
             Write-RunnerLog -LogPath $logPath -Event 'PackageIntegrityValidated' -Message 'Staged package SHA-256 validation succeeded.' -Data @{ Id = $package.Id; Sha256 = $actualHash; Archive = $archivePath }
         }
 
@@ -476,7 +662,32 @@ try {
         Order = @($apps | ForEach-Object { "$($_.Source):$($_.Id)" })
     }
 
+    $preInstallFailures = @{}
+    if ($preInstallResult -and $preInstallResult.Applications) {
+        foreach ($preInstallApplication in @($preInstallResult.Applications)) {
+            if ([string]$preInstallApplication.Status -eq 'Failed') {
+                $preInstallFailures[[string]$preInstallApplication.Id] = $preInstallApplication
+            }
+        }
+    }
+
     foreach ($app in $apps) {
+        $id = [string]$app.Id
+        if ([string]$app.Source -eq 'BuiltIn' -and $preInstallFailures.ContainsKey($id)) {
+            $preInstallFailure = $preInstallFailures[$id]
+            $message = if ($preInstallFailure.Error) {
+                "Installation was not attempted because PreInstall failed: $($preInstallFailure.Error)"
+            }
+            else {
+                'Installation was not attempted because PreInstall did not prepare this application.'
+            }
+            $failureType = if ($preInstallFailure.FailureType) { [string]$preInstallFailure.FailureType } else { 'PreInstallFailed' }
+            $applicationResults.Add((New-RunnerApplicationResult -App $app -Status 'Skipped' -FailureType $failureType -ErrorMessage $message))
+            Write-RunnerLog -LogPath $logPath -Event 'ApplicationInstallSkipped' -Level 'Error' -Message $message -Data @{ Id=$id; Source=$app.Source; FailureType=$failureType }
+            Save-RunnerResult -Status Running
+            continue
+        }
+
         $applicationStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
             $execution = switch ([string]$app.Source) {
@@ -492,22 +703,7 @@ try {
             }
 
             $applicationStopwatch.Stop()
-            $cacheInfo = Get-RunnerCacheInfo -App $app
-            $applicationResults.Add([pscustomobject]@{
-                Id              = [string]$app.Id
-                DisplayName     = if ($app.DisplayName) { [string]$app.DisplayName } else { [string]$app.Id }
-                Source          = [string]$app.Source
-                Type            = if ($app.Type) { [string]$app.Type } else { $null }
-                Version         = if ($app.Version) { [string]$app.Version } elseif ($cacheInfo -and $cacheInfo.Version) { [string]$cacheInfo.Version } else { $null }
-                Architecture    = if ($app.Architecture) { [string]$app.Architecture } elseif ($cacheInfo -and $cacheInfo.Architecture) { [string]$cacheInfo.Architecture } else { $null }
-                Status          = 'Succeeded'
-                ExitCode        = if ($execution) { [int]$execution.ExitCode } else { $null }
-                DurationSeconds = [math]::Round($applicationStopwatch.Elapsed.TotalSeconds, 1)
-                Integrity       = if ($execution) { [string]$execution.Integrity } else { $null }
-                CacheUsed       = if ($cacheInfo -and $null -ne $cacheInfo.Cached) { [bool]$cacheInfo.Cached } else { $null }
-                PackageUpdated  = if ($cacheInfo -and $null -ne $cacheInfo.Updated) { [bool]$cacheInfo.Updated } else { $null }
-                Error           = $null
-            })
+            $applicationResults.Add((New-RunnerApplicationResult -App $app -Status 'Succeeded' -DurationSeconds $applicationStopwatch.Elapsed.TotalSeconds -Execution $execution))
             Write-RunnerLog -LogPath $logPath -Event 'ApplicationInstallComplete' -Message 'Application processing completed.' -Data @{
                 Id = $app.Id
                 Source = $app.Source
@@ -516,38 +712,47 @@ try {
             Save-RunnerResult -Status Running
         }
         catch {
+            $applicationErrorRecord = $_
             if ($applicationStopwatch.IsRunning) { $applicationStopwatch.Stop() }
-            $applicationError = $_.Exception.Message
+            $failure = Get-RunnerFailureInfo -ErrorRecord $applicationErrorRecord -ApplicationId $id
             $failedExitCode = $null
-            if ($applicationError -match 'exit code\s+(-?\d+)') {
+            if ($failure.Message -match 'exit code\s+(-?\d+)') {
                 $failedExitCode = [int]$Matches[1]
             }
-            $cacheInfo = Get-RunnerCacheInfo -App $app
-            $applicationResults.Add([pscustomobject]@{
-                Id              = [string]$app.Id
-                DisplayName     = if ($app.DisplayName) { [string]$app.DisplayName } else { [string]$app.Id }
-                Source          = [string]$app.Source
-                Type            = if ($app.Type) { [string]$app.Type } else { $null }
-                Version         = if ($app.Version) { [string]$app.Version } elseif ($cacheInfo -and $cacheInfo.Version) { [string]$cacheInfo.Version } else { $null }
-                Architecture    = if ($app.Architecture) { [string]$app.Architecture } elseif ($cacheInfo -and $cacheInfo.Architecture) { [string]$cacheInfo.Architecture } else { $null }
-                Status          = 'Failed'
-                ExitCode        = $failedExitCode
-                DurationSeconds = [math]::Round($applicationStopwatch.Elapsed.TotalSeconds, 1)
-                Integrity       = $null
-                CacheUsed       = if ($cacheInfo -and $null -ne $cacheInfo.Cached) { [bool]$cacheInfo.Cached } else { $null }
-                PackageUpdated  = if ($cacheInfo -and $null -ne $cacheInfo.Updated) { [bool]$cacheInfo.Updated } else { $null }
-                Error           = $applicationError
-            })
-            Write-RunnerLog -LogPath $logPath -Event 'ApplicationInstallFailed' -Level 'Error' -Message $applicationError -Data @{
+            $failedExecution = if ($null -ne $failedExitCode) { [pscustomobject]@{ ExitCode=$failedExitCode; Integrity=$null } } else { $null }
+            $applicationResults.Add((New-RunnerApplicationResult -App $app -Status 'Failed' -DurationSeconds $applicationStopwatch.Elapsed.TotalSeconds -Execution $failedExecution -FailureType $failure.FailureType -ErrorMessage $failure.Message))
+            Write-RunnerLog -LogPath $logPath -Event 'ApplicationInstallFailed' -Level 'Error' -Message $failure.Message -Data @{
                 Id = $app.Id
                 Source = $app.Source
+                FailureType = $failure.FailureType
+                ContinueQueue = (-not $failure.Fatal)
                 DurationSeconds = [math]::Round($applicationStopwatch.Elapsed.TotalSeconds, 1)
             }
-            throw
+            Save-RunnerResult -Status Running
+            if ($failure.Fatal) {
+                throw
+            }
         }
     }
 
     $runnerStopwatch.Stop()
+    $failedApplicationCount = @($applicationResults | Where-Object { $_.Status -eq 'Failed' }).Count
+    $skippedApplicationCount = @($applicationResults | Where-Object { $_.Status -eq 'Skipped' }).Count
+    if (($failedApplicationCount + $skippedApplicationCount) -gt 0) {
+        $summary = "$failedApplicationCount application(s) failed and $skippedApplicationCount application(s) were skipped; no automatic retry is scheduled."
+        Write-RunnerLog -LogPath $logPath -Event 'InstallCompletedWithErrors' -Level 'Error' -Message $summary -Data @{
+            ApplicationCount = @($apps).Count
+            SuccessfulApplicationCount = @($applicationResults | Where-Object { $_.Status -eq 'Succeeded' }).Count
+            FailedApplicationCount = $failedApplicationCount
+            SkippedApplicationCount = $skippedApplicationCount
+            CleanupMode = $cleanupMode
+            DurationSeconds = [math]::Round($runnerStopwatch.Elapsed.TotalSeconds, 1)
+        }
+        Save-RunnerResult -Status Failed -FailureType 'ApplicationFailures' -ErrorMessage $summary
+        Write-RunnerLog -LogPath $logPath -Event 'CleanupSkipped' -Level 'Warning' -Message 'Runtime source cleanup was skipped because one or more applications were unsuccessful.' -Data @{ Path=$StagedPath; CleanupMode=$cleanupMode; Reason='ApplicationFailures' }
+        exit 1
+    }
+
     Write-RunnerLog -LogPath $logPath -Event 'InstallComplete' -Message 'OSD App Runner completed successfully.' -Data @{
         ApplicationCount = @($apps).Count
         CleanupMode = $cleanupMode
@@ -565,7 +770,9 @@ try {
     exit 0
 }
 catch {
-    $failureMessage = $_.Exception.Message
+    $runtimeErrorRecord = $_
+    $failure = Get-RunnerFailureInfo -ErrorRecord $runtimeErrorRecord
+    $failureMessage = $failure.Message
     if ($runnerStopwatch.IsRunning) { $runnerStopwatch.Stop() }
     if (-not $logPath) {
         try {
@@ -576,29 +783,16 @@ catch {
         catch { }
     }
 
-    $failureType = if ($failureMessage -match 'SHA-256') {
-        'HashMismatch'
-    }
-    elseif ($failureMessage -match 'not found|does not contain') {
-        'SourceMissing'
-    }
-    elseif ($failureMessage -match 'timeout|exceeded') {
-        'Timeout'
-    }
-    elseif ($failureMessage -match 'exit code') {
-        'InstallerFailed'
-    }
-    else {
-        'RuntimeError'
-    }
+    Complete-RunnerAbortedResults -Failure $failure
 
     if ($logPath) {
         Write-RunnerLog -LogPath $logPath -Event 'InstallFailed' -Level 'Error' -Message $failureMessage -Data @{
-            FailureType = $failureType
+            FailureType = $failure.FailureType
             DurationSeconds = [math]::Round($runnerStopwatch.Elapsed.TotalSeconds, 1)
         }
+        Write-RunnerLog -LogPath $logPath -Event 'CleanupSkipped' -Level 'Warning' -Message 'Runtime source cleanup was skipped after a critical execution failure.' -Data @{ Path=$StagedPath; CleanupMode=$cleanupMode; Reason=$failure.FailureType }
     }
-    Save-RunnerResult -Status Failed -FailureType $failureType -ErrorMessage $failureMessage
+    Save-RunnerResult -Status Failed -FailureType $failure.FailureType -ErrorMessage $failureMessage
 
     exit 1
 }

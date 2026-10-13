@@ -17,6 +17,7 @@ $manifest = $null
 $builtInApps = @()
 $usbRoot = $null
 $networkAvailable = $null
+$applicationResults = [System.Collections.Generic.List[object]]::new()
 
 function Write-PreInstallLog {
     param([string]$Event,[ValidateSet('Info','Warning','Error')][string]$Level='Info',[string]$Message,[hashtable]$Data)
@@ -53,7 +54,7 @@ function Write-PreInstallLog {
 
 function Write-PreInstallResult {
     param(
-        [Parameter(Mandatory)][ValidateSet('Succeeded','Failed')][string]$Status,
+        [Parameter(Mandatory)][ValidateSet('Succeeded','CompletedWithErrors','Failed')][string]$Status,
         [string]$FailureType,
         [string]$ErrorMessage
     )
@@ -61,6 +62,8 @@ function Write-PreInstallResult {
     $directory = Split-Path -Path $preInstallResultPath -Parent
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     $temporaryPath = "$preInstallResultPath.$([guid]::NewGuid().ToString('N')).tmp"
+    $successful = @($applicationResults | Where-Object { $_.Status -eq 'Succeeded' }).Count
+    $failed = @($applicationResults | Where-Object { $_.Status -eq 'Failed' }).Count
     $record = [ordered]@{
         SchemaVersion           = '1.0'
         DeploymentId           = if ($manifest -and $manifest.DeploymentId) { [string]$manifest.DeploymentId } else { $null }
@@ -70,9 +73,12 @@ function Write-PreInstallResult {
         CompletedAtUtc          = (Get-Date).ToUniversalTime().ToString('o')
         DurationSeconds         = [math]::Round($preInstallStopwatch.Elapsed.TotalSeconds, 1)
         BuiltInApplicationCount = @($builtInApps).Count
+        SuccessfulBuiltInApplicationCount = $successful
+        FailedBuiltInApplicationCount = $failed
         CacheUsed               = [bool]$usbRoot
         CachePath               = $usbRoot
         NetworkAvailable        = $networkAvailable
+        Applications            = @($applicationResults | ForEach-Object { $_ })
         FailureType             = $FailureType
         Error                   = $ErrorMessage
     }
@@ -87,6 +93,19 @@ function Write-PreInstallResult {
             Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
         }
     }
+}
+
+function Get-PreInstallFailureType {
+    param([Parameter(Mandatory)][System.Management.Automation.ErrorRecord]$ErrorRecord)
+
+    $message = $ErrorRecord.Exception.Message
+    if ($ErrorRecord.Exception -is [System.Security.SecurityException]) { return 'TrustValidationFailed' }
+    if ($ErrorRecord.Exception -is [System.IO.InvalidDataException]) { return 'ManifestInvalid' }
+    if ($message -match 'no network|not reachable') { return 'NetworkUnavailable' }
+    if ($message -match 'timeout|exceeded') { return 'Timeout' }
+    if ($message -match 'no staged|no .*cached|missing') { return 'CacheOrSourceMissing' }
+    if ($message -match 'metadata|HTTP|response|download|acquisition') { return 'RemoteAcquisition' }
+    'PreInstallError'
 }
 
 function Test-InternetEndpoint {
@@ -310,7 +329,7 @@ function Assert-PreInstallSignedPayload {
         default                    { $null }
     }
     if (-not $expected) {
-        throw "No trusted signer policy exists for built-in '$Id'."
+        throw [System.Security.SecurityException]::new("No trusted signer policy exists for built-in '$Id'.")
     }
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
         throw "Required signed built-in file missing: $Path"
@@ -318,7 +337,7 @@ function Assert-PreInstallSignedPayload {
 
     $signature = Get-AuthenticodeSignature -LiteralPath $Path -ErrorAction Stop
     if ([string]$signature.Status -ne 'Valid' -or -not $signature.SignerCertificate) {
-        throw "Built-in '$Id' signature validation failed (status: $($signature.Status)): $Path"
+        throw [System.Security.SecurityException]::new("Built-in '$Id' signature validation failed (status: $($signature.Status)): $Path")
     }
 
     $subject = [string]$signature.SignerCertificate.Subject
@@ -331,7 +350,7 @@ function Assert-PreInstallSignedPayload {
         }
     } else { $null }
     if (-not [string]::Equals($org,$expected,[StringComparison]::OrdinalIgnoreCase)) {
-        throw "Built-in '$Id' publisher mismatch. Expected '$expected'; signer subject: $subject"
+        throw [System.Security.SecurityException]::new("Built-in '$Id' publisher mismatch. Expected '$expected'; signer subject: $subject")
     }
     Write-PreInstallLog -Event 'BuiltInSignatureVerified' -Message 'Built-in MSI/EXE Authenticode and expected publisher validated.' -Data @{Id=$Id;File=$Path;Publisher=$expected}
 }
@@ -477,7 +496,10 @@ try {
 
     foreach($app in $builtInApps){
         $builtInStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-        switch($app.Id){
+        $applicationError = $null
+        $applicationFailureType = $null
+        try {
+            switch($app.Id){
             'Microsoft365Apps' {
                 $localRoot=Join-Path $StagedPath 'BuiltIn\Microsoft365Apps'
                 New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
@@ -698,10 +720,51 @@ try {
                 $relativeRoot = Join-Path 'BuiltIn\MozillaFirefoxEnterprise' (Join-Path $channel (Join-Path $architecture $language))
                 Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Mozilla Firefox Enterprise'
             }
+            default {
+                throw [System.IO.InvalidDataException]::new("Unsupported built-in application Id '$($app.Id)' in the device manifest.")
+            }
+            }
+        }
+        catch {
+            $applicationErrorRecord = $_
+            $applicationError = $applicationErrorRecord.Exception.Message
+            $applicationFailureType = Get-PreInstallFailureType -ErrorRecord $applicationErrorRecord
+            $fatal = (
+                $applicationErrorRecord.Exception -is [System.Security.SecurityException] -or
+                $applicationErrorRecord.Exception -is [System.IO.InvalidDataException]
+            )
+            Write-PreInstallLog -Event 'ApplicationRefreshFailed' -Level 'Error' -Message $applicationError -Data @{
+                Id = $app.Id
+                FailureType = $applicationFailureType
+                ContinueQueue = (-not $fatal)
+                DurationSeconds = [math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)
+            }
+            if ($fatal) { throw }
+        }
+        finally {
+            if ($builtInStopwatch.IsRunning) { $builtInStopwatch.Stop() }
+            $applicationResults.Add([pscustomobject]@{
+                Id              = [string]$app.Id
+                DisplayName     = if ($app.DisplayName) { [string]$app.DisplayName } else { [string]$app.Id }
+                Status          = if ($applicationError) { 'Failed' } else { 'Succeeded' }
+                DurationSeconds = [math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)
+                CacheUsed       = [bool]$usbRoot
+                FailureType     = $applicationFailureType
+                Error           = $applicationError
+            })
         }
     }
 
     $preInstallStopwatch.Stop()
+    $failedApplicationCount = @($applicationResults | Where-Object { $_.Status -eq 'Failed' }).Count
+    if ($failedApplicationCount -gt 0) {
+        $summary = "$failedApplicationCount built-in application(s) could not be prepared; independent applications will continue and no automatic retry is scheduled."
+        Write-PreInstallLog -Event 'RefreshCompletedWithErrors' -Level 'Error' -Message $summary -Data @{CacheUsed=[bool]$usbRoot;BuiltInAppCount=@($builtInApps).Count;FailedBuiltInApplicationCount=$failedApplicationCount;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
+        Write-PreInstallLog -Event 'PreInstallComplete' -Level 'Warning' -Message 'PreInstall completed with application errors. Runner execution may continue for unaffected applications.' -Data @{BuiltInAppCount=@($builtInApps).Count;FailedBuiltInApplicationCount=$failedApplicationCount;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
+        try { Write-PreInstallResult -Status CompletedWithErrors -FailureType 'ApplicationFailures' -ErrorMessage $summary } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
+        exit 0
+    }
+
     Write-PreInstallLog -Event 'RefreshComplete' -Message 'Built-in acquisition and refresh completed. Installation will continue.' -Data @{CacheUsed=[bool]$usbRoot;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
     Write-PreInstallLog -Event 'PreInstallComplete' -Message 'PreInstall completed successfully.' -Data @{BuiltInAppCount=@($builtInApps).Count;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
     try { Write-PreInstallResult -Status Succeeded } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
@@ -709,21 +772,7 @@ try {
 } catch {
     if ($preInstallStopwatch.IsRunning) { $preInstallStopwatch.Stop() }
     $failureMessage = $_.Exception.Message
-    $failureType = if ($failureMessage -match 'no network|not reachable') {
-        'NetworkUnavailable'
-    }
-    elseif ($failureMessage -match 'timeout|exceeded') {
-        'Timeout'
-    }
-    elseif ($failureMessage -match 'no staged|no .*cached|missing') {
-        'CacheOrSourceMissing'
-    }
-    elseif ($failureMessage -match 'metadata|HTTP|response|download') {
-        'RemoteAcquisition'
-    }
-    else {
-        'PreInstallError'
-    }
+    $failureType = Get-PreInstallFailureType -ErrorRecord $_
 
     Write-PreInstallLog -Event 'RefreshFailed' -Level 'Error' -Message $failureMessage -Data @{FailureType=$failureType;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
     try { Write-PreInstallResult -Status Failed -FailureType $failureType -ErrorMessage $failureMessage } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
