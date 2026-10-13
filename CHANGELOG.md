@@ -17,7 +17,8 @@
 ### Validation
 
 - Added Windows runtime tests proving continuation after a controlled installer exit code, continuation after a recorded PreInstall acquisition failure, all-installer blocking on a repository hash mismatch, staging retention after partial failure and absence of persistence-based retry mechanisms.
-- The release candidate passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, with **31/31 packaged command-help topics** verified on each engine and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38403980958)).
+- The release candidate passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, with **31/31 packaged command-help topics** verified on each engine and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38405028071)).
+- Two freshly applied x64 PCs passed a physical SetupComplete pair using the same eight-app queue and USB cache. A controlled repository installer failure on PC 1 was recorded once (exit code `42`), did not prevent the following Omnissa package from succeeding, produced a final failed result with 7 succeeded / 1 failed / 0 skipped, retained staging and created no retry persistence. PC 2 then completed the unchanged normal queue with **8/8 succeeded**, zero failed or skipped, correlated successful phase records, successful `OnSuccess` cleanup and no scheduled task, service or RunOnce entry.
 
 ## 0.36.0
 
