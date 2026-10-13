@@ -12,11 +12,14 @@ This file is a **catalog of OSDApps' vendor-native built-in integrations**, **no
 
 ## Stable schema and fields
 
-`SchemaVersion: 1` and `Applications[]` remain unchanged in 0.32.0.
+`SchemaVersion: 1` and `Applications[]` remain backward-compatible. OSDApps
+0.36.0 adds the optional `Aliases` field; consumers that already ignore unknown
+optional fields require no schema change.
 
 | Field | Viewer use |
 | --- | --- |
 | `Id`, `DisplayName`, `Vendor` | Stable key and human-readable label |
+| `Aliases` | Optional retired built-in cache identities that resolve to `Id`; never render them as additional applications or command names |
 | `Source`, `Acquisition`, `SyncPhase` | Distinguish built-in ownership and acquisition phase |
 | `AddCommand`, `SyncCommand` | Show ready-to-copy PowerShell examples |
 | `Architectures`, `DefaultArchitecture` | Selectable architectures, not necessarily field-validated ones |
@@ -26,6 +29,11 @@ This file is a **catalog of OSDApps' vendor-native built-in integrations**, **no
 | `IconUrl` | Official public repository-hosted SVG logo for the card |
 
 Use `Id` as the card key rather than display name. Render optional fields only when available. Keep the public schema backward-compatible; bump `SchemaVersion` and coordinate consumers before any future breaking change.
+
+For example, `MicrosoftTeams` declares `Teams` as a retired cache alias so
+health tooling can recognize and remove an old `BuiltIn/Teams` folder after a
+valid canonical replacement exists. `MicrosoftTeams` remains the only card,
+manifest identity and public command suffix.
 
 ## 0.32.0: Cisco Webex
 

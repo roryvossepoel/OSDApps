@@ -168,7 +168,7 @@ The Teams cache contains:
 - `teams.msix`
 - `CacheInfo.json`
 
-The canonical built-in ID is `MicrosoftTeams`. Its USB cache and WinPE staging location is `BuiltIn\MicrosoftTeams`, containing `teamsbootstrapper.exe`, `teams.msix` and `CacheInfo.json`. Version 0.31.0 intentionally does **not** recognize or automatically migrate the previous `BuiltIn\Teams` folder or the old cmdlet names. To use existing deployment media offline, pre-populate the new cache with `Sync-OSDAppMicrosoftTeams` in full Windows before booting WinPE.
+The canonical built-in ID is `MicrosoftTeams`. Its USB cache and WinPE staging location is `BuiltIn\MicrosoftTeams`, containing `teamsbootstrapper.exe`, `teams.msix` and `CacheInfo.json`. The 0.31.0 rename intentionally introduced no legacy commands or runtime identity. From 0.36.0, metadata recognizes `Teams` only as a retired **cache alias**: full-Windows `Sync-OSDAppMicrosoftTeams` and standalone PreInstall remove the old folder only after the canonical payload is complete and the bootstrapper passes the Microsoft trust gate. A PreInstall cleanup failure is logged as a warning rather than failing an otherwise usable deployment. The old cmdlet names and SetupComplete identity remain unsupported. Re-synchronize existing media before booting WinPE for an offline deployment.
 
 Teams freshness is checked using HTTP metadata. ETag is preferred; Last-Modified plus Content-Length is the fallback.
 

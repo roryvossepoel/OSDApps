@@ -15,6 +15,7 @@ Export-ModuleMember -Function @(
     'Get-OSDAppCatalog',
     'Get-OSDApp',
     'Get-OSDAppCache',
+    'Get-OSDAppCacheHealth',
     'Get-OSDAppDeploymentResult',
     'Test-OSDAppCache',
     'Test-OSDAppDeployment',

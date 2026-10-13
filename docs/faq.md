@@ -24,7 +24,7 @@ See [Architecture](architecture.md) and [Microsoft 365 Apps options](built-in-ap
 
 ## Teams sync works in WinPE. Why is it also deferred?
 
-The public `Sync-OSDAppMicrosoftTeams` command in 0.35.0 **rejects WinPE**. Downloading Teams files may be technically possible there, but that is not the supported OSDApps built-in synchronization path.
+The public `Sync-OSDAppMicrosoftTeams` command **rejects WinPE**. Downloading Teams files may be technically possible there, but that is not the supported OSDApps built-in synchronization path.
 
 All built-ins follow the same division: stage in WinPE; refresh through full-Windows Sync commands or standalone PreInstall. The MSI/EXE signature policy is enforced in full Windows, not bypassed by treating WinPE as another Sync environment.
 
@@ -51,11 +51,13 @@ An existing manifest means that target already has OSDApps staging; it does not 
 
 `Show-OSDAppUI -TestMode` inspects an existing isolated GUI test folder on full Windows. It does not create demonstration apps, and it must not be used for normal WinPE deployment.
 
-## Can I use the old Teams USB cache after upgrading to 0.31.0?
+## What happens to an old BuiltIn\Teams USB cache?
 
-Not without re-synchronizing. The canonical Id is `MicrosoftTeams`; its folder is `BuiltIn\MicrosoftTeams`, and the commands are `Add-OSDAppMicrosoftTeams` / `Sync-OSDAppMicrosoftTeams`. There are no aliases or automatic migration from the old `Teams` Id and folder.
+The canonical Id remains `MicrosoftTeams`; its folder is `BuiltIn\MicrosoftTeams`, and the commands are `Add-OSDAppMicrosoftTeams` / `Sync-OSDAppMicrosoftTeams`. The public metadata now declares `Teams` as a **retired cache alias**, not as a command or deployable application Id.
 
-Prepare the current cache on full Windows before an offline deployment. An online deployment can acquire current Teams content during PreInstall. The change is recorded in the [changelog](../CHANGELOG.md#0310).
+Run `Sync-OSDAppMicrosoftTeams` on full Windows. OSDApps prepares the canonical payload first and removes `BuiltIn\Teams` only after `BuiltIn\MicrosoftTeams` is complete. Standalone PreInstall applies the same guarded cleanup when it successfully uses or creates a canonical USB cache; cleanup failure is a warning and does not fail installation. If canonical preparation or trust validation fails, the old folder is preserved. You can inspect the condition beforehand with `Get-OSDAppCacheHealth -Offline` or explicitly preview manual removal with `Clear-OSDAppCache -Name Teams -WhatIf`.
+
+This does not reintroduce the old `Add-OSDAppTeams` or `Sync-OSDAppTeams` commands, and the SetupComplete runtime still accepts only the canonical identity. The original rename is recorded in the [0.31.0 changelog](../CHANGELOG.md#0310).
 
 ## Do built-in apps require an OSDCloud USB stick?
 
@@ -87,6 +89,34 @@ Sync-OSDAppCiscoWebex
 Choose the actual architectures, channels and languages needed by your deployment rather than running every default blindly. In particular, match Office/Firefox configuration and Teams architecture between preparation and staging.
 
 For repository packages, configure your real `CatalogUri` and call `Sync-OSDAppRepository`. Pre-caching is optional for normal online deployment; `Add-OSDApp` can synchronize requested repository packages in WinPE, and built-ins refresh during full-Windows PreInstall.
+
+## How do I inspect and safely clean stale repository cache content?
+
+Start with the read-only health plan:
+
+```powershell
+$Health = Get-OSDAppCacheHealth
+$Health.Entries |
+    Where-Object Action -ne 'None' |
+    Select-Object Id, CanonicalId, State, Integrity, Action, Reason, SizeMB
+```
+
+This uses the session's configured repository catalog. Use `-Offline` for a
+local-only integrity view, or `-CatalogPath` / `-CatalogUri` for an explicit
+desired catalog. A desired-state failure makes `Healthy=False`; it never grants
+permission to remove cached content.
+
+Then preview complete reconciliation:
+
+```powershell
+Sync-OSDAppRepository -Prune -WhatIf
+```
+
+If the listed cache volume, replacements and removals are correct, run the same
+command with `-Confirm`. `-Prune` is deliberately incompatible with selective
+`-Name` synchronization. Valid exceptional packages can be retained with
+`-PinnedId`; aliases, missing packages and corrupt packages cannot be pinned.
+See [Cache health and reconciliation](repository.md#cache-health-and-reconciliation).
 
 ## What happens if the USB is removed too early?
 

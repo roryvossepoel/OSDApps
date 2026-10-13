@@ -66,6 +66,39 @@ Describe 'P1 offline repository staging and WhatIf safety' {
         }
     }
 
+    It 'resolves a retired repository alias to the canonical cached Id before staging' {
+        InModuleScope OSDApps {
+            $cacheRoot = Join-Path $TestDrive 'AliasCache'
+            $winRoot = Join-Path $TestDrive 'AliasWindows'
+            $pkgRoot = Join-Path $cacheRoot 'Packages\NewApp'
+            New-Item -ItemType Directory -Path $pkgRoot,$winRoot -Force | Out-Null
+            $archive = Join-Path $pkgRoot 'Package.zip'
+            Set-Content -LiteralPath $archive -Value 'canonical package' -Encoding ASCII
+            $sha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+            @{
+                SchemaVersion = 1
+                Packages = @(
+                    @{
+                        Id='NewApp';Aliases=@('OldApp');Version='2.0';Architecture='any'
+                        Archive=@{Sha256=$sha256;FileName='Package.zip'}
+                    }
+                )
+            } | ConvertTo-Json -Depth 10 |
+                Set-Content -LiteralPath (Join-Path $cacheRoot 'CacheCatalog.json') -Encoding UTF8
+            Mock Get-OSDAppCachePath { $cacheRoot }
+            Mock Resolve-OSDAppWindowsPath { $winRoot }
+            Mock Get-OSDAppConfiguration { [pscustomobject]@{ CatalogUri = $null } }
+
+            $result = @(Add-OSDApp -Name OldApp -WindowsPath $winRoot -SkipCacheRefresh)
+
+            $result.Count | Should -Be 1
+            $result[0].Name | Should -Be 'NewApp'
+            (Test-Path -LiteralPath (Join-Path $winRoot 'Windows\Temp\OSDApps\Packages\NewApp\Package.zip')) | Should -BeTrue
+            $manifest = Get-Content -LiteralPath (Join-Path $winRoot 'Windows\Temp\OSDApps\DeviceManifest.json') -Raw | ConvertFrom-Json
+            @($manifest.Apps.Id) | Should -Be @('NewApp')
+        }
+    }
+
     It 'falls back to a valid cache when online synchronization fails' {
         InModuleScope OSDApps {
             $cacheRoot = Join-Path $TestDrive 'Cache'
@@ -98,6 +131,33 @@ Describe 'P1 offline repository staging and WhatIf safety' {
 
             Should -Invoke Sync-OSDAppCache -Exactly 1
             (Test-Path -LiteralPath (Join-Path $winRoot 'Windows\Temp\OSDApps\DeviceManifest.json')) | Should -BeTrue
+        }
+    }
+
+    It 'refuses fallback when a cached alias conflicts with a canonical Id' {
+        InModuleScope OSDApps {
+            $cacheRoot = Join-Path $TestDrive 'AmbiguousAliasCache'
+            $winRoot = Join-Path $TestDrive 'AmbiguousAliasWindows'
+            New-Item -ItemType Directory -Path $cacheRoot,$winRoot -Force | Out-Null
+            @{
+                SchemaVersion = 1
+                Packages = @(
+                    @{Id='OldApp';Version='1.0';Architecture='any';Archive=@{Sha256=('0' * 64);FileName='Package.zip'}},
+                    @{Id='NewApp';Aliases=@('OldApp');Version='2.0';Architecture='any';Archive=@{Sha256=('1' * 64);FileName='Package.zip'}}
+                )
+            } | ConvertTo-Json -Depth 10 |
+                Set-Content -LiteralPath (Join-Path $cacheRoot 'CacheCatalog.json') -Encoding UTF8
+
+            Mock Get-OSDAppCachePath { $cacheRoot }
+            Mock Resolve-OSDAppWindowsPath { $winRoot }
+            Mock Get-OSDAppConfiguration { [pscustomobject]@{ CatalogUri = 'https://invalid.example.org/catalog.json' } }
+            Mock Sync-OSDAppCache { throw 'Simulated connection failure' }
+            Mock Copy-OSDAppContent { throw 'Staging must not be attempted' }
+
+            { Add-OSDApp -Name OldApp -WindowsPath $winRoot -WarningAction SilentlyContinue } |
+                Should -Throw '*cannot be resolved safely*ambiguous*'
+
+            Should -Invoke Copy-OSDAppContent -Exactly 0
         }
     }
 

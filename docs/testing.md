@@ -6,11 +6,45 @@ This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging succ
 
 | Scenario | Status | Evidence / expected behavior |
 | --- | --- | --- |
-| Empty OSDCloud USB cache, online | **Validated — 0.34.1 cold run (12 Oct 2026)** | Six built-ins refreshed and two repository packages installed; 8/8 successful and cleanup completed. |
-| Existing OSDCloud USB cache, online | **Validated — 0.35.0 release candidate (12 Oct 2026)** | Hard offline-readiness preflight passed; correlated JSON reported 8/8 successful and cleanup was confirmed. |
+| Empty OSDCloud USB application cache, online | **Validated — 0.36.0 cold run (13 Oct 2026)** | The recoverably cleared active cache was repopulated; correlated results reported 8/8 successful, cleanup completed and the final eight-entry cache was healthy. |
+| Existing OSDCloud USB cache, online | **Validated — 0.36.0 warm run (13 Oct 2026)** | Hard offline-readiness preflight passed; all six built-ins used cached content, correlated results reported 8/8 successful, cleanup completed and the cache remained healthy. |
 | No USB cache, online | **Validated — 0.30.0 test 1** | Built-ins acquired on Windows volume; repository apps staged in WinPE |
 | Existing OSDCloud USB cache, offline | **Validated — 0.34.0 PC 2 (11 Oct 2026)** | LAN disconnected; six BuiltInRefreshSkipped events, five built-in signer/publisher checks and 8/8 successful installations. Earlier 0.30.0 six-app test also passed. |
 | No USB, offline | **Not yet validated** | Without a complete staged fallback, PreInstall is expected to stop before Runner |
+
+## OSDApps 0.36.0 release-candidate validation — 13 October 2026
+
+The 0.36.0 candidate from [PR #24](https://github.com/roryvossepoel/OSDApps/pull/24) was built from commit `03bbd8a2304a4c6f72d1253c0d2c5c4ac9637229` and installed as `E:\Modules\OSDApps\0.36.0`. Its source tree matched the locally reviewed and tested feature tree. GitHub Actions passed **235/235 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38364310573)).
+
+### Cache health and reconciliation
+
+The populated `E:\OSDApps` cache was first exercised on the full-Windows preparation machine:
+
+- Offline inspection reported eight active entries, no obsolete, orphaned, renamed, incomplete or corrupt entries, and valid SHA-256 evidence for both repository packages.
+- Online desired-state inspection against the configured repository catalog reported the same healthy eight-entry state. `Sync-OSDAppRepository -Prune -WhatIf` made no changes.
+- A controlled unregistered `Packages\OSDAppsPruneProbe` folder was classified as `Orphaned`. `-WhatIf` preserved it; an actual transactional prune removed only that folder. Existing repository folder names and archive hashes were unchanged, and the final cache was healthy.
+- A controlled legacy `BuiltIn\Teams` folder was classified as `Renamed` with canonical ID `MicrosoftTeams`. Synchronizing Microsoft Teams validated the existing canonical cache, retained its MSIX hash and then removed only the alias. The final cache was healthy.
+
+The transaction log recorded `AcquireCount=0` and `PruneCount=1` for the controlled prune, followed by `PackagePruned` and `SyncComplete`. The Teams test recorded `CacheAliasPruned` only between `BuiltInSyncStart` and a successful `BuiltInSyncComplete`.
+
+### Cold and warm SetupComplete pair
+
+Two freshly applied x64 Windows installations used the same online OSDCloud USB stick and the same ordered eight-app queue documented below. Both machines loaded the exact 0.36.0 module in WinPE, retained the USB and network connection through SetupComplete, and were checked after OOBE.
+
+For PC 1, the healthy active cache payload was moved to the recoverable `OSDApps-0.36.0-PreColdBackup` folder outside the active `OSDApps` root. The cold preflight reported `Valid=True`, `OfflineReady=False` and `NetworkRequired=True`, as expected. SetupComplete acquired all six built-ins, synchronized the USB cache and installed all six built-ins plus both SHA-256-validated repository packages.
+
+PC 2 reused the cache populated by PC 1. Its strict `Test-OSDAppDeployment -RequireOfflineReady -MinimumFreeSpaceGB 10 -ThrowOnFailure` preflight reported `Valid=True`, `OfflineReady=True` and `NetworkRequired=False` before reboot.
+
+| Cache state | PreInstall | Runner | Measured Windows total | Built-ins updated | Outcome |
+| --- | ---: | ---: | ---: | --- | --- |
+| Cold/recoverably cleared | 215.3 s | 364.8 s | **580.1 s (9:40)** | All six | **8/8**, cleanup succeeded |
+| Warm/reused | 45.3 s | 364.1 s | **409.4 s (6:49)** | None | **8/8**, cleanup succeeded |
+
+The cold and warm result records used deployment IDs `1efce244-3e62-4bd0-a294-f428ce1e3b8f` and `53c706f5-fa02-48a0-ae6f-13a4d5a26914`, respectively. In this pair, warm-cache reuse reduced PreInstall by **170.0 seconds** while Runner differed by only **0.7 seconds**; the measured total improved by **170.7 seconds**. These are observations from one run per cache state, not a performance benchmark.
+
+On both PCs, the correlated PreInstall and final result records reported `Succeeded`, with eight expected, eight successful and zero failed applications. The final checks also confirmed six built-ins, at least five expected-publisher validations, no warning or error log entries, successful `OnSuccess` cleanup, removal of the cleanup helper, preservation of the persistent result and log, and a healthy desired-state cache with eight active entries and zero problem classifications. The pre-cold backup was intentionally retained after validation.
+
+These two runs validate the online cold and warm SetupComplete paths for this release candidate. They do not add a new offline deployment result and do not prove licensing, user sign-in or later interactive application health. Raw device logs and organization-managed repository packages are not committed to the public repository.
 
 ## OSDApps 0.35.0 release-candidate physical validation — 12 October 2026
 

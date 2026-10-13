@@ -10,53 +10,35 @@ function Sync-OSDAppCache {
         [Parameter(Mandatory)]
         [string]$CachePath,
 
-        [string[]]$Name
+        [string[]]$Name,
+
+        [switch]$Prune,
+
+        [string[]]$PinnedId
     )
 
     $logPath = Join-Path $CachePath 'Logs\\Client.log'
 
+    if ($Prune -and $Name) {
+        throw 'Prune requires a complete catalog synchronization. Do not combine Prune with Name.'
+    }
+    if ($PinnedId -and -not $Prune) {
+        throw 'PinnedId is only valid together with Prune.'
+    }
+
     if ($PSCmdlet.ParameterSetName -eq 'Uri') {
         $sourceCatalog = Get-OSDAppCatalogPackages -CatalogUri $CatalogUri -Name $Name
         $catalogSourceDescription = $CatalogUri.AbsoluteUri
-        $repositoryRoot = $null
-        $repositoryBaseUri = [uri]::new($CatalogUri, '.')
     }
     else {
         $resolvedCatalogPath = (Resolve-Path -LiteralPath $CatalogPath -ErrorAction Stop).Path
         $sourceCatalog = Get-OSDAppCatalogPackages -CatalogPath $resolvedCatalogPath -Name $Name
         $catalogSourceDescription = $resolvedCatalogPath
-        $repositoryRoot = Split-Path -Path $resolvedCatalogPath -Parent
-        $repositoryBaseUri = $null
     }
 
     $hostArchitecture = Get-OSDAppHostArchitecture
     $allPackages = @($sourceCatalog.Packages)
-
-    # Resolve one compatible package variant per application.
-    # Exact architecture always wins; 'any' is the fallback.
-    $packages = @(
-        foreach ($group in ($allPackages | Group-Object Id)) {
-            $exact = @(
-                $group.Group |
-                    Where-Object { ([string]$_.Architecture).ToLowerInvariant() -eq $hostArchitecture }
-            )
-
-            $neutral = @(
-                $group.Group |
-                    Where-Object { ([string]$_.Architecture).ToLowerInvariant() -eq 'any' }
-            )
-
-            if ($exact.Count -gt 0) {
-                $exact | Select-Object -First 1
-            }
-            elseif ($neutral.Count -gt 0) {
-                $neutral | Select-Object -First 1
-            }
-            else {
-                throw "No compatible package variant for '$($group.Name)' on '$hostArchitecture'. Available: $((@($group.Group.Architecture) -join ', '))"
-            }
-        }
-    )
+    $packages = @(Resolve-OSDAppCatalogPackageVariant -Package $allPackages -Architecture $hostArchitecture)
 
 
     $packagesRoot = Join-Path $CachePath 'Packages'
@@ -79,6 +61,24 @@ function Sync-OSDAppCache {
         if ([string]$package.Archive.Sha256 -notmatch '^[A-Fa-f0-9]{64}$') {
             throw "Package '$($package.Id)' has an invalid SHA-256 hash."
         }
+        foreach ($aliasValue in @($package.Aliases)) {
+            $alias = [string]$aliasValue
+            if ($alias -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $alias -match '\.\.') {
+                throw "Package '$($package.Id)' has invalid alias '$alias'."
+            }
+        }
+    }
+
+    $desiredIds = @($packages.Id)
+    $aliasIds = @($packages | ForEach-Object { @($_.Aliases) } | Select-Object -Unique)
+    $pins = @($PinnedId | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    foreach ($pin in $pins) {
+        if ([string]$pin -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or [string]$pin -match '\.\.') {
+            throw "Invalid pinned cache Id '$pin'."
+        }
+        if ($pin -in $aliasIds) {
+            throw "Pinned cache Id '$pin' is a declared alias. Pin the canonical Id instead."
+        }
     }
 
     # Never discard existing cache entries because a catalog is unreadable.
@@ -97,11 +97,105 @@ function Sync-OSDAppCache {
         }
     }
 
+    $existingIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($package in $existingPackages) {
+        $existingId = [string]$package.Id
+        if ([string]::IsNullOrWhiteSpace($existingId) -or
+            $existingId -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
+            $existingId -match '\.\.') {
+            throw "Existing cache catalog contains invalid package Id '$existingId'."
+        }
+        if (-not $existingIds.Add($existingId)) {
+            throw "Existing cache catalog contains duplicate package Id '$existingId'."
+        }
+        if (-not $package.Archive -or
+            [string]$package.Archive.Sha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+            throw "Existing cache catalog package '$existingId' has an invalid SHA-256 archive definition."
+        }
+    }
+
+    $existingAliasOwners = @{}
+    foreach ($package in $existingPackages) {
+        $existingId = [string]$package.Id
+        $existingAliases = if ($package.PSObject.Properties.Name -contains 'Aliases') {
+            @($package.Aliases)
+        }
+        else { @() }
+        foreach ($aliasValue in $existingAliases) {
+            $alias = ([string]$aliasValue).Trim()
+            if ([string]::IsNullOrWhiteSpace($alias) -or
+                $alias -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
+                $alias -match '\.\.') {
+                throw "Existing cache catalog package '$existingId' has invalid alias '$alias'."
+            }
+            if ($existingIds.Contains($alias)) {
+                throw "Existing cache catalog alias '$alias' for '$existingId' conflicts with a canonical package Id."
+            }
+            $aliasKey = $alias.ToLowerInvariant()
+            if ($existingAliasOwners.ContainsKey($aliasKey)) {
+                throw "Existing cache catalog alias '$alias' is assigned to both '$($existingAliasOwners[$aliasKey])' and '$existingId'."
+            }
+            $existingAliasOwners[$aliasKey] = $existingId
+        }
+    }
+
+    if ($Prune) {
+        $knownIds = @($desiredIds) + @($existingPackages.Id)
+        $unknownPins = @($pins | Where-Object { $_ -notin $knownIds })
+        if ($unknownPins.Count -gt 0) {
+            throw "Pinned cache Id(s) are not present in desired or existing cache state: $($unknownPins -join ', ')."
+        }
+
+        foreach ($pin in @($pins | Where-Object { $_ -notin $desiredIds })) {
+            $pinnedPackage = @($existingPackages | Where-Object { $_.Id -ieq $pin })[0]
+            $pinnedArchive = Join-Path $packagesRoot (Join-Path $pinnedPackage.Id 'Package.zip')
+            if (-not (Test-OSDAppFileHash -Path $pinnedArchive -ExpectedSha256 $pinnedPackage.Archive.Sha256)) {
+                throw "Pinned cache package '$pin' is missing or corrupt. Refresh it or remove the pin before pruning."
+            }
+            $pinnedAliases = if ($pinnedPackage.PSObject.Properties.Name -contains 'Aliases') {
+                @($pinnedPackage.Aliases)
+            }
+            else { @() }
+            $identityConflicts = @(
+                $pinnedAliases |
+                    Where-Object { $_ -in $desiredIds -or $_ -in $aliasIds }
+            )
+            if ($identityConflicts.Count -gt 0) {
+                throw "Pinned cache package '$pin' has alias '$($identityConflicts[0])' that conflicts with desired catalog identity."
+            }
+        }
+    }
+
     $updatedIds = @($packages.Id)
-    $mergedPackages = @(
-        @($existingPackages | Where-Object { $_.Id -notin $updatedIds }) +
-        @($packages)
-    )
+    $retainedExistingPackages = [System.Collections.Generic.List[object]]::new()
+    foreach ($existingPackage in @($existingPackages | Where-Object { $_.Id -notin $updatedIds })) {
+        $existingAliases = if ($existingPackage.PSObject.Properties.Name -contains 'Aliases') {
+            @($existingPackage.Aliases)
+        }
+        else { @() }
+        $conflictingIdentity = @(
+            @([string]$existingPackage.Id) + $existingAliases |
+                Where-Object { $_ -in $aliasIds -or $_ -in $desiredIds }
+        ) | Select-Object -First 1
+        if ($conflictingIdentity) {
+            Write-Verbose "Retiring cached metadata for '$($existingPackage.Id)' because identity '$conflictingIdentity' is owned by the desired catalog. Physical content is retained unless Prune is used."
+            continue
+        }
+        $retainedExistingPackages.Add($existingPackage)
+    }
+
+    $mergedPackages = if ($Prune) {
+        @(
+            @($retainedExistingPackages | Where-Object { $_.Id -in $pins }) +
+            @($packages)
+        )
+    }
+    else {
+        @(
+            @($retainedExistingPackages) +
+            @($packages)
+        )
+    }
     $selectedCatalog = [ordered]@{
         SchemaVersion = $sourceCatalog.SchemaVersion
         GeneratedAt = $sourceCatalog.GeneratedAt
@@ -124,11 +218,32 @@ function Sync-OSDAppCache {
         }
     }
 
-    if (-not $PSCmdlet.ShouldProcess($CachePath, "Synchronize $($packages.Count) application(s) as a single cache transaction")) {
+    $toRemove = [System.Collections.Generic.List[object]]::new()
+    if ($Prune -and (Test-Path -LiteralPath $packagesRoot -PathType Container)) {
+        foreach ($directory in @(Get-ChildItem -LiteralPath $packagesRoot -Directory -ErrorAction SilentlyContinue)) {
+            if ($directory.Name -in $desiredIds -or $directory.Name -in $pins) {
+                continue
+            }
+            $classification = if ($directory.Name -in $aliasIds) { 'Renamed' } elseif ($directory.Name -in @($existingPackages.Id)) { 'Obsolete' } else { 'Orphaned' }
+            $toRemove.Add([pscustomobject]@{
+                Id = $directory.Name
+                Path = $directory.FullName
+                Classification = $classification
+            })
+        }
+    }
+
+    $action = if ($Prune) {
+        "Reconcile $($packages.Count) desired application(s) and prune $($toRemove.Count) stale cache folder(s) as a single transaction"
+    }
+    else {
+        "Synchronize $($packages.Count) application(s) as a single cache transaction"
+    }
+    if (-not $PSCmdlet.ShouldProcess($CachePath, $action)) {
         return
     }
 
-    Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'SyncStart' -Message 'Starting transactional repository synchronization.' -Data @{ CachePath = $CachePath; RequestedCount = $packages.Count; AcquireCount = $toAcquire.Count }
+    Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'SyncStart' -Message 'Starting transactional repository synchronization.' -Data @{ CachePath = $CachePath; RequestedCount = $packages.Count; AcquireCount = $toAcquire.Count; Prune = [bool]$Prune; PruneCount = $toRemove.Count; PinnedIds = $pins }
     Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'ArchitectureResolved' -Message 'Resolved package variants.' -Data @{ HostArchitecture = $hostArchitecture; Packages = @($packages | ForEach-Object { "$($_.Id):$($_.Architecture)" }) }
 
     # Everything is downloaded and hash-validated BEFORE an existing package is replaced.
@@ -136,16 +251,19 @@ function Sync-OSDAppCache {
     $transactionRoot = Join-Path $stagingRoot ("Sync-{0}" -f [guid]::NewGuid().ToString('N'))
     $preparedRoot = Join-Path $transactionRoot 'Prepared'
     $backupRoot = Join-Path $transactionRoot 'Backup'
+    $replacedBackupRoot = Join-Path $backupRoot 'Replaced'
+    $removedBackupRoot = Join-Path $backupRoot 'Removed'
     $catalogPrepared = Join-Path $transactionRoot 'CacheCatalog.json.new'
     $catalogBackup = Join-Path $transactionRoot 'CacheCatalog.json.old'
     $promoted = [System.Collections.Generic.List[object]]::new()
+    $removed = [System.Collections.Generic.List[object]]::new()
     $keepRecoveryFiles = $false
     $catalogExisted = Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf
     $catalogCommitAttempted = $false
     $committed = $false
 
     try {
-        New-Item -ItemType Directory -Path $packagesRoot,$preparedRoot,$backupRoot -Force -ErrorAction Stop | Out-Null
+        New-Item -ItemType Directory -Path $packagesRoot,$preparedRoot,$replacedBackupRoot,$removedBackupRoot -Force -ErrorAction Stop | Out-Null
 
         foreach ($entry in $toAcquire) {
             $package = $entry.Package
@@ -182,10 +300,22 @@ function Sync-OSDAppCache {
             Copy-Item -LiteralPath $cacheCatalogPath -Destination $catalogBackup -Force -ErrorAction Stop
         }
 
+        # Stale content is moved, not deleted, until the new catalog commits.
+        foreach ($entry in $toRemove) {
+            $backupPath = Join-Path $removedBackupRoot $entry.Id
+            Move-Item -LiteralPath $entry.Path -Destination $backupPath -ErrorAction Stop
+            $removed.Add([pscustomobject]@{
+                Id = $entry.Id
+                TargetRoot = $entry.Path
+                BackupPath = $backupPath
+                Classification = $entry.Classification
+            })
+        }
+
         foreach ($entry in $toAcquire) {
             $id = [string]$entry.Package.Id
             $targetRoot = [string]$entry.TargetRoot
-            $backupPath = Join-Path $backupRoot $id
+            $backupPath = Join-Path $replacedBackupRoot $id
             $sourcePath = Join-Path $preparedRoot $id
             $hadPrevious = Test-Path -LiteralPath $targetRoot
 
@@ -227,6 +357,19 @@ function Sync-OSDAppCache {
                 }
             }
 
+            for ($i = $removed.Count - 1; $i -ge 0; $i--) {
+                $entry = $removed[$i]
+                try {
+                    if (Test-Path -LiteralPath $entry.TargetRoot) {
+                        Remove-Item -LiteralPath $entry.TargetRoot -Recurse -Force -ErrorAction Stop
+                    }
+                    Move-Item -LiteralPath $entry.BackupPath -Destination $entry.TargetRoot -ErrorAction Stop
+                }
+                catch {
+                    $recoveryErrors.Add("$($entry.Id): $($_.Exception.Message)")
+                }
+            }
+
             if ($catalogCommitAttempted) {
                 try {
                     if ($catalogExisted) {
@@ -261,11 +404,16 @@ function Sync-OSDAppCache {
     foreach ($entry in $toAcquire) {
         Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'PackageUpdated' -Message 'Package transaction committed and SHA-256 validated.' -Data @{ Id = $entry.Package.Id; Version = $entry.Package.Version; Sha256 = $entry.Package.Archive.Sha256 }
     }
+    foreach ($entry in $toRemove) {
+        Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'PackagePruned' -Message 'Stale cache package was removed after replacement validation and catalog commit.' -Data @{ Id = $entry.Id; Classification = $entry.Classification }
+    }
     Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'SyncComplete' -Message 'Repository synchronization committed.' -Data @{
         Catalog = $cacheCatalogPath
         SyncedPackageCount = $packages.Count
         UpdatedPackageCount = $toAcquire.Count
         CachedPackageCount = @($mergedPackages).Count
+        PrunedPackageCount = $toRemove.Count
+        PinnedPackageCount = $pins.Count
     }
 
     Get-Item -LiteralPath $cacheCatalogPath

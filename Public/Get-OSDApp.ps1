@@ -83,6 +83,7 @@ function Get-OSDApp {
             PSTypeName    = 'OSDApps.App'
             Id            = $id
             Name          = $id
+            Aliases       = if ($onlinePackage -and $onlinePackage.PSObject.Properties.Name -contains 'Aliases') { @($onlinePackage.Aliases) } elseif ($cachedPackage -and $cachedPackage.PSObject.Properties.Name -contains 'Aliases') { @($cachedPackage.Aliases) } else { @() }
             DisplayName   = if ($onlinePackage -and $onlinePackage.DisplayName) { $onlinePackage.DisplayName } elseif ($cachedPackage) { $cachedPackage.DisplayName } else { $id }
             Source        = 'Repository'
             Vendor        = if ($onlinePackage -and $onlinePackage.Vendor) { [string]$onlinePackage.Vendor } elseif ($cachedPackage -and $cachedPackage.Vendor) { [string]$cachedPackage.Vendor } else { $null }
@@ -175,7 +176,12 @@ function Get-OSDApp {
         $result = @(
             $result | Where-Object {
                 $app = $_
-                @($Name | Where-Object { $app.Id -like $_ -or $app.DisplayName -like $_ }).Count -gt 0
+                @($Name | Where-Object {
+                    $filter = $_
+                    $app.Id -like $filter -or
+                    $app.DisplayName -like $filter -or
+                    @($app.Aliases | Where-Object { $_ -like $filter }).Count -gt 0
+                }).Count -gt 0
             }
         )
     }

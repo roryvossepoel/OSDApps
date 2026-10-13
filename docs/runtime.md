@@ -128,6 +128,7 @@ Runtime `LogPath` can be configured. The Viewer discovers known default location
 | `BuiltInRefreshSkipped` | No network was reported; existing staged built-in content was selected. Recorded as a warning, not an installer failure. |
 | `BuiltInRefreshStart` / `BuiltInRefreshComplete` | Refresh/acquisition attempt and successful readiness of content. |
 | `BuiltInRefreshFailed` | A refresh failed and the existing local fallback was selected after applicable checks. |
+| `CacheAliasPruned` / `CacheAliasPruneFailed` | Guarded removal of a retired cache identity after canonical validation, or a nonfatal cleanup warning. |
 | `RefreshFailed` | PreInstall failed; inspect its failure type and original message. |
 | `PreInstallComplete` | The built-in preparation phase completed successfully. |
 | `PackageIntegrityValidated` | A repository package passed its integrity check. |

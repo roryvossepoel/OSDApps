@@ -1,4 +1,4 @@
-Describe 'MicrosoftTeams built-in naming contract (no legacy aliases)' {
+Describe 'MicrosoftTeams canonical naming and cache alias contract' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Parent $PSScriptRoot
         Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
@@ -14,7 +14,7 @@ Describe 'MicrosoftTeams built-in naming contract (no legacy aliases)' {
         $exports | Should -Not -Contain 'Sync-OSDAppTeams'
     }
 
-    It 'publishes only the canonical MicrosoftTeams identity and icon in built-in metadata' {
+    It 'publishes only the canonical MicrosoftTeams identity plus its retired cache alias' {
         $ids = @($script:metadata.Applications.Id)
         $ids | Should -Contain 'MicrosoftTeams'
         $ids | Should -Not -Contain 'Teams'
@@ -24,6 +24,7 @@ Describe 'MicrosoftTeams built-in naming contract (no legacy aliases)' {
         $app.SyncCommand | Should -Be 'Sync-OSDAppMicrosoftTeams'
         $app.Acquisition | Should -Be 'MicrosoftTeamsBootstrapper'
         $app.CachePath | Should -Be 'BuiltIn/MicrosoftTeams'
+        @($app.Aliases) | Should -Be @('Teams')
         $app.IconUrl | Should -Match '/metadata/icons/microsoftteams\.svg$'
         (Test-Path -LiteralPath (Join-Path $script:moduleRoot 'metadata\icons\microsoftteams.svg') -PathType Leaf) | Should -BeTrue
     }
@@ -84,8 +85,10 @@ Describe 'MicrosoftTeams built-in naming contract (no legacy aliases)' {
         $preinstall.Contains("'MicrosoftTeams' {") | Should -BeTrue
         $preinstall.Contains('BuiltIn\MicrosoftTeams') | Should -BeTrue
         $preinstall.Contains("'Teams' {") | Should -BeFalse
-        $preinstall.Contains('BuiltIn\Teams') | Should -BeFalse
+        $preinstall.Contains('function Remove-LegacyMicrosoftTeamsCache') | Should -BeTrue
+        $preinstall.Contains('BuiltIn\Teams') | Should -BeTrue
         $runner.Contains("'MicrosoftTeamsBootstrapper' {") | Should -BeTrue
         $runner.Contains("'TeamsBootstrapper' {") | Should -BeFalse
+        $runner.Contains('BuiltIn\Teams') | Should -BeFalse
     }
 }

@@ -17,7 +17,6 @@ function Sync-OSDAppMicrosoftTeams {
     $bootstrapperPath = Join-Path $root 'teamsbootstrapper.exe'
     $msixPath = Join-Path $root 'teams.msix'
     $cacheInfoPath = Join-Path $root 'CacheInfo.json'
-    New-Item -ItemType Directory -Path $root -Force | Out-Null
 
     $resolvedArchitecture = $Architecture
 
@@ -29,6 +28,7 @@ function Sync-OSDAppMicrosoftTeams {
 
     if (-not $PSCmdlet.ShouldProcess($root, "Configure and synchronize Microsoft Teams built-in cache ($resolvedArchitecture)")) { return }
 
+    New-Item -ItemType Directory -Path $root -Force | Out-Null
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'Microsoft Teams cache synchronization' -LogPath $clientLogPath | Out-Null
     Write-OSDAppLog -LogPath $clientLogPath -Component 'MicrosoftTeams' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft Teams built-in cache.' -Data @{ Architecture = $resolvedArchitecture }
 
@@ -85,9 +85,20 @@ function Sync-OSDAppMicrosoftTeams {
         RemoteFinalUri=$remoteMetadata.FinalUri; SyncedAt=(Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'MicrosoftTeams' -Event 'BuiltInSyncComplete' -Message 'Microsoft Teams built-in cache synchronized.' -Data @{ Version=$resolvedVersion; Architecture=$resolvedArchitecture; Updated=$updated; Path=$root; SourcePolicy='Evergreen'; SyncMethod='HttpMetadata' }
+    # MicrosoftTeams replaced the pre-0.31 cache identity Teams. Only remove
+    # that legacy folder after the canonical payload above is complete.
+    $removedAliases = @(
+        Remove-OSDAppBuiltInCacheAlias `
+            -CachePath $cachePath `
+            -CanonicalId 'MicrosoftTeams' `
+            -Alias @('Teams') `
+            -LogPath $clientLogPath `
+            -Confirm:$false
+    )
+
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'MicrosoftTeams' -Event 'BuiltInSyncComplete' -Message 'Microsoft Teams built-in cache synchronized.' -Data @{ Version=$resolvedVersion; Architecture=$resolvedArchitecture; Updated=$updated; Path=$root; SourcePolicy='Evergreen'; SyncMethod='HttpMetadata'; RemovedAliases=$removedAliases }
     Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Status 'Completed.' -PercentComplete 100
     Start-Sleep -Milliseconds 350
     Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Completed
-    [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id='MicrosoftTeams'; Version=$resolvedVersion; Architecture=$resolvedArchitecture; CachePath=$root; Cached=$true; Updated=$updated }
+    [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id='MicrosoftTeams'; Version=$resolvedVersion; Architecture=$resolvedArchitecture; CachePath=$root; Cached=$true; Updated=$updated; RemovedAliases=$removedAliases }
 }

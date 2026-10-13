@@ -37,6 +37,11 @@ Runner checks the staged archive hash again before extraction and `Package/Insta
 
 Full-Windows `Sync-OSDAppRepository` can also prepare media ahead of deployment. Repository variants are selected for the synchronization host's architecture; preparation on a different architecture needs explicit care. Repository content, licensing and hosting remain the repository owner's responsibility.
 
+`Get-OSDAppCacheHealth` compares physical cache content, local metadata and an
+optional desired catalog without changing files. Explicit
+`Sync-OSDAppRepository -Prune` reconciles the complete host-compatible catalog
+transactionally; normal selective synchronization remains merge-only.
+
 ### Built-in applications
 
 Built-ins are vendor-native integrations maintained by OSDApps. The module does not ship their installer payloads.
@@ -91,7 +96,7 @@ The explicit log events distinguish cache discovery, refresh skipped, refresh fa
 
 | File | Role |
 | --- | --- |
-| `catalog.json` | Online repository index |
+| `catalog.json` | Repository index, including optional retired aliases mapped to canonical IDs |
 | `Apps/<Id>/<Version>/<Architecture>/manifest.json` | Per-repository-package metadata and archive hash |
 | `CacheCatalog.json` | Local repository-cache snapshot |
 | `CacheInfo.json` | Per-built-in cache metadata |

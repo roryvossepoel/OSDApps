@@ -11,6 +11,7 @@ OSDApps is CLI-first. Use PowerShell to configure, cache and stage applications;
 | Stage apps after OSDCloud has applied Windows | [Online WinPE deployment](../Examples/WinPE-Online.md) | WinPE, before the first Windows boot |
 | Deploy without network from prepared content | [Offline WinPE deployment](../Examples/WinPE-Offline.md) | WinPE and SetupComplete, with a complete matching cache |
 | Preflight staging and inspect cache, signatures and logs | [Getting started](getting-started.md#3-inspect-before-reboot) and [OSDApps Viewer](viewer.md) | WinPE or full Windows |
+| Audit or reconcile long-lived repository cache content | [Cache health and reconciliation](repository.md#cache-health-and-reconciliation) | Full Windows preparation or WinPE cache session |
 | Package an organization-managed application | [Repository examples](../Examples/README.md#build-a-repository-package) | Full Windows authoring machine |
 
 **Do not run deployment staging examples against your preparation machine's Windows drive.** Each example identifies its environment and what it changes. The Viewer is read-only; the Add and Sync commands are not.
@@ -20,7 +21,7 @@ OSDApps is CLI-first. Use PowerShell to configure, cache and stage applications;
 | Topic | Contents |
 | --- | --- |
 | [Built-in applications](built-in-apps.md) | Per-app configuration, architectures, vendor sources and signature/publisher policy |
-| [Repository applications](repository.md) | Catalog and manifest structure, package authoring, Vendor metadata and SHA-256 integrity |
+| [Repository applications](repository.md) | Catalog/alias structure, package authoring, cache health, transactional reconciliation and SHA-256 integrity |
 | [Viewer](viewer.md) | Launch options, tab contents, cache/version/signature meanings and read-only boundaries |
 | [Runtime and cleanup](runtime.md) | SetupComplete, PreInstall, Runner, machine-readable results, configuration, logs and failure handling |
 | [FAQ and troubleshooting](faq.md) | Environment mistakes, cache and network failures, trust checks, logs and upgrades |

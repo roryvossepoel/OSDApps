@@ -27,9 +27,62 @@ function Get-OSDAppCatalogPackages {
     }
 
     $applications = @($catalog.Applications)
+    $canonicalIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $aliasOwners = @{}
+
+    # Application Ids and aliases become cache directory names. Validate the
+    # complete identity graph before resolving a subset or reading manifests.
+    foreach ($application in $applications) {
+        $applicationId = [string]$application.Id
+        if ([string]::IsNullOrWhiteSpace($applicationId) -or
+            $applicationId -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
+            $applicationId -match '\.\.') {
+            throw "Invalid application Id '$applicationId' in repository catalog."
+        }
+        if (-not $canonicalIds.Add($applicationId)) {
+            throw "Duplicate application Id '$applicationId' in repository catalog."
+        }
+    }
+
+    foreach ($application in $applications) {
+        $applicationId = [string]$application.Id
+        $aliases = @(
+            if ($application.PSObject.Properties.Name -contains 'Aliases') {
+                @($application.Aliases)
+            }
+        )
+        foreach ($aliasValue in $aliases) {
+            $alias = ([string]$aliasValue).Trim()
+            if ([string]::IsNullOrWhiteSpace($alias) -or
+                $alias -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
+                $alias -match '\.\.') {
+                throw "Invalid alias '$alias' for '$applicationId' in repository catalog."
+            }
+            if ($canonicalIds.Contains($alias)) {
+                throw "Alias '$alias' for '$applicationId' conflicts with a canonical application Id."
+            }
+            $aliasKey = $alias.ToLowerInvariant()
+            if ($aliasOwners.ContainsKey($aliasKey)) {
+                throw "Alias '$alias' is assigned to both '$($aliasOwners[$aliasKey])' and '$applicationId'."
+            }
+            $aliasOwners[$aliasKey] = $applicationId
+        }
+    }
+
     if ($Name) {
-        $applications = @($applications | Where-Object { $_.Id -in $Name })
-        $missing = @($Name | Where-Object { $_ -notin @($applications.Id) })
+        $resolvedNames = @(
+            foreach ($requestedName in $Name) {
+                $requestedKey = ([string]$requestedName).ToLowerInvariant()
+                if ($aliasOwners.ContainsKey($requestedKey)) {
+                    [string]$aliasOwners[$requestedKey]
+                }
+                else {
+                    [string]$requestedName
+                }
+            }
+        )
+        $applications = @($applications | Where-Object { $_.Id -in $resolvedNames })
+        $missing = @($resolvedNames | Where-Object { $_ -notin @($applications.Id) })
         if ($missing.Count -gt 0) {
             throw "Requested application(s) not found in catalog: $($missing -join ', ')"
         }
@@ -66,6 +119,15 @@ function Get-OSDAppCatalogPackages {
                 throw "Package manifest architecture '$($packageManifest.Architecture)' does not match catalog architecture '$($packageRef.Architecture)' for '$($application.Id)'."
             }
 
+            if ([string]::IsNullOrWhiteSpace([string]$packageManifest.Version)) {
+                throw "Package manifest for '$($application.Id)' must contain Version."
+            }
+
+            if (-not $packageManifest.Archive -or
+                [string]$packageManifest.Archive.Sha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+                throw "Package '$($application.Id)' has an invalid SHA-256 archive definition."
+            }
+
             $fileName = if ($packageManifest.Archive.FileName) { [string]$packageManifest.Archive.FileName } else { 'Package.zip' }
             if ($fileName -ne 'Package.zip') {
                 throw "Package '$($application.Id)' must use the fixed archive name Package.zip."
@@ -85,6 +147,11 @@ function Get-OSDAppCatalogPackages {
 
             $packages.Add([pscustomobject]@{
                 Id           = [string]$packageManifest.Id
+                Aliases      = @(
+                    if ($application.PSObject.Properties.Name -contains 'Aliases') {
+                        @($application.Aliases | ForEach-Object { ([string]$_).Trim() })
+                    }
+                )
                 DisplayName  = if ($packageManifest.DisplayName) { [string]$packageManifest.DisplayName } else { [string]$packageManifest.Id }
                 Vendor       = if ($packageManifest.Vendor) { ([string]$packageManifest.Vendor).Trim() } else { $null }
                 Version      = [string]$packageManifest.Version

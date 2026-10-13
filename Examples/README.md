@@ -6,12 +6,12 @@ Choose an example for the environment you are using. These are reference workflo
 
 | Example | Run on | Changes made |
 | --- | --- | --- |
-| [Prepare a USB cache](Prepare-UsbCache.md) | Full Windows preparation machine | Saves module files and optionally downloads/refreshes cache content; does not stage apps against Windows. |
+| [Prepare a USB cache](Prepare-UsbCache.md) | Full Windows preparation machine | Saves module files, optionally downloads/refreshes content, and shows explicit repository health/prune preview; does not stage apps against Windows. |
 | [Online WinPE deployment](WinPE-Online.md) | WinPE after OSDCloud has applied Windows | Stages app intent/content and SetupComplete on the discovered offline target; optional repository sync downloads packages. |
 | [Offline WinPE deployment](WinPE-Offline.md) | WinPE with complete matching cache and networking disconnected | Stages cached content and SetupComplete without repository refresh. |
 | [Build a repository package](#build-a-repository-package) | Full Windows authoring machine | Creates a package archive and local repository metadata. |
 
-The deployment examples use x64 Teams and Firefox Rapid/en-US so preparation and staging select the same variants. They pin OSDApps 0.35.0, discover the USB by label rather than assuming a drive letter, and do not format disks, clear caches or reboot automatically.
+The deployment examples use x64 Teams and Firefox Rapid/en-US so preparation and staging select the same variants. They pin OSDApps 0.36.0, discover the USB by label rather than assuming a drive letter, and do not format disks or reboot automatically. Repository pruning appears only as a separate preview-and-confirm maintenance step.
 
 Add other apps only after selecting their intended configuration. For example, match Office architecture, channel, language and products between cache preparation and staging. See [Built-in applications](../docs/built-in-apps.md).
 
@@ -31,7 +31,7 @@ Build the archive and publish it to a local repository directory:
 
 ```powershell
 $ErrorActionPreference = 'Stop'
-Import-Module OSDApps -RequiredVersion 0.35.0 -Force
+Import-Module OSDApps -RequiredVersion 0.36.0 -Force
 
 New-OSDAppPackage `
     -Id ExampleApp `
