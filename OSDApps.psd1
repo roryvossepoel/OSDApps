@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.36.0'
+    ModuleVersion     = '0.37.0'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -47,7 +47,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.36.0: Add desired-state cache health, canonical repository aliases, transactional prune with valid pinned retention and rollback, dynamic named cleanup, and safe removal of the retired Teams cache after MicrosoftTeams validation.'
+            ReleaseNotes = '0.37.0: Add one-shot per-application fault isolation, partial PreInstall/Runner result reporting, pre-execution repository integrity gates, and failure-safe staging retention without automatic retries.'
             RequireLicenseAcceptance = $false
         }
     }

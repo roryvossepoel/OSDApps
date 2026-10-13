@@ -8,7 +8,7 @@ This guide separates the three environments used by OSDApps. The commands you ru
 
 Use an OSDCloud v2 deployment that leaves time to stage applications after the Windows image has been applied and before the first Windows boot. OSDApps does not replace Windows image deployment.
 
-The examples target x64 and pin the published OSDApps **0.36.0** release. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
+The examples target x64 and pin OSDApps **0.37.0**. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
 
 Decide which source types you need:
 
@@ -25,8 +25,8 @@ For an online deployment, vendor/repository access must be available when acquis
 **Environment: full Windows.** This phase can write module files and USB cache content. It must not stage applications against the preparation machine's Windows installation.
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.36.0 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.36.0 -Force
+Install-Module OSDApps -RequiredVersion 0.37.0 -Scope CurrentUser -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.37.0 -Force
 ```
 
 An OSDCloud cache volume is identified by its label, `OSDCloud` by default; its drive letter can change between machines. The cache is stored in `\OSDApps` on that volume. Storing the PowerShell module in `\Modules` keeps the module separate from installer content.
@@ -112,9 +112,9 @@ Close the Viewer before continuing the deployment. Keep the cache USB attached u
 
 **Environment: deployed Windows, automatically through SetupComplete.** Do not launch the runtime scripts manually as an alternative to the normal deployment sequence.
 
-PreInstall prepares the built-in content, validates supported installer signatures/publishers and uses a usable local fallback when refresh is unavailable. Runner then processes the full built-in/repository queue from local staging. The module does not need to be installed in this Windows installation.
+PreInstall prepares the built-in content, validates supported installer signatures/publishers and uses a usable local fallback when refresh is unavailable. Runner then processes the full built-in/repository queue from local staging. A normal app-local acquisition or installer failure is recorded and does not prevent independent applications from being attempted. Integrity, trust and invalid-manifest failures remain blocking. The module does not need to be installed in this Windows installation.
 
-A successful staging command is not a successful installation. PreInstall or Runner can still stop if content, trust validation, extraction or an installer fails.
+A successful staging command is not a successful installation. SetupComplete is a one-shot execution: OSDApps does not automatically retry after a reboot or leave a scheduled task, RunOnce entry or service behind. A failed installer will normally leave a final `Failed` result and retained staging even when later queue entries succeeded.
 
 ## 5. Check the outcome
 
@@ -128,8 +128,8 @@ When the OSDApps module is available, read the atomic machine result first:
 
 ```powershell
 $Result = Get-OSDAppDeploymentResult
-$Result | Format-List Status, DeploymentId, SuccessfulApplicationCount, FailedApplicationCount, DurationSeconds
-$Result.Applications | Format-Table Id, Status, ExitCode, Version, DurationSeconds
+$Result | Format-List Status, DeploymentId, SuccessfulApplicationCount, FailedApplicationCount, SkippedApplicationCount, DurationSeconds
+$Result.Applications | Format-Table Id, Status, FailureType, ExitCode, Version, DurationSeconds
 ```
 
 The default file is `%ProgramData%\OSDApps\Results\Latest.json`. It remains outside local staging, so `CleanupMode OnSuccess` does not remove it. Without the module, the JSON can be read with `Get-Content -Raw | ConvertFrom-Json`.
@@ -143,10 +143,10 @@ if (-not (Test-Path -LiteralPath $Log -PathType Leaf)) {
 }
 
 Get-Content -LiteralPath $Log |
-    Select-String 'BuiltInSignatureVerified|BuiltInRefreshSkipped|BuiltInRefreshFailed|PreInstallComplete|ApplicationInstallComplete|InstallComplete|RefreshFailed|InstallFailed'
+    Select-String 'BuiltInSignatureVerified|BuiltInRefreshSkipped|BuiltInRefreshFailed|ApplicationRefreshFailed|PreInstallComplete|ApplicationInstallComplete|ApplicationInstallFailed|ApplicationInstallSkipped|InstallComplete|InstallCompletedWithErrors|RefreshFailed|InstallFailed'
 ```
 
-Look for individual install/provisioning outcomes and the final `InstallComplete` app count. In an intentionally offline deployment, `BuiltInRefreshSkipped` reports use of existing staged content; it is recorded as a warning, not an installer failure.
+Look for individual install/provisioning outcomes and exactly one final `InstallComplete`, `InstallCompletedWithErrors` or `InstallFailed` outcome. In an intentionally offline deployment, `BuiltInRefreshSkipped` reports use of existing staged content; it is recorded as a warning, not an installer failure.
 
 With `CleanupMode OnSuccess`, the runtime schedules removal of temporary staging after a successful run; persistent logs remain at the configured log path. `CleanupMode Never` retains staging for troubleshooting. A failed run retains its source. See [Runtime and cleanup](runtime.md).
 

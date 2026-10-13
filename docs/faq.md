@@ -201,6 +201,10 @@ An empty Staged for device tab after cleanup does not mean installation failed. 
 
 No. The runtime retains source on failure so the manifest, payload and work directory can be inspected. Do not delete that evidence before collecting the relevant log. `CleanupMode=OnSuccess` in a completion line names the policy; use the cleanup events or filesystem state to verify cleanup itself.
 
+## Does SetupComplete retry a failed application after reboot?
+
+No. SetupComplete is a one-shot Windows Setup phase and OSDApps does not create a scheduled task, RunOnce value or service to repeat it. During that single run, an ordinary app-local acquisition or installer failure is recorded and independent remaining applications continue. The final result is still `Failed`, staging is retained and remediation is an explicit administrator action. Manifest, hash and supported-publisher trust failures stop the queue instead of continuing.
+
 ## What is the difference between catalog.json, CacheCatalog.json, and DeviceManifest.json?
 
 | File | Role |

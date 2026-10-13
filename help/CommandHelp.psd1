@@ -124,14 +124,14 @@
         }
         'Get-OSDAppDeploymentResult' = @{
             Synopsis = 'Read the latest machine-readable SetupComplete deployment result.'
-            Description = 'Reads and minimally validates the final JSON written atomically by the standalone runner. It reports phase context and per-app outcomes; it does not infer licensing, sign-in or later application health.'
+            Description = 'Reads and minimally validates the JSON written atomically by the standalone one-shot runner. It reports PreInstall context, succeeded/failed/skipped counts and per-app outcomes; it does not retry deployment or infer licensing, sign-in or later application health.'
             Environment = 'Full Windows after or during SetupComplete; any host with access to a copied result file can use Path.'
             Output = 'OSDApps.DeploymentResult with status, timing, PreInstall context and application results.'
             Parameters = @{
                 Path = 'Optional explicit result JSON path. Omit it to use the current session ResultPath configuration.'
             }
             Examples = @(
-                @{ Code = 'Get-OSDAppDeploymentResult | Select-Object Status, SuccessfulApplicationCount, FailedApplicationCount'; Remarks = 'Read the configured Latest.json after first boot.' },
+                @{ Code = 'Get-OSDAppDeploymentResult | Select-Object Status, SuccessfulApplicationCount, FailedApplicationCount, SkippedApplicationCount'; Remarks = 'Read the configured Latest.json after first boot.' },
                 @{ Code = 'Get-OSDAppDeploymentResult -Path ''C:\Evidence\Latest.json'''; Remarks = 'Inspect a result copied from another device.' }
             )
             Link = 'docs/runtime.md'
