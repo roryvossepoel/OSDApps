@@ -57,8 +57,7 @@ Test-OSDAppRepository -RepositoryPath C:\OSDApps\Repository
 For a configuration or debloat package, keep the same archive layout and use
 `-PackageType Script`. This is classification only: the script receives the
 same SHA-256 enforcement, staging, SYSTEM execution context and one-shot
-failure handling as an application package. See `PackageSource/RegistryMarker`
-for a deliberately small machine-context example.
+failure handling as an application package.
 
 The required archive layout is:
 

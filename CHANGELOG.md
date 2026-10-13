@@ -6,7 +6,6 @@
 
 - Added optional repository `PackageType` metadata with supported values `Application` and `Script`. `Add-OSDAppPackage` writes `Application` by default; existing manifests without the property remain compatible and resolve to `Application`.
 - Package type now flows unchanged through catalog resolution, transactional cache synchronization, `Get-OSDApp`, `Get-OSDAppCache`, device staging, the read-only Viewer, runtime logs and each `Latest.json` application result.
-- Added a safe registry-marker script package example showing how configuration or debloat logic can use the existing repository contract without new staging or execution cmdlets.
 
 ### Execution contract
 
