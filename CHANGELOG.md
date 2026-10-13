@@ -18,7 +18,9 @@
 ### Validation
 
 - Added file-backed tests for desired-state classification, offline health, corruption despite pins, repository alias conflicts and authoring, canonical alias staging, successful prune, empty desired state, valid pin retention, `WhatIf`, commit-failure rollback, dynamic named clearing and guarded Teams alias cleanup.
-- PowerShell 7 parser/import and targeted regression tests pass locally. Windows PowerShell 5.1 and the complete Windows CI matrix remain the release gate; physical cold/warm deployment behavior is unchanged and has not yet been re-run specifically for 0.36.0.
+- The release candidate passed **235/235 tests** on both Windows PowerShell 5.1 and PowerShell 7, with **31/31 packaged command-help topics** verified on each engine and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38364310573)).
+- Full-Windows testing on a populated eight-entry USB cache passed offline and online desired-state health checks, prune `WhatIf`, a controlled transactional orphan prune with unchanged retained package hashes, and guarded migration of a temporary `BuiltIn\Teams` alias with the canonical Teams MSIX unchanged.
+- Two freshly applied x64 PCs passed the complete online eight-app SetupComplete path with the same USB stick. The recoverably cleared cold run repopulated a healthy cache in `PreInstall 215.3 s + Runner 364.8 s`; all six built-ins were updated. The subsequent warm run passed hard offline-readiness and completed in `PreInstall 45.3 s + Runner 364.1 s` with no built-in updates. Both correlated result sets reported **8/8 successful installations**, no runtime warnings or errors, successful `OnSuccess` cleanup and a final healthy eight-entry cache.
 
 ### Compatibility and scope
 
