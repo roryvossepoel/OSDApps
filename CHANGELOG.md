@@ -17,6 +17,7 @@
 ### Validation
 
 - Added Windows runtime tests proving continuation after a controlled installer exit code, continuation after a recorded PreInstall acquisition failure, all-installer blocking on a repository hash mismatch, staging retention after partial failure and absence of persistence-based retry mechanisms.
+- The release candidate passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, with **31/31 packaged command-help topics** verified on each engine and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38403980958)).
 
 ## 0.36.0
 

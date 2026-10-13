@@ -12,6 +12,20 @@ This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging succ
 | Existing OSDCloud USB cache, offline | **Validated — 0.34.0 PC 2 (11 Oct 2026)** | LAN disconnected; six BuiltInRefreshSkipped events, five built-in signer/publisher checks and 8/8 successful installations. Earlier 0.30.0 six-app test also passed. |
 | No USB, offline | **Not yet validated** | Without a complete staged fallback, PreInstall is expected to stop before Runner |
 
+## OSDApps 0.37.0 automated release-candidate validation — 13 October 2026
+
+The 0.37.0 candidate from [PR #25](https://github.com/roryvossepoel/OSDApps/pull/25) was built from commit `ab39d74ed86228a8a8e9748954cf126ece2dbbe9`. GitHub Actions passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38403980958)).
+
+Five new file-backed scenarios validate the one-shot partial-failure contract:
+
+- an installer exit-code failure is recorded while the next independent repository application still runs once;
+- a built-in acquisition failure recorded by PreInstall causes only that built-in to be skipped by Runner while an independent repository application proceeds;
+- a selected repository SHA-256 mismatch aborts before any installer executes and marks remaining work skipped;
+- a normal PreInstall acquisition failure produces `CompletedWithErrors` without blocking Runner or creating retry state;
+- generated SetupComplete integration calls each phase once and contains no RunOnce, scheduled-task or service persistence.
+
+These automated tests also confirm that partial or fatal failure retains staging and suppresses `OnSuccess` cleanup. They do not replace a physical SetupComplete failure-injection run; that evidence remains pending.
+
 ## OSDApps 0.36.0 release-candidate validation — 13 October 2026
 
 The 0.36.0 candidate from [PR #24](https://github.com/roryvossepoel/OSDApps/pull/24) was built from commit `03bbd8a2304a4c6f72d1253c0d2c5c4ac9637229` and installed as `E:\Modules\OSDApps\0.36.0`. Its source tree matched the locally reviewed and tested feature tree. GitHub Actions passed **235/235 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38364310573)).
