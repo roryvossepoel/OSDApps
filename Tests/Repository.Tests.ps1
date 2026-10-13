@@ -46,8 +46,11 @@ Describe 'Repository authoring and validation' {
         $result[0].PackageType | Should -Be 'Registry'
         $result[0].PackageTypeValid | Should -BeFalse
         $result[0].Valid | Should -BeFalse
-        { Get-OSDAppCatalogPackages -CatalogPath (Join-Path $script:repository 'catalog.json') } |
-            Should -Throw '*unsupported PackageType*'
+        $catalogPath = Join-Path $script:repository 'catalog.json'
+        InModuleScope OSDApps -Parameters @{ CatalogPath = $catalogPath } {
+            { Get-OSDAppCatalogPackages -CatalogPath $CatalogPath } |
+                Should -Throw '*unsupported PackageType*'
+        }
     }
 
     It 'preserves an existing script type when republishing without PackageType' {
