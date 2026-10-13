@@ -11,9 +11,9 @@ function Set-OSDAppUIColumnWidths {
     # Reserve enough room for Teams' four-part package version, and let
     # Application / Message absorb remaining space on window resize.
     $fixed = switch ($Key) {
-        'Staged'       { @(65,0,90,100,125,185,105) }
-        'Applications' { @(0,75,90,110,175,100,100,90) }
-        'Cache'        { @(0,75,88,175,95,115,74,122) }
+        'Staged'       { @(65,0,90,95,100,125,185,105) }
+        'Applications' { @(0,75,95,90,110,175,100,100,90) }
+        'Cache'        { @(0,75,95,88,175,95,115,74,122) }
         'Logs'         { @(185,78,135,125,0) }
     }
     $flexIndex = if ($Key -in @('Staged','Applications','Cache')) {
@@ -59,7 +59,7 @@ function Show-OSDAppUIRows {
                 if ($Key -eq 'Staged' -and $column -eq 0) {
                     [int]$value
                 }
-                elseif ($Key -eq 'Cache' -and $column -eq 6) {
+                elseif ($Key -eq 'Cache' -and $column -eq 7) {
                     $parsed = [double]0
                     $rawValue = $value.Replace(' MB','').Replace(',','.')
                     if ([double]::TryParse($rawValue,[System.Globalization.NumberStyles]::Float,
@@ -170,6 +170,7 @@ function Update-OSDAppUIReadOnlyView {
             $displayInfo = Get-OSDAppUIDisplayInfo -Application $app -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
             [void]$item.SubItems.Add([string]$displayInfo.DisplayName)
             [void]$item.SubItems.Add($(if ($app.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
+            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -Application $app))
             [void]$item.SubItems.Add([string]$displayInfo.Vendor)
             [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -Application $app))
             [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
@@ -185,6 +186,7 @@ function Update-OSDAppUIReadOnlyView {
             $displayInfo = Get-OSDAppUIDisplayInfo -Application $app -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
             $item = [System.Windows.Forms.ListViewItem]::new([string]$displayInfo.DisplayName)
             [void]$item.SubItems.Add($(if ($app.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
+            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -Application $app))
             [void]$item.SubItems.Add([string]$displayInfo.Vendor)
             [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -Application $app))
             [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
@@ -199,6 +201,7 @@ function Update-OSDAppUIReadOnlyView {
             $displayInfo = Get-OSDAppUIDisplayInfo -Application $app -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
             $item = [System.Windows.Forms.ListViewItem]::new([string]$displayInfo.DisplayName)
             [void]$item.SubItems.Add($(if ($app.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
+            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -Application $app))
             [void]$item.SubItems.Add([string]$displayInfo.Vendor)
             [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -Application $app))
             [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
@@ -215,6 +218,7 @@ function Update-OSDAppUIReadOnlyView {
             $displayInfo = Get-OSDAppUIDisplayInfo -Application $entry -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
             $item = [System.Windows.Forms.ListViewItem]::new([string]$displayInfo.DisplayName)
             [void]$item.SubItems.Add($(if ($entry.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
+            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -Application $entry))
             [void]$item.SubItems.Add([string]$displayInfo.Vendor)
             $cacheVersion = [string]$entry.Version
             if ([string]::IsNullOrWhiteSpace($cacheVersion) -or $cacheVersion -eq 'Current') { $cacheVersion = 'Not recorded' }
@@ -488,6 +492,7 @@ function Show-OSDAppUI {
     [void]$stagedList.Columns.Add('Order',65)
     [void]$stagedList.Columns.Add('Display Name',270)
     [void]$stagedList.Columns.Add('Source',90)
+    [void]$stagedList.Columns.Add('Package Type',95)
     [void]$stagedList.Columns.Add('Vendor',100)
     [void]$stagedList.Columns.Add('Version / policy',125)
     [void]$stagedList.Columns.Add('USB version',185)
@@ -519,6 +524,7 @@ function Show-OSDAppUI {
     $catalogList.GridLines = $true
     [void]$catalogList.Columns.Add('Display Name',260)
     [void]$catalogList.Columns.Add('Source',90)
+    [void]$catalogList.Columns.Add('Package Type',95)
     [void]$catalogList.Columns.Add('Vendor',100)
     [void]$catalogList.Columns.Add('Version / policy',110)
     [void]$catalogList.Columns.Add('USB version',115)
@@ -546,6 +552,7 @@ function Show-OSDAppUI {
     $cacheList.ShowItemToolTips = $true
     [void]$cacheList.Columns.Add('Display Name',265)
     [void]$cacheList.Columns.Add('Source',75)
+    [void]$cacheList.Columns.Add('Package Type',95)
     [void]$cacheList.Columns.Add('Vendor',88)
     [void]$cacheList.Columns.Add('USB version',175)
     [void]$cacheList.Columns.Add('Architecture',105)

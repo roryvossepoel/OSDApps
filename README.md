@@ -6,7 +6,7 @@
 [![Windows PowerShell 5.1](https://img.shields.io/badge/Windows%20PowerShell-5.1-blue)](#install-from-powershell-gallery)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Prepare applications with PowerShell. Install them through SetupComplete. Inspect the result with a read-only Viewer.**
+**Prepare applications and machine-context scripts with PowerShell. Run them through SetupComplete. Inspect the result with a read-only Viewer.**
 
 OSDApps adds application deployment to OSDCloud v2: vendor-native built-ins, organization-managed repository packages, an optional USB cache, and one ordered installation queue before OOBE continues.
 
@@ -27,11 +27,11 @@ The CLI owns configuration and automation. The Viewer does not add or remove app
 
 ## Install from PowerShell Gallery
 
-**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin **0.37.0**:
+**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin **0.38.0**:
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.37.0 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.37.0 -Force
+Install-Module OSDApps -RequiredVersion 0.38.0 -Scope CurrentUser -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.38.0 -Force
 ```
 
 For offline WinPE, save the module to USB first; see [Prepare a USB cache](Examples/Prepare-UsbCache.md). PowerShellGet is the documented WinPE/Windows PowerShell 5.1 installation path. `Install-PSResource` is an alternative only on a machine where PSResourceGet is already available.
@@ -61,6 +61,11 @@ Show-OSDAppUI -Offline
 The Add cmdlets discover the offline Windows target, or accept an explicit `-WindowsPath`. They prepare installation; they do **not** install these apps in WinPE. Keep the cache USB attached through SetupComplete when it is being used, and close the Viewer before rebooting.
 
 SetupComplete is intentionally one-shot. OSDApps does not install a retry task or RunOnce entry. A normal installer/source failure is recorded per application and independent remaining entries continue; a manifest, repository-integrity or supported-publisher trust failure aborts the queue. Any unsuccessful entry retains local staging and makes the final machine result `Failed`.
+
+Repository packages may be classified as `Application` or `Script`. Both use
+the same versioned `Package.zip`, `Package/Install.ps1`, SHA-256 enforcement,
+ordered queue and failure contract; the type changes presentation and reporting,
+not execution privileges or trust.
 
 For a complete workflow, use the [online WinPE example](Examples/WinPE-Online.md) or the [offline WinPE example](Examples/WinPE-Offline.md). Neither example formats a disk or reboots automatically.
 

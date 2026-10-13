@@ -372,13 +372,14 @@
         }
         'Add-OSDAppPackage' = @{
             Synopsis = 'Publish an existing package into a local repository.'
-            Description = 'Validates input structure and the canonical Id/alias graph before asking for destination approval. Only after approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. Omitting Alias on an update preserves existing aliases; an explicitly empty Alias removes them. WhatIf or declined confirmation leaves the destination unchanged. Older repository source folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
+            Description = 'Validates input structure and the canonical Id/alias graph before asking for destination approval. Only after approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. PackageType classifies the shared Install.ps1 execution unit as Application or Script without changing its runtime path. Omitting Alias on an update preserves existing aliases; an explicitly empty Alias removes them. WhatIf or declined confirmation leaves the destination unchanged. Older repository source folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
             Environment = 'Repository preparation machine with writable local repository.'
             Output = 'OSDApps.RepositoryPackage with archive SHA-256 and manifest reference after publication; no package-success object when previewed or declined.'
             Parameters = @{
                 Alias = 'Optional retired Ids that resolve to this canonical Id and are eligible for renamed-cache detection. Values cannot collide with another Id or alias.'
+                PackageType = 'Optional Application or Script classification. New packages default to Application; republishing an existing variant preserves its current type when omitted. Classification does not change integrity checks, execution context or failure handling.'
             }
-            Examples = @(@{ Code = 'Add-OSDAppPackage -Id NewApp -Alias ''OldApp'' -DisplayName ''Example App'' -Vendor ''Example Publisher'' -Version 1.0.0 -Architecture x64 -PackagePath ''C:\Work\Build\ExampleApp\Package.zip'' -RepositoryPath ''C:\Work\Repository'''; Remarks = 'Publish a canonical Id with one retired identity; upload to your HTTP host separately.' })
+            Examples = @(@{ Code = 'Add-OSDAppPackage -Id ConfigureWindows -DisplayName ''Configure Windows'' -Version 1.0.0 -Architecture x64 -PackageType Script -PackagePath ''C:\Work\Build\ConfigureWindows\Package.zip'' -RepositoryPath ''C:\Work\Repository'''; Remarks = 'Publish a script package using the same repository and SetupComplete runtime contract as an application.' })
             Link = 'docs/repository.md'
         }
         'Test-OSDAppPackage' = @{

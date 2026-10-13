@@ -49,6 +49,7 @@ function Get-OSDAppCache {
                     DisplayName  = if ($package.DisplayName) { [string]$package.DisplayName } else { [string]$package.Id }
                     Vendor       = if ($package.Vendor) { [string]$package.Vendor } else { $null }
                     Source       = 'Repository'
+                    PackageType  = if ($package.PackageType) { [string]$package.PackageType } else { 'Application' }
                     Version      = [string]$package.Version
                     Architecture = [string]$package.Architecture
                     Channel      = $null
@@ -131,6 +132,7 @@ function Get-OSDAppCache {
                     PSTypeName   = 'OSDApps.CacheEntry'
                     Id           = [string]$info.Id
                     Source       = 'BuiltIn'
+                    PackageType  = 'Application'
                     Version      = if ($resolvedVersion) { $resolvedVersion } else { $cachedVersion }
                     VersionSource = $versionSource
                     Architecture = if ($info.Architecture) { [string]$info.Architecture } else { $null }

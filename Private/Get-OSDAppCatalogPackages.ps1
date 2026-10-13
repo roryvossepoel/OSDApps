@@ -123,6 +123,18 @@ function Get-OSDAppCatalogPackages {
                 throw "Package manifest for '$($application.Id)' must contain Version."
             }
 
+            $packageType = if ($packageManifest.PSObject.Properties.Name -contains 'PackageType' -and
+                -not [string]::IsNullOrWhiteSpace([string]$packageManifest.PackageType)) {
+                [string]$packageManifest.PackageType
+            }
+            else {
+                'Application'
+            }
+            if ($packageType -notin @('Application','Script')) {
+                throw "Package '$($application.Id)' has unsupported PackageType '$packageType'. Expected Application or Script."
+            }
+            $packageType = if ($packageType -ieq 'Script') { 'Script' } else { 'Application' }
+
             if (-not $packageManifest.Archive -or
                 [string]$packageManifest.Archive.Sha256 -notmatch '^[A-Fa-f0-9]{64}$') {
                 throw "Package '$($application.Id)' has an invalid SHA-256 archive definition."
@@ -156,6 +168,7 @@ function Get-OSDAppCatalogPackages {
                 Vendor       = if ($packageManifest.Vendor) { ([string]$packageManifest.Vendor).Trim() } else { $null }
                 Version      = [string]$packageManifest.Version
                 Architecture = [string]$packageManifest.Architecture
+                PackageType  = $packageType
                 SuccessCodes = @($packageManifest.SuccessCodes)
                 Archive      = [pscustomobject]$archive
             })

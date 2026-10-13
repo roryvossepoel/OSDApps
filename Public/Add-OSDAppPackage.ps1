@@ -11,6 +11,9 @@ function Add-OSDAppPackage {
         [ValidateSet('x64','arm64','any')]
         [string]$Architecture = 'x64',
 
+        [ValidateSet('Application','Script')]
+        [string]$PackageType,
+
         [int[]]$SuccessCodes = @(0,3010),
 
         [string[]]$Alias
@@ -19,7 +22,6 @@ function Add-OSDAppPackage {
     if ($Id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $Id -match '\.\.') {
         throw "Invalid package Id '$Id'."
     }
-
     $packageTest = Test-OSDAppPackage -PackagePath $PackagePath
     if (-not $packageTest.Valid) {
         throw 'Package validation failed. Package.zip must contain Package/Install.ps1.'
@@ -31,6 +33,26 @@ function Add-OSDAppPackage {
 
     $catalog = Get-OSDAppRepositoryManifest -RepositoryPath $RepositoryPath
     $existingApplication = @($catalog.Applications | Where-Object { $_.Id -eq $Id } | Select-Object -First 1)
+    if ($PSBoundParameters.ContainsKey('PackageType')) {
+        $PackageType = if ($PackageType -ieq 'Script') { 'Script' } else { 'Application' }
+    }
+    elseif (Test-Path -LiteralPath $targetManifest -PathType Leaf) {
+        $existingPackageManifest = Get-OSDAppManifest -Path $targetManifest
+        $existingPackageType = if ($existingPackageManifest.PSObject.Properties.Name -contains 'PackageType' -and
+            -not [string]::IsNullOrWhiteSpace([string]$existingPackageManifest.PackageType)) {
+            [string]$existingPackageManifest.PackageType
+        }
+        else {
+            'Application'
+        }
+        if ($existingPackageType -notin @('Application','Script')) {
+            throw "Existing package '$Id' has unsupported PackageType '$existingPackageType'."
+        }
+        $PackageType = if ($existingPackageType -ieq 'Script') { 'Script' } else { 'Application' }
+    }
+    else {
+        $PackageType = 'Application'
+    }
     $effectiveAliases = if ($PSBoundParameters.ContainsKey('Alias')) {
         @($Alias | ForEach-Object { ([string]$_).Trim() } | Select-Object -Unique)
     }
@@ -92,6 +114,7 @@ function Add-OSDAppPackage {
         DisplayName   = $DisplayName
         Version       = $Version
         Architecture  = $Architecture
+        PackageType   = $PackageType
         SuccessCodes  = @($SuccessCodes)
         Archive       = [ordered]@{
             FileName = 'Package.zip'
@@ -150,6 +173,7 @@ function Add-OSDAppPackage {
         Vendor       = if ($Vendor) { $Vendor.Trim() } else { $null }
         Version      = $Version
         Architecture = $Architecture
+        PackageType  = $PackageType
         SuccessCodes = @($SuccessCodes)
         Aliases      = @($effectiveAliases)
         ManifestPath = $manifestRelativePath

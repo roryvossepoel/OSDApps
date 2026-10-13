@@ -25,7 +25,7 @@ powershell.exe -STA -NoProfile
 In the new PowerShell session:
 
 ```powershell
-Import-Module OSDApps -RequiredVersion 0.37.0 -Force
+Import-Module OSDApps -RequiredVersion 0.38.0 -Force
 Show-OSDAppUI -Offline
 ```
 
@@ -52,7 +52,7 @@ Search filters displayed rows. Clicking a column header sorts the view; it does 
 
 ## Staged for device
 
-This tab reads the selected target's `DeviceManifest.json` and shows the manifest order, Display Name, Source, Vendor, version policy, USB version and architecture. The detail pane shows the selected app's actual staged settings, not settings reconstructed from defaults.
+This tab reads the selected target's `DeviceManifest.json` and shows the manifest order, Display Name, Source, Package Type, Vendor, version policy, USB version and architecture. The detail pane shows the selected app's actual staged settings, not settings reconstructed from defaults.
 
 The Order column remains the manifest sequence even when the table is sorted differently. The detail pane is populated on initial load when entries are available.
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.38.0
+
+### Added
+
+- Added optional repository `PackageType` metadata with supported values `Application` and `Script`. `Add-OSDAppPackage` writes `Application` by default; existing manifests without the property remain compatible and resolve to `Application`.
+- Package type now flows unchanged through catalog resolution, transactional cache synchronization, `Get-OSDApp`, `Get-OSDAppCache`, device staging, the read-only Viewer, runtime logs and each `Latest.json` application result.
+- Added a safe registry-marker script package example showing how configuration or debloat logic can use the existing repository contract without new staging or execution cmdlets.
+
+### Execution contract
+
+- Applications and scripts use the same `Package/Install.ps1` entry point, SHA-256 enforcement, ordered one-shot SetupComplete queue, timeout, success-code handling and 0.37.0 failure-isolation behavior. `PackageType` is classification metadata and does not select a different or less trusted runtime path.
+- OSDApps does not automatically reboot, retry or roll back script changes. Scripts run as SYSTEM during SetupComplete and must not initiate a restart; user-profile (`HKCU`) configuration is outside this phase's machine-context contract.
+
+### Validation
+
+- Added compatibility and propagation tests for explicit script packages, legacy manifests, unsupported package types, Viewer labeling and runtime result reporting.
+
 ## 0.37.0
 
 ### Added

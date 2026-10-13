@@ -17,20 +17,24 @@ Describe 'Optional repository Vendor metadata' {
             Compress-Archive -Path $payload -DestinationPath $zip -Force
             $originalHash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
 
-            $published = Add-OSDAppPackage -Id SampleApp -DisplayName 'Sample App' -Vendor 'Example Publisher' -Version '1.2.3' -PackagePath $zip -RepositoryPath $repo -Architecture x64 -Confirm:$false
+            $published = Add-OSDAppPackage -Id SampleApp -DisplayName 'Sample App' -Vendor 'Example Publisher' -Version '1.2.3' -PackagePath $zip -RepositoryPath $repo -Architecture x64 -PackageType Script -Confirm:$false
             $published.Vendor | Should -Be 'Example Publisher'
+            $published.PackageType | Should -Be 'Script'
             $manifest = Get-Content -LiteralPath (Join-Path $repo 'Apps\SampleApp\1.2.3\x64\manifest.json') -Raw | ConvertFrom-Json
             $manifest.Vendor | Should -Be 'Example Publisher'
+            $manifest.PackageType | Should -Be 'Script'
             $manifest.Archive.Sha256 | Should -Be $originalHash
 
             $catalog = Get-OSDAppCatalogPackages -CatalogPath (Join-Path $repo 'catalog.json')
             @($catalog.Packages).Count | Should -Be 1
             $catalog.Packages[0].Vendor | Should -Be 'Example Publisher'
+            $catalog.Packages[0].PackageType | Should -Be 'Script'
 
             Mock Get-OSDAppHostArchitecture { 'x64' }
             Sync-OSDAppCache -CatalogPath (Join-Path $repo 'catalog.json') -CachePath $cache -Confirm:$false | Out-Null
             $cachedCatalog = Get-Content -LiteralPath (Join-Path $cache 'CacheCatalog.json') -Raw | ConvertFrom-Json
             $cachedCatalog.Packages[0].Vendor | Should -Be 'Example Publisher'
+            $cachedCatalog.Packages[0].PackageType | Should -Be 'Script'
 
             $script:VendorTestCacheRoot = $cache
             Mock Get-OSDAppCachePath { $script:VendorTestCacheRoot }
@@ -38,6 +42,7 @@ Describe 'Optional repository Vendor metadata' {
             $entry.Count | Should -Be 1
             $entry[0].Vendor | Should -Be 'Example Publisher'
             $entry[0].DisplayName | Should -Be 'Sample App'
+            $entry[0].PackageType | Should -Be 'Script'
             $entry[0].Valid | Should -BeTrue
 
             Copy-OSDAppContent -Name @('SampleApp') -CachePath $cache -WindowsPath $target -Confirm:$false | Out-Null
@@ -45,6 +50,7 @@ Describe 'Optional repository Vendor metadata' {
             @($device.Apps).Count | Should -Be 1
             $device.Apps[0].Vendor | Should -Be 'Example Publisher'
             $device.Apps[0].DisplayName | Should -Be 'Sample App'
+            $device.Apps[0].PackageType | Should -Be 'Script'
             (Get-FileHash -LiteralPath (Join-Path $cache 'Packages\SampleApp\Package.zip') -Algorithm SHA256).Hash | Should -Be $originalHash
         }
     }
@@ -64,6 +70,7 @@ Describe 'Optional repository Vendor metadata' {
             $manifest.PSObject.Properties.Name | Should -Not -Contain 'Vendor'
             $catalog = Get-OSDAppCatalogPackages -CatalogPath (Join-Path $repo 'catalog.json')
             $catalog.Packages[0].Vendor | Should -BeNullOrEmpty
+            $catalog.Packages[0].PackageType | Should -Be 'Application'
         }
     }
 }

@@ -99,6 +99,14 @@ function Get-OSDAppUIDisplayVersion {
     return '-'
 }
 
+function Get-OSDAppUIPackageType {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Application)
+
+    if ([string]$Application.PackageType -eq 'Script') { return 'Script' }
+    return 'Application'
+}
+
 function Get-OSDAppUICachedVersion {
     [CmdletBinding()]
     param(
