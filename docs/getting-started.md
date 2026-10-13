@@ -8,7 +8,7 @@ This guide separates the three environments used by OSDApps. The commands you ru
 
 Use an OSDCloud v2 deployment that leaves time to stage applications after the Windows image has been applied and before the first Windows boot. OSDApps does not replace Windows image deployment.
 
-The examples target x64 and pin the published OSDApps **0.35.0** release. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
+The examples target x64 and pin the published OSDApps **0.36.0** release. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
 
 Decide which source types you need:
 
@@ -25,13 +25,25 @@ For an online deployment, vendor/repository access must be available when acquis
 **Environment: full Windows.** This phase can write module files and USB cache content. It must not stage applications against the preparation machine's Windows installation.
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.35.0 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.35.0 -Force
+Install-Module OSDApps -RequiredVersion 0.36.0 -Scope CurrentUser -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.36.0 -Force
 ```
 
 An OSDCloud cache volume is identified by its label, `OSDCloud` by default; its drive letter can change between machines. The cache is stored in `\OSDApps` on that volume. Storing the PowerShell module in `\Modules` keeps the module separate from installer content.
 
-The [USB preparation example](../Examples/Prepare-UsbCache.md) saves the exact module version to the stick. It can also pre-cache Teams and Firefox. Pre-caching is optional for online deployment, but necessary for the corresponding offline example. Nothing in that example clears the cache or formats the stick.
+The [USB preparation example](../Examples/Prepare-UsbCache.md) saves the exact module version to the stick. It can also pre-cache Teams and Firefox. Pre-caching is optional for online deployment, but necessary for the corresponding offline example. It never formats the stick; its optional repository cleanup is separated behind an explicit `-Prune` preview and confirmation.
+
+Before reusing long-lived media, inspect it without changes:
+
+```powershell
+Get-OSDAppCacheHealth -Offline |
+    Select-Object Healthy, ActiveCount, RenamedCount, IncompleteCount, CorruptCount
+```
+
+Repository owners can compare against their complete desired catalog and
+preview transactional cleanup with `Sync-OSDAppRepository -Prune -WhatIf`.
+See [Cache health and reconciliation](repository.md#cache-health-and-reconciliation)
+before approving removals.
 
 ## 2. Target machine — stage in WinPE
 

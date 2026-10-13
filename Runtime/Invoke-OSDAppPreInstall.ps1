@@ -261,6 +261,28 @@ function Test-LocalMicrosoftTeamsSource {
     return ((Test-Path -LiteralPath (Join-Path $Root 'teamsbootstrapper.exe') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Root 'teams.msix') -PathType Leaf))
 }
 
+function Remove-LegacyMicrosoftTeamsCache {
+    param(
+        [string]$UsbRoot,
+        [string]$CanonicalRoot
+    )
+
+    if (-not $UsbRoot -or -not (Test-LocalMicrosoftTeamsSource -Root $CanonicalRoot)) { return }
+    $legacyRoot = Join-Path $UsbRoot 'BuiltIn\Teams'
+    if (-not (Test-Path -LiteralPath $legacyRoot)) { return }
+
+    try {
+        # Validate the signable canonical component again at the deletion
+        # boundary. Teams MSIX remains outside the explicit signature scope.
+        Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $CanonicalRoot 'teamsbootstrapper.exe')
+        Remove-Item -LiteralPath $legacyRoot -Recurse -Force -ErrorAction Stop
+        Write-PreInstallLog -Event 'CacheAliasPruned' -Message 'Retired Microsoft Teams cache was removed after canonical replacement validation.' -Data @{Alias='Teams';CanonicalId='MicrosoftTeams';Path=$legacyRoot}
+    }
+    catch {
+        Write-PreInstallLog -Event 'CacheAliasPruneFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Alias='Teams';CanonicalId='MicrosoftTeams';Path=$legacyRoot}
+    }
+}
+
 function Test-LocalAdobeAcrobatUnifiedSource {
     param([string]$Root)
     return (Test-Path -LiteralPath (Join-Path $Root 'Package.zip') -PathType Leaf)
@@ -521,7 +543,7 @@ try {
                 }
 
                 if(-not $networkAvailable){
-                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='MicrosoftTeams'};continue}
+                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Remove-LegacyMicrosoftTeamsCache -UsbRoot $usbRoot -CanonicalRoot $acquireRoot;Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='MicrosoftTeams'};continue}
                     throw 'Microsoft Teams has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
                 try {
@@ -540,6 +562,7 @@ try {
                     if(-not $matches){$tempMsix=Join-Path $tempRoot 'teams.msix';Save-PreInstallDownload -Uri $msixUri -DestinationPath $tempMsix -Id 'MicrosoftTeams' -Description "Microsoft Teams $architecture MSIX" -TimeoutMinutes 15;$version=Get-MicrosoftTeamsPackageVersion -Path $tempMsix;Copy-Item -LiteralPath $tempMsix -Destination $msixPath -Force;$updated=$true}else{$version=if($cacheInfo -and $cacheInfo.Version){[string]$cacheInfo.Version}else{Get-MicrosoftTeamsPackageVersion -Path $msixPath}}
                     [ordered]@{Id='MicrosoftTeams';Cached=[bool]$usbRoot;Version=$version;Architecture=$architecture;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';Updated=$updated;BootstrapperUri=$bootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified;RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
                     if($usbRoot){Copy-Item -LiteralPath $bootstrapperPath -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force;Copy-Item -LiteralPath $msixPath -Destination (Join-Path $localRoot 'teams.msix') -Force;Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
+                    Remove-LegacyMicrosoftTeamsCache -UsbRoot $usbRoot -CanonicalRoot $acquireRoot
                     Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='MicrosoftTeams';Version=$version;PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {
                     if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='MicrosoftTeams';Fallback='ExistingStagedPayload'};continue}

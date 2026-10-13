@@ -9,7 +9,7 @@ OSDApps defines the repository contract, provides examples, and includes optiona
 
 Application names used in examples, such as `OmnissaHorizonClient` and `NotepadPlusPlus`, represent packages from an organization's own repository. They are not built-in OSDApps applications and are not distributed or maintained by this project.
 
-Repository synchronization is a **WinPE operation**. OSDApps resolves the requested repository package, refreshes or reuses the optional OSDCloud USB cache, validates the package, and stages it into the offline Windows installation before the first boot. SetupComplete then installs the staged local package; repository content is not refreshed again in full Windows.
+Repository synchronization can be used on a **full-Windows preparation machine** to pre-cache media or in **WinPE** while staging a target. OSDApps resolves the requested repository package, refreshes or reuses the optional OSDCloud USB cache, validates the package, and stages it into the offline Windows installation before the first boot. SetupComplete then installs the staged local package; repository content is not refreshed again in full Windows.
 
 ## Repository layout
 
@@ -45,6 +45,9 @@ Example:
   "Applications": [
     {
       "Id": "ExampleApp",
+      "Aliases": [
+        "RetiredExampleApp"
+      ],
       "Packages": [
         {
           "Architecture": "x64",
@@ -55,6 +58,12 @@ Example:
   ]
 }
 ```
+
+`Id` is the canonical identity. Optional `Aliases` are retired IDs that now
+resolve to that canonical application. IDs and aliases are compared
+case-insensitively, must be safe directory names, and cannot collide with any
+other canonical ID or alias. Aliases are identity metadata; they do not create
+another package or cache copy.
 
 ## Package manifest
 
@@ -133,6 +142,79 @@ First boot / SetupComplete
 
 This makes repository applications deterministic at first boot: the package that was selected and cached in WinPE is the package that SetupComplete installs.
 
+## Cache health and reconciliation
+
+Inspecting health is read-only. With a desired catalog, OSDApps compares the
+physical cache, `CacheCatalog.json`, canonical IDs and aliases:
+
+```powershell
+$Health = Get-OSDAppCacheHealth -CatalogPath C:\OSDApps\Repository\catalog.json
+$Health | Select-Object Healthy, CatalogError, CacheCatalogError, ActiveCount, PinnedCount, ObsoleteCount, OrphanedCount, RenamedCount, IncompleteCount, CorruptCount, RemovableSizeMB
+$Health.Entries |
+    Where-Object Action -ne 'None' |
+    Select-Object Id, CanonicalId, State, Integrity, Action, Reason, SizeMB
+```
+
+Use `-CatalogUri` for an explicit published catalog. With the session's
+configured `CatalogUri`, omit both catalog arguments. To verify only the local
+cache without a repository request:
+
+```powershell
+Get-OSDAppCacheHealth -Offline
+```
+
+A valid locally cataloged package remains `Active` during that offline check;
+OSDApps does not call it obsolete merely because desired state was not queried.
+The health states are:
+
+| State | Meaning |
+| --- | --- |
+| `Active` | Canonical desired content is current, or locally recorded content passes SHA-256 during an offline-only inspection. |
+| `Pinned` | Valid repository content is intentionally retained outside desired state. |
+| `Obsolete` | A cached canonical ID or version no longer matches desired state. |
+| `Orphaned` | A physical folder is not represented by usable cache metadata. |
+| `Renamed` | A retired alias folder exists for a canonical ID. |
+| `Incomplete` | Required content is missing. |
+| `Corrupt` | Metadata is invalid/ambiguous or a repository SHA-256 fails. |
+
+An unfinished directory under `.staging` is reported separately with
+`Source=Transaction` and `Action=Review`. Recovery data is never removed by a
+health inspection or by an unrelated prune operation.
+
+Normal selective synchronization remains non-destructive and continues to
+merge entries. When a current alias names an older cached canonical ID, its
+conflicting metadata is retired so alias resolution stays unambiguous, while
+the old package folder remains untouched. Cleanup is explicit and always uses
+the complete catalog:
+
+```powershell
+# Configured CatalogUri and intended OSDCloud cache volume required.
+Sync-OSDAppRepository -Prune -WhatIf
+Sync-OSDAppRepository -Prune -Confirm
+```
+
+`-Prune` cannot be combined with `-Name`. OSDApps first resolves the complete
+host-compatible plan and downloads and SHA-256-validates every replacement.
+Stale folders are moved into the same-volume transaction backup, new packages
+are promoted, and `CacheCatalog.json` is the commit point. A failure before
+commit restores the previous catalog and folders.
+
+An exceptional package can be retained by canonical ID only when its existing
+archive is still valid:
+
+```powershell
+Sync-OSDAppRepository -Prune -PinnedId LegacyApp -WhatIf
+Sync-OSDAppRepository -Prune -PinnedId LegacyApp -Confirm
+```
+
+Unknown, missing, corrupt and alias pins are rejected. Repository pruning does
+not clear built-in caches, device staging or the source repository. A successful
+`Sync-OSDAppMicrosoftTeams` and standalone PreInstall separately remove the
+retired `BuiltIn\Teams` folder only after the canonical
+`BuiltIn\MicrosoftTeams` payload is complete and its bootstrapper passes the
+existing trust check. A PreInstall cleanup failure is logged but does not fail
+an otherwise usable deployment.
+
 ## Creating a repository
 
 The complete structure may be created manually. OSDApps also includes convenience helpers.
@@ -158,6 +240,7 @@ Publish it into the repository:
 ```powershell
 Add-OSDAppPackage `
     -Id ExampleApp `
+    -Alias RetiredExampleApp `
     -DisplayName 'Example App' `
     -Vendor 'Example Software' `
     -Version 1.0.0 `
@@ -173,7 +256,11 @@ The helper:
 3. copies `Package.zip`;
 4. calculates SHA-256;
 5. writes `manifest.json`;
-6. adds or replaces the architecture reference in `catalog.json`.
+6. validates and records optional retired aliases;
+7. adds or replaces the architecture reference in `catalog.json`.
+
+When updating an existing application, omitting `-Alias` preserves its aliases.
+Supplying an explicitly empty alias array removes them.
 
 ## Validation
 

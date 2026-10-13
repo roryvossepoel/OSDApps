@@ -28,7 +28,7 @@ $Usb = @(Get-Volume | Where-Object {
 })
 if ($Usb.Count -ne 1) { throw 'Expected exactly one OSDCloud cache volume.' }
 $UsbRoot = "$($Usb[0].DriveLetter):\"
-$ModulePath = Join-Path $UsbRoot 'Modules\OSDApps\0.35.0\OSDApps.psd1'
+$ModulePath = Join-Path $UsbRoot 'Modules\OSDApps\0.36.0\OSDApps.psd1'
 if (-not (Test-Path -LiteralPath $ModulePath -PathType Leaf)) {
     throw 'Saved module missing. Complete the Windows USB preparation example first.'
 }

@@ -78,7 +78,7 @@
             Environment = 'Full Windows or WinPE; online discovery unless Offline is supplied or no catalog is configured.'
             Output = 'OSDApps.App objects, not installed-software inventory.'
             Parameters = @{
-                Name = 'Optional Id or DisplayName filters; wildcards supported.'
+                Name = 'Optional canonical Id, declared repository alias or DisplayName filters; wildcards supported.'
                 Offline = 'Skip online catalog and package-manifest lookup only; does not disconnect networking or control SetupComplete.'
             }
             Examples = @(
@@ -103,6 +103,24 @@
                 @{ Code = 'Get-OSDAppCache -ResolveVersions -VerifySignatures | Select-Object Id, Version, Valid, SignatureStatus, SignatureScope'; Remarks = 'Full Windows: independently inspect versions, integrity and supported signatures.' }
             )
             Link = 'docs/viewer.md'
+        }
+        'Get-OSDAppCacheHealth' = @{
+            Synopsis = 'Compare cache contents with desired state and classify cleanup work.'
+            Description = 'Returns one read-only health plan for repository and built-in cache content. Repository entries are classified as Active, Pinned, Obsolete, Orphaned, Renamed, Incomplete or Corrupt. It verifies recorded SHA-256 values but never downloads, repairs or deletes files.'
+            Environment = 'Full Windows or WinPE with an accessible cache; desired-state lookup is optional and can be disabled with Offline.'
+            Output = 'One OSDApps.CacheHealth object with CatalogError/CacheCatalogError diagnostics, aggregate counts, removable size and detailed OSDApps.CacheHealthEntry records in Entries.'
+            Parameters = @{
+                CachePath = 'Explicit OSDApps cache root to inspect instead of auto-detecting a volume labeled OSDCloud. A missing path returns CacheAvailable=False.'
+                CatalogUri = 'Explicit HTTP/HTTPS root catalog used as desired repository state. Cannot be combined with CatalogPath or Offline.'
+                CatalogPath = 'Explicit local catalog.json used as desired repository state. Cannot be combined with CatalogUri or Offline.'
+                Offline = 'Do not query the configured repository catalog. Locally cataloged packages can still be Active when their recorded SHA-256 passes.'
+                PinnedId = 'Repository cache Ids intentionally retained outside desired state. A pin does not make missing, corrupt or renamed content healthy.'
+            }
+            Examples = @(
+                @{ Code = 'Get-OSDAppCacheHealth -Offline | Select-Object Healthy, ActiveCount, CorruptCount'; Remarks = 'Inspect local integrity without any repository request.' },
+                @{ Code = '$health = Get-OSDAppCacheHealth -CatalogPath ''C:\Work\Repository\catalog.json''; $health.Entries | Where-Object Action -ne ''None'''; Remarks = 'Preview desired-state differences from a local repository before pruning.' }
+            )
+            Link = 'docs/repository.md'
         }
         'Get-OSDAppDeploymentResult' = @{
             Synopsis = 'Read the latest machine-readable SetupComplete deployment result.'
@@ -176,7 +194,7 @@
             Environment = 'Intended for WinPE after Windows image application and before first boot. Do not target the running preparation PC.'
             Output = 'OSDApps.StagedApp objects; not installation proof.'
             Parameters = @{
-                Name = 'Exact repository Ids (alias Id), with pipeline support. Built-in Ids and wildcard selections are not supported here.'
+                Name = 'Exact canonical repository Ids or declared retired aliases, with pipeline support. Built-in Ids and wildcard selections are not supported here.'
                 SkipCacheRefresh = 'Use existing repository cache only; all requested archives must pass SHA-256. Does not change built-in acquisition.'
             }
             Examples = @(
@@ -203,11 +221,18 @@
         }
         'Sync-OSDAppRepository' = @{
             Synopsis = 'Synchronize repository packages into the configured cache volume.'
-            Description = 'Requires CatalogUri and cache media. Resolves compatible packages and validates SHA-256 before committing a transaction. Does not write device staging or install apps.'
+            Description = 'Requires CatalogUri and cache media. Resolves exactly one compatible package per canonical Id and validates every new archive before committing. Prune reconciles the complete catalog as one transaction, removing renamed, obsolete and orphaned folders only after replacements validate; rollback restores the prior cache when commit fails. Does not write device staging or install apps.'
             Environment = 'Full Windows or WinPE; configured repository and cache required.'
             Output = 'FileInfo for resulting CacheCatalog.json.'
-            Parameters = @{ Name = 'Optional exact repository Ids. Omit to synchronize applicable catalog packages.' }
-            Examples = @(@{ Code = 'Sync-OSDAppRepository -Name ''ExampleApp'''; Remarks = 'Use your own published catalog/Id; may update USB cache files.' })
+            Parameters = @{
+                Name = 'Optional exact canonical Ids or declared aliases. Omit to synchronize all compatible catalog packages. Cannot be combined with Prune.'
+                Prune = 'Reconcile the complete catalog and transactionally remove unpinned renamed, obsolete and orphaned repository folders. Preview with WhatIf.'
+                PinnedId = 'Canonical cached package Ids to retain outside desired state during Prune. Pins must already be valid and cannot name aliases.'
+            }
+            Examples = @(
+                @{ Code = 'Sync-OSDAppRepository -Name ''ExampleApp'''; Remarks = 'Use your own published catalog Id or alias; may update USB cache files.' },
+                @{ Code = 'Sync-OSDAppRepository -Prune -PinnedId ''LegacyApp'' -WhatIf'; Remarks = 'Preview complete desired-state reconciliation while retaining one valid legacy package.' }
+            )
             Link = 'docs/repository.md'
         }
         'Clear-OSDAppCache' = @{
@@ -219,7 +244,7 @@
                 All = 'Clear repository and built-in caches. Also the default with no scope argument.'
                 Repository = 'Clear repository archives and CacheCatalog.json only.'
                 BuiltIn = 'Clear built-in cache only.'
-                Name = 'Named cache entries. Inspect the resolved operations with WhatIf.'
+                Name = 'Exact safe cache Ids. Matching built-in and repository paths are both removed, including retired identities; inspect operations with WhatIf.'
                 IncludeLogs = 'Also remove existing cache logs; new audit entries are written afterward.'
             }
             Examples = @(
@@ -286,9 +311,9 @@
         }
         'Sync-OSDAppMicrosoftTeams' = @{
             Synopsis = 'Prepare the Teams bootstrapper and MSIX cache.'
-            Description = 'Validates a new bootstrapper and Microsoft publisher. Reuses unchanged MSIX by metadata; Updated=False is not zero HTTP requests or no bootstrapper download. Explicit signature check does not cover MSIX. Architectures share the MicrosoftTeams cache directory.'
+            Description = 'Validates a new bootstrapper and Microsoft publisher. Reuses unchanged MSIX by metadata; Updated=False is not zero HTTP requests or no bootstrapper download. Explicit signature check does not cover MSIX. Architectures share the MicrosoftTeams cache directory. After the canonical payload is complete, a retired BuiltIn\Teams cache folder is removed.'
             Environment = 'Full Windows only with configured cache and vendor access. WinPE is rejected.'
-            Output = 'OSDApps.BuiltInCache; Updated describes MSIX replacement.'
+            Output = 'OSDApps.BuiltInCache; Updated describes MSIX replacement and RemovedAliases reports retired folders removed.'
             Examples = @(@{ Code = 'Sync-OSDAppMicrosoftTeams -Architecture x64'; Remarks = 'Prepare x64 content without installing Teams.' })
             Link = 'docs/built-in-apps.md'
         }
@@ -347,10 +372,13 @@
         }
         'Add-OSDAppPackage' = @{
             Synopsis = 'Publish an existing package into a local repository.'
-            Description = 'Validates input structure in owned temporary storage before asking for destination approval. Only after ShouldProcess approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. WhatIf or declined confirmation leaves the destination unchanged and returns no package-success object; input validation can still create and clean temporary files. Older folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
+            Description = 'Validates input structure and the canonical Id/alias graph before asking for destination approval. Only after approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. Omitting Alias on an update preserves existing aliases; an explicitly empty Alias removes them. WhatIf or declined confirmation leaves the destination unchanged. Older repository source folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
             Environment = 'Repository preparation machine with writable local repository.'
             Output = 'OSDApps.RepositoryPackage with archive SHA-256 and manifest reference after publication; no package-success object when previewed or declined.'
-            Examples = @(@{ Code = 'Add-OSDAppPackage -Id ExampleApp -DisplayName ''Example App'' -Vendor ''Example Publisher'' -Version 1.0.0 -Architecture x64 -PackagePath ''C:\Work\Build\ExampleApp\Package.zip'' -RepositoryPath ''C:\Work\Repository'''; Remarks = 'Update local content; upload to your HTTP host separately.' })
+            Parameters = @{
+                Alias = 'Optional retired Ids that resolve to this canonical Id and are eligible for renamed-cache detection. Values cannot collide with another Id or alias.'
+            }
+            Examples = @(@{ Code = 'Add-OSDAppPackage -Id NewApp -Alias ''OldApp'' -DisplayName ''Example App'' -Vendor ''Example Publisher'' -Version 1.0.0 -Architecture x64 -PackagePath ''C:\Work\Build\ExampleApp\Package.zip'' -RepositoryPath ''C:\Work\Repository'''; Remarks = 'Publish a canonical Id with one retired identity; upload to your HTTP host separately.' })
             Link = 'docs/repository.md'
         }
         'Test-OSDAppPackage' = @{

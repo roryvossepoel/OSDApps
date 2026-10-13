@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.36.0
+
+### Added
+
+- Added read-only `Get-OSDAppCacheHealth` with aggregate health, removable size and per-entry `Active`, `Pinned`, `Obsolete`, `Orphaned`, `Renamed`, `Incomplete` and `Corrupt` classifications.
+- Added optional root-catalog `Aliases` for retired repository IDs. Catalog resolution, selective synchronization and `Add-OSDApp` map aliases to one canonical ID. Merge-only sync retires conflicting legacy metadata but preserves its files until explicit pruning.
+- Added `Sync-OSDAppRepository -Prune` for complete desired-state reconciliation and `-PinnedId` for intentional retention of valid canonical packages.
+
+### Cache safety
+
+- Repository prune resolves the complete architecture-compatible plan and acquires and SHA-256-validates replacements before changing persistent content. Stale folders remain in a same-volume transaction backup until `CacheCatalog.json` commits; a failed commit restores promoted and removed folders plus the prior catalog.
+- Selective `-Name` synchronization remains merge-only and cannot be combined with `-Prune`. Unknown, alias, missing and corrupt pins are rejected. `-WhatIf` stops before cache writes.
+- `Clear-OSDAppCache -Name` now resolves exact safe IDs in both built-in and repository namespaces instead of relying on a hard-coded built-in list, allowing retired identities to be removed explicitly.
+- `MicrosoftTeams` metadata declares `Teams` as a retired cache alias. Full-Windows `Sync-OSDAppMicrosoftTeams` and standalone PreInstall remove `BuiltIn\Teams` only after the canonical cache is complete and its bootstrapper passes the existing Microsoft trust gate. PreInstall treats cleanup failure as a logged warning so it cannot turn an otherwise usable deployment into a failure. No legacy public command or SetupComplete identity was restored.
+
+### Validation
+
+- Added file-backed tests for desired-state classification, offline health, corruption despite pins, repository alias conflicts and authoring, canonical alias staging, successful prune, empty desired state, valid pin retention, `WhatIf`, commit-failure rollback, dynamic named clearing and guarded Teams alias cleanup.
+- PowerShell 7 parser/import and targeted regression tests pass locally. Windows PowerShell 5.1 and the complete Windows CI matrix remain the release gate; physical cold/warm deployment behavior is unchanged and has not yet been re-run specifically for 0.36.0.
+
+### Compatibility and scope
+
+- Windows PowerShell 5.1 remains the minimum supported version. Existing schema-1 repositories without `Aliases` remain compatible, and normal synchronization remains non-destructive unless `-Prune` is explicitly supplied.
+- Repository pruning changes persistent cache content only; it does not prune the source repository, built-in caches or device staging. Cache health is diagnostic evidence, not installed-application or licensing state.
+
 ## 0.35.0
 
 ### Added

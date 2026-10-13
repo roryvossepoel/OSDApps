@@ -24,6 +24,16 @@ function Clear-OSDAppCache {
         $All = $true
     }
 
+    if ($scope -eq 'Name') {
+        foreach ($appName in @($Name)) {
+            if ([string]::IsNullOrWhiteSpace([string]$appName) -or
+                [string]$appName -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
+                [string]$appName -match '\.\.') {
+                throw "Invalid cache Id '$appName'."
+            }
+        }
+    }
+
     if (-not $WhatIfPreference) {
         Write-OSDAppLog -LogPath $logPath -Component 'Cache' -Event 'CacheClearStart' -Message 'Starting OSD App cache clear operation.' -Data @{
             Scope       = $scope
@@ -91,11 +101,11 @@ function Clear-OSDAppCache {
         }
 
         foreach ($appName in @($Name | Select-Object -Unique)) {
-            if ($appName -ieq 'Microsoft365Apps' -or $appName -ieq 'MicrosoftTeams' -or $appName -ieq 'AdobeAcrobatUnified' -or $appName -ieq 'GoogleChromeEnterprise' -or $appName -ieq 'CiscoWebex' -or $appName -ieq 'MozillaFirefoxEnterprise') {
-                Remove-CacheItem -Path (Join-Path $builtInPath $appName) -Label "Built-in app '$appName'"
-                continue
-            }
-
+            # A name can be a current Id, a retired built-in Id, or an
+            # organization repository Id. Remove exact matches from both
+            # namespaces so renamed entries such as BuiltIn\Teams remain
+            # explicitly cleanable without a hard-coded command list.
+            Remove-CacheItem -Path (Join-Path $builtInPath $appName) -Label "Built-in app '$appName'"
             Remove-CacheItem -Path (Join-Path $packagesPath $appName) -Label "Repository app '$appName'"
 
             if ($manifest -and $manifest.PSObject.Properties.Name -contains 'Packages') {

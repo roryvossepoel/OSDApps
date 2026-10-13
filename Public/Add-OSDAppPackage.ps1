@@ -11,8 +11,14 @@ function Add-OSDAppPackage {
         [ValidateSet('x64','arm64','any')]
         [string]$Architecture = 'x64',
 
-        [int[]]$SuccessCodes = @(0,3010)
+        [int[]]$SuccessCodes = @(0,3010),
+
+        [string[]]$Alias
     )
+
+    if ($Id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $Id -match '\.\.') {
+        throw "Invalid package Id '$Id'."
+    }
 
     $packageTest = Test-OSDAppPackage -PackagePath $PackagePath
     if (-not $packageTest.Valid) {
@@ -22,6 +28,50 @@ function Add-OSDAppPackage {
     $targetFolder = Join-Path $RepositoryPath (Join-Path 'Apps' (Join-Path $Id (Join-Path $Version $Architecture)))
     $targetPackage = Join-Path $targetFolder 'Package.zip'
     $targetManifest = Join-Path $targetFolder 'manifest.json'
+
+    $catalog = Get-OSDAppRepositoryManifest -RepositoryPath $RepositoryPath
+    $existingApplication = @($catalog.Applications | Where-Object { $_.Id -eq $Id } | Select-Object -First 1)
+    $effectiveAliases = if ($PSBoundParameters.ContainsKey('Alias')) {
+        @($Alias | ForEach-Object { ([string]$_).Trim() } | Select-Object -Unique)
+    }
+    elseif ($existingApplication.Count -gt 0 -and
+        $existingApplication[0].PSObject.Properties.Name -contains 'Aliases') {
+        @($existingApplication[0].Aliases)
+    }
+    else {
+        @()
+    }
+
+    foreach ($aliasValue in $effectiveAliases) {
+        $aliasId = [string]$aliasValue
+        if ([string]::IsNullOrWhiteSpace($aliasId) -or
+            $aliasId -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
+            $aliasId -match '\.\.') {
+            throw "Invalid alias '$aliasId' for '$Id'."
+        }
+        if ($aliasId -ieq $Id) {
+            throw "Alias '$aliasId' cannot be the same as canonical Id '$Id'."
+        }
+    }
+
+    foreach ($application in @($catalog.Applications | Where-Object { $_.Id -ne $Id })) {
+        if ([string]$application.Id -ieq $Id) { continue }
+        if ([string]$application.Id -in $effectiveAliases) {
+            throw "Alias '$($application.Id)' for '$Id' conflicts with an existing canonical application Id."
+        }
+        $otherAliases = @(
+            if ($application.PSObject.Properties.Name -contains 'Aliases') {
+                @($application.Aliases)
+            }
+        )
+        if ($Id -in $otherAliases) {
+            throw "Canonical Id '$Id' is already an alias of '$($application.Id)'."
+        }
+        $conflicts = @($effectiveAliases | Where-Object { $_ -in $otherAliases })
+        if ($conflicts.Count -gt 0) {
+            throw "Alias '$($conflicts[0])' is already assigned to '$($application.Id)'."
+        }
+    }
 
     if (-not $PSCmdlet.ShouldProcess($targetFolder, "Publish $Id $Version ($Architecture)")) {
         return
@@ -59,9 +109,6 @@ function Add-OSDAppPackage {
         ConvertTo-Json -Depth 20 |
         Set-Content -LiteralPath $targetManifest -Encoding UTF8
 
-    $catalog = Get-OSDAppRepositoryManifest -RepositoryPath $RepositoryPath
-    $existingApplication = @($catalog.Applications | Where-Object { $_.Id -eq $Id } | Select-Object -First 1)
-
     if ($existingApplication.Count -gt 0) {
         $applicationPackages = @(
             $existingApplication[0].Packages |
@@ -80,10 +127,14 @@ function Add-OSDAppPackage {
         Manifest     = $manifestRelativePath
     }
 
-    $applicationEntry = [pscustomobject]@{
+    $applicationEntryData = [ordered]@{
         Id       = $Id
         Packages = @($applicationPackages) + $packageReference
     }
+    if ($effectiveAliases.Count -gt 0) {
+        $applicationEntryData['Aliases'] = @($effectiveAliases)
+    }
+    $applicationEntry = [pscustomobject]$applicationEntryData
 
     $catalog.Applications = @(
         @($catalog.Applications | Where-Object { $_.Id -ne $Id }) +
@@ -100,6 +151,7 @@ function Add-OSDAppPackage {
         Version      = $Version
         Architecture = $Architecture
         SuccessCodes = @($SuccessCodes)
+        Aliases      = @($effectiveAliases)
         ManifestPath = $manifestRelativePath
         Archive      = [pscustomobject]$packageManifest.Archive
     }

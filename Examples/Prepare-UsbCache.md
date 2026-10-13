@@ -2,7 +2,7 @@
 
 [Examples](README.md) · [Next: online WinPE](WinPE-Online.md) · [Next: offline WinPE](WinPE-Offline.md)
 
-**Run on a full Windows preparation machine, not in WinPE.** This example saves the module to an existing USB volume and optionally refreshes application content. It does not stage apps against the preparation machine's Windows drive, format the volume, delete a cache or create bootable OSDCloud media.
+**Run on a full Windows preparation machine, not in WinPE.** This example saves the module to an existing USB volume and optionally refreshes application content. It does not stage apps against the preparation machine's Windows drive, format the volume or create bootable OSDCloud media. The optional repository reconciliation section can remove stale repository cache folders only after a separate `-Prune` confirmation.
 
 Use Windows PowerShell 5.1 with PowerShellGet available and internet access. Attach exactly one intended cache volume labeled `OSDCloud`; prepare/label the media separately before running this example. There must be enough free space for the module and selected payloads, including any existing content.
 
@@ -32,10 +32,10 @@ if ($UsbRoot.TrimEnd('\') -ieq $env:SystemDrive) {
 $ModuleParent = Join-Path $UsbRoot 'Modules'
 New-Item -ItemType Directory -Path $ModuleParent -Force | Out-Null
 
-Save-Module -Name OSDApps -RequiredVersion 0.35.0 `
+Save-Module -Name OSDApps -RequiredVersion 0.36.0 `
     -Repository PSGallery -Path $ModuleParent -Force
 
-$ModulePath = Join-Path $ModuleParent 'OSDApps\0.35.0\OSDApps.psd1'
+$ModulePath = Join-Path $ModuleParent 'OSDApps\0.36.0\OSDApps.psd1'
 if (-not (Test-Path -LiteralPath $ModulePath -PathType Leaf)) {
     throw "Saved module not found: $ModulePath"
 }
@@ -61,6 +61,9 @@ Sync-OSDAppMozillaFirefoxEnterprise -Channel Rapid -Language en-US -Architecture
 
 Get-OSDAppCache -Name MicrosoftTeams,MozillaFirefoxEnterprise -ResolveVersions -VerifySignatures |
     Select-Object Id, Version, Architecture, Channel, Language, Valid, SignatureStatus
+
+Get-OSDAppCacheHealth -Offline |
+    Select-Object Healthy, ActiveCount, RenamedCount, IncompleteCount, CorruptCount
 ```
 
 Review both file availability and signature results. The corresponding WinPE examples use the same x64 Teams and Firefox Rapid/en-US variants. `Updated=False` means existing content was reused; it is not a synchronization failure. Built-in signed-file trust/publisher failures must be investigated before relying on the cache.
@@ -83,6 +86,17 @@ Get-OSDAppCache -Name $RepoAppId |
     Select-Object Id, DisplayName, Vendor, Version, Architecture, Valid
 ```
 
+Selective synchronization does not remove unrelated packages. To maintain a
+long-lived repository cache against the complete configured catalog, inspect
+the plan first and approve it separately:
+
+```powershell
+Get-OSDAppCacheHealth
+Sync-OSDAppRepository -Prune -WhatIf
+# After reviewing the exact cache volume and WhatIf output:
+Sync-OSDAppRepository -Prune -Confirm
+```
+
 Repository synchronization resolves a variant for the **current host architecture**. When preparing media on an ARM64 machine for an x64 target, do not assume that a host-selected repository variant is suitable for that target. These paired examples assume an x64 preparation/deployment workflow; verify the architecture shown in the cache results.
 
 ## 4. Move the stick to the target
@@ -91,7 +105,7 @@ Wait for all commands and file activity to finish. The relevant layout is:
 
 ```text
 <USB>:\
-    Modules\OSDApps\0.35.0\OSDApps.psd1
+    Modules\OSDApps\0.36.0\OSDApps.psd1
     OSDApps\BuiltIn\...
     OSDApps\Packages\...          (when repository content was synced)
     OSDApps\CacheCatalog.json    (when repository content was synced)

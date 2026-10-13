@@ -35,6 +35,9 @@
     },
     {
       "Id": "MicrosoftTeams",
+      "Aliases": [
+        "Teams"
+      ],
       "DisplayName": "Microsoft Teams",
       "Source": "BuiltIn",
       "Vendor": "Microsoft",

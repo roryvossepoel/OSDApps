@@ -15,6 +15,9 @@ function Add-OSDApp {
         if($apps.Count -eq 0){throw 'No applications were supplied.'}
 
         foreach($app in $apps){
+            if($app -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $app -match '\.\.'){
+                throw "Invalid repository application Id '$app'."
+            }
             if($app -ieq 'Microsoft365Apps'){throw "'Microsoft365Apps' is a built-in application. Use Add-OSDAppMicrosoft365Apps instead."}
             if($app -ieq 'MicrosoftTeams' -or $app -ieq 'Teams'){throw "'MicrosoftTeams' is a built-in application. Use Add-OSDAppMicrosoftTeams instead."}
             if($app -ieq 'AdobeAcrobatUnified'){throw "'AdobeAcrobatUnified' is a built-in application. Use Add-OSDAppAdobeAcrobatUnified instead."}
@@ -55,9 +58,19 @@ function Add-OSDApp {
 
             try {
                 Sync-OSDAppCache -CatalogUri $sourceUri -CachePath $cachePath -Name $apps -Confirm:$false -ErrorAction Stop | Out-Null
+                $apps = @(Resolve-OSDAppCachedPackageId -CachePath $cachePath -Name $apps)
             }
             catch {
                 $syncError = $_.Exception.Message
+
+                if (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf) {
+                    try {
+                        $apps = @(Resolve-OSDAppCachedPackageId -CachePath $cachePath -Name $apps)
+                    }
+                    catch {
+                        throw "Repository synchronization failed ($syncError). Cached repository identities cannot be resolved safely: $($_.Exception.Message)"
+                    }
+                }
 
                 # Only fall back when *every* requested archive is present and
                 # matches the SHA-256 recorded in the local cache catalog.
@@ -93,6 +106,7 @@ function Add-OSDApp {
                 throw 'No cached repository catalog is available. Configure CatalogUri and synchronize first, or attach a USB drive with a populated OSDApps cache.'
             }
 
+            $apps = @(Resolve-OSDAppCachedPackageId -CachePath $cachePath -Name $apps)
             $cachedPackages = @(Test-OSDAppRepositoryCache -CachePath $cachePath -Name $apps)
             $unavailable = @($apps | Where-Object {
                 $requestedName = $_

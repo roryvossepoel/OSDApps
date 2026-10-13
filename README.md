@@ -27,11 +27,11 @@ The CLI owns configuration and automation. The Viewer does not add or remove app
 
 ## Install from PowerShell Gallery
 
-**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin the published **0.35.0** release:
+**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin the published **0.36.0** release:
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.35.0 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.35.0 -Force
+Install-Module OSDApps -RequiredVersion 0.36.0 -Scope CurrentUser -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.36.0 -Force
 ```
 
 For offline WinPE, save the module to USB first; see [Prepare a USB cache](Examples/Prepare-UsbCache.md). PowerShellGet is the documented WinPE/Windows PowerShell 5.1 installation path. `Install-PSResource` is an alternative only on a machine where PSResourceGet is already available.
@@ -72,6 +72,15 @@ For a complete workflow, use the [online WinPE example](Examples/WinPE-Online.md
 The six built-ins are **Microsoft 365 Apps, Microsoft Teams, Adobe Acrobat Unified, Google Chrome Enterprise, Mozilla Firefox Enterprise and Cisco Webex**. Their supported architectures and configuration options differ; see [Built-in applications](docs/built-in-apps.md).
 
 Repository apps use `Add-OSDApp -Name <Id>`. Configure your own `CatalogUri` first, or use a previously synchronized repository cache with `-SkipCacheRefresh`. Names such as Notepad++ and Omnissa Horizon Client in the test reports are **example repository packages**, not bundled built-ins. See [Repository applications](docs/repository.md).
+
+Long-lived cache media can be audited without mutation using
+`Get-OSDAppCacheHealth`. Repository owners can declare retired aliases, preview
+complete desired-state reconciliation with
+`Sync-OSDAppRepository -Prune -WhatIf`, and optionally retain valid canonical
+packages with `-PinnedId`.
+Replacements are hash-validated before the transactional commit; selective
+synchronization remains non-destructive. See [cache health and
+reconciliation](docs/repository.md#cache-health-and-reconciliation).
 
 OSDApps does not bundle or redistribute vendor installer payloads. Built-ins are downloaded directly from their vendors; repository content is the repository owner's responsibility.
 

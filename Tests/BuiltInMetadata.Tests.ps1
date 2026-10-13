@@ -20,6 +20,16 @@ Describe 'Built-in metadata' {
         @($ids | Select-Object -Unique).Count | Should -Be $ids.Count
     }
 
+    It 'uses unique cache aliases that never collide with canonical ids' {
+        $ids = @($script:metadata.Applications.Id)
+        $aliases = @($script:metadata.Applications | ForEach-Object { @($_.Aliases) } | Where-Object { $_ })
+        @($aliases | Select-Object -Unique).Count | Should -Be $aliases.Count
+        foreach ($alias in $aliases) {
+            $alias | Should -Not -BeIn $ids
+            $alias | Should -Match '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+        }
+    }
+
     It 'contains required fields for every built-in' {
         foreach ($app in @($script:metadata.Applications)) {
             $app.Id | Should -Not -BeNullOrEmpty
