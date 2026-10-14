@@ -45,9 +45,10 @@ Describe 'Microsoft 365 Apps PreInstall configuration handling' {
         Get-Content -LiteralPath $localConfig -Raw | Should -Match 'id="latest"'
     }
 
-    It 'uses the guarded helper in the Office PreInstall acquisition route' {
+    It 'uses an isolated generation configuration in the Office PreInstall acquisition route' {
         $runtime = Get-Content -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'Runtime\Invoke-OSDAppPreInstall.ps1') -Raw
-        $runtime | Should -Match 'Copy-OfficeConfigurationToCache -LocalConfig \$localConfig -AcquireConfig \$acquireConfig'
-        [regex]::IsMatch($runtime, 'Copy-Item -LiteralPath \$localConfig -Destination \$acquireConfig') | Should -BeFalse
+        $runtime | Should -Match 'Set-OfficeDownloadSourcePath -SourcePath \$localConfig -DestinationPath \$downloadConfig'
+        $runtime | Should -Match 'Test-OfficeCacheGeneration -OfficeRoot \$transactionRoot'
+        [regex]::IsMatch($runtime, 'Copy-OfficeConfigurationToCache -LocalConfig \$localConfig -AcquireConfig \$acquireConfig') | Should -BeFalse
     }
 }

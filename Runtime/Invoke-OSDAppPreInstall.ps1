@@ -52,6 +52,39 @@ function Write-PreInstallLog {
     Add-Content -LiteralPath $logPath -Value $line -Encoding UTF8
 }
 
+function Stop-PreInstallProcessTree {
+    param(
+        [Parameter(Mandatory)][System.Diagnostics.Process]$Process,
+        [ValidateRange(1,30)][int]$TimeoutSeconds = 5
+    )
+
+    try { $Process.Refresh() } catch {}
+    if ($Process.HasExited) { return $true }
+
+    # setup.exe can leave Office acquisition child processes behind. Use the
+    # Windows process-tree terminator, but bound that helper as well so the
+    # PreInstall timeout can never turn into another unbounded wait.
+    $taskKillPath = Join-Path $env:SystemRoot 'System32\taskkill.exe'
+    if (Test-Path -LiteralPath $taskKillPath -PathType Leaf) {
+        try {
+            $taskKill = Start-Process -FilePath $taskKillPath -ArgumentList @('/PID', $Process.Id, '/T', '/F') -WindowStyle Hidden -PassThru
+            if (-not $taskKill.WaitForExit($TimeoutSeconds * 1000)) {
+                try { $taskKill.Kill() } catch {}
+            }
+        }
+        catch {}
+    }
+
+    try { $Process.Refresh() } catch {}
+    if (-not $Process.HasExited) {
+        try { $Process.Kill() } catch {}
+    }
+
+    try { [void]$Process.WaitForExit($TimeoutSeconds * 1000) } catch {}
+    try { $Process.Refresh() } catch {}
+    return [bool]$Process.HasExited
+}
+
 function Write-PreInstallResult {
     param(
         [Parameter(Mandatory)][ValidateSet('Succeeded','CompletedWithErrors','Failed')][string]$Status,
@@ -120,6 +153,35 @@ function Get-OfficeCacheVersion {
     $versions=@(Get-ChildItem -LiteralPath $dataPath -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } | ForEach-Object { try { [pscustomobject]@{Name=$_.Name;Version=[version]$_.Name} } catch{} } | Sort-Object Version -Descending)
     if ($versions.Count -gt 0) { return $versions[0].Name }
     return $null
+}
+
+function Test-OfficeCacheGeneration {
+    param(
+        [Parameter(Mandatory)][string]$OfficeRoot,
+        [Parameter(Mandatory)][string]$ExpectedVersion,
+        [ValidateSet('x64','x86')][string]$Architecture='x64'
+    )
+    $dataPath=Join-Path $OfficeRoot 'Office\Data';$prefix=if($Architecture -eq 'x86'){'v32'}else{'v64'}
+    $versions=@(Get-ChildItem -LiteralPath $dataPath -Directory -ErrorAction SilentlyContinue|Where-Object{$_.Name -match '^\d+\.\d+\.\d+\.\d+$'})
+    if($versions.Count -ne 1){throw "Expected exactly one Office version directory; found $($versions.Count)."}
+    if($versions[0].Name -ne $ExpectedVersion){throw "Office cache version '$($versions[0].Name)' does not match '$ExpectedVersion'."}
+    if(@(Get-ChildItem -LiteralPath $versions[0].FullName -File -Recurse -ErrorAction Stop).Count -eq 0){throw 'The active Office version directory contains no files.'}
+    $sharedCab=Join-Path $dataPath "$prefix.cab";$versionCab=Join-Path $dataPath ("{0}_{1}.cab" -f $prefix,$ExpectedVersion)
+    if(-not(Test-Path -LiteralPath $sharedCab -PathType Leaf)){throw "$prefix.cab is missing."}
+    if(-not(Test-Path -LiteralPath $versionCab -PathType Leaf)){throw "The version-specific $prefix CAB is missing."}
+    $sharedHash=(Get-FileHash -LiteralPath $sharedCab -Algorithm SHA256).Hash;$versionHash=(Get-FileHash -LiteralPath $versionCab -Algorithm SHA256).Hash
+    if($sharedHash -ne $versionHash){throw "$prefix.cab does not match the active version-specific CAB."}
+    $true
+}
+
+function Set-OfficeDownloadSourcePath {
+    param([Parameter(Mandatory)][string]$SourcePath,[Parameter(Mandatory)][string]$DestinationPath)
+    [xml]$xml=Get-Content -LiteralPath $SourcePath -Raw -Encoding UTF8
+    $add=$xml.Configuration.Add
+    if(-not $add){throw 'Office configuration does not contain an Add element.'}
+    $add.SetAttribute('SourcePath',(Split-Path -Path $DestinationPath -Parent))
+    $settings=[System.Xml.XmlWriterSettings]::new();$settings.Indent=$true;$settings.Encoding=[System.Text.UTF8Encoding]::new($false)
+    $writer=[System.Xml.XmlWriter]::Create($DestinationPath,$settings);try{$xml.Save($writer)}finally{$writer.Dispose()}
 }
 
 function Get-MicrosoftTeamsPackageVersion {
@@ -272,7 +334,13 @@ function Copy-OfficeConfigurationToCache {
 
 function Test-LocalOfficeSource {
     param([string]$Root)
-    return ((Test-Path -LiteralPath (Join-Path $Root 'setup.exe') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Root 'configuration.xml') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Root 'Office\Data') -PathType Container))
+    try{
+        $cacheInfoPath=Join-Path $Root 'CacheInfo.json'
+        if(-not(Test-Path -LiteralPath $cacheInfoPath -PathType Leaf)){return $false}
+        $cacheInfo=Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8|ConvertFrom-Json
+        Test-OfficeCacheGeneration -OfficeRoot $Root -ExpectedVersion ([string]$cacheInfo.Version) -Architecture $(if([string]$cacheInfo.Architecture -eq 'x86'){'x86'}else{'x64'})|Out-Null
+        return $true
+    }catch{return $false}
 }
 
 function Test-LocalMicrosoftTeamsSource {
@@ -521,25 +589,39 @@ try {
                     throw 'Microsoft 365 Apps has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
 
+                $transactionRoot=$null;$backupRoot=$null
                 try {
-                    $acquireConfig=Join-Path $acquireRoot 'configuration.xml'
-                    Copy-OfficeConfigurationToCache -LocalConfig $localConfig -AcquireConfig $acquireConfig
-                    $setupPath=Join-Path $acquireRoot 'setup.exe'
+                    $transactionRoot="$acquireRoot.osdapps-new-$([guid]::NewGuid().ToString('N'))"
+                    $backupRoot="$acquireRoot.osdapps-old-$([guid]::NewGuid().ToString('N'))"
+                    New-Item -ItemType Directory -Path $transactionRoot -Force | Out-Null
+                    $acquireConfig=Join-Path $transactionRoot 'configuration.xml'
+                    Copy-Item -LiteralPath $localConfig -Destination $acquireConfig -Force
+                    $downloadConfig=Join-Path $transactionRoot 'download-configuration.xml'
+                    Set-OfficeDownloadSourcePath -SourcePath $localConfig -DestinationPath $downloadConfig
+                    $setupPath=Join-Path $transactionRoot 'setup.exe'
                     $odtUri=if($app.OfficeDeploymentToolUri){[string]$app.OfficeDeploymentToolUri}else{'https://officecdn.microsoft.com/pr/wsus/setup.exe'}
-                    if(-not (Test-Path -LiteralPath $setupPath -PathType Leaf)){Save-PreInstallDownload -Uri $odtUri -DestinationPath $setupPath -Id 'Microsoft365Apps' -Description 'Office Deployment Tool' -TimeoutMinutes 5}
+                    Save-PreInstallDownload -Uri $odtUri -DestinationPath $setupPath -Id 'Microsoft365Apps' -Description 'Office Deployment Tool' -TimeoutMinutes 5
                     Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path $setupPath
                     if(-not (Test-InternetEndpoint -Uri $odtUri)){throw 'Microsoft 365 Apps CDN is not reachable.'}
                     $previous=Get-OfficeCacheVersion -OfficeRoot $acquireRoot
                     Write-PreInstallLog -Event 'BuiltInRefreshStart' -Message 'Synchronizing Microsoft 365 Apps content.' -Data @{Id='Microsoft365Apps';Target=if($usbRoot){'USB'}else{'Local'};PreviousVersion=$previous;TimeoutMinutes=$OfficeRefreshTimeoutMinutes}
-                    $process=Start-Process -FilePath $setupPath -ArgumentList @('/download',$acquireConfig) -WorkingDirectory $acquireRoot -PassThru
+                    $process=Start-Process -FilePath $setupPath -ArgumentList @('/download',$downloadConfig) -WorkingDirectory $transactionRoot -PassThru
                     $sw=[System.Diagnostics.Stopwatch]::StartNew()
-                    while(-not $process.HasExited){if($sw.Elapsed.TotalMinutes -ge $OfficeRefreshTimeoutMinutes){try{$process.Kill();$process.WaitForExit()}catch{};throw "Office Deployment Tool cache refresh exceeded the $OfficeRefreshTimeoutMinutes minute timeout."};Start-Sleep -Seconds 2;$process.Refresh()}
+                    while(-not $process.HasExited){if($sw.Elapsed.TotalMinutes -ge $OfficeRefreshTimeoutMinutes){$terminated=Stop-PreInstallProcessTree -Process $process -TimeoutSeconds 5;throw "Office Deployment Tool cache refresh exceeded the $OfficeRefreshTimeoutMinutes minute timeout. ProcessTreeTerminated=$terminated"};Start-Sleep -Seconds 2;$process.Refresh()}
                     $sw.Stop()
                     if($process.ExitCode -ne 0){throw "Office Deployment Tool exited with code $($process.ExitCode)."}
-                    $version=Get-OfficeCacheVersion -OfficeRoot $acquireRoot
+                    $version=Get-OfficeCacheVersion -OfficeRoot $transactionRoot
                     if(-not $version){throw 'Office acquisition completed but Office\Data does not contain a resolvable version.'}
+                    Test-OfficeCacheGeneration -OfficeRoot $transactionRoot -ExpectedVersion $version -Architecture $app.Architecture | Out-Null
                     $cacheInfo=[ordered]@{Id='Microsoft365Apps';Cached=[bool]$usbRoot;Version=$version;Architecture=$app.Architecture;Channel=$app.Channel;ProductId=$app.ProductId;Language=@($app.Language);SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';Updated=($previous -ne $version);SyncedAt=(Get-Date).ToUniversalTime().ToString('o')}
-                    $cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json'; $cacheInfo | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
+                    $cacheInfoPath=Join-Path $transactionRoot 'CacheInfo.json';$cacheInfo|ConvertTo-Json -Depth 10|Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
+                    Remove-Item -LiteralPath $downloadConfig -Force
+                    $hadPrevious=Test-Path -LiteralPath $acquireRoot -PathType Container
+                    if($hadPrevious){Move-Item -LiteralPath $acquireRoot -Destination $backupRoot -ErrorAction Stop}
+                    try{Move-Item -LiteralPath $transactionRoot -Destination $acquireRoot -ErrorAction Stop}
+                    catch{if($hadPrevious -and (Test-Path -LiteralPath $backupRoot -PathType Container) -and -not(Test-Path -LiteralPath $acquireRoot)){Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue};throw}
+                    if(Test-Path -LiteralPath $backupRoot -PathType Container){Remove-Item -LiteralPath $backupRoot -Recurse -Force}
+                    $setupPath=Join-Path $acquireRoot 'setup.exe';$acquireConfig=Join-Path $acquireRoot 'configuration.xml';$cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json';$removedVersions=@()
                     if($usbRoot){
                         Copy-Item -LiteralPath $setupPath -Destination (Join-Path $localRoot 'setup.exe') -Force
                         Copy-Item -LiteralPath $acquireConfig -Destination $localConfig -Force
@@ -547,8 +629,10 @@ try {
                         Copy-DirectoryReplace -Source (Join-Path $acquireRoot 'Office') -Destination (Join-Path $localRoot 'Office')
                     }
                     $versionChanged = ($previous -ne $version)
-                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps content is ready for installation.' -Data @{Id='Microsoft365Apps';Version=$version;CacheSynchronized=[bool]$usbRoot;VersionChanged=$versionChanged;SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
+                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps content is ready for installation.' -Data @{Id='Microsoft365Apps';Version=$version;CacheSynchronized=[bool]$usbRoot;VersionChanged=$versionChanged;RemovedVersions=$removedVersions;SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {
+                    if($transactionRoot -and (Test-Path -LiteralPath $transactionRoot)){Remove-Item -LiteralPath $transactionRoot -Recurse -Force -ErrorAction SilentlyContinue}
+                    if($backupRoot -and (Test-Path -LiteralPath $backupRoot -PathType Container) -and -not(Test-Path -LiteralPath $acquireRoot)){Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue}
                     if(Test-LocalOfficeSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Microsoft365Apps';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft 365 Apps acquisition failed and no staged fallback is available. $($_.Exception.Message)"
                 }

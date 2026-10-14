@@ -52,7 +52,7 @@ function Copy-OSDAppContent {
                 Remove-Item -LiteralPath $target -Recurse -Force
             }
             Copy-Item -LiteralPath $source -Destination $target -Recurse -Force
-            Write-OSDAppLog -LogPath $clientLogPath -Component 'Stage' -Event 'PackageStaged' -Message 'Package copied to offline Windows volume.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Destination = $target }
+            Write-OSDAppLog -LogPath $clientLogPath -Component 'Stage' -Event 'PackageStaged' -Message 'Package copied to offline Windows volume.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; PackageType = if ($package.PackageType) { [string]$package.PackageType } else { 'Application' }; Destination = $target }
         }
 
         if (Test-Path -LiteralPath $deviceManifestPath -PathType Leaf) {

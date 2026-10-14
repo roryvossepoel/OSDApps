@@ -77,6 +77,7 @@ Each deployable package keeps its metadata directly beside `Package.zip`.
   "Vendor": "Example Software",
   "Version": "1.0.0",
   "Architecture": "x64",
+  "PackageType": "Application",
   "SuccessCodes": [
     0,
     3010
@@ -100,6 +101,23 @@ updated manifest and run `Sync-OSDAppRepository -Name <Id>` on the Windows
 development machine (or normal WinPE repository sync) to refresh its cached
 metadata. The existing cache archive is reused when its SHA-256 still matches.
 Previously staged `DeviceManifest.json` files are not silently rewritten.
+
+`PackageType` is optional classification metadata with two supported values:
+`Application` and `Script`. When it is absent, OSDApps uses `Application` for
+backward compatibility. Both types use the same `Package/Install.ps1` entry
+point, SHA-256 checks, cache and staging paths, ordered SetupComplete queue,
+timeouts, success codes and failure handling. The value does not enable a
+different or less trusted execution path.
+
+When an existing package variant is republished, omitting `-PackageType`
+preserves its current classification. A newly published package defaults to
+`Application`.
+
+Use `Script` for machine-context configuration, debloat or remediation logic
+that must run once during SetupComplete. Such scripts run as SYSTEM, must not
+restart or shut down Windows, and should not target `HKCU`: no normal end-user
+profile is active in this phase. OSDApps records the result but does not provide
+automatic rollback for changes made by a script.
 
 The package URL is derived from the manifest location. A separate `SourcePath` property is not used.
 
@@ -245,6 +263,7 @@ Add-OSDAppPackage `
     -Vendor 'Example Software' `
     -Version 1.0.0 `
     -Architecture x64 `
+    -PackageType Application `
     -PackagePath C:\OSDApps\Build\ExampleApp\Package.zip `
     -RepositoryPath C:\OSDApps\Repository
 ```
@@ -255,12 +274,33 @@ The helper:
 2. creates `Apps/<Id>/<Version>/<Architecture>`;
 3. copies `Package.zip`;
 4. calculates SHA-256;
-5. writes `manifest.json`;
+5. writes `manifest.json`, including the selected package type;
 6. validates and records optional retired aliases;
 7. adds or replaces the architecture reference in `catalog.json`.
 
 When updating an existing application, omitting `-Alias` preserves its aliases.
 Supplying an explicitly empty alias array removes them.
+
+Publish a script package with the same authoring commands:
+
+```powershell
+New-OSDAppPackage `
+    -Id ConfigureWindows `
+    -Version 1.0.0 `
+    -SourcePath C:\OSDApps\Packages\ConfigureWindows `
+    -OutputPath C:\OSDApps\Build\ConfigureWindows
+
+Add-OSDAppPackage `
+    -Id ConfigureWindows `
+    -DisplayName 'Configure Windows' `
+    -Version 1.0.0 `
+    -Architecture x64 `
+    -PackageType Script `
+    -PackagePath C:\OSDApps\Build\ConfigureWindows\Package.zip `
+    -RepositoryPath C:\OSDApps\Repository
+```
+
+Stage it with the existing command: `Add-OSDApp -Name ConfigureWindows`.
 
 ## Validation
 

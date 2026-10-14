@@ -86,6 +86,7 @@ function Get-OSDApp {
             Aliases       = if ($onlinePackage -and $onlinePackage.PSObject.Properties.Name -contains 'Aliases') { @($onlinePackage.Aliases) } elseif ($cachedPackage -and $cachedPackage.PSObject.Properties.Name -contains 'Aliases') { @($cachedPackage.Aliases) } else { @() }
             DisplayName   = if ($onlinePackage -and $onlinePackage.DisplayName) { $onlinePackage.DisplayName } elseif ($cachedPackage) { $cachedPackage.DisplayName } else { $id }
             Source        = 'Repository'
+            PackageType   = if ($cachedPackage -and $cachedPackage.PackageType) { [string]$cachedPackage.PackageType } elseif ($onlinePackage -and $onlinePackage.PackageType) { [string]$onlinePackage.PackageType } else { 'Application' }
             Vendor        = if ($onlinePackage -and $onlinePackage.Vendor) { [string]$onlinePackage.Vendor } elseif ($cachedPackage -and $cachedPackage.Vendor) { [string]$cachedPackage.Vendor } else { $null }
             OnlineVersion = if ($onlinePackage) { $onlinePackage.Version } else { $null }
             CachedVersion = if ($cachedPackage) { $cachedPackage.Version } else { $null }
@@ -161,6 +162,7 @@ function Get-OSDApp {
             Name          = $builtIn.Id
             DisplayName   = $builtIn.DisplayName
             Source        = 'BuiltIn'
+            PackageType   = 'Application'
             OnlineVersion = 'Current'
             CachedVersion = if ($builtIn.Info) { $builtIn.Info.Version } else { $null }
             Version       = if ($builtIn.Info) { $builtIn.Info.Version } else { 'Current' }

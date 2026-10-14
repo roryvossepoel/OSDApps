@@ -61,6 +61,7 @@ function Test-OSDAppRepository {
                     ArchitectureValid     = $false
                     IdValid               = $false
                     SuccessCodesValid     = $false
+                    PackageTypeValid      = $false
                     ArchiveDefinitionValid= $false
                     DuplicateReference    = $duplicateReference
                     Orphaned              = $false
@@ -103,6 +104,15 @@ function Test-OSDAppRepository {
                 $successCodes.Count -gt 0 -and
                 @($successCodes | Where-Object { $null -eq ($_ -as [int]) }).Count -eq 0
             )
+            $packageType = if ($manifest.PSObject.Properties.Name -contains 'PackageType' -and
+                -not [string]::IsNullOrWhiteSpace([string]$manifest.PackageType)) {
+                [string]$manifest.PackageType
+            }
+            else { 'Application' }
+            $packageTypeValid = $packageType -in @('Application','Script')
+            if ($packageTypeValid) {
+                $packageType = if ($packageType -ieq 'Script') { 'Script' } else { 'Application' }
+            }
 
             [pscustomobject]@{
                 PSTypeName             = 'OSDApps.RepositoryValidation'
@@ -116,6 +126,8 @@ function Test-OSDAppRepository {
                 ArchitectureValid      = $architectureValid
                 IdValid                = $idValid
                 SuccessCodesValid      = $successCodesValid
+                PackageType            = $packageType
+                PackageTypeValid       = $packageTypeValid
                 ArchiveDefinitionValid = $archiveDefinitionValid
                 DuplicateReference     = $duplicateReference
                 Orphaned               = $false
@@ -128,6 +140,7 @@ function Test-OSDAppRepository {
                     $architectureValid -and
                     $idValid -and
                     $successCodesValid -and
+                    $packageTypeValid -and
                     $archiveDefinitionValid -and
                     -not $duplicateReference
                 )
@@ -160,6 +173,7 @@ function Test-OSDAppRepository {
                     ArchitectureValid      = $false
                     IdValid                = $false
                     SuccessCodesValid      = $false
+                    PackageTypeValid       = $false
                     ArchiveDefinitionValid = $false
                     DuplicateReference     = $false
                     Orphaned               = $true

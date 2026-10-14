@@ -219,6 +219,7 @@ function New-RunnerApplicationResult {
         DisplayName     = if ($App.DisplayName) { [string]$App.DisplayName } else { [string]$App.Id }
         Source          = [string]$App.Source
         Type            = if ($App.Type) { [string]$App.Type } else { $null }
+        PackageType     = if ($App.PackageType) { [string]$App.PackageType } else { 'Application' }
         Version         = if ($App.Version) { [string]$App.Version } elseif ($cacheInfo -and $cacheInfo.Version) { [string]$cacheInfo.Version } else { $null }
         Architecture    = if ($App.Architecture) { [string]$App.Architecture } elseif ($cacheInfo -and $cacheInfo.Architecture) { [string]$cacheInfo.Architecture } else { $null }
         Status          = $Status
@@ -707,6 +708,7 @@ try {
             Write-RunnerLog -LogPath $logPath -Event 'ApplicationInstallComplete' -Message 'Application processing completed.' -Data @{
                 Id = $app.Id
                 Source = $app.Source
+                PackageType = if ($app.PackageType) { [string]$app.PackageType } else { 'Application' }
                 DurationSeconds = [math]::Round($applicationStopwatch.Elapsed.TotalSeconds, 1)
             }
             Save-RunnerResult -Status Running
@@ -724,6 +726,7 @@ try {
             Write-RunnerLog -LogPath $logPath -Event 'ApplicationInstallFailed' -Level 'Error' -Message $failure.Message -Data @{
                 Id = $app.Id
                 Source = $app.Source
+                PackageType = if ($app.PackageType) { [string]$app.PackageType } else { 'Application' }
                 FailureType = $failure.FailureType
                 ContinueQueue = (-not $failure.Fatal)
                 DurationSeconds = [math]::Round($applicationStopwatch.Elapsed.TotalSeconds, 1)

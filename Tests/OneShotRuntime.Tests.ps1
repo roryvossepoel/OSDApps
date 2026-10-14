@@ -14,7 +14,8 @@ Describe 'One-shot fault-tolerant runtime' {
             param(
                 [Parameter(Mandatory)][string]$Stage,
                 [Parameter(Mandatory)][string]$Id,
-                [Parameter(Mandatory)][string]$InstallScript
+                [Parameter(Mandatory)][string]$InstallScript,
+                [ValidateSet('Application','Script')][string]$PackageType = 'Application'
             )
 
             $sourceRoot = Join-Path (Split-Path $Stage -Parent) ("Source-{0}-{1}" -f $Id, [guid]::NewGuid().ToString('N'))
@@ -32,6 +33,7 @@ Describe 'One-shot fault-tolerant runtime' {
                 DisplayName = $Id
                 Source = 'Repository'
                 Type = 'RepositoryPackage'
+                PackageType = $PackageType
                 Version = '1.0.0'
                 Architecture = 'x64'
                 Archive = [ordered]@{ Sha256 = $sha256 }
@@ -83,7 +85,7 @@ Describe 'One-shot fault-tolerant runtime' {
         $failedScript = "Set-Content -LiteralPath $(ConvertTo-SingleQuotedPowerShellLiteral $failedMarker) -Value 'attempted' -Encoding ASCII`r`nexit 42"
         $successScript = "Set-Content -LiteralPath $(ConvertTo-SingleQuotedPowerShellLiteral $successMarker) -Value 'attempted' -Encoding ASCII`r`nexit 0"
         $apps = @(
-            New-OneShotRepositoryPackage -Stage $stage -Id 'BrokenInstaller' -InstallScript $failedScript
+            New-OneShotRepositoryPackage -Stage $stage -Id 'BrokenInstaller' -InstallScript $failedScript -PackageType Script
             New-OneShotRepositoryPackage -Stage $stage -Id 'IndependentInstaller' -InstallScript $successScript
         )
         $fixture = New-OneShotDeploymentFixture -Root $root -Apps $apps
@@ -103,6 +105,8 @@ Describe 'One-shot fault-tolerant runtime' {
         @($result.Applications.Status) | Should -Be @('Failed','Succeeded')
         $result.Applications[0].ExitCode | Should -Be 42
         $result.Applications[0].FailureType | Should -Be 'InstallerFailed'
+        $result.Applications[0].PackageType | Should -Be 'Script'
+        $result.Applications[1].PackageType | Should -Be 'Application'
         (Get-Content -LiteralPath $fixture.LogPath -Raw) | Should -Match '\[InstallCompletedWithErrors\]'
     }
 

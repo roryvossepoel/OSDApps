@@ -32,10 +32,10 @@ if ($UsbRoot.TrimEnd('\') -ieq $env:SystemDrive) {
 $ModuleParent = Join-Path $UsbRoot 'Modules'
 New-Item -ItemType Directory -Path $ModuleParent -Force | Out-Null
 
-Save-Module -Name OSDApps -RequiredVersion 0.37.0 `
+Save-Module -Name OSDApps -RequiredVersion 0.38.0 `
     -Repository PSGallery -Path $ModuleParent -Force
 
-$ModulePath = Join-Path $ModuleParent 'OSDApps\0.37.0\OSDApps.psd1'
+$ModulePath = Join-Path $ModuleParent 'OSDApps\0.38.0\OSDApps.psd1'
 if (-not (Test-Path -LiteralPath $ModulePath -PathType Leaf)) {
     throw "Saved module not found: $ModulePath"
 }
@@ -105,7 +105,7 @@ Wait for all commands and file activity to finish. The relevant layout is:
 
 ```text
 <USB>:\
-    Modules\OSDApps\0.37.0\OSDApps.psd1
+    Modules\OSDApps\0.38.0\OSDApps.psd1
     OSDApps\BuiltIn\...
     OSDApps\Packages\...          (when repository content was synced)
     OSDApps\CacheCatalog.json    (when repository content was synced)

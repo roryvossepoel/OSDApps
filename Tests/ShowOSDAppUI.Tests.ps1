@@ -322,6 +322,17 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         }
     }
 
+    It 'labels repository scripts separately without changing their execution source' {
+        InModuleScope OSDApps {
+            (Get-OSDAppUIPackageType -Application ([pscustomobject]@{Source='Repository';PackageType='Script'})) |
+                Should -Be 'Script'
+            (Get-OSDAppUIPackageType -Application ([pscustomobject]@{Source='Repository'})) |
+                Should -Be 'Application'
+            (Get-OSDAppUIPackageType -Application ([pscustomobject]@{Source='BuiltIn'})) |
+                Should -Be 'Application'
+        }
+    }
+
     It 'honors the staged display name while resolving Vendor from catalog metadata' {
         InModuleScope OSDApps {
             $staged = [pscustomobject]@{
@@ -373,7 +384,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source | Should -Match "stagedList.Columns.Add\('Display Name'"
         $source | Should -Match "catalogList.Columns.Add\('Display Name'"
         $source | Should -Match "cacheList.Columns.Add\('Display Name'"
-        $source | Should -Match "'Staged'\s+\{ @\(65,0,90,100,125,185,105\) \}"
+        $source | Should -Match "'Staged'\s+\{ @\(65,0,90,95,100,125,185,105\) \}"
         $source | Should -Not -Match '(?i)\bInvoke-OSDAppUIStage\b'
     }
 
@@ -408,11 +419,12 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source | Should -Match '\$State\.ContextToolTip\.SetToolTip'
     }
 
-    It 'adds cache Vendor after Source without breaking numeric Size sorting' {
+    It 'adds package type and cache Vendor without breaking numeric Size sorting' {
         $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
-        $source | Should -Match "'Cache'\s+\{ @\(0,75,88,175,95,115,74,122\) \}"
+        $source | Should -Match "'Cache'\s+\{ @\(0,75,95,88,175,95,115,74,122\) \}"
+        $source | Should -Match "cacheList.Columns.Add\('Package Type',95\)"
         $source | Should -Match "cacheList.Columns.Add\('Vendor',88\)"
-        $source | Should -Match 'elseif \(\$Key -eq ''Cache'' -and \$column -eq 6\)'
+        $source | Should -Match 'elseif \(\$Key -eq ''Cache'' -and \$column -eq 7\)'
         $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$entry'
         $source | Should -Match '\$item.SubItems.Add\(\[string\]\$displayInfo.Vendor\)'
         $source | Should -Not -Match '(?i)\bRemove-OSDAppStaging\b'

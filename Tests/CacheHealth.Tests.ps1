@@ -148,6 +148,30 @@ Describe 'Desired-state cache health' {
         $entry.Pinned | Should -BeTrue
     }
 
+    It 'classifies a hybrid Microsoft 365 Apps generation as corrupt' {
+        $cache = Join-Path $TestDrive 'HybridOfficeCache'
+        $root = Join-Path $cache 'BuiltIn\Microsoft365Apps'
+        $data = Join-Path $root 'Office\Data'
+        $version = '16.0.20430.20146'
+        $versionRoot = Join-Path $data $version
+        New-Item -ItemType Directory -Path $versionRoot -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $root 'setup.exe') -Value setup
+        Set-Content -LiteralPath (Join-Path $root 'configuration.xml') -Value '<Configuration />'
+        Set-Content -LiteralPath (Join-Path $versionRoot 'stream.dat') -Value payload
+        Set-Content -LiteralPath (Join-Path $data 'v64.cab') -Value old
+        Set-Content -LiteralPath (Join-Path $data "v64_$version.cab") -Value current
+        @{Id='Microsoft365Apps';Version=$version;Architecture='x64'} | ConvertTo-Json |
+            Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Encoding UTF8
+
+        $health = Get-OSDAppCacheHealth -CachePath $cache -Offline
+        $entry = @($health.Entries | Where-Object Id -eq 'Microsoft365Apps')[0]
+
+        $health.Healthy | Should -BeFalse
+        $entry.State | Should -Be 'Corrupt'
+        $entry.Integrity | Should -Be 'Corrupt'
+        $entry.Reason | Should -Match 'does not match the active version-specific CAB'
+    }
+
     It 'marks an unknown requested pin as unhealthy instead of silently ignoring it' {
         $cache = Join-Path $TestDrive 'UnknownPinCache'
         New-Item -ItemType Directory -Path $cache -Force | Out-Null

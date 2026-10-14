@@ -128,6 +128,17 @@ function Add-OSDApp {
         $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
         Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false -ErrorAction Stop | Out-Null
 
-        foreach($app in $apps){[pscustomobject]@{PSTypeName='OSDApps.StagedApp';Name=$app;CachePath=$cachePath;WindowsPath=$resolvedWindowsPath;StagedPath=(Join-Path $resolvedWindowsPath $stagedRelativePath);Source='Repository'}}
+        foreach($app in $apps){
+            $stagedEntry = @($manifest.Apps | Where-Object { $_.Id -ieq $app } | Select-Object -First 1)
+            [pscustomobject]@{
+                PSTypeName='OSDApps.StagedApp'
+                Name=$app
+                PackageType=if($stagedEntry.Count -gt 0 -and $stagedEntry[0].PackageType){[string]$stagedEntry[0].PackageType}else{'Application'}
+                CachePath=$cachePath
+                WindowsPath=$resolvedWindowsPath
+                StagedPath=(Join-Path $resolvedWindowsPath $stagedRelativePath)
+                Source='Repository'
+            }
+        }
     }
 }

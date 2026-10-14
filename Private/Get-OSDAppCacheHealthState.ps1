@@ -383,6 +383,25 @@ function Get-OSDAppCacheHealthState {
             $metadataId
         }
         $isPinned = $false
+        $officeGenerationCorrupt = $false
+        $officeGenerationReason = $null
+        if ($canonicalId -eq 'Microsoft365Apps' -and $folderIsCanonical) {
+            try {
+                $officeGeneration = Test-OSDAppOfficeCacheGeneration `
+                    -OfficeRoot $item.CachePath `
+                    -ExpectedVersion ([string]$item.Version) `
+                    -Architecture $(if ([string]$item.Architecture -eq 'x86') { 'x86' } else { 'x64' }) `
+                    -PassThru
+                if (-not $officeGeneration.Valid) {
+                    $officeGenerationCorrupt = $true
+                    $officeGenerationReason = @($officeGeneration.Errors) -join ' '
+                }
+            }
+            catch {
+                $officeGenerationCorrupt = $true
+                $officeGenerationReason = $_.Exception.Message
+            }
+        }
 
         if ($folderIsAlias) {
             $state = 'Renamed'; $action = 'MigrateOrRemove'; $reason = "'$topLevelId' is an alias of canonical Id '$canonicalId'."
@@ -396,6 +415,9 @@ function Get-OSDAppCacheHealthState {
         elseif ($metadataId -ine $canonicalId) {
             $state = 'Corrupt'; $action = 'Refresh'; $reason = "CacheInfo.json Id '$metadataId' does not match canonical folder '$canonicalId'."
         }
+        elseif ($officeGenerationCorrupt) {
+            $state = 'Corrupt'; $action = 'Refresh'; $reason = "The Microsoft 365 Apps cache generation is inconsistent. $officeGenerationReason"
+        }
         elseif (-not $item.Valid) {
             $state = 'Incomplete'; $action = 'Refresh'; $reason = 'Required built-in payload files are missing.'
         }
@@ -406,7 +428,7 @@ function Get-OSDAppCacheHealthState {
         $entries.Add((New-CacheHealthEntry `
             -Id $topLevelId -CanonicalId $canonicalId -DisplayName $item.DisplayName `
             -Source 'BuiltIn' -Version $item.Version -Architecture $item.Architecture `
-            -State $state -Integrity $(if ($item.Valid) { 'Valid' } else { 'Missing' }) `
+            -State $state -Integrity $(if ($officeGenerationCorrupt) { 'Corrupt' } elseif ($item.Valid) { 'Valid' } else { 'Missing' }) `
             -Action $action -Reason $reason -Path $item.CachePath `
             -Desired:$folderIsCanonical -Pinned:$isPinned))
     }

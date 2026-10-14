@@ -226,6 +226,26 @@ The offline log demonstrates the USB cache was **detected** during SetupComplete
 
 **Remaining limitations:** ARM64 MSI retrieval, signature and installation have **not** been field-validated; the combined seven-app SetupComplete scenario has not been run. USB cache re-use across an additional **online SetupComplete** run and recovery under other network failures are also not established by these tests.
 
+## Repository script packages and bounded Office fallback — 0.38.0
+
+**Executed:** 13–14 October 2026 on x64 hardware, using OSDApps **0.38.0** from PR #26. The validation package was created externally for the test and is intentionally not included as a built-in or example package. It used `PackageType=Script`, architecture `any`, a SHA-256 protected `Package.zip`, an `Install.ps1` entry point and a harmless HKLM marker written as `NT AUTHORITY\SYSTEM`.
+
+| Test | Verified observation | Result |
+| --- | --- | --- |
+| USB preparation | Script metadata, archive hash and package layout valid; existing repository packages and hashes unchanged | Pass |
+| Script-only SetupComplete | One repository script staged in WinPE; runtime SHA-256 validation succeeded; script returned 0; marker confirmed SYSTEM execution; `Latest.json` succeeded; staging and cleanup helper removed; no retry task, service or RunOnce entry remained | Pass |
+| Mixed queue | Six built-ins, two repository applications and one repository script executed in the intended order; all nine completed successfully; application entries retained `PackageType=Application` and the script retained `PackageType=Script` | Pass |
+| One-shot cleanup | SetupComplete completed once, scheduled normal `OnSuccess` cleanup and left no automatic retry mechanism | Pass |
+| Office refresh fallback | ODT exceeded its configured 20-minute refresh timeout; the previously staged Office payload was used successfully and Microsoft 365 Apps installed offline with exit code 0 | Pass, with timeout hardening identified |
+| Bounded process-tree termination | Post-fix physical test terminated one parent and two child processes in **0.42 s**; helper reported success and no process remained | Pass |
+| Post-interruption cache inspection | Eight active entries; zero obsolete, orphaned, renamed, incomplete or corrupt entries; Office setup signature valid; recorded build `16.0.20430.20146` present; no partial/temp download files detected | Pass |
+
+The mixed deployment reported **PreInstall 2022.7 s** and **Runner 448.9 s** (measured Windows total **2471.6 s / 41:11.6**). Microsoft 365 Apps accounted for **1992.5 s** of PreInstall. Log timestamps showed the 20-minute ODT timeout was reached, but the old parameterless `WaitForExit()` then added approximately 13 minutes while stopping the process. This was a timeout-enforcement defect, not a script-package failure: fallback installation and the remaining queue still succeeded.
+
+The follow-up change terminates the ODT process tree and bounds both the `taskkill.exe` helper and `WaitForExit` calls to five seconds. File-backed regression tests reject any parameterless `WaitForExit()` in PreInstall. CI run 313 passed on both PowerShell 7 and Windows PowerShell 5.1. The physical process-tree test exercises the termination helper directly; the entire 20-minute external network/CDN disturbance was not recreated.
+
+The Office data directory contained the previous build `16.0.20326.20142` and the current recorded build `16.0.20430.20146`. That retained previous version was not classified as an incomplete cache entry and was not removed during this read-only validation.
+
 ## Validated built-ins and remaining variants
 
 The 0.30.0 end-to-end tests above cover Microsoft 365 Apps, Microsoft Teams, Adobe Acrobat Unified **x64**, and Google Chrome Enterprise **x64**. The earlier validation matrix also listed Mozilla Firefox Enterprise Rapid x64 as validated; it was **not** part of these four 0.30.0 runs.

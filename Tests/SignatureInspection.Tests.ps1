@@ -136,7 +136,7 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
         $source | Should -Match 'SkipSignatureVerification'
         $source | Should -Match 'SkipSignatureVerification:\$State.SkipSignatureVerification'
         $source | Should -Match "Columns.Add\('Signature'"
-        $source | Should -Match "'Cache'\s+\{ @\(0,75,88,175,95,115,74,122\) \}"
+        $source | Should -Match "'Cache'\s+\{ @\(0,75,95,88,175,95,115,74,122\) \}"
         $source | Should -Match 'Get-OSDAppUISignatureLabel -Status'
         $source | Should -Match '-Source \(\[string\]\$entry.Source\)'
         $source | Should -Not -Match '(?i)\bSet-OSDAppConfiguration\b'

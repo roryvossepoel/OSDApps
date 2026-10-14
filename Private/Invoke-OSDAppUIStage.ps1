@@ -50,7 +50,7 @@ function Format-OSDAppUIStagedDetails {
     # Whitelist descriptive manifest fields; do not display arbitrary scripts,
     # custom arguments, installer command lines or authenticated download URLs.
     foreach ($key in @(
-        'DisplayName','Id','Source','Type','Version','Architecture','Channel',
+        'DisplayName','Id','Source','PackageType','Type','Version','Architecture','Channel',
         'Language','ProductId','SharedComputerLicensing','DeviceBasedLicensing',
         'UpdatesEnabled','InstallMeetingAddin','IncludeVisio','IncludeProject',
         'ExcludeApp','AutoStartWithWindows','PreventPreLoginUpdates',

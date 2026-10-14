@@ -49,6 +49,7 @@ function Get-OSDAppCache {
                     DisplayName  = if ($package.DisplayName) { [string]$package.DisplayName } else { [string]$package.Id }
                     Vendor       = if ($package.Vendor) { [string]$package.Vendor } else { $null }
                     Source       = 'Repository'
+                    PackageType  = if ($package.PackageType) { [string]$package.PackageType } else { 'Application' }
                     Version      = [string]$package.Version
                     Architecture = [string]$package.Architecture
                     Channel      = $null
@@ -84,9 +85,13 @@ function Get-OSDAppCache {
 
                 $payloadValid = switch ([string]$info.Id) {
                     'Microsoft365Apps' {
-                        (Test-Path -LiteralPath (Join-Path $entryRoot 'setup.exe') -PathType Leaf) -and
-                        (Test-Path -LiteralPath (Join-Path $entryRoot 'configuration.xml') -PathType Leaf) -and
-                        (Test-Path -LiteralPath (Join-Path $entryRoot 'Office\Data') -PathType Container)
+                        $officeArchitecture = if ([string]$info.Architecture -eq 'x86') { 'x86' } else { 'x64' }
+                        $officeValidation = Test-OSDAppOfficeCacheGeneration `
+                            -OfficeRoot $entryRoot `
+                            -ExpectedVersion ([string]$info.Version) `
+                            -Architecture $officeArchitecture `
+                            -PassThru
+                        $officeValidation.Valid
                     }
                     'MicrosoftTeams' {
                         (Test-Path -LiteralPath (Join-Path $entryRoot 'teamsbootstrapper.exe') -PathType Leaf) -and
@@ -131,6 +136,7 @@ function Get-OSDAppCache {
                     PSTypeName   = 'OSDApps.CacheEntry'
                     Id           = [string]$info.Id
                     Source       = 'BuiltIn'
+                    PackageType  = 'Application'
                     Version      = if ($resolvedVersion) { $resolvedVersion } else { $cachedVersion }
                     VersionSource = $versionSource
                     Architecture = if ($info.Architecture) { [string]$info.Architecture } else { $null }
