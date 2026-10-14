@@ -34,5 +34,28 @@ function Remove-OSDAppStaleOfficeCacheVersion {
         }
     }
 
+    foreach ($cab in @(Get-ChildItem -LiteralPath $dataPath -File -ErrorAction Stop)) {
+        if ($cab.Name -notmatch '^v(?:32|64)_(\d+\.\d+\.\d+\.\d+)\.cab$') {
+            continue
+        }
+        $cabVersion = $Matches[1]
+        if ($cabVersion -eq $ActiveVersion) {
+            continue
+        }
+
+        $quarantinePath = Join-Path $dataPath ('.osdapps-prune-' + [guid]::NewGuid().ToString('N') + '.cab')
+        Move-Item -LiteralPath $cab.FullName -Destination $quarantinePath -ErrorAction Stop
+        try {
+            Remove-Item -LiteralPath $quarantinePath -Force -ErrorAction Stop
+            if (-not $removed.Contains($cabVersion)) { $removed.Add($cabVersion) }
+        }
+        catch {
+            if (Test-Path -LiteralPath $quarantinePath -PathType Leaf) {
+                Move-Item -LiteralPath $quarantinePath -Destination $cab.FullName -ErrorAction SilentlyContinue
+            }
+            throw
+        }
+    }
+
     @($removed)
 }
