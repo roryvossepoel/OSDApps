@@ -155,6 +155,22 @@ function Get-OfficeCacheVersion {
     return $null
 }
 
+function Remove-StaleOfficeCacheVersion {
+    param([Parameter(Mandatory)][string]$OfficeRoot,[Parameter(Mandatory)][string]$ActiveVersion)
+    $dataPath=Join-Path $OfficeRoot 'Office\Data';$activePath=Join-Path $dataPath $ActiveVersion
+    if(-not (Test-Path -LiteralPath $activePath -PathType Container)){throw "Active Office cache version folder is missing: $activePath"}
+    if(@(Get-ChildItem -LiteralPath $activePath -File -Recurse -ErrorAction Stop).Count -eq 0){throw "Active Office cache version folder contains no files: $activePath"}
+    $removed=[System.Collections.Generic.List[string]]::new()
+    foreach($directory in @(Get-ChildItem -LiteralPath $dataPath -Directory -ErrorAction Stop)){
+        if($directory.Name -eq $ActiveVersion -or $directory.Name -notmatch '^\d+\.\d+\.\d+\.\d+$'){continue}
+        $quarantinePath=Join-Path $dataPath ('.osdapps-prune-'+[guid]::NewGuid().ToString('N'))
+        Move-Item -LiteralPath $directory.FullName -Destination $quarantinePath -ErrorAction Stop
+        try{Remove-Item -LiteralPath $quarantinePath -Recurse -Force -ErrorAction Stop;$removed.Add($directory.Name)}
+        catch{if(Test-Path -LiteralPath $quarantinePath -PathType Container){Move-Item -LiteralPath $quarantinePath -Destination $directory.FullName -ErrorAction SilentlyContinue};throw}
+    }
+    @($removed)
+}
+
 function Get-MicrosoftTeamsPackageVersion {
     param([Parameter(Mandatory)][string]$Path)
     Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
@@ -573,6 +589,8 @@ try {
                     if(-not $version){throw 'Office acquisition completed but Office\Data does not contain a resolvable version.'}
                     $cacheInfo=[ordered]@{Id='Microsoft365Apps';Cached=[bool]$usbRoot;Version=$version;Architecture=$app.Architecture;Channel=$app.Channel;ProductId=$app.ProductId;Language=@($app.Language);SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';Updated=($previous -ne $version);SyncedAt=(Get-Date).ToUniversalTime().ToString('o')}
                     $cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json'; $cacheInfo | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
+                    $removedVersions=@(Remove-StaleOfficeCacheVersion -OfficeRoot $acquireRoot -ActiveVersion $version)
+                    foreach($removedVersion in $removedVersions){Write-PreInstallLog -Event 'OfficeCacheVersionPruned' -Message 'A stale Microsoft 365 Apps cache version was removed after successful refresh validation.' -Data @{ActiveVersion=$version;RemovedVersion=$removedVersion}}
                     if($usbRoot){
                         Copy-Item -LiteralPath $setupPath -Destination (Join-Path $localRoot 'setup.exe') -Force
                         Copy-Item -LiteralPath $acquireConfig -Destination $localConfig -Force
@@ -580,7 +598,7 @@ try {
                         Copy-DirectoryReplace -Source (Join-Path $acquireRoot 'Office') -Destination (Join-Path $localRoot 'Office')
                     }
                     $versionChanged = ($previous -ne $version)
-                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps content is ready for installation.' -Data @{Id='Microsoft365Apps';Version=$version;CacheSynchronized=[bool]$usbRoot;VersionChanged=$versionChanged;SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
+                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps content is ready for installation.' -Data @{Id='Microsoft365Apps';Version=$version;CacheSynchronized=[bool]$usbRoot;VersionChanged=$versionChanged;RemovedVersions=$removedVersions;SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {
                     if(Test-LocalOfficeSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Microsoft365Apps';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft 365 Apps acquisition failed and no staged fallback is available. $($_.Exception.Message)"
