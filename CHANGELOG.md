@@ -16,6 +16,11 @@
 
 - Added compatibility and propagation tests for explicit script packages, legacy manifests, unsupported package types, Viewer labeling and runtime result reporting.
 
+### Cache resilience
+
+- Microsoft 365 Apps refresh timeout handling now terminates the complete ODT process tree through bounded waits before falling back to an already staged payload.
+- After a successful Office refresh and active-version validation, standalone PreInstall and `Sync-OSDAppMicrosoft365Apps` remove older version directories while preserving the active build and non-versioned shared data. Failed or timed-out refreshes never prune fallback content.
+
 ## 0.37.0
 
 ### Added
