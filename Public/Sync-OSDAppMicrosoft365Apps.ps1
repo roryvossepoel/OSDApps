@@ -117,7 +117,12 @@ function Sync-OSDAppMicrosoft365Apps {
         SyncedAt = (Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root; Channel = $Channel; Architecture = $Architecture; SourcePolicy='Evergreen'; SyncMethod='OfficeDeploymentTool' }
+    $removedVersions = @(Remove-OSDAppStaleOfficeCacheVersion -OfficeRoot $root -ActiveVersion $resolvedVersion)
+    foreach ($removedVersion in $removedVersions) {
+        Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeCacheVersionPruned' -Message 'A stale Microsoft 365 Apps cache version was removed after successful refresh validation.' -Data @{ ActiveVersion=$resolvedVersion; RemovedVersion=$removedVersion }
+    }
 
-    [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id='Microsoft365Apps'; Version=$resolvedVersion; Architecture=$Architecture; Channel=$Channel; CachePath=$root; Cached=$true }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root; Channel = $Channel; Architecture = $Architecture; RemovedVersions=$removedVersions; SourcePolicy='Evergreen'; SyncMethod='OfficeDeploymentTool' }
+
+    [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id='Microsoft365Apps'; Version=$resolvedVersion; Architecture=$Architecture; Channel=$Channel; CachePath=$root; Cached=$true; RemovedVersions=$removedVersions }
 }
