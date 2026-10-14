@@ -108,9 +108,20 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
             $windows = Join-Path $TestDrive 'MicrosoftWindows'
             $office = Join-Path $usb 'BuiltIn\Microsoft365Apps'
             $teams = Join-Path $usb 'BuiltIn\MicrosoftTeams'
-            New-Item -ItemType Directory -Path $windows,$office,$teams,(Join-Path $office 'Office\Data') -Force | Out-Null
+            $officeVersion = '16.0.20430.20146'
+            $officeData = Join-Path $office 'Office\Data'
+            $officeVersionRoot = Join-Path $officeData $officeVersion
+            New-Item -ItemType Directory -Path $windows,$office,$teams,$officeVersionRoot -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $office 'setup.exe') -Value 'setup' -Encoding Ascii
             Set-Content -LiteralPath (Join-Path $office 'configuration.xml') -Value '<Configuration />' -Encoding Ascii
+            Set-Content -LiteralPath (Join-Path $officeVersionRoot 'stream.x64.x-none.dat') -Value 'payload' -Encoding Ascii
+            Set-Content -LiteralPath (Join-Path $officeData 'v64.cab') -Value 'matching-cab' -Encoding Ascii
+            Set-Content -LiteralPath (Join-Path $officeData "v64_$officeVersion.cab") -Value 'matching-cab' -Encoding Ascii
+            [pscustomobject]@{
+                Id = 'Microsoft365Apps'
+                Version = $officeVersion
+                Architecture = 'x64'
+            } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $office 'CacheInfo.json') -Encoding UTF8
             Set-Content -LiteralPath (Join-Path $teams 'teams.msix') -Value 'msix' -Encoding Ascii
             Set-Content -LiteralPath (Join-Path $teams 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding Ascii
             Add-OSDAppMicrosoft365AppsInternal -CachePath $usb -WindowsPath $windows -Confirm:$false | Out-Null
