@@ -52,6 +52,39 @@ function Write-PreInstallLog {
     Add-Content -LiteralPath $logPath -Value $line -Encoding UTF8
 }
 
+function Stop-PreInstallProcessTree {
+    param(
+        [Parameter(Mandatory)][System.Diagnostics.Process]$Process,
+        [ValidateRange(1,30)][int]$TimeoutSeconds = 5
+    )
+
+    try { $Process.Refresh() } catch {}
+    if ($Process.HasExited) { return $true }
+
+    # setup.exe can leave Office acquisition child processes behind. Use the
+    # Windows process-tree terminator, but bound that helper as well so the
+    # PreInstall timeout can never turn into another unbounded wait.
+    $taskKillPath = Join-Path $env:SystemRoot 'System32\taskkill.exe'
+    if (Test-Path -LiteralPath $taskKillPath -PathType Leaf) {
+        try {
+            $taskKill = Start-Process -FilePath $taskKillPath -ArgumentList @('/PID', $Process.Id, '/T', '/F') -WindowStyle Hidden -PassThru
+            if (-not $taskKill.WaitForExit($TimeoutSeconds * 1000)) {
+                try { $taskKill.Kill() } catch {}
+            }
+        }
+        catch {}
+    }
+
+    try { $Process.Refresh() } catch {}
+    if (-not $Process.HasExited) {
+        try { $Process.Kill() } catch {}
+    }
+
+    try { [void]$Process.WaitForExit($TimeoutSeconds * 1000) } catch {}
+    try { $Process.Refresh() } catch {}
+    return [bool]$Process.HasExited
+}
+
 function Write-PreInstallResult {
     param(
         [Parameter(Mandatory)][ValidateSet('Succeeded','CompletedWithErrors','Failed')][string]$Status,
@@ -533,7 +566,7 @@ try {
                     Write-PreInstallLog -Event 'BuiltInRefreshStart' -Message 'Synchronizing Microsoft 365 Apps content.' -Data @{Id='Microsoft365Apps';Target=if($usbRoot){'USB'}else{'Local'};PreviousVersion=$previous;TimeoutMinutes=$OfficeRefreshTimeoutMinutes}
                     $process=Start-Process -FilePath $setupPath -ArgumentList @('/download',$acquireConfig) -WorkingDirectory $acquireRoot -PassThru
                     $sw=[System.Diagnostics.Stopwatch]::StartNew()
-                    while(-not $process.HasExited){if($sw.Elapsed.TotalMinutes -ge $OfficeRefreshTimeoutMinutes){try{$process.Kill();$process.WaitForExit()}catch{};throw "Office Deployment Tool cache refresh exceeded the $OfficeRefreshTimeoutMinutes minute timeout."};Start-Sleep -Seconds 2;$process.Refresh()}
+                    while(-not $process.HasExited){if($sw.Elapsed.TotalMinutes -ge $OfficeRefreshTimeoutMinutes){$terminated=Stop-PreInstallProcessTree -Process $process -TimeoutSeconds 5;throw "Office Deployment Tool cache refresh exceeded the $OfficeRefreshTimeoutMinutes minute timeout. ProcessTreeTerminated=$terminated"};Start-Sleep -Seconds 2;$process.Refresh()}
                     $sw.Stop()
                     if($process.ExitCode -ne 0){throw "Office Deployment Tool exited with code $($process.ExitCode)."}
                     $version=Get-OfficeCacheVersion -OfficeRoot $acquireRoot
