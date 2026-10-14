@@ -114,11 +114,20 @@ Describe 'Trusted built-in publisher enforcement' {
 
     It 'uses security checks in all signable full-Windows sync paths' {
         $root = Split-Path -Parent $PSScriptRoot
+        $sharedVendorSync = Get-Content -LiteralPath (Join-Path $root 'Private\Sync-OSDAppVendorBuiltInCache.ps1') -Raw
         foreach ($id in @('GoogleChromeEnterprise','CiscoWebex','MozillaFirefoxEnterprise','MicrosoftTeams','Microsoft365Apps')) {
             $path = Join-Path $root "Public\Sync-OSDApp$id.ps1"
             $source = Get-Content -LiteralPath $path -Raw
-            $source | Should -Match 'Save-OSDAppVerifiedBuiltInDownload'
-            $source | Should -Match 'Assert-OSDAppBuiltInSignature'
+            if ($id -in @('GoogleChromeEnterprise','CiscoWebex','MozillaFirefoxEnterprise')) {
+                $source | Should -Match 'Sync-OSDAppVendorBuiltInCache'
+                $source | Should -Match '-SignedPackage'
+                $sharedVendorSync | Should -Match 'Save-OSDAppVerifiedBuiltInDownload'
+                $sharedVendorSync | Should -Match 'Assert-OSDAppBuiltInSignature'
+            }
+            else {
+                $source | Should -Match 'Save-OSDAppVerifiedBuiltInDownload'
+                $source | Should -Match 'Assert-OSDAppBuiltInSignature'
+            }
         }
     }
 
@@ -127,9 +136,9 @@ Describe 'Trusted built-in publisher enforcement' {
         $runtime = Get-Content -LiteralPath (Join-Path $root 'Runtime\Invoke-OSDAppPreInstall.ps1') -Raw
         $runtime | Should -Match 'function Assert-PreInstallSignedPayload'
         $runtime | Should -Match 'BuiltInSignatureVerified'
-        $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id \$id -Path \$tempPackage'
+        $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id \$id -Path \$packagePath'
         $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id ''Microsoft365Apps'' -Path \$setupPath'
-        $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id ''MicrosoftTeams'' -Path \$tempBootstrapper'
+        $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id ''MicrosoftTeams'' -Path \$candidateBootstrapper'
         $runtime | Should -Match 'Expected \x27\$expected\x27'
     }
 }
