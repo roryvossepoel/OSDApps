@@ -35,11 +35,19 @@ function Add-OSDAppMicrosoft365AppsInternal {
     $cacheConfig = if ($cacheRoot) { Join-Path $cacheRoot 'configuration.xml' } else { $null }
     $cacheHasPayload = $false
     if ($cacheRoot) {
-        $cacheHasPayload = (
-            (Test-Path -LiteralPath (Join-Path $cacheRoot 'Office\Data') -PathType Container) -and
-            (Test-Path -LiteralPath (Join-Path $cacheRoot 'setup.exe') -PathType Leaf) -and
-            (Test-Path -LiteralPath $cacheConfig -PathType Leaf)
-        )
+        $cacheInfoPath = Join-Path $cacheRoot 'CacheInfo.json'
+        if (Test-Path -LiteralPath $cacheInfoPath -PathType Leaf) {
+            try {
+                $cacheInfo = Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                $cacheValidation = Test-OSDAppOfficeCacheGeneration `
+                    -OfficeRoot $cacheRoot `
+                    -ExpectedVersion ([string]$cacheInfo.Version) `
+                    -Architecture $(if ([string]$cacheInfo.Architecture -eq 'x86') { 'x86' } else { 'x64' }) `
+                    -PassThru
+                $cacheHasPayload = $cacheValidation.Valid
+            }
+            catch { $cacheHasPayload = $false }
+        }
     }
 
     if (-not $PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage Microsoft 365 Apps deployment intent and available cache')) { return }

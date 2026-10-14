@@ -85,9 +85,13 @@ function Get-OSDAppCache {
 
                 $payloadValid = switch ([string]$info.Id) {
                     'Microsoft365Apps' {
-                        (Test-Path -LiteralPath (Join-Path $entryRoot 'setup.exe') -PathType Leaf) -and
-                        (Test-Path -LiteralPath (Join-Path $entryRoot 'configuration.xml') -PathType Leaf) -and
-                        (Test-Path -LiteralPath (Join-Path $entryRoot 'Office\Data') -PathType Container)
+                        $officeArchitecture = if ([string]$info.Architecture -eq 'x86') { 'x86' } else { 'x64' }
+                        $officeValidation = Test-OSDAppOfficeCacheGeneration `
+                            -OfficeRoot $entryRoot `
+                            -ExpectedVersion ([string]$info.Version) `
+                            -Architecture $officeArchitecture `
+                            -PassThru
+                        $officeValidation.Valid
                     }
                     'MicrosoftTeams' {
                         (Test-Path -LiteralPath (Join-Path $entryRoot 'teamsbootstrapper.exe') -PathType Leaf) -and
