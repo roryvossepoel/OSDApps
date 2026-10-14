@@ -14,6 +14,9 @@ Describe 'Microsoft 365 Apps stale cache version pruning' {
         Set-Content -LiteralPath (Join-Path $active 'stream.dat') -Value 'active'
         Set-Content -LiteralPath (Join-Path $old 'stream.dat') -Value 'old'
         Set-Content -LiteralPath (Join-Path $other 'keep.dat') -Value 'keep'
+        Set-Content -LiteralPath (Join-Path $data 'v64.cab') -Value 'shared'
+        Set-Content -LiteralPath (Join-Path $data 'v64_16.0.20430.20146.cab') -Value 'active cab'
+        Set-Content -LiteralPath (Join-Path $data 'v64_16.0.20326.20142.cab') -Value 'old cab'
 
         $removed = @(Remove-OSDAppStaleOfficeCacheVersion -OfficeRoot $root -ActiveVersion '16.0.20430.20146')
 
@@ -22,6 +25,28 @@ Describe 'Microsoft 365 Apps stale cache version pruning' {
         Test-Path -LiteralPath $active | Should -BeTrue
         Test-Path -LiteralPath $old | Should -BeFalse
         Test-Path -LiteralPath $other | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $data 'v64.cab') | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $data 'v64_16.0.20430.20146.cab') | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $data 'v64_16.0.20326.20142.cab') | Should -BeFalse
+    }
+
+    It 'removes a stale architecture CAB even when its version directory is already gone' {
+        $root = Join-Path $TestDrive 'CabOnlyCache'
+        $data = Join-Path $root 'Office\Data'
+        $active = Join-Path $data '16.0.20430.20146'
+        New-Item -ItemType Directory -Path $active -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $active 'stream.dat') -Value 'active'
+        Set-Content -LiteralPath (Join-Path $data 'v32.cab') -Value 'shared'
+        Set-Content -LiteralPath (Join-Path $data 'v32_16.0.20430.20146.cab') -Value 'active cab'
+        Set-Content -LiteralPath (Join-Path $data 'v32_16.0.20326.20142.cab') -Value 'old cab'
+
+        $removed = @(Remove-OSDAppStaleOfficeCacheVersion -OfficeRoot $root -ActiveVersion '16.0.20430.20146')
+
+        $removed.Count | Should -Be 1
+        $removed[0] | Should -Be '16.0.20326.20142'
+        Test-Path -LiteralPath (Join-Path $data 'v32.cab') | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $data 'v32_16.0.20430.20146.cab') | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $data 'v32_16.0.20326.20142.cab') | Should -BeFalse
     }
 
     It 'refuses to prune when the active version is missing or empty' {
