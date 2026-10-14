@@ -380,6 +380,14 @@ function Test-LocalMsiSource {
     return (Test-Path -LiteralPath (Join-Path $Root 'Package.msi') -PathType Leaf)
 }
 
+function Remove-PreInstallTransactionResidue {
+    param([Parameter(Mandatory)][string]$Root)
+    $parent=Split-Path -Path $Root -Parent;$leaf=Split-Path -Path $Root -Leaf
+    Get-ChildItem -LiteralPath $parent -Directory -ErrorAction SilentlyContinue|
+        Where-Object{$_.Name -like "$leaf.osdapps-new-*" -or $_.Name -like "$leaf.osdapps-old-*"}|
+        ForEach-Object{Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue}
+}
+
 function Assert-PreInstallSignedPayload {
     param(
         [Parameter(Mandatory)][string]$Id,
@@ -456,6 +464,8 @@ function Sync-PreInstallVendorMsi {
         throw "$DisplayName has no staged or USB-cached payload and no network connection is available to acquire one."
     }
 
+    $transactionRoot = $null
+    $backupRoot = $null
     try {
         $cacheInfoPath = Join-Path $acquireRoot 'CacheInfo.json'
         $cacheInfo = $null
@@ -482,17 +492,20 @@ function Sync-PreInstallVendorMsi {
         }
 
         $updated = $false
+        $generationRoot = $acquireRoot
         if (-not $matches) {
-            $tempRoot = Join-Path $StagedPath (Join-Path 'Work\Refresh' $id)
-            New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
-            $tempPackage = Join-Path $tempRoot 'Package.msi'
-            Save-PreInstallDownload -Uri $PackageUri -DestinationPath $tempPackage -Id $id -Description "$DisplayName MSI" -TimeoutMinutes 15
-            Assert-PreInstallSignedPayload -Id $id -Path $tempPackage
-            Copy-Item -LiteralPath $tempPackage -Destination $packagePath -Force
+            $transactionRoot = "$acquireRoot.osdapps-new-$([guid]::NewGuid().ToString('N'))"
+            $backupRoot = "$acquireRoot.osdapps-old-$([guid]::NewGuid().ToString('N'))"
+            New-Item -ItemType Directory -Path $transactionRoot -Force | Out-Null
+            $generationRoot = $transactionRoot
+            $packagePath = Join-Path $generationRoot 'Package.msi'
+            Save-PreInstallDownload -Uri $PackageUri -DestinationPath $packagePath -Id $id -Description "$DisplayName MSI" -TimeoutMinutes 15
+            Assert-PreInstallSignedPayload -Id $id -Path $packagePath
             $updated = $true
         }
 
         Assert-PreInstallSignedPayload -Id $id -Path $packagePath
+        $cacheInfoPath = Join-Path $generationRoot 'CacheInfo.json'
         $cacheRecord = [ordered]@{
             Id                  = $id
             Cached              = [bool]$usbRoot
@@ -513,6 +526,24 @@ function Sync-PreInstallVendorMsi {
 
         $cacheRecord | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
+        if ($transactionRoot) {
+            if (-not (Test-LocalMsiSource -Root $transactionRoot)) { throw "$DisplayName candidate generation is incomplete." }
+            $validatedInfo = Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ([string]$validatedInfo.Id -ne $id) { throw "$DisplayName candidate metadata is inconsistent." }
+            $hadPrevious = Test-Path -LiteralPath $acquireRoot -PathType Container
+            if ($hadPrevious) { Move-Item -LiteralPath $acquireRoot -Destination $backupRoot -ErrorAction Stop }
+            try { Move-Item -LiteralPath $transactionRoot -Destination $acquireRoot -ErrorAction Stop }
+            catch {
+                if ($hadPrevious -and (Test-Path -LiteralPath $backupRoot -PathType Container) -and -not (Test-Path -LiteralPath $acquireRoot)) { Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue }
+                throw
+            }
+            if (Test-Path -LiteralPath $backupRoot -PathType Container) { Remove-Item -LiteralPath $backupRoot -Recurse -Force }
+            $transactionRoot = $null
+            Remove-PreInstallTransactionResidue -Root $acquireRoot
+            $packagePath = Join-Path $acquireRoot 'Package.msi'
+            $cacheInfoPath = Join-Path $acquireRoot 'CacheInfo.json'
+        }
+
         if ($usbRoot) {
             Copy-Item -LiteralPath $packagePath -Destination (Join-Path $localRoot 'Package.msi') -Force
             Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force
@@ -521,6 +552,8 @@ function Sync-PreInstallVendorMsi {
         Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message "$DisplayName content is ready for installation." -Data @{ Id=$id; PackageUpdated=$updated; CacheSynchronized=[bool]$usbRoot; SourcePolicy='Evergreen'; SyncMethod='HttpMetadata'; DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1) }
     }
     catch {
+        if ($transactionRoot -and (Test-Path -LiteralPath $transactionRoot)) { Remove-Item -LiteralPath $transactionRoot -Recurse -Force -ErrorAction SilentlyContinue }
+        if ($backupRoot -and (Test-Path -LiteralPath $backupRoot -PathType Container) -and -not (Test-Path -LiteralPath $acquireRoot)) { Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue }
         if (Test-LocalMsiSource -Root $localRoot) {
             Assert-PreInstallSignedPayload -Id $id -Path (Join-Path $localRoot 'Package.msi')
             Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{ Id=$id; Fallback='ExistingStagedPayload' }
@@ -621,6 +654,7 @@ try {
                     try{Move-Item -LiteralPath $transactionRoot -Destination $acquireRoot -ErrorAction Stop}
                     catch{if($hadPrevious -and (Test-Path -LiteralPath $backupRoot -PathType Container) -and -not(Test-Path -LiteralPath $acquireRoot)){Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue};throw}
                     if(Test-Path -LiteralPath $backupRoot -PathType Container){Remove-Item -LiteralPath $backupRoot -Recurse -Force}
+                    Remove-PreInstallTransactionResidue -Root $acquireRoot
                     $setupPath=Join-Path $acquireRoot 'setup.exe';$acquireConfig=Join-Path $acquireRoot 'configuration.xml';$cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json';$removedVersions=@()
                     if($usbRoot){
                         Copy-Item -LiteralPath $setupPath -Destination (Join-Path $localRoot 'setup.exe') -Force
@@ -652,6 +686,7 @@ try {
                     if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Remove-LegacyMicrosoftTeamsCache -UsbRoot $usbRoot -CanonicalRoot $acquireRoot;Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='MicrosoftTeams'};continue}
                     throw 'Microsoft Teams has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
+                $transactionRoot=$null;$backupRoot=$null
                 try {
                     $architecture=if($app.Architecture){[string]$app.Architecture}else{'x64'}
                     $msixUri=if($app.MsixUri){[string]$app.MsixUri}else{switch($architecture){'x86'{'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196060'}'x64'{'https://go.microsoft.com/fwlink/?linkid=2196106'}'arm64'{'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196207'}}}
@@ -661,16 +696,23 @@ try {
                     $msixPath=Join-Path $acquireRoot 'teams.msix'; $bootstrapperPath=Join-Path $acquireRoot 'teamsbootstrapper.exe'
                     $remote=Get-RemoteMetadata -Uri $msixUri; $matches=$false
                     if((Test-Path -LiteralPath $msixPath -PathType Leaf) -and $cacheInfo){if($remote.ETag -and $cacheInfo.RemoteETag){$matches=$remote.ETag -eq [string]$cacheInfo.RemoteETag}elseif($remote.LastModified -and $cacheInfo.RemoteLastModified -and $remote.ContentLength -and $cacheInfo.RemoteContentLength){$matches=($remote.LastModified -eq [string]$cacheInfo.RemoteLastModified -and [int64]$remote.ContentLength -eq [int64]$cacheInfo.RemoteContentLength)}}
-                    $tempRoot=Join-Path $StagedPath 'Work\Refresh\MicrosoftTeams'; New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
-                    $tempBootstrapper=Join-Path $tempRoot 'teamsbootstrapper.exe'; Save-PreInstallDownload -Uri $bootstrapperUri -DestinationPath $tempBootstrapper -Id 'MicrosoftTeams' -Description 'Microsoft Teams bootstrapper' -TimeoutMinutes 5; Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path $tempBootstrapper; Copy-Item -LiteralPath $tempBootstrapper -Destination $bootstrapperPath -Force
-                    Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path $bootstrapperPath
-                    $updated=$false
-                    if(-not $matches){$tempMsix=Join-Path $tempRoot 'teams.msix';Save-PreInstallDownload -Uri $msixUri -DestinationPath $tempMsix -Id 'MicrosoftTeams' -Description "Microsoft Teams $architecture MSIX" -TimeoutMinutes 15;$version=Get-MicrosoftTeamsPackageVersion -Path $tempMsix;Copy-Item -LiteralPath $tempMsix -Destination $msixPath -Force;$updated=$true}else{$version=if($cacheInfo -and $cacheInfo.Version){[string]$cacheInfo.Version}else{Get-MicrosoftTeamsPackageVersion -Path $msixPath}}
-                    [ordered]@{Id='MicrosoftTeams';Cached=[bool]$usbRoot;Version=$version;Architecture=$architecture;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';Updated=$updated;BootstrapperUri=$bootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified;RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
+                    $transactionRoot="$acquireRoot.osdapps-new-$([guid]::NewGuid().ToString('N'))";$backupRoot="$acquireRoot.osdapps-old-$([guid]::NewGuid().ToString('N'))";New-Item -ItemType Directory -Path $transactionRoot -Force|Out-Null
+                    $candidateBootstrapper=Join-Path $transactionRoot 'teamsbootstrapper.exe';$candidateMsix=Join-Path $transactionRoot 'teams.msix'
+                    Save-PreInstallDownload -Uri $bootstrapperUri -DestinationPath $candidateBootstrapper -Id 'MicrosoftTeams' -Description 'Microsoft Teams bootstrapper' -TimeoutMinutes 5;Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path $candidateBootstrapper
+                    if($matches){Copy-Item -LiteralPath $msixPath -Destination $candidateMsix -Force;$updated=$false;$version=if($cacheInfo -and $cacheInfo.Version){[string]$cacheInfo.Version}else{Get-MicrosoftTeamsPackageVersion -Path $candidateMsix}}
+                    else{Save-PreInstallDownload -Uri $msixUri -DestinationPath $candidateMsix -Id 'MicrosoftTeams' -Description "Microsoft Teams $architecture MSIX" -TimeoutMinutes 15;$version=Get-MicrosoftTeamsPackageVersion -Path $candidateMsix;$updated=$true}
+                    Get-MicrosoftTeamsPackageVersion -Path $candidateMsix|Out-Null
+                    [ordered]@{Id='MicrosoftTeams';Cached=[bool]$usbRoot;Version=$version;Architecture=$architecture;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';Updated=$updated;BootstrapperUri=$bootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified;RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')}|ConvertTo-Json -Depth 10|Set-Content -LiteralPath (Join-Path $transactionRoot 'CacheInfo.json') -Encoding UTF8
+                    $hadPrevious=Test-Path -LiteralPath $acquireRoot -PathType Container;if($hadPrevious){Move-Item -LiteralPath $acquireRoot -Destination $backupRoot -ErrorAction Stop}
+                    try{Move-Item -LiteralPath $transactionRoot -Destination $acquireRoot -ErrorAction Stop}catch{if($hadPrevious -and(Test-Path -LiteralPath $backupRoot -PathType Container)-and-not(Test-Path -LiteralPath $acquireRoot)){Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue};throw}
+                    if(Test-Path -LiteralPath $backupRoot -PathType Container){Remove-Item -LiteralPath $backupRoot -Recurse -Force};$transactionRoot=$null;Remove-PreInstallTransactionResidue -Root $acquireRoot
+                    $bootstrapperPath=Join-Path $acquireRoot 'teamsbootstrapper.exe';$msixPath=Join-Path $acquireRoot 'teams.msix';$cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json'
                     if($usbRoot){Copy-Item -LiteralPath $bootstrapperPath -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force;Copy-Item -LiteralPath $msixPath -Destination (Join-Path $localRoot 'teams.msix') -Force;Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
                     Remove-LegacyMicrosoftTeamsCache -UsbRoot $usbRoot -CanonicalRoot $acquireRoot
                     Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='MicrosoftTeams';Version=$version;PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {
+                    if($transactionRoot -and(Test-Path -LiteralPath $transactionRoot)){Remove-Item -LiteralPath $transactionRoot -Recurse -Force -ErrorAction SilentlyContinue}
+                    if($backupRoot -and(Test-Path -LiteralPath $backupRoot -PathType Container)-and-not(Test-Path -LiteralPath $acquireRoot)){Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue}
                     if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='MicrosoftTeams';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft Teams acquisition failed and no staged fallback is available. $($_.Exception.Message)"
                 }
@@ -696,6 +738,7 @@ try {
                     throw 'Adobe Acrobat Unified has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
 
+                $transactionRoot=$null;$backupRoot=$null
                 try {
                     $packageUri=if($app.PackageUri){[string]$app.PackageUri}else{switch($architecture){'x86'{'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_WWMUI.zip'}default{'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_x64_WWMUI.zip'}}}
                     $cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json'
@@ -716,16 +759,15 @@ try {
                         }
                     }
 
-                    $updated=$false
+                    $updated=$false;$generationRoot=$acquireRoot
                     if(-not $matches){
-                        $tempRoot=Join-Path $StagedPath 'Work\Refresh\AdobeAcrobatUnified'
-                        New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
-                        $tempPackage=Join-Path $tempRoot 'Package.zip'
-                        Save-PreInstallDownload -Uri $packageUri -DestinationPath $tempPackage -Id 'AdobeAcrobatUnified' -Description "Adobe Acrobat Unified $architecture package" -TimeoutMinutes 30
-                        Copy-Item -LiteralPath $tempPackage -Destination $packagePath -Force
+                        $transactionRoot="$acquireRoot.osdapps-new-$([guid]::NewGuid().ToString('N'))";$backupRoot="$acquireRoot.osdapps-old-$([guid]::NewGuid().ToString('N'))"
+                        New-Item -ItemType Directory -Path $transactionRoot -Force|Out-Null;$generationRoot=$transactionRoot;$packagePath=Join-Path $generationRoot 'Package.zip'
+                        Save-PreInstallDownload -Uri $packageUri -DestinationPath $packagePath -Id 'AdobeAcrobatUnified' -Description "Adobe Acrobat Unified $architecture package" -TimeoutMinutes 30
                         $updated=$true
                     }
 
+                    $cacheInfoPath=Join-Path $generationRoot 'CacheInfo.json'
                     [ordered]@{
                         Id='AdobeAcrobatUnified'
                         Cached=[bool]$usbRoot
@@ -742,6 +784,15 @@ try {
                         SyncedAt=(Get-Date).ToUniversalTime().ToString('o')
                     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
+                    if($transactionRoot){
+                        Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue;$archive=$null
+                        try{$archive=[System.IO.Compression.ZipFile]::OpenRead($packagePath);if($archive.Entries.Count -eq 0){throw 'Adobe candidate ZIP is empty.'}}finally{if($archive){$archive.Dispose()}}
+                        $validatedInfo=Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8|ConvertFrom-Json;if([string]$validatedInfo.Id -ne 'AdobeAcrobatUnified'){throw 'Adobe candidate metadata is inconsistent.'}
+                        $hadPrevious=Test-Path -LiteralPath $acquireRoot -PathType Container;if($hadPrevious){Move-Item -LiteralPath $acquireRoot -Destination $backupRoot -ErrorAction Stop}
+                        try{Move-Item -LiteralPath $transactionRoot -Destination $acquireRoot -ErrorAction Stop}catch{if($hadPrevious -and(Test-Path -LiteralPath $backupRoot -PathType Container)-and-not(Test-Path -LiteralPath $acquireRoot)){Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue};throw}
+                        if(Test-Path -LiteralPath $backupRoot -PathType Container){Remove-Item -LiteralPath $backupRoot -Recurse -Force};$transactionRoot=$null;Remove-PreInstallTransactionResidue -Root $acquireRoot;$packagePath=Join-Path $acquireRoot 'Package.zip';$cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json'
+                    }
+
                     if($usbRoot){
                         Copy-Item -LiteralPath $packagePath -Destination (Join-Path $localRoot 'Package.zip') -Force
                         Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force
@@ -750,6 +801,8 @@ try {
                     Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Adobe Acrobat Unified content is ready for installation.' -Data @{Id='AdobeAcrobatUnified';PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 }
                 catch {
+                    if($transactionRoot -and(Test-Path -LiteralPath $transactionRoot)){Remove-Item -LiteralPath $transactionRoot -Recurse -Force -ErrorAction SilentlyContinue}
+                    if($backupRoot -and(Test-Path -LiteralPath $backupRoot -PathType Container)-and-not(Test-Path -LiteralPath $acquireRoot)){Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue}
                     if(Test-LocalAdobeAcrobatUnifiedSource -Root $localRoot){
                         Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='AdobeAcrobatUnified';Fallback='ExistingStagedPayload'}
                         continue

@@ -27,11 +27,11 @@ The CLI owns configuration and automation. The Viewer does not add or remove app
 
 ## Install from PowerShell Gallery
 
-**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin **0.38.0**:
+**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin **0.39.0**:
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.38.0 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.38.0 -Force
+Install-Module OSDApps -RequiredVersion 0.39.0 -Scope CurrentUser -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.39.0 -Force
 ```
 
 For offline WinPE, save the module to USB first; see [Prepare a USB cache](Examples/Prepare-UsbCache.md). PowerShellGet is the documented WinPE/Windows PowerShell 5.1 installation path. `Install-PSResource` is an alternative only on a machine where PSResourceGet is already available.
