@@ -44,7 +44,7 @@
 ### Cache resilience
 
 - Microsoft 365 Apps refresh timeout handling now terminates the complete ODT process tree through bounded waits before falling back to an already staged payload.
-- After a successful Office refresh and active-version validation, standalone PreInstall and `Sync-OSDAppMicrosoft365Apps` remove older version directories and their `v32_<version>.cab` / `v64_<version>.cab` files while preserving the active build and non-versioned shared data. Failed or timed-out refreshes never prune fallback content.
+- Microsoft 365 Apps refresh builds and validates a complete replacement generation before switching the active cache directory. The previous directory is removed only after promotion. An earlier selective version-folder/CAB pruning approach was superseded during validation; individual Office payload files must not be pruned from an active generation.
 
 ## 0.37.0
 
