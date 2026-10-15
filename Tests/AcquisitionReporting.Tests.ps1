@@ -19,6 +19,7 @@ Describe 'Per-deployment acquisition reporting' {
             $definition = $runnerAst.Find({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $true)
             . ([scriptblock]::Create($definition.Extent.Text))
         }
+        Add-Type -AssemblyName System.IO.Compression
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         function New-TestArchive {
             param([string]$Path, [switch]$Teams)
