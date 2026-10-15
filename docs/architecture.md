@@ -165,7 +165,7 @@ For built-ins, the deployment first identifies the optional cache and available 
 
 A refresh failure is not automatically fatal if an acceptable staged fallback exists. Without a usable fallback, that built-in is recorded as failed and its installer is skipped while independent entries can continue. Conversely, a complete-looking fallback is not automatically acceptable: a supported MSI/EXE signature or publisher failure stops deployment. `GetIsNetworkAvailable()` reports interface availability, not verified access to every vendor endpoint.
 
-The explicit log events distinguish cache discovery, refresh skipped, refresh failed with fallback, signature verification and installer results. See [Runtime logging](runtime.md#logging).
+Per-deployment `AcquisitionOutcome` and retained refresh errors distinguish successful download, metadata-confirmed reuse, offline use and fallback from installation success. The embedded PreInstall result counts fallback/offline entries; a successful installation can still carry an acquisition warning. See [Acquisition reporting](runtime.md#acquisition-and-installation-are-separate-results) and [Runtime logging](runtime.md#logging).
 
 ## Metadata model
 

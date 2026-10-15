@@ -114,6 +114,9 @@ function Write-PreInstallResult {
         FailedBuiltInApplicationCount = $failed
         CacheUsed               = [bool]$usbRoot
         CachePath               = $usbRoot
+        FallbackApplicationCount = @($applicationResults | Where-Object { $_.AcquisitionOutcome -eq 'FallbackCacheUsed' }).Count
+        OfflineCacheApplicationCount = @($applicationResults | Where-Object { $_.AcquisitionOutcome -eq 'OfflineCacheUsed' }).Count
+        HasAcquisitionWarnings  = @($applicationResults | Where-Object { $_.AcquisitionOutcome -in @('FallbackCacheUsed','OfflineCacheUsed') }).Count -gt 0
         NetworkAvailable        = $networkAvailable
         Applications            = @($applicationResults | ForEach-Object { $_ })
         FailureType             = $FailureType
@@ -139,11 +142,26 @@ function Get-PreInstallFailureType {
     $message = $ErrorRecord.Exception.Message
     if ($ErrorRecord.Exception -is [System.Security.SecurityException]) { return 'TrustValidationFailed' }
     if ($ErrorRecord.Exception -is [System.IO.InvalidDataException]) { return 'ManifestInvalid' }
+    if ($message -match 'Insufficient free space') { return 'InsufficientDiskSpace' }
     if ($message -match 'no network|not reachable') { return 'NetworkUnavailable' }
     if ($message -match 'timeout|exceeded') { return 'Timeout' }
     if ($message -match 'no staged|no .*cached|missing') { return 'CacheOrSourceMissing' }
     if ($message -match 'metadata|HTTP|response|download|acquisition') { return 'RemoteAcquisition' }
     'PreInstallError'
+}
+
+function Set-PreInstallAcquisitionResult {
+    param(
+        [Parameter(Mandatory)][hashtable]$Result,
+        [Parameter(Mandatory)][ValidateSet('Downloaded','CacheReused','OfflineCacheUsed','FallbackCacheUsed')][string]$Outcome,
+        [System.Management.Automation.ErrorRecord]$RefreshError
+    )
+
+    $Result.Outcome = $Outcome
+    if ($RefreshError) {
+        $Result.RefreshFailureType = Get-PreInstallFailureType -ErrorRecord $RefreshError
+        $Result.RefreshError = $RefreshError.Exception.Message
+    }
 }
 
 function Test-InternetEndpoint {
@@ -461,7 +479,8 @@ function Sync-PreInstallVendorMsi {
         [Parameter(Mandatory)][psobject]$App,
         [Parameter(Mandatory)][string]$RelativeRoot,
         [Parameter(Mandatory)][string]$PackageUri,
-        [Parameter(Mandatory)][string]$DisplayName
+        [Parameter(Mandatory)][string]$DisplayName,
+        [Parameter(Mandatory)][hashtable]$Acquisition
     )
 
     $id = [string]$App.Id
@@ -484,6 +503,7 @@ function Sync-PreInstallVendorMsi {
     if (-not $networkAvailable) {
         if (Test-LocalMsiSource -Root $localRoot) {
             Assert-PreInstallSignedPayload -Id $id -Path (Join-Path $localRoot 'Package.msi')
+            Set-PreInstallAcquisitionResult -Result $acquisition -Outcome OfflineCacheUsed
             Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message "No network is available. Existing staged $DisplayName payload will be used." -Data @{ Id=$id }
             return
         }
@@ -576,6 +596,7 @@ function Sync-PreInstallVendorMsi {
             Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force
         }
 
+        Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($updated) { 'Downloaded' } else { 'CacheReused' })
         Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message "$DisplayName content is ready for installation." -Data @{ Id=$id; PackageUpdated=$updated; CacheSynchronized=[bool]$usbRoot; SourcePolicy='Evergreen'; SyncMethod='HttpMetadata'; DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1) }
     }
     catch {
@@ -583,6 +604,7 @@ function Sync-PreInstallVendorMsi {
         if ($backupRoot -and (Test-Path -LiteralPath $backupRoot -PathType Container) -and -not (Test-Path -LiteralPath $acquireRoot)) { Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue }
         if (Test-LocalMsiSource -Root $localRoot) {
             Assert-PreInstallSignedPayload -Id $id -Path (Join-Path $localRoot 'Package.msi')
+            Set-PreInstallAcquisitionResult -Result $acquisition -Outcome FallbackCacheUsed -RefreshError $_
             Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{ Id=$id; Fallback='ExistingStagedPayload' }
             return
         }
@@ -628,6 +650,7 @@ try {
         $builtInStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         $applicationError = $null
         $applicationFailureType = $null
+        $acquisition = @{ Outcome = 'Failed'; RefreshFailureType = $null; RefreshError = $null }
         try {
             switch($app.Id){
             'Microsoft365Apps' {
@@ -648,7 +671,7 @@ try {
                 }
 
                 if(-not $networkAvailable){
-                    if(Test-LocalOfficeSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Office payload will be used.' -Data @{Id='Microsoft365Apps'}; continue}
+                    if(Test-LocalOfficeSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Set-PreInstallAcquisitionResult -Result $acquisition -Outcome OfflineCacheUsed;Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Office payload will be used.' -Data @{Id='Microsoft365Apps'}; continue}
                     throw 'Microsoft 365 Apps has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
 
@@ -694,11 +717,12 @@ try {
                         Copy-DirectoryReplace -Source (Join-Path $acquireRoot 'Office') -Destination (Join-Path $localRoot 'Office')
                     }
                     $versionChanged = ($previous -ne $version)
+                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome Downloaded
                     Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps content is ready for installation.' -Data @{Id='Microsoft365Apps';Version=$version;CacheSynchronized=[bool]$usbRoot;VersionChanged=$versionChanged;RemovedVersions=$removedVersions;SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {
                     if($transactionRoot -and (Test-Path -LiteralPath $transactionRoot)){Remove-Item -LiteralPath $transactionRoot -Recurse -Force -ErrorAction SilentlyContinue}
                     if($backupRoot -and (Test-Path -LiteralPath $backupRoot -PathType Container) -and -not(Test-Path -LiteralPath $acquireRoot)){Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue}
-                    if(Test-LocalOfficeSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Microsoft365Apps';Fallback='ExistingStagedPayload'};continue}
+                    if(Test-LocalOfficeSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Set-PreInstallAcquisitionResult -Result $acquisition -Outcome FallbackCacheUsed -RefreshError $_;Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Microsoft365Apps';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft 365 Apps acquisition failed and no staged fallback is available. $($_.Exception.Message)"
                 }
             }
@@ -716,7 +740,7 @@ try {
                 }
 
                 if(-not $networkAvailable){
-                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Remove-LegacyMicrosoftTeamsCache -UsbRoot $usbRoot -CanonicalRoot $acquireRoot;Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='MicrosoftTeams'};continue}
+                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Remove-LegacyMicrosoftTeamsCache -UsbRoot $usbRoot -CanonicalRoot $acquireRoot;Set-PreInstallAcquisitionResult -Result $acquisition -Outcome OfflineCacheUsed;Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='MicrosoftTeams'};continue}
                     throw 'Microsoft Teams has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
                 $transactionRoot=$null;$backupRoot=$null
@@ -743,11 +767,12 @@ try {
                     $bootstrapperPath=Join-Path $acquireRoot 'teamsbootstrapper.exe';$msixPath=Join-Path $acquireRoot 'teams.msix';$cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json'
                     if($usbRoot){Copy-Item -LiteralPath $bootstrapperPath -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force;Copy-Item -LiteralPath $msixPath -Destination (Join-Path $localRoot 'teams.msix') -Force;Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
                     Remove-LegacyMicrosoftTeamsCache -UsbRoot $usbRoot -CanonicalRoot $acquireRoot
+                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($updated) { 'Downloaded' } else { 'CacheReused' })
                     Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='MicrosoftTeams';Version=$version;PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {
                     if($transactionRoot -and(Test-Path -LiteralPath $transactionRoot)){Remove-Item -LiteralPath $transactionRoot -Recurse -Force -ErrorAction SilentlyContinue}
                     if($backupRoot -and(Test-Path -LiteralPath $backupRoot -PathType Container)-and-not(Test-Path -LiteralPath $acquireRoot)){Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue}
-                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='MicrosoftTeams';Fallback='ExistingStagedPayload'};continue}
+                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Set-PreInstallAcquisitionResult -Result $acquisition -Outcome FallbackCacheUsed -RefreshError $_;Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='MicrosoftTeams';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft Teams acquisition failed and no staged fallback is available. $($_.Exception.Message)"
                 }
             }
@@ -767,6 +792,7 @@ try {
 
                 if(-not $networkAvailable){
                     if(Test-LocalAdobeAcrobatUnifiedSource -Root $localRoot){
+                        Set-PreInstallAcquisitionResult -Result $acquisition -Outcome OfflineCacheUsed
                         Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Adobe Acrobat Unified payload will be used.' -Data @{Id='AdobeAcrobatUnified'}
                         continue
                     }
@@ -834,12 +860,14 @@ try {
                         Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force
                     }
 
+                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($updated) { 'Downloaded' } else { 'CacheReused' })
                     Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Adobe Acrobat Unified content is ready for installation.' -Data @{Id='AdobeAcrobatUnified';PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 }
                 catch {
                     if($transactionRoot -and(Test-Path -LiteralPath $transactionRoot)){Remove-Item -LiteralPath $transactionRoot -Recurse -Force -ErrorAction SilentlyContinue}
                     if($backupRoot -and(Test-Path -LiteralPath $backupRoot -PathType Container)-and-not(Test-Path -LiteralPath $acquireRoot)){Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue}
                     if(Test-LocalAdobeAcrobatUnifiedSource -Root $localRoot){
+                        Set-PreInstallAcquisitionResult -Result $acquisition -Outcome FallbackCacheUsed -RefreshError $_
                         Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='AdobeAcrobatUnified';Fallback='ExistingStagedPayload'}
                         continue
                     }
@@ -859,7 +887,7 @@ try {
                     }
                 }
                 $relativeRoot = Join-Path 'BuiltIn\CiscoWebex' $architecture
-                Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Cisco Webex'
+                Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Cisco Webex' -Acquisition $acquisition
             }
             'GoogleChromeEnterprise' {
                 $architecture = if ($app.Architecture) { [string]$app.Architecture } else { 'x64' }
@@ -874,7 +902,7 @@ try {
                 }
 
                 $relativeRoot = Join-Path 'BuiltIn\GoogleChromeEnterprise' $architecture
-                Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Google Chrome Enterprise'
+                Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Google Chrome Enterprise' -Acquisition $acquisition
             }
             'MozillaFirefoxEnterprise' {
                 $channel = if ($app.Channel) { [string]$app.Channel } else { 'Rapid' }
@@ -891,7 +919,7 @@ try {
                 }
 
                 $relativeRoot = Join-Path 'BuiltIn\MozillaFirefoxEnterprise' (Join-Path $channel (Join-Path $architecture $language))
-                Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Mozilla Firefox Enterprise'
+                Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Mozilla Firefox Enterprise' -Acquisition $acquisition
             }
             default {
                 throw [System.IO.InvalidDataException]::new("Unsupported built-in application Id '$($app.Id)' in the device manifest.")
@@ -922,9 +950,21 @@ try {
                 Status          = if ($applicationError) { 'Failed' } else { 'Succeeded' }
                 DurationSeconds = [math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)
                 CacheUsed       = [bool]$usbRoot
+                AcquisitionOutcome = if ($applicationError) { 'Failed' } else { $acquisition.Outcome }
+                RefreshFailureType = $acquisition.RefreshFailureType
+                RefreshError    = $acquisition.RefreshError
                 FailureType     = $applicationFailureType
                 Error           = $applicationError
             })
+            $applicationResult = $applicationResults[$applicationResults.Count - 1]
+            $level = if ($applicationError) { 'Error' } elseif ($acquisition.Outcome -in @('FallbackCacheUsed','OfflineCacheUsed')) { 'Warning' } else { 'Info' }
+            Write-PreInstallLog -Event 'ApplicationAcquisitionComplete' -Level $level -Message 'Built-in preparation outcome recorded; installation is a separate step.' -Data @{
+                Id = $app.Id
+                Status = $applicationResult.Status
+                AcquisitionOutcome = $applicationResult.AcquisitionOutcome
+                RefreshFailureType = $applicationResult.RefreshFailureType
+                RefreshError = $applicationResult.RefreshError
+            }
         }
     }
 
@@ -939,7 +979,10 @@ try {
     }
 
     Write-PreInstallLog -Event 'RefreshComplete' -Message 'Built-in acquisition and refresh completed. Installation will continue.' -Data @{CacheUsed=[bool]$usbRoot;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
-    Write-PreInstallLog -Event 'PreInstallComplete' -Message 'PreInstall completed successfully.' -Data @{BuiltInAppCount=@($builtInApps).Count;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
+    $fallbackCount = @($applicationResults | Where-Object { $_.AcquisitionOutcome -eq 'FallbackCacheUsed' }).Count
+    $offlineCount = @($applicationResults | Where-Object { $_.AcquisitionOutcome -eq 'OfflineCacheUsed' }).Count
+    $completionLevel = if (($fallbackCount + $offlineCount) -gt 0) { 'Warning' } else { 'Info' }
+    Write-PreInstallLog -Event 'PreInstallComplete' -Level $completionLevel -Message 'PreInstall completed successfully; inspect acquisition outcomes for cache fallback or offline use.' -Data @{BuiltInAppCount=@($builtInApps).Count;FallbackApplicationCount=$fallbackCount;OfflineCacheApplicationCount=$offlineCount;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
     try { Write-PreInstallResult -Status Succeeded } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
     exit 0
 } catch {
