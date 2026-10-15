@@ -23,7 +23,7 @@ function Sync-OSDAppMicrosoft365Apps {
 
         [string]$ConfigurationXml,
         [string]$OfficeDeploymentToolUri = 'https://officecdn.microsoft.com/pr/wsus/setup.exe',
-        [double]$MinimumFreeSpaceGB = 8
+        [ValidateRange(0, [double]::MaxValue)][double]$MinimumFreeSpaceGB = 8
     )
 
     if (Test-OSDAppWinPE) {
@@ -51,7 +51,7 @@ function Sync-OSDAppMicrosoft365Apps {
 
     Restore-OSDAppBuiltInCache -Root $root -Id Microsoft365Apps -LogPath $clientLogPath
 
-    Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'Microsoft 365 Apps cache synchronization' -LogPath $clientLogPath | Out-Null
+    Assert-OSDAppCacheFreeSpace -CachePath $root -ExistingPath $root -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'Microsoft 365 Apps cache synchronization' -LogPath $clientLogPath | Out-Null
     Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft 365 Apps built-in cache.'
 
     New-Item -ItemType Directory -Path $transactionRoot -Force | Out-Null

@@ -114,8 +114,43 @@ Describe 'Transactional multi-app repository synchronization' {
         }
     }
 
+    It 'rejects a batch that cannot fit even when each package fits individually' {
+        InModuleScope OSDApps {
+            Mock Get-OSDAppAvailableDiskBytes { 100GB }
+            $cache = Join-Path $TestDrive 'BatchSpaceCache'
+            $oldCatalog = New-Snapshot -Root (Join-Path $TestDrive 'BatchOld') -Version '1.0.0'
+            $newCatalog = New-Snapshot -Root (Join-Path $TestDrive 'BatchNew') -Version '2.0.0'
+            Sync-OSDAppCache -CatalogPath $oldCatalog -CachePath $cache -Confirm:$false | Out-Null
+            $before = (Get-FileHash (Join-Path $cache 'CacheCatalog.json')).Hash
+            Mock Get-OSDAppArchiveSpaceEstimate { 100MB }
+            Mock Get-OSDAppAvailableDiskBytes { 200MB }
+            { Sync-OSDAppCache -CatalogPath $newCatalog -CachePath $cache -Confirm:$false } | Should -Throw '*Insufficient free space*'
+            (Get-FileHash (Join-Path $cache 'CacheCatalog.json')).Hash | Should -Be $before
+            @((Get-ChildItem (Join-Path $cache '.staging') -Directory)).Count | Should -Be 0
+        }
+    }
+
+    It 'preserves packages and catalog if free space drops before the second acquisition' {
+        InModuleScope OSDApps {
+            Mock Get-OSDAppAvailableDiskBytes { 100GB }
+            $cache = Join-Path $TestDrive 'ShrinkingSpaceCache'
+            $oldCatalog = New-Snapshot -Root (Join-Path $TestDrive 'ShrinkingOld') -Version '1.0.0'
+            $newCatalog = New-Snapshot -Root (Join-Path $TestDrive 'ShrinkingNew') -Version '2.0.0'
+            Sync-OSDAppCache -CatalogPath $oldCatalog -CachePath $cache -Confirm:$false | Out-Null
+            $paths = @('CacheCatalog.json', 'Packages/AppA/Package.zip', 'Packages/AppB/Package.zip')
+            $before = @($paths | ForEach-Object { (Get-FileHash (Join-Path $cache $_)).Hash })
+            $script:spaceReads = 0
+            Mock Get-OSDAppAvailableDiskBytes { $script:spaceReads++; if ($script:spaceReads -lt 3) { 100GB } else { 1MB } }
+            { Sync-OSDAppCache -CatalogPath $newCatalog -CachePath $cache -Confirm:$false } | Should -Throw '*Insufficient free space*Previous cache preserved*'
+            @($paths | ForEach-Object { (Get-FileHash (Join-Path $cache $_)).Hash }) | Should -Be $before
+            @((Get-ChildItem (Join-Path $cache '.staging') -Directory)).Count | Should -Be 0
+        }
+    }
+
     It 'does not write any cache data in WhatIf mode' {
         InModuleScope OSDApps {
+            Mock Get-OSDAppArchiveSpaceEstimate { throw 'WhatIf must not probe archive sizes' }
+            Mock Get-OSDAppAvailableDiskBytes { throw 'WhatIf must not query free space' }
             $cache = Join-Path $TestDrive 'WhatIfCache'
             $source = New-Snapshot -Root (Join-Path $TestDrive 'WhatIfSource') -Version '1.0.0'
             Sync-OSDAppCache -CatalogPath $source -CachePath $cache -WhatIf | Out-Null

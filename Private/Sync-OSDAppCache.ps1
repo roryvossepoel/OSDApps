@@ -243,6 +243,16 @@ function Sync-OSDAppCache {
         return
     }
 
+    # Budget the complete prepared batch. Old packages remain on disk until
+    # commit; pruning cannot be used to finance downloads before validation.
+    [double]$remainingBytes = 0
+    foreach ($entry in $toAcquire) {
+        $estimate = Get-OSDAppArchiveSpaceEstimate -Archive $entry.Package.Archive -ExistingPath $entry.TargetRoot
+        $entry | Add-Member -NotePropertyName EstimatedBytes -NotePropertyValue $estimate
+        $remainingBytes += $estimate
+    }
+    Assert-OSDAppTransactionSpace -Path $CachePath -ExpectedBytes $remainingBytes -Operation 'repository cache batch preparation' | Out-Null
+
     Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'SyncStart' -Message 'Starting transactional repository synchronization.' -Data @{ CachePath = $CachePath; RequestedCount = $packages.Count; AcquireCount = $toAcquire.Count; Prune = [bool]$Prune; PruneCount = $toRemove.Count; PinnedIds = $pins }
     Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'ArchitectureResolved' -Message 'Resolved package variants.' -Data @{ HostArchitecture = $hostArchitecture; Packages = @($packages | ForEach-Object { "$($_.Id):$($_.Architecture)" }) }
 
@@ -266,6 +276,9 @@ function Sync-OSDAppCache {
         New-Item -ItemType Directory -Path $packagesRoot,$preparedRoot,$replacedBackupRoot,$removedBackupRoot -Force -ErrorAction Stop | Out-Null
 
         foreach ($entry in $toAcquire) {
+            # Recheck remaining work: another process may have consumed space
+            # while earlier packages were downloading.
+            Assert-OSDAppTransactionSpace -Path $CachePath -ExpectedBytes $remainingBytes -Operation 'repository cache package acquisition' | Out-Null
             $package = $entry.Package
             $packageTemp = Join-Path $preparedRoot $package.Id
             New-Item -ItemType Directory -Path $packageTemp -Force -ErrorAction Stop | Out-Null
@@ -290,6 +303,7 @@ function Sync-OSDAppCache {
             if (-not (Test-OSDAppFileHash -Path $tempArchive -ExpectedSha256 $package.Archive.Sha256)) {
                 throw "SHA-256 validation failed for '$($package.Id)/Package.zip'."
             }
+            $remainingBytes -= $entry.EstimatedBytes
             Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'PackagePrepared' -Message 'Package is downloaded and SHA-256 validated.' -Data @{ Id = $package.Id; Version = $package.Version }
         }
 

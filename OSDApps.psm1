@@ -1,4 +1,5 @@
 $moduleRoot = $PSScriptRoot
+. (Join-Path $moduleRoot 'Runtime\Assert-OSDAppTransactionSpace.ps1')
 . (Join-Path $moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1')
 
 foreach ($folder in @('Private','Public')) {

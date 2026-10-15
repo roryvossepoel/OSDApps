@@ -17,6 +17,7 @@ Describe 'Operational readiness and deployment results' {
             New-Item -ItemType Directory -Path $stage,$setupDirectory,$packageDirectory -Force | Out-Null
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Assert-OSDAppTransactionSpace.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1') -Destination $stage
 
             $archive = Join-Path $packageDirectory 'Package.zip'

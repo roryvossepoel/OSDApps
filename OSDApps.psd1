@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.39.1'
+    ModuleVersion     = '0.40.0'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -47,7 +47,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.39.1: Simplify getting started, clarify apps and scripts in the deployment diagrams and Viewer guide, and refresh package discovery metadata. Deployment and cache behavior are unchanged.'
+            ReleaseNotes = '0.40.0: Check candidate and batch cache space before acquisition, share checks with standalone PreInstall, and preserve existing cache and staged fallback when refresh cannot fit.'
             RequireLicenseAcceptance = $false
         }
     }

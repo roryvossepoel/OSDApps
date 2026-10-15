@@ -5,20 +5,19 @@ function Assert-OSDAppCacheFreeSpace {
         [string]$CachePath,
 
         [Parameter(Mandatory)]
-        [double]$MinimumFreeSpaceGB,
+        [ValidateRange(0, [double]::MaxValue)][double]$MinimumFreeSpaceGB,
 
         [Parameter(Mandatory)]
         [string]$Operation,
 
-        [string]$LogPath
+        [string]$LogPath,
+
+        [string]$ExistingPath
     )
 
+    $space = Assert-OSDAppTransactionSpace -Path $CachePath -ExistingPath $ExistingPath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation $Operation
     $driveLetter = [System.IO.Path]::GetPathRoot($CachePath).TrimEnd('\').TrimEnd(':')
-    $volume = Get-Volume -DriveLetter $driveLetter -ErrorAction Stop
-
-    $freeBytes = [double]$volume.SizeRemaining
-    $requiredBytes = $MinimumFreeSpaceGB * 1GB
-    $freeGB = [math]::Round($freeBytes / 1GB, 2)
+    $freeGB = [math]::Round($space.AvailableBytes / 1GB, 2)
 
     if ($LogPath) {
         Write-OSDAppLog -LogPath $LogPath -Component 'Cache' -Event 'FreeSpaceCheck' -Message 'Checked free space on the OSDCloud cache volume.' -Data @{
@@ -26,11 +25,9 @@ function Assert-OSDAppCacheFreeSpace {
             DriveLetter        = $driveLetter
             FreeSpaceGB        = $freeGB
             MinimumFreeSpaceGB = $MinimumFreeSpaceGB
+            RequiredBytes = $space.RequiredBytes
+            Basis = $space.Basis
         }
-    }
-
-    if ($freeBytes -lt $requiredBytes) {
-        throw ('Insufficient free space on OSDCloud volume {0}: {1} GB available; {2} GB required before {3}.' -f $driveLetter, $freeGB, $MinimumFreeSpaceGB, $Operation)
     }
 
     [pscustomobject]@{
