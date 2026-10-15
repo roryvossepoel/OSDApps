@@ -98,6 +98,50 @@ The top-level status is `Running`, `Succeeded` or `Failed`. The final record inc
 
 `Integrity` records the check actually performed by Runner. Repository archives report SHA-256 validation; supported built-in publishers are validated in PreInstall and carried as phase context. `CacheUsed` and `PackageUpdated` come from built-in `CacheInfo.json` when available. Null means the fact was not available for that source, not false.
 
+### Acquisition and installation are separate results
+
+From 0.42.0, `AcquisitionOutcome` describes how PreInstall prepared a built-in's
+primary payload during **this deployment**. It is copied to the matching Runner
+application result; `Status`, `ExitCode`, `FailureType` and `Error` continue to
+report installation or a blocking preparation failure.
+
+| AcquisitionOutcome | Meaning |
+| --- | --- |
+| `Downloaded` | The acquired primary payload passed the preparation checks and is ready to install. It may be the same version as before. |
+| `CacheReused` | Remote HTTP metadata matched the existing primary payload, which passed the applicable preparation checks. |
+| `OfflineCacheUsed` | No network interface was available; acceptable staged/cache content was used without a refresh attempt. Freshness was not established. |
+| `FallbackCacheUsed` | Refresh failed, but acceptable staged content was available. `RefreshFailureType` and `RefreshError` retain the refresh failure. Freshness was not established. |
+| `Failed` | PreInstall could not prepare this entry; inspect its preparation error and Runner status. |
+| `Unknown` | Runner has no matching acquisition outcome, for example with an older PreInstall result. |
+| `NotApplicable` | Repository packages, including scripts, do not use this built-in PreInstall acquisition path. |
+
+Office builds a fresh complete generation, so a successful acquisition reports
+`Downloaded` even if the version is unchanged. Teams can report `CacheReused`
+for its MSIX while downloading the bootstrapper; reuse does not mean zero
+network traffic. `CacheReused` reflects the existing vendor metadata checks,
+not a new guarantee of remote version or content identity.
+
+The embedded `PreInstall` record adds `FallbackApplicationCount`,
+`OfflineCacheApplicationCount` and `HasAcquisitionWarnings`. A fallback can
+therefore coexist with a final `Status=Succeeded`: all installations succeeded,
+but one or more refreshes did not. `OnSuccess` cleanup still follows installation
+success, and the persistent result retains the warning after source cleanup.
+These are additive fields in result schema `1.0`.
+
+```powershell
+$Result = Get-OSDAppDeploymentResult
+$Result.PreInstall | Select-Object Status, HasAcquisitionWarnings, FallbackApplicationCount, OfflineCacheApplicationCount
+$Result.Applications | Select-Object Id, Status, AcquisitionOutcome, RefreshFailureType, RefreshError, ExitCode, Error
+```
+
+Use `AcquisitionOutcome` for current-deployment freshness and fallback decisions.
+Legacy `CacheUsed` describes USB/cache context, not proof of reuse or freshness;
+`PackageUpdated` is read from stored cache metadata and can describe an earlier
+synchronization when fallback is used. These fields are retained for compatibility.
+The `ApplicationAcquisitionComplete` log event records the same preparation
+outcome, and `PreInstallComplete` includes fallback/offline counts on success.
+No retry, extra download or changed fallback acceptance rule is introduced.
+
 Result writing is best effort so an evidence-path problem does not convert an otherwise successful installer run into a failed deployment. A `ResultWriteFailed` warning in `Runtime.log` means the JSON is incomplete or unavailable; use the log as the authoritative fallback. A successful JSON status remains installer/provisioning evidence, not proof of activation, user sign-in or later interactive health.
 
 ## Cleanup policy

@@ -229,7 +229,7 @@ Describe 'Standalone PreInstall recovery with no network' {
         . (Join-Path $root 'Runtime\Restore-OSDAppCacheGeneration.ps1')
         $tokens = $null; $errors = $null
         $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'Runtime\Invoke-OSDAppPreInstall.ps1'),[ref]$tokens,[ref]$errors)
-        foreach ($name in @('Restore-PreInstallBuiltInCache','Test-LocalMsiSource','Sync-PreInstallVendorMsi')) {
+        foreach ($name in @('Restore-PreInstallBuiltInCache','Test-LocalMsiSource','Sync-PreInstallVendorMsi','Set-PreInstallAcquisitionResult','Get-PreInstallFailureType')) {
             $node = $ast.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name},$true)
             . ([scriptblock]::Create($node.Extent.Text))
         }
@@ -253,10 +253,12 @@ Describe 'Standalone PreInstall recovery with no network' {
         Mock Assert-PreInstallSignedPayload { return }
         Mock Write-PreInstallLog { return }
         Mock Get-RemoteMetadata { throw 'offline recovery must not need network' }
-        Sync-PreInstallVendorMsi -App ([pscustomobject]@{Id='GoogleChromeEnterprise';Architecture='x64'}) -RelativeRoot $relative -PackageUri 'https://example.invalid/package.msi' -DisplayName Chrome
+        $acquisition = @{ Outcome='Failed'; RefreshFailureType=$null; RefreshError=$null }
+        Sync-PreInstallVendorMsi -App ([pscustomobject]@{Id='GoogleChromeEnterprise';Architecture='x64'}) -RelativeRoot $relative -PackageUri 'https://example.invalid/package.msi' -DisplayName Chrome -Acquisition $acquisition
         (Get-FileHash -LiteralPath (Join-Path $active 'Package.msi')).Hash | Should -Be $hash
         (Get-FileHash -LiteralPath (Join-Path (Join-Path $StagedPath $relative) 'Package.msi')).Hash | Should -Be $hash
         Test-Path -LiteralPath $old | Should -BeFalse
+        $acquisition.Outcome | Should -Be OfflineCacheUsed
         Should -Invoke Get-RemoteMetadata -Exactly 0
         Should -Invoke Write-PreInstallLog -Exactly 1 -ParameterFilter { $Event -eq 'CacheGenerationRecovered' }
         Should -Invoke Write-PreInstallLog -Exactly 1 -ParameterFilter { $Event -eq 'BuiltInRefreshSkipped' }

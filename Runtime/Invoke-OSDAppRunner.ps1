@@ -214,6 +214,18 @@ function New-RunnerApplicationResult {
     )
 
     $cacheInfo = Get-RunnerCacheInfo -App $App
+    # Freshness belongs to this deployment's PreInstall result, never to an older CacheInfo.json.
+    $acquisitionOutcome = if ([string]$App.Source -eq 'BuiltIn') { 'Unknown' } else { 'NotApplicable' }
+    $refreshFailureType = $null
+    $refreshError = $null
+    if ([string]$App.Source -eq 'BuiltIn' -and $preInstallResult) {
+        $preparation = @($preInstallResult.Applications | Where-Object { [string]$_.Id -eq [string]$App.Id } | Select-Object -First 1)
+        if ($preparation.Count -gt 0 -and $preparation[0].PSObject.Properties.Name -contains 'AcquisitionOutcome') {
+            $acquisitionOutcome = [string]$preparation[0].AcquisitionOutcome
+            if ($preparation[0].PSObject.Properties.Name -contains 'RefreshFailureType') { $refreshFailureType = $preparation[0].RefreshFailureType }
+            if ($preparation[0].PSObject.Properties.Name -contains 'RefreshError') { $refreshError = $preparation[0].RefreshError }
+        }
+    }
     [pscustomobject]@{
         Id              = [string]$App.Id
         DisplayName     = if ($App.DisplayName) { [string]$App.DisplayName } else { [string]$App.Id }
@@ -228,6 +240,9 @@ function New-RunnerApplicationResult {
         Integrity       = if ($Execution -and $Execution.Integrity) { [string]$Execution.Integrity } else { $null }
         CacheUsed       = if ($cacheInfo -and $null -ne $cacheInfo.Cached) { [bool]$cacheInfo.Cached } else { $null }
         PackageUpdated  = if ($cacheInfo -and $null -ne $cacheInfo.Updated) { [bool]$cacheInfo.Updated } else { $null }
+        AcquisitionOutcome = $acquisitionOutcome
+        RefreshFailureType = $refreshFailureType
+        RefreshError    = $refreshError
         FailureType     = $FailureType
         Error           = $ErrorMessage
     }

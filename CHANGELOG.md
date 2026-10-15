@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.42.0
+
+- Record each built-in's current-deployment acquisition outcome in PreInstall and Runner results: `Downloaded`, `CacheReused`, `OfflineCacheUsed`, `FallbackCacheUsed` or `Failed`.
+- Preserve the refresh failure type and message when an acceptable staged fallback allows preparation and installation to continue. Classify insufficient acquisition space as `InsufficientDiskSpace`.
+- Add fallback/offline counts and an acquisition-warning flag to the PreInstall record, plus an `ApplicationAcquisitionComplete` log event. Successful preparation with fallback/offline use emits a warning-level completion summary.
+- Keep installer status, exit codes, one-shot execution, cleanup decisions and existing result fields unchanged. Older PreInstall records report `Unknown`; repository entries report `NotApplicable` for the built-in acquisition outcome.
+
 ## 0.41.0
 
 - Protect all public built-in synchronizers, repository synchronization/pruning and cache clearing with one exclusive file handle per cache root, held through recovery, commit and cleanup.
