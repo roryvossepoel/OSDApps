@@ -11,7 +11,7 @@ Choose an example for the environment you are using. These are reference workflo
 | [Offline WinPE deployment](WinPE-Offline.md) | WinPE with complete matching cache and networking disconnected | Stages cached content and SetupComplete without repository refresh. |
 | [Build a repository package](#build-a-repository-package) | Full Windows authoring machine | Creates a package archive and local repository metadata. |
 
-The deployment examples use x64 Teams and Firefox Rapid/en-US so preparation and staging select the same variants. They pin OSDApps 0.38.0, discover the USB by label rather than assuming a drive letter, and do not format disks or reboot automatically. Repository pruning appears only as a separate preview-and-confirm maintenance step.
+The deployment examples use x64 Teams and Firefox Rapid/en-US so preparation and staging select the same variants. They pin OSDApps 0.39.0, discover the USB by label rather than assuming a drive letter, and do not format disks or reboot automatically. Repository pruning appears only as a separate preview-and-confirm maintenance step.
 
 Add other apps only after selecting their intended configuration. For example, match Office architecture, channel, language and products between cache preparation and staging. See [Built-in applications](../docs/built-in-apps.md).
 
@@ -31,7 +31,7 @@ Build the archive and publish it to a local repository directory:
 
 ```powershell
 $ErrorActionPreference = 'Stop'
-Import-Module OSDApps -RequiredVersion 0.38.0 -Force
+Import-Module OSDApps -RequiredVersion 0.39.0 -Force
 
 New-OSDAppPackage `
     -Id ExampleApp `

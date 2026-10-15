@@ -17,7 +17,11 @@ Describe 'Microsoft 365 Apps cache transaction wiring' {
         $runtime | Should -Match 'osdapps-new-'
         $runtime | Should -Match 'Set-OfficeDownloadSourcePath'
         $runtime | Should -Match 'Test-OfficeCacheGeneration -OfficeRoot \$transactionRoot'
-        $runtime.IndexOf('Test-OfficeCacheGeneration -OfficeRoot $transactionRoot') | Should -BeLessThan $runtime.IndexOf('Move-Item -LiteralPath $acquireRoot -Destination $backupRoot')
+        $officeStart = $runtime.IndexOf("'Microsoft365Apps' {")
+        $officeEnd = $runtime.IndexOf("'MicrosoftTeams' {", $officeStart)
+        $officeBlock = $runtime.Substring($officeStart, $officeEnd - $officeStart)
+        $officeBlock.IndexOf('Test-OfficeCacheGeneration -OfficeRoot $transactionRoot') |
+            Should -BeLessThan $officeBlock.IndexOf('Move-Item -LiteralPath $acquireRoot -Destination $backupRoot')
         $runtime | Should -Not -Match 'Remove-StaleOfficeCacheVersion'
     }
 

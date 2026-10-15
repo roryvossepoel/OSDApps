@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.39.0
+
+### Cache resilience
+
+- Microsoft Teams, Google Chrome Enterprise, Mozilla Firefox Enterprise, Cisco Webex and Adobe Acrobat Unified now acquire changed content into a complete sibling cache generation. The active directory is replaced only after required files, metadata and the applicable publisher or archive checks succeed.
+- Directory promotion uses a same-volume backup and rollback boundary. A failed download, validation or promotion leaves the prior active generation available; a successful promotion removes the prior generation and residue from older interrupted transactions.
+- The standalone SetupComplete PreInstall runtime uses the same generation-level contract. Existing staged content remains the one-shot fallback when an online refresh fails.
+- If an interrupted swap leaves the active USB directory absent, the next built-in sync or PreInstall invocation restores exactly one validated previous `.osdapps-old-<guid>` generation before acquisition or offline fallback. Active directories are never overwritten by recovery; uncommitted `.new` content is never promoted. Ambiguous or invalid backups are preserved and reported. Read-only cache checks do not mutate the cache and SetupComplete is never scheduled to retry.
+
+### Validation
+
+- Added fault-injection coverage proving failed candidate validation does not change active content, successful promotion replaces the complete generation, and stale transaction directories are removed only after a valid generation is active.
+- Added source-wiring regression coverage for all five non-Office built-ins in both the module synchronizers and standalone PreInstall runtime.
+- Added interrupted-swap recovery tests, including offline restaging in standalone PreInstall, preservation on validation/rename failure, ambiguous backups, idempotence, WhatIf and staging of the shared recovery helper.
+
 ## 0.38.0
 
 ### Added

@@ -27,11 +27,11 @@ The CLI owns configuration and automation. The Viewer does not add or remove app
 
 ## Install from PowerShell Gallery
 
-**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin **0.38.0**:
+**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin **0.39.0**:
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.38.0 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.38.0 -Force
+Install-Module OSDApps -RequiredVersion 0.39.0 -Scope CurrentUser -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.39.0 -Force
 ```
 
 For offline WinPE, save the module to USB first; see [Prepare a USB cache](Examples/Prepare-UsbCache.md). PowerShellGet is the documented WinPE/Windows PowerShell 5.1 installation path. `Install-PSResource` is an alternative only on a machine where PSResourceGet is already available.
@@ -88,6 +88,18 @@ packages with `-PinnedId`.
 Replacements are hash-validated before the transactional commit; selective
 synchronization remains non-destructive. See [cache health and
 reconciliation](docs/repository.md#cache-health-and-reconciliation).
+
+Built-in refreshes replace complete directories, not individual files in the
+active cache. A sibling `.osdapps-new-<guid>` holds the candidate and
+`.osdapps-old-<guid>` temporarily holds the previous generation. If a process
+stops between the directory renames, the next full-Windows built-in sync or
+PreInstall invocation can restore a validated old generation before attempting
+downloads or offline restaging. Recovery never overwrites an existing active
+directory or promotes unfinished `.new` content. If no old candidate validates,
+or multiple candidates validate, it preserves them and reports the ambiguity.
+Successful refresh removes obsolete transaction directories. Read-only cache
+inspection does not perform recovery. This does not retry SetupComplete or
+recover an interrupted Windows installation; use one writer per cache.
 
 OSDApps does not bundle or redistribute vendor installer payloads. Built-ins are downloaded directly from their vendors; repository content is the repository owner's responsibility.
 
