@@ -5,8 +5,13 @@ function Sync-OSDAppMozillaFirefoxEnterprise {
     if(-not $PackageUri){$product=if($Channel -eq 'ESR'){'firefox-esr-msi-latest-ssl'}else{'firefox-msi-latest-ssl'};$os=if($Architecture -eq 'x64'){'win64'}else{'win'};$PackageUri="https://download.mozilla.org/?product=$product&os=$os&lang=$Language"}
     $cachePath=Get-OSDAppCachePath;$log=Join-Path $cachePath 'Logs\Client.log';$root=Join-Path $cachePath (Join-Path 'BuiltIn\MozillaFirefoxEnterprise' (Join-Path $Channel (Join-Path $Architecture $Language)))
     if(-not $PSCmdlet.ShouldProcess($root,"Transactionally synchronize Mozilla Firefox Enterprise $Channel cache ($Architecture, $Language)")){return}
+
+    $cacheLock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'built-in cache synchronization'
+    try {
     Write-OSDAppLog -LogPath $log -Component MozillaFirefoxEnterprise -Event BuiltInSyncStart -Message 'Synchronizing Mozilla Firefox Enterprise built-in cache.' -Data @{Channel=$Channel;Architecture=$Architecture;Language=$Language;Transactional=$true}
     $sync=Sync-OSDAppVendorBuiltInCache -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Id MozillaFirefoxEnterprise -Root $root -PackageUri $PackageUri -Architecture $Architecture -PackageFileName Package.msi -Activity "Downloading Mozilla Firefox Enterprise $Channel $Architecture MSI" -AdditionalMetadata @{Channel=$Channel;Language=$Language} -LogPath $log -SignedPackage
     Write-OSDAppLog -LogPath $log -Component MozillaFirefoxEnterprise -Event BuiltInSyncComplete -Message 'Mozilla Firefox Enterprise built-in cache synchronized.' -Data @{Channel=$Channel;Architecture=$Architecture;Language=$Language;Updated=$sync.Updated;Path=$root;Transactional=$true}
     [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='MozillaFirefoxEnterprise';Version=$sync.Version;Channel=$Channel;Architecture=$Architecture;Language=$Language;CachePath=$root;Cached=$true;Updated=$sync.Updated}
+    }
+    finally { $cacheLock.Dispose() }
 }

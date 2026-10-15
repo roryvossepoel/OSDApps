@@ -5,6 +5,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Enter-OSDAppCacheLock.ps1')
+$cacheLock = $null
 . (Join-Path $PSScriptRoot 'Restore-OSDAppCacheGeneration.ps1')
 . (Join-Path $PSScriptRoot 'Assert-OSDAppTransactionSpace.ps1')
 Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
@@ -133,6 +135,7 @@ function Write-PreInstallResult {
 function Get-PreInstallFailureType {
     param([Parameter(Mandatory)][System.Management.Automation.ErrorRecord]$ErrorRecord)
 
+    if ($ErrorRecord.Exception.Data.Contains('OSDAppsCacheLockFailure')) { return 'CacheLockUnavailable' }
     $message = $ErrorRecord.Exception.Message
     if ($ErrorRecord.Exception -is [System.Security.SecurityException]) { return 'TrustValidationFailed' }
     if ($ErrorRecord.Exception -is [System.IO.InvalidDataException]) { return 'ManifestInvalid' }
@@ -613,6 +616,8 @@ try {
 
     $cacheVolume=Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.FileSystemLabel -eq $cacheVolumeLabel -and $_.DriveLetter } | Select-Object -First 1
     $usbRoot=if($cacheVolume){"$($cacheVolume.DriveLetter):\OSDApps"}else{$null}
+    $lockRoot = if ($usbRoot) { $usbRoot } else { $StagedPath }
+    $cacheLock = Enter-OSDAppCacheLock -CachePath $lockRoot -Operation 'PreInstall cache acquisition and recovery'
     Write-PreInstallLog -Event 'RefreshStart' -Message 'Starting built-in acquisition and refresh before installation.' -Data @{StagedPath=$StagedPath;BuiltInApps=@($builtInApps.Id);CacheAvailable=[bool]$usbRoot;CacheRoot=$usbRoot}
     if($usbRoot){New-Item -ItemType Directory -Path $usbRoot -Force | Out-Null; Write-PreInstallLog -Event 'CacheVolumeFound' -Message 'OSDCloud USB cache is available and will be used automatically.' -Data @{CacheRoot=$usbRoot}}
     else{Write-PreInstallLog -Event 'CacheVolumeNotFound' -Message 'No OSDCloud USB cache is connected. Built-ins will be acquired directly to the local Windows runtime.'}
@@ -945,4 +950,7 @@ try {
     Write-PreInstallLog -Event 'RefreshFailed' -Level 'Error' -Message $failureMessage -Data @{FailureType=$failureType;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
     try { Write-PreInstallResult -Status Failed -FailureType $failureType -ErrorMessage $failureMessage } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
     exit 1
+}
+finally {
+    if ($cacheLock) { $cacheLock.Dispose() }
 }

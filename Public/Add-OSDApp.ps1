@@ -61,6 +61,7 @@ function Add-OSDApp {
                 $apps = @(Resolve-OSDAppCachedPackageId -CachePath $cachePath -Name $apps)
             }
             catch {
+                if ($_.Exception.Data.Contains('OSDAppsCacheLockFailure')) { throw }
                 $syncError = $_.Exception.Message
 
                 if (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf) {

@@ -14,6 +14,7 @@ function Add-OSDAppSetupComplete {
     $moduleRoot = Split-Path $PSScriptRoot -Parent
     $runnerSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'
     $preInstallSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1'
+    $lockSource = Join-Path $moduleRoot 'Runtime\Enter-OSDAppCacheLock.ps1'
     $spaceSource = Join-Path $moduleRoot 'Runtime\Assert-OSDAppTransactionSpace.ps1'
     $recoverySource = Join-Path $moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1'
 
@@ -32,11 +33,16 @@ function Add-OSDAppSetupComplete {
         throw "OSD App cache space runtime was not found: $spaceSource"
     }
 
+    if (-not (Test-Path -LiteralPath $lockSource -PathType Leaf)) {
+        throw "OSD App cache lock runtime was not found: $lockSource"
+    }
+
     if ($PSCmdlet.ShouldProcess($stagedRoot, 'Stage OSD Apps runtime scripts')) {
         New-Item -ItemType Directory -Path $scriptsPath -Force | Out-Null
         New-Item -ItemType Directory -Path $stagedRoot -Force | Out-Null
         Copy-Item -LiteralPath $runnerSource -Destination (Join-Path $stagedRoot 'Invoke-OSDAppRunner.ps1') -Force
         Copy-Item -LiteralPath $preInstallSource -Destination (Join-Path $stagedRoot 'Invoke-OSDAppPreInstall.ps1') -Force
+        Copy-Item -LiteralPath $lockSource -Destination (Join-Path $stagedRoot 'Enter-OSDAppCacheLock.ps1') -Force
         Copy-Item -LiteralPath $spaceSource -Destination (Join-Path $stagedRoot 'Assert-OSDAppTransactionSpace.ps1') -Force
         Copy-Item -LiteralPath $recoverySource -Destination (Join-Path $stagedRoot 'Restore-OSDAppCacheGeneration.ps1') -Force
     }

@@ -9,6 +9,9 @@ function Sync-OSDAppMicrosoftTeams {
     $cachePath=Get-OSDAppCachePath;$log=Join-Path $cachePath 'Logs\Client.log';$root=Join-Path $cachePath 'BuiltIn\MicrosoftTeams'
     $msixUri=switch($Architecture){'x86'{'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196060'}'x64'{'https://go.microsoft.com/fwlink/?linkid=2196106'}'arm64'{'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196207'}}
     if(-not $PSCmdlet.ShouldProcess($root,"Transactionally synchronize Microsoft Teams built-in cache ($Architecture)")){return}
+
+    $cacheLock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'built-in cache synchronization'
+    try {
     Write-OSDAppLog -LogPath $log -Component MicrosoftTeams -Event BuiltInSyncStart -Message 'Synchronizing Microsoft Teams built-in cache.' -Data @{Architecture=$Architecture;Transactional=$true}
     Restore-OSDAppBuiltInCache -Root $root -Id MicrosoftTeams -LogPath $log
     $remote=Get-OSDAppRemoteFileMetadata -Uri $msixUri;$previous=$null;$activeInfo=Join-Path $root 'CacheInfo.json';$activeMsix=Join-Path $root 'teams.msix'
@@ -32,4 +35,6 @@ function Sync-OSDAppMicrosoftTeams {
     $removedAliases=@(Remove-OSDAppBuiltInCacheAlias -CachePath $cachePath -CanonicalId MicrosoftTeams -Alias Teams -LogPath $log -Confirm:$false)
     Write-OSDAppLog -LogPath $log -Component MicrosoftTeams -Event BuiltInSyncComplete -Message 'Microsoft Teams built-in cache synchronized.' -Data @{Version=$committed.Version;Architecture=$Architecture;Updated=$committed.Updated;Path=$root;Transactional=$true;RemovedAliases=$removedAliases}
     [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='MicrosoftTeams';Version=[string]$committed.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=[bool]$committed.Updated;RemovedAliases=$removedAliases}
+    }
+    finally { $cacheLock.Dispose() }
 }

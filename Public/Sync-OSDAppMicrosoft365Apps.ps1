@@ -49,6 +49,9 @@ function Sync-OSDAppMicrosoft365Apps {
 
     if (-not $PSCmdlet.ShouldProcess($root, 'Configure and synchronize Microsoft 365 Apps built-in cache')) { return }
 
+    $cacheLock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'built-in cache synchronization'
+    try {
+
     Restore-OSDAppBuiltInCache -Root $root -Id Microsoft365Apps -LogPath $clientLogPath
 
     Assert-OSDAppCacheFreeSpace -CachePath $root -ExistingPath $root -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'Microsoft 365 Apps cache synchronization' -LogPath $clientLogPath | Out-Null
@@ -157,4 +160,6 @@ function Sync-OSDAppMicrosoft365Apps {
         if ((Test-Path -LiteralPath $backupRoot -PathType Container) -and -not (Test-Path -LiteralPath $root)) { Move-Item -LiteralPath $backupRoot -Destination $root -ErrorAction SilentlyContinue }
         throw
     }
+    }
+    finally { $cacheLock.Dispose() }
 }

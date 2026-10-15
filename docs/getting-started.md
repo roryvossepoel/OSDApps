@@ -106,6 +106,7 @@ The staging directory is normally:
     Invoke-OSDAppRunner.ps1
     Restore-OSDAppCacheGeneration.ps1
     Assert-OSDAppTransactionSpace.ps1
+    Enter-OSDAppCacheLock.ps1
     BuiltIn\
     Packages\
 ```
