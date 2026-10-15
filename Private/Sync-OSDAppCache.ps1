@@ -81,6 +81,23 @@ function Sync-OSDAppCache {
         }
     }
 
+    # Reject pins that cannot exist in a new cache before creating its lock
+    # file. Existing-catalog identities are still validated under the lock.
+    if ($Prune -and -not (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf)) {
+        $unknownPins = @($pins | Where-Object { $_ -notin $desiredIds })
+        if ($unknownPins.Count -gt 0) {
+            throw "Pinned cache Id(s) are not present in desired or existing cache state: $($unknownPins -join ', ')."
+        }
+    }
+
+    $action = if ($Prune) {
+        "Reconcile $($packages.Count) desired application(s) and prune stale cache folders as a single transaction"
+    }
+    else { "Synchronize $($packages.Count) application(s) as a single cache transaction" }
+    if (-not $PSCmdlet.ShouldProcess($CachePath, $action)) { return }
+
+    $cacheLock = Enter-OSDAppCacheLock -CachePath $CachePath -Operation 'repository cache synchronization'
+    try {
     # Never discard existing cache entries because a catalog is unreadable.
     $existingPackages = @()
     if (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf) {
@@ -231,16 +248,6 @@ function Sync-OSDAppCache {
                 Classification = $classification
             })
         }
-    }
-
-    $action = if ($Prune) {
-        "Reconcile $($packages.Count) desired application(s) and prune $($toRemove.Count) stale cache folder(s) as a single transaction"
-    }
-    else {
-        "Synchronize $($packages.Count) application(s) as a single cache transaction"
-    }
-    if (-not $PSCmdlet.ShouldProcess($CachePath, $action)) {
-        return
     }
 
     # Budget the complete prepared batch. Old packages remain on disk until
@@ -431,4 +438,6 @@ function Sync-OSDAppCache {
     }
 
     Get-Item -LiteralPath $cacheCatalogPath
+    }
+    finally { $cacheLock.Dispose() }
 }

@@ -34,6 +34,11 @@ function Clear-OSDAppCache {
         }
     }
 
+    $cacheLock = $null
+    if (-not $WhatIfPreference) {
+        $cacheLock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'cache cleanup'
+    }
+    try {
     if (-not $WhatIfPreference) {
         Write-OSDAppLog -LogPath $logPath -Component 'Cache' -Event 'CacheClearStart' -Message 'Starting OSD App cache clear operation.' -Data @{
             Scope       = $scope
@@ -159,4 +164,6 @@ function Clear-OSDAppCache {
         IncludeLogs = [bool]$IncludeLogs
         Removed     = @($removed)
     }
+    }
+    finally { if ($cacheLock) { $cacheLock.Dispose() } }
 }

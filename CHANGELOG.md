@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.41.0
+
+- Protect all public built-in synchronizers, repository synchronization/pruning and cache clearing with one exclusive file handle per cache root, held through recovery, commit and cleanup.
+- Use the same lock in standalone PreInstall, including local acquisition when no USB cache is present. Report `CacheLockUnavailable` and stop before touching a busy acquisition cache; no automatic retry is added.
+- Prevent repository staging from treating lock acquisition failures as network failures eligible for cached fallback.
+- Release handles in `finally`; process termination releases them through the operating system. Keep the empty `.osdapps-cache.lock` file in place to avoid delete/recreate races. File existence alone never blocks use.
+- Keep `-WhatIf` free of lock creation. Stage and validate the shared runtime helper without adding public commands or settings.
+
 ## 0.40.0
 
 - Check free space before preparing a replacement built-in cache generation, using the known payload length or an existing-generation estimate plus a 20% allowance and 64 MB overhead, subject to the configured minimum.

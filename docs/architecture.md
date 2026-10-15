@@ -84,7 +84,34 @@ directory or promotes unfinished `.new` content. If no old candidate validates,
 or multiple candidates validate, it preserves them and reports the ambiguity.
 Successful refresh removes obsolete transaction directories. Read-only cache
 inspection does not perform recovery. This does not retry SetupComplete or
-recover an interrupted Windows installation; use one writer per cache.
+recover an interrupted Windows installation.
+
+## One cache writer at a time
+
+OSDApps 0.41.0 and later hold an exclusive file handle on
+`<cache root>/.osdapps-cache.lock` while a public built-in sync, repository
+sync/prune, or cache-clear operation is active. The lock covers the full
+operation, including reading the existing catalog for reconciliation, recovery,
+downloads, directory swaps and cleanup. PreInstall uses the same helper for its
+USB cache, or its local staged root when no USB cache is available.
+
+A competing lock attempt fails immediately instead of waiting or retrying.
+In PreInstall this is a phase failure (`CacheLockUnavailable`): SetupComplete's
+existing exit-code guard prevents Runner from starting. There is no scheduled
+retry or promise that SetupComplete runs again. Repository staging also stops
+on a lock failure instead of reading a changing cache as offline fallback.
+
+Normal completion and errors dispose the handle; process termination or reboot
+releases it through the operating system. The empty file deliberately remains,
+including after `Clear-OSDAppCache -All`. Its existence does not mean the cache
+is busy. Do not delete or replace it to force an unlock. `-WhatIf` neither opens
+nor creates it, and unrelated cache roots can be written independently.
+
+This coordinates cooperating writers using this implementation. Older module
+versions, manual file operations and external tools do not participate. Viewer
+and health inspection remain read-only and do not acquire a lock; they are not
+consistent snapshots during a concurrent write. Cache locking does not serialize
+separate device-staging operations or retry interrupted deployments.
 
 ## Cache transaction space checks
 
