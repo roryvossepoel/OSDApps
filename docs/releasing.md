@@ -49,6 +49,25 @@ The version in `OSDApps.psd1` and the corresponding top-level section in `CHANGE
 
 Both workflows can also be dispatched manually when appropriate. A manually dispatched publish requires an already existing matching release tag. A Gallery version is immutable: never attempt to overwrite a published version. Pre-existing versions are treated as explicit conflicts, while a post-push 409 is reconciled only when the published files match the release.
 
+### Gallery verification delays
+
+After a push, Gallery search can expose the version before `Save-Module` can
+retrieve it. The publish workflow therefore uses the exact-version download as
+the readiness check. It tries up to 12 downloads, waits 10 seconds between
+failed attempts, and starts each attempt in an empty verification directory.
+The total duration also includes the individual Gallery request durations.
+
+Only retrieval is retried; `Publish-Module` is called once. A downloaded package
+with a missing file or a different SHA256 hash fails immediately. Exhausting the
+download attempts leaves the workflow failed and explicitly unverified, even if
+the push succeeded. No content mismatch is accepted as a propagation delay.
+
+A failed verification does not prove that publication failed. Check whether the
+exact version is available and compare it to the tagged build before taking
+further action. Do not republish or retag an existing version; the pre-existing
+version guard still rejects that operation. This workflow-only change does not
+publish a new module version or alter an already completed workflow run.
+
 A normal `main` push without an `OSDApps.psd1` change does not trigger a new release. Documentation-only or unreleased fixes remain pending until a later version bump.
 
 ## Release documentation checklist
