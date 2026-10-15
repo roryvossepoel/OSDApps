@@ -6,7 +6,7 @@
 
 Use Windows PowerShell 5.1 with PowerShellGet available and internet access. Attach exactly one intended cache volume labeled `OSDCloud`; prepare/label the media separately before running this example. There must be enough free space for the module and selected payloads, including any existing content.
 
-## 1. Save the exact module to the stick
+## 1. Save the module to the stick
 
 ```powershell
 $ErrorActionPreference = 'Stop'
@@ -32,10 +32,13 @@ if ($UsbRoot.TrimEnd('\') -ieq $env:SystemDrive) {
 $ModuleParent = Join-Path $UsbRoot 'Modules'
 New-Item -ItemType Directory -Path $ModuleParent -Force | Out-Null
 
-Save-Module -Name OSDApps -RequiredVersion 0.39.0 `
-    -Repository PSGallery -Path $ModuleParent -Force
+Save-Module -Name OSDApps -Repository PSGallery -Path $ModuleParent
 
-$ModulePath = Join-Path $ModuleParent 'OSDApps\0.39.0\OSDApps.psd1'
+$SavedVersions = @(Get-ChildItem -LiteralPath (Join-Path $UsbRoot 'Modules\OSDApps') -Directory |
+    Where-Object { $_.Name -as [version] } |
+    Sort-Object { [version]$_.Name } -Descending)
+if ($SavedVersions.Count -eq 0) { throw 'No saved OSDApps version found on this USB.' }
+$ModulePath = Join-Path $SavedVersions[0].FullName 'OSDApps.psd1'
 if (-not (Test-Path -LiteralPath $ModulePath -PathType Leaf)) {
     throw "Saved module not found: $ModulePath"
 }
@@ -47,28 +50,29 @@ Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud
 Get-Module OSDApps | Select-Object Name, Version, Path
 ```
 
-`Save-Module` places the module in a version subdirectory. The following WinPE examples import that exact saved path, so an older module elsewhere on the stick is not selected accidentally.
+`Save-Module` places the module in a version subdirectory. The examples select the newest version saved under this USB's module directory, without depending on an installed version elsewhere. For controlled rollouts, you can deliberately pin a version with `Save-Module -RequiredVersion` and import its exact saved path.
 
 At this point an **online** target can use the saved module even when the app cache has not yet been populated. Continue below before an **offline** deployment.
 
 ## 2. Pre-cache the matching built-ins
 
-**Run in the same full-Windows PowerShell session.** These commands download or refresh the USB cache; they do not install Teams or Firefox on the preparation machine.
+**Run in the same full-Windows PowerShell session.** These commands download or refresh the USB cache; they do not install Office, Adobe or Chrome on the preparation machine.
 
 ```powershell
-Sync-OSDAppMicrosoftTeams -Architecture x64
-Sync-OSDAppMozillaFirefoxEnterprise -Channel Rapid -Language en-US -Architecture x64
+Sync-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
+Sync-OSDAppAdobeAcrobatUnified
+Sync-OSDAppGoogleChromeEnterprise
 
-Get-OSDAppCache -Name MicrosoftTeams,MozillaFirefoxEnterprise -ResolveVersions -VerifySignatures |
+Get-OSDAppCache -Name Microsoft365Apps,AdobeAcrobatUnified,GoogleChromeEnterprise -ResolveVersions -VerifySignatures |
     Select-Object Id, Version, Architecture, Channel, Language, Valid, SignatureStatus
 
 Get-OSDAppCacheHealth -Offline |
     Select-Object Healthy, ActiveCount, RenamedCount, IncompleteCount, CorruptCount
 ```
 
-Review both file availability and signature results. The corresponding WinPE examples use the same x64 Teams and Firefox Rapid/en-US variants. `Updated=False` means existing content was reused; it is not a synchronization failure. Built-in signed-file trust/publisher failures must be investigated before relying on the cache.
+Review both file availability and signature results. The corresponding WinPE examples use the same x64 apps, with Microsoft 365 Apps set to MonthlyEnterprise/en-us. `Updated=False` means existing content was reused; it is not a synchronization failure. Built-in signed-file trust/publisher failures must be investigated before relying on the cache.
 
-To add Office or another built-in, choose its required configuration from the [built-in guide](../docs/built-in-apps.md). Do not assume a cache for one channel, language, product set or architecture satisfies another configuration.
+To customize Office or add another built-in, choose its required configuration from the [built-in guide](../docs/built-in-apps.md). Do not assume a cache for one channel, language, product set or architecture satisfies another configuration.
 
 ## 3. Optionally pre-cache your repository app
 
@@ -105,7 +109,7 @@ Wait for all commands and file activity to finish. The relevant layout is:
 
 ```text
 <USB>:\
-    Modules\OSDApps\0.39.0\OSDApps.psd1
+    Modules\OSDApps\<version>\OSDApps.psd1
     OSDApps\BuiltIn\...
     OSDApps\Packages\...          (when repository content was synced)
     OSDApps\CacheCatalog.json    (when repository content was synced)

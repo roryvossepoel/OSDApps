@@ -1,10 +1,10 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.39.0'
+    ModuleVersion     = '0.39.1'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
-    Description       = 'PowerShell module for OSDCloud v2 application deployment with repository and vendor-native built-in apps, optional USB caching, pre-OOBE SetupComplete installation, and repository authoring/validation.'
+    Description       = 'Deploy apps and PowerShell scripts with OSDCloud v2 before the first sign-in. Stage in WinPE, run through SetupComplete, and reuse a validated USB cache. Includes vendor-native apps and support for your own repository packages.'
     PowerShellVersion = '5.1'
     FunctionsToExport = @(
         'Set-OSDAppConfiguration',
@@ -44,10 +44,10 @@
     AliasesToExport   = @()
     PrivateData = @{
         PSData = @{
-            Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
+            Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.39.0: Refresh every vendor-native built-in cache as a validated, rollback-capable directory generation before replacing active content.'
+            ReleaseNotes = '0.39.1: Simplify getting started, clarify apps and scripts in the deployment diagrams and Viewer guide, and refresh package discovery metadata. Deployment and cache behavior are unchanged.'
             RequireLicenseAcceptance = $false
         }
     }

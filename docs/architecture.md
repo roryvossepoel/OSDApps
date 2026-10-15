@@ -30,9 +30,9 @@ The Viewer can inspect an existing Windows target and cache in full Windows or s
 
 ## Two source models
 
-### Repository applications
+### Repository apps and scripts
 
-A repository is organization-managed static content: `catalog.json`, per-app manifests and package archives. During WinPE staging the module resolves a compatible variant, downloads or reuses its `Package.zip`, checks the manifest SHA-256 and copies it to local device staging.
+A repository is owner-managed static content: `catalog.json`, per-app manifests and package archives. During WinPE staging the module resolves a compatible variant, downloads or reuses its `Package.zip`, checks the manifest SHA-256 and copies it to local device staging.
 
 Runner checks every available selected staged archive before starting the first installer, then extracts it for `Package/Install.ps1` execution. A hash mismatch is a queue-blocking trust failure. Runner does not contact the repository to refresh packages during SetupComplete.
 
@@ -72,6 +72,20 @@ The cache changes where content is acquired and reused. Runner consumes local st
 
 ![Source ownership and synchronization phases](images/source-ownership-sync.svg)
 
+## Cache generation recovery
+
+Built-in refreshes replace complete directories, not individual files in the
+active cache. A sibling `.osdapps-new-<guid>` holds the candidate and
+`.osdapps-old-<guid>` temporarily holds the previous generation. If a process
+stops between the directory renames, the next full-Windows built-in sync or
+PreInstall invocation can restore a validated old generation before attempting
+downloads or offline restaging. Recovery never overwrites an existing active
+directory or promotes unfinished `.new` content. If no old candidate validates,
+or multiple candidates validate, it preserves them and reports the ambiguity.
+Successful refresh removes obsolete transaction directories. Read-only cache
+inspection does not perform recovery. This does not retry SetupComplete or
+recover an interrupted Windows installation; use one writer per cache.
+
 ## Runtime locations
 
 | Location | Contents |
@@ -81,7 +95,7 @@ The cache changes where content is acquired and reused. Runner consumes local st
 | `%ProgramData%\OSDApps\Logs\Runtime.log` | Default persistent PreInstall/Runner log in deployed Windows |
 | `%ProgramData%\OSDApps\Results\Latest.json` | Default atomic final deployment result and per-app outcomes |
 
-Typical local staging contains `DeviceManifest.json`, `Invoke-OSDAppPreInstall.ps1`, `Invoke-OSDAppRunner.ps1`, `Packages`, `BuiltIn` and `Work`.
+Typical local staging contains `DeviceManifest.json`, `Invoke-OSDAppPreInstall.ps1`, `Invoke-OSDAppRunner.ps1`, `Restore-OSDAppCacheGeneration.ps1`, `Packages`, `BuiltIn` and `Work`.
 
 `CleanupMode OnSuccess` schedules removal of temporary device source only after every selected application succeeded; `Never` retains it. A failed or skipped application retains source for investigation. The persistent log, result and reusable USB cache are separate from that staging directory.
 
@@ -109,6 +123,8 @@ The explicit log events distinguish cache discovery, refresh skipped, refresh fa
 Optional repository Vendor metadata is descriptive. It is not a signing certificate, a signature verification result or an authorization decision.
 
 ## Device manifest
+
+Repository packages can be classified as `Application` or `Script`. Both execute `Package/Install.ps1` as SYSTEM, with the same hash checks and one-shot failure handling; the type is presentation and reporting metadata. Scripts must be unattended and must not trigger a restart.
 
 The manifest has a stable per-staging `DeploymentId` and one ordered `Apps` array containing `Source=BuiltIn` or `Source=Repository` entries. PreInstall filters the built-ins for preparation; Runner processes the full array from top to bottom and uses the identity to correlate phase results.
 

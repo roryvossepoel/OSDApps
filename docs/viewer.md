@@ -2,13 +2,13 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Troubleshooting](faq.md)
 
-OSDApps Viewer is the read-only interface opened by `Show-OSDAppUI`. It displays what the CLI has prepared: the device queue and configuration, built-in/repository apps, USB cache and existing logs. It does not add, remove, configure, download or install applications.
+OSDApps Viewer is the read-only interface opened by `Show-OSDAppUI`. It displays what the CLI has prepared: the device queue and configuration, built-in/repository apps, script packages, USB cache and existing logs. It does not add, remove, configure, download or install applications.
 
 ## Where to run it
 
 | Environment | Target inspected | Notes |
 | --- | --- | --- |
-| Full Windows | Current Windows system drive, or an explicit `-WindowsPath` | Useful for cache inspection and existing runtime logs. A cleaned-up deployment may have no staging manifest left. |
+| Windows preparation machine | Connected USB cache, plus an existing target if supplied with `-WindowsPath` | Prepare and inspect deployment content. There is no need to install the Viewer on deployed devices. |
 | WinPE | Discovered offline Windows installation, or an explicit `-WindowsPath` | Inspect after OSDCloud has applied Windows and the CLI has staged apps. Do not use `-TestMode`. |
 | Full Windows with `-TestMode` | Existing `%TEMP%\OSDApps-GUI-Staging-Test` folder | Legacy isolated test-target inspection. The Viewer does not create the folder or stage sample apps. |
 
@@ -16,7 +16,7 @@ Use an STA PowerShell session with Windows Forms available. The WinPE image also
 
 ## Open the Viewer
 
-**Full Windows, with OSDApps installed:** start Windows PowerShell in STA if needed, then import the module inside that session.
+**Windows preparation machine, with OSDApps installed:** start Windows PowerShell in STA if needed, then import the module inside that session.
 
 ```powershell
 powershell.exe -STA -NoProfile
@@ -25,7 +25,7 @@ powershell.exe -STA -NoProfile
 In the new PowerShell session:
 
 ```powershell
-Import-Module OSDApps -RequiredVersion 0.39.0 -Force
+Import-Module OSDApps
 Show-OSDAppUI -Offline
 ```
 
@@ -60,6 +60,8 @@ The Order column remains the manifest sequence even when the table is sorted dif
 
 ## Apps
 
+The **Package Type** column shows `Application` or `Script` in **Staged for device**, **Apps** and **Cache**. Search for `Script` to find script packages. The Apps tab contains both types; no separate script queue or script-specific command is needed. Legacy packages without a type are displayed as `Application`.
+
 Apps combines built-in definitions and available repository/cache metadata. Staged apps remain visible even when absent from the current catalog/cache. Source distinguishes built-ins from repository packages; Vendor is displayed only when available from the relevant metadata.
 
 | Column or value | Meaning |
@@ -76,7 +78,7 @@ The CLI can distinguish `Cached` from `CachedOnly`; the Viewer labels both as US
 
 ## Cache
 
-Cache lists entries from `\OSDApps` on the configured cache volume, separately from the Windows target's staging folder. It shows Display Name, Source, Vendor, USB version, architecture, integrity, size and signature status. Row tooltips retain the exact signature file, signer and check scope where available.
+Cache lists entries from `\OSDApps` on the configured cache volume, separately from the Windows target's staging folder. It shows Display Name, Source, Package Type, Vendor, USB version, architecture, integrity, size and signature status. Row tooltips retain the exact signature file, signer and check scope where available.
 
 ### Versions
 

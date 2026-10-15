@@ -1,20 +1,67 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
-<title id="title">OSDApps end-to-end architecture</title>
-<desc id="desc">Repository apps are synchronized in WinPE, built-in apps are refreshed in full Windows, then all apps are installed by the runner in one ordered queue before OOBE.</desc>
-<style>
-text{font-family:Segoe UI,Arial,sans-serif;fill:#172033}.h{font-size:28px;font-weight:700}.t{font-size:18px;font-weight:600}.s{font-size:15px}.phase{font-size:17px;font-weight:700;fill:#fff}.arrow{stroke:#4a5a73;stroke-width:3;fill:none;marker-end:url(#a)}.box{fill:#fff;stroke:#9fb1c8;stroke-width:2}.accent{fill:#233b5f}.soft{fill:#eef4fa;stroke:#9fb1c8;stroke-width:2}.repo{fill:#f4f7fb;stroke:#6b83a3;stroke-width:2}.built{fill:#eef7f2;stroke:#6a9a7d;stroke-width:2}</style>
-<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#4a5a73"/></marker></defs>
-<text x="600" y="42" text-anchor="middle" class="h">OSDApps end-to-end architecture</text>
-<rect x="55" y="80" width="1090" height="55" rx="10" class="accent"/><text x="600" y="115" text-anchor="middle" class="phase">WINPE · repository sync, cache and deployment intent</text>
-<rect x="90" y="175" width="300" height="120" rx="12" class="repo"/><text x="240" y="207" text-anchor="middle" class="t">Self-maintained repository</text><text x="240" y="238" text-anchor="middle" class="s">catalog.json + manifests</text><text x="240" y="263" text-anchor="middle" class="s">Package.zip controlled by you</text>
-<rect x="450" y="175" width="300" height="120" rx="12" class="built"/><text x="600" y="207" text-anchor="middle" class="t">Built-in applications</text><text x="600" y="238" text-anchor="middle" class="s">Vendor sources are defined</text><text x="600" y="263" text-anchor="middle" class="s">Intent is staged in WinPE</text>
-<rect x="810" y="175" width="300" height="120" rx="12" class="soft"/><text x="960" y="207" text-anchor="middle" class="t">OSDCloud USB cache</text><text x="960" y="238" text-anchor="middle" class="s">Optional, persistent cache</text><text x="960" y="263" text-anchor="middle" class="s">Repository apps updated in WinPE</text>
-<path d="M390 235 H450" class="arrow"/><path d="M750 235 H810" class="arrow"/>
-<rect x="370" y="330" width="460" height="95" rx="12" class="box"/><text x="600" y="363" text-anchor="middle" class="t">DeviceManifest.json</text><text x="600" y="392" text-anchor="middle" class="s">One ordered Apps[] queue · repository + built-ins</text>
-<path d="M240 295 C240 355 330 375 370 375" class="arrow"/><path d="M600 295 V330" class="arrow"/><path d="M960 295 C960 355 870 375 830 375" class="arrow"/>
-<rect x="55" y="455" width="1090" height="55" rx="10" class="accent"/><text x="600" y="490" text-anchor="middle" class="phase">FULL WINDOWS · built-in refresh, local staging and installation</text>
-<rect x="90" y="545" width="290" height="105" rx="12" class="built"/><text x="235" y="578" text-anchor="middle" class="t">PreInstall</text><text x="235" y="608" text-anchor="middle" class="s">Refresh built-ins from vendor</text><text x="235" y="633" text-anchor="middle" class="s">Update USB cache + OS staging</text>
-<rect x="455" y="545" width="290" height="105" rx="12" class="box"/><text x="600" y="578" text-anchor="middle" class="t">Runner</text><text x="600" y="608" text-anchor="middle" class="s">Validate + install Apps[]</text><text x="600" y="633" text-anchor="middle" class="s">Exact Add-* order</text>
-<rect x="820" y="545" width="290" height="105" rx="12" class="soft"/><text x="965" y="578" text-anchor="middle" class="t">OOBE / Autopilot</text><text x="965" y="608" text-anchor="middle" class="s">Continues after successful</text><text x="965" y="633" text-anchor="middle" class="s">SetupComplete execution</text>
-<path d="M600 425 V455" class="arrow"/><path d="M600 510 C600 528 235 520 235 545" class="arrow"/><path d="M380 598 H455" class="arrow"/><path d="M745 598 H820" class="arrow"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="920" viewBox="0 0 1200 920" role="img" aria-labelledby="title desc">
+  <title id="title">OSDApps: from WinPE to apps and scripts before first sign-in</title>
+  <desc id="desc">Optionally prepare a USB cache in full Windows. In WinPE, independent built-in and repository sources plus available cached content feed one staged queue. At first boot, SetupComplete prepares built-in content and executes apps and scripts once in order. Results remain available as Windows setup continues to OOBE.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#47617c"/></marker>
+  </defs>
+  <style>
+    text{font-family:Segoe UI,Arial,sans-serif;fill:#172b42}
+    .title{font-size:30px;font-weight:700}
+    .sub{font-size:17px;fill:#425c75}
+    .phase{font-size:21px;font-weight:700}
+    .label{font-size:19px;font-weight:700}
+    .body{font-size:17px}
+    .note{font-size:16px;fill:#425c75}
+    .line{stroke:#47617c;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+  </style>
+  <rect width="1200" height="920" rx="20" fill="#f6f8fb"/>
+  <text x="52" y="53" class="title">Stage in WinPE. Run before the first sign-in.</text>
+  <text x="52" y="83" class="sub">Built-in apps and your own packages, in one ordered deployment.</text>
+
+  <rect x="40" y="110" width="1120" height="56" rx="12" fill="#e5edf7"/>
+  <text x="62" y="144" class="body">Optional preparation on a Windows PC: save the module and pre-cache content on USB.</text>
+
+  <rect x="40" y="190" width="1120" height="280" rx="16" fill="#fff" stroke="#cad6e3"/>
+  <text x="64" y="229" class="phase">1   WinPE · after OSDCloud applies Windows</text>
+
+  <rect x="64" y="253" width="330" height="93" rx="10" fill="#eaf5ee" stroke="#8db69d"/>
+  <text x="229" y="284" text-anchor="middle" class="label">Built-in apps</text>
+  <text x="229" y="312" text-anchor="middle" class="body">Stage vendor app configuration</text>
+
+  <rect x="435" y="253" width="330" height="93" rx="10" fill="#eef2fa" stroke="#9caed0"/>
+  <text x="600" y="284" text-anchor="middle" class="label">Your repository</text>
+  <text x="600" y="312" text-anchor="middle" class="body">Stage apps and script packages</text>
+
+  <rect x="806" y="253" width="330" height="93" rx="10" fill="#fff6e6" stroke="#cfb57f"/>
+  <text x="971" y="284" text-anchor="middle" class="label">Optional USB cache</text>
+  <text x="971" y="312" text-anchor="middle" class="body">Reuse available matching content</text>
+
+  <path d="M229 346 V367 H400 V389" class="line"/>
+  <path d="M600 346 V389" class="line"/>
+  <path d="M971 346 V367 H800 V389" class="line"/>
+  <rect x="260" y="390" width="680" height="57" rx="10" fill="#203e60"/>
+  <text x="600" y="425" text-anchor="middle" style="font-size:19px;font-weight:600;fill:#fff">One ordered queue · local content · standalone runtime</text>
+
+  <path d="M600 470 V505" class="line"/>
+  <rect x="40" y="508" width="1120" height="230" rx="16" fill="#fff" stroke="#cad6e3"/>
+  <text x="64" y="547" class="phase">2   First Windows boot · SetupComplete runs once</text>
+
+  <rect x="64" y="575" width="464" height="134" rx="10" fill="#eaf5ee" stroke="#8db69d"/>
+  <text x="88" y="608" class="label">PreInstall · prepare built-ins</text>
+  <text x="88" y="638" class="body">Refresh from vendors or use valid cached content.</text>
+  <text x="88" y="668" class="body">Validate replacements before switching the cache.</text>
+  <text x="88" y="692" class="note">Prepare local payloads for the runner.</text>
+
+  <path d="M528 641 H669" class="line"/>
+  <rect x="672" y="575" width="464" height="134" rx="10" fill="#eef2fa" stroke="#9caed0"/>
+  <text x="696" y="608" class="label">Runner · execute the queue</text>
+  <text x="696" y="638" class="body">Install apps and run scripts as SYSTEM.</text>
+  <text x="696" y="668" class="body">Use the staged order and record each outcome.</text>
+  <text x="696" y="692" class="note">No automatic retry after reboot.</text>
+
+  <path d="M600 738 V773" class="line"/>
+  <rect x="40" y="776" width="1120" height="109" rx="16" fill="#203e60"/>
+  <text x="64" y="811" style="font-size:21px;font-weight:700;fill:#fff">3   Results retained · Windows setup continues to OOBE / Autopilot</text>
+  <text x="64" y="843" style="font-size:17px;fill:#fff">Clean staging on success. Retain staging on failure. Keep the persistent result and log.</text>
+  <text x="64" y="870" style="font-size:16px;fill:#d4e2f0">OOBE is not a success check: review the recorded package outcomes.</text>
 </svg>
