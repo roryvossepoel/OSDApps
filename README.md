@@ -107,6 +107,10 @@ Use the [USB preparation guide](Examples/Prepare-UsbCache.md) to get started, [c
 
 **OSDApps Viewer** shows the staged queue, available packages, cache and logs. The **Package Type** column distinguishes `Application` from `Script` in the Staged for device, Apps and Cache tabs. Use it in WinPE to review staging or on a preparation machine to inspect the cache. See the [Viewer guide](docs/viewer.md).
 
+![OSDApps Viewer in WinPE showing Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise staged in order, with Office configuration details](docs/images/viewer-staged-winpe.png)
+
+*A real WinPE staging session. The detail pane shows the selected Office configuration; channel, language and cached versions reflect that session. [See the Apps and Cache views](docs/viewer.md#screenshots-from-winpe).*
+
 The deployed Windows system keeps its results without needing the module or Viewer:
 
 | File | Purpose |

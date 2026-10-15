@@ -6,6 +6,8 @@ OSDApps Viewer is the read-only interface opened by `Show-OSDAppUI`. It displays
 
 ## Where to run it
 
+See the [screenshots below](#screenshots-from-winpe) for a real WinPE session with three staged built-ins and eight cached packages.
+
 | Environment | Target inspected | Notes |
 | --- | --- | --- |
 | Windows preparation machine | Connected USB cache, plus an existing target if supplied with `-WindowsPath` | Prepare and inspect deployment content. There is no need to install the Viewer on deployed devices. |
@@ -43,6 +45,28 @@ Show-OSDAppUI -WindowsPath 'D:\' -Offline
 ```
 
 For online repository discovery, set your actual `CatalogUri` through `Set-OSDAppConfiguration` in the same session and omit `-Offline`. The repository URL cannot be edited in the Viewer.
+
+## Screenshots from WinPE
+
+These unmodified screenshots show an actual staging session. App versions and Office settings reflect that session, not a required configuration. The examples in this guide can use different channel and language choices.
+
+### Staged queue and selected configuration
+
+![Staged for device: three built-ins in manifest order, with the selected Microsoft 365 Apps configuration shown below](images/viewer-staged-winpe.png)
+
+Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise are queued for SetupComplete. The detail pane shows the selected Office configuration. This is staging evidence, not an installation result.
+
+### Available apps and repository packages
+
+![Apps tab: six built-in applications and two user-maintained repository packages, with cache and staging status](images/viewer-apps-winpe.png)
+
+The Apps tab combines built-ins and repository metadata. Notepad++ and Omnissa Horizon Client are packages supplied by the repository used for this session; they are not bundled with OSDApps. All packages shown here are applications. Script packages appear in the same view with `Package Type: Script` when present.
+
+### Cache availability and integrity
+
+![Cache tab: eight USB cache entries with recorded versions, file availability, repository SHA-256 verification and WinPE signature-check limitations](images/viewer-cache-winpe.png)
+
+The Cache tab separates recorded versions, file availability, repository hashes and signature status. `Not recorded` means no concrete package version was recorded. `WinPE: not checked` reflects the environment: supported built-in signature and publisher checks run in full Windows sync and PreInstall.
 
 ## Header and navigation
 
