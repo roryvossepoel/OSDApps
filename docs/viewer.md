@@ -2,13 +2,15 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Troubleshooting](faq.md)
 
-OSDApps Viewer is the read-only interface opened by `Show-OSDAppUI`. It displays what the CLI has prepared: the device queue and configuration, built-in/repository apps, USB cache and existing logs. It does not add, remove, configure, download or install applications.
+OSDApps Viewer is the read-only interface opened by `Show-OSDAppUI`. It displays what the CLI has prepared: the device queue and configuration, built-in/repository apps, script packages, USB cache and existing logs. It does not add, remove, configure, download or install applications.
 
 ## Where to run it
 
+See the [screenshots below](#screenshots-from-winpe) for a real WinPE session with three staged built-ins and eight cached packages.
+
 | Environment | Target inspected | Notes |
 | --- | --- | --- |
-| Full Windows | Current Windows system drive, or an explicit `-WindowsPath` | Useful for cache inspection and existing runtime logs. A cleaned-up deployment may have no staging manifest left. |
+| Windows preparation machine | Connected USB cache, plus an existing target if supplied with `-WindowsPath` | Prepare and inspect deployment content. There is no need to install the Viewer on deployed devices. |
 | WinPE | Discovered offline Windows installation, or an explicit `-WindowsPath` | Inspect after OSDCloud has applied Windows and the CLI has staged apps. Do not use `-TestMode`. |
 | Full Windows with `-TestMode` | Existing `%TEMP%\OSDApps-GUI-Staging-Test` folder | Legacy isolated test-target inspection. The Viewer does not create the folder or stage sample apps. |
 
@@ -16,7 +18,7 @@ Use an STA PowerShell session with Windows Forms available. The WinPE image also
 
 ## Open the Viewer
 
-**Full Windows, with OSDApps installed:** start Windows PowerShell in STA if needed, then import the module inside that session.
+**Windows preparation machine, with OSDApps installed:** start Windows PowerShell in STA if needed, then import the module inside that session.
 
 ```powershell
 powershell.exe -STA -NoProfile
@@ -25,7 +27,7 @@ powershell.exe -STA -NoProfile
 In the new PowerShell session:
 
 ```powershell
-Import-Module OSDApps -RequiredVersion 0.39.0 -Force
+Import-Module OSDApps
 Show-OSDAppUI -Offline
 ```
 
@@ -44,6 +46,28 @@ Show-OSDAppUI -WindowsPath 'D:\' -Offline
 
 For online repository discovery, set your actual `CatalogUri` through `Set-OSDAppConfiguration` in the same session and omit `-Offline`. The repository URL cannot be edited in the Viewer.
 
+## Screenshots from WinPE
+
+These unmodified screenshots show an actual staging session. App versions and Office settings reflect that session, not a required configuration. The examples in this guide can use different channel and language choices.
+
+### Staged queue and selected configuration
+
+![Staged for device: three built-ins in manifest order, with the selected Microsoft 365 Apps configuration shown below](images/viewer-staged-winpe.png)
+
+Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise are queued for SetupComplete. The detail pane shows the selected Office configuration. This is staging evidence, not an installation result.
+
+### Available apps and repository packages
+
+![Apps tab: six built-in applications and two user-maintained repository packages, with cache and staging status](images/viewer-apps-winpe.png)
+
+The Apps tab combines built-ins and repository metadata. Notepad++ and Omnissa Horizon Client are packages supplied by the repository used for this session; they are not bundled with OSDApps. All packages shown here are applications. Script packages appear in the same view with `Package Type: Script` when present.
+
+### Cache availability and integrity
+
+![Cache tab: eight USB cache entries with recorded versions, file availability, repository SHA-256 verification and WinPE signature-check limitations](images/viewer-cache-winpe.png)
+
+The Cache tab separates recorded versions, file availability, repository hashes and signature status. `Not recorded` means no concrete package version was recorded. `WinPE: not checked` reflects the environment: supported built-in signature and publisher checks run in full Windows sync and PreInstall.
+
 ## Header and navigation
 
 The compact context row shows **Target | USB | Offline/Online**. Its tooltip provides fuller target, cache and catalog context. `Offline` describes repository lookup behavior, not the machine's actual network connection.
@@ -59,6 +83,8 @@ The Order column remains the manifest sequence even when the table is sorted dif
 **Staged does not mean installed.** `SetupComplete.cmd: Present` reports file presence, not evidence that SetupComplete or every installer has completed. An empty queue can mean no apps were staged, the wrong target was selected, or successful cleanup removed staging. Use runtime logs to establish the installation outcome.
 
 ## Apps
+
+The **Package Type** column shows `Application` or `Script` in **Staged for device**, **Apps** and **Cache**. Search for `Script` to find script packages. The Apps tab contains both types; no separate script queue or script-specific command is needed. Legacy packages without a type are displayed as `Application`.
 
 Apps combines built-in definitions and available repository/cache metadata. Staged apps remain visible even when absent from the current catalog/cache. Source distinguishes built-ins from repository packages; Vendor is displayed only when available from the relevant metadata.
 
@@ -76,7 +102,7 @@ The CLI can distinguish `Cached` from `CachedOnly`; the Viewer labels both as US
 
 ## Cache
 
-Cache lists entries from `\OSDApps` on the configured cache volume, separately from the Windows target's staging folder. It shows Display Name, Source, Vendor, USB version, architecture, integrity, size and signature status. Row tooltips retain the exact signature file, signer and check scope where available.
+Cache lists entries from `\OSDApps` on the configured cache volume, separately from the Windows target's staging folder. It shows Display Name, Source, Package Type, Vendor, USB version, architecture, integrity, size and signature status. Row tooltips retain the exact signature file, signer and check scope where available.
 
 ### Versions
 

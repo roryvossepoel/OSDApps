@@ -12,6 +12,21 @@ This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging succ
 | Existing OSDCloud USB cache, offline | **Validated — 0.34.0 PC 2 (11 Oct 2026)** | LAN disconnected; six BuiltInRefreshSkipped events, five built-in signer/publisher checks and 8/8 successful installations. Earlier 0.30.0 six-app test also passed. |
 | No USB, offline | **Not yet validated** | Without a complete staged fallback, PreInstall is expected to stop before Runner |
 
+## OSDApps 0.39.0 cache and deployment validation — 15 October 2026
+
+The candidate from [PR #27](https://github.com/roryvossepoel/OSDApps/pull/27), commit `08206e105daea529893d348f5dfee750160210fa`, passed the following physical checks. These are separate from the automated test suite.
+
+| Check | Observed result |
+| --- | --- |
+| Isolated transaction and recovery fixtures on USB | Interrupted-swap recovery, preservation of uncommitted candidates, old-generation preservation after build/validation failures, valid promotion and transaction cleanup all passed. |
+| Real synchronization of Teams, Chrome, Firefox, Webex and Adobe | All five generations remained valid. All reported `Updated=False`; this run did not exercise a newer vendor download. Office and repository content were unchanged. |
+| Freshly applied x64 PC, online with populated USB cache | All eight applications succeeded, with zero failures or skipped entries. All six built-ins used cached content. PreInstall took 89.8 seconds; Runner took 367.6 seconds. Temporary staging and its cleanup helper were removed. |
+| Isolated Chrome acquisition, forced replacement and reuse | Two real downloads passed the signature/generation checks. The second replaced the complete test generation and removed its marker and transaction directories. A third sync reused the generation without changing its files. Full before/after fingerprints confirmed the live app cache was unchanged. |
+
+The two Chrome downloads had the same SHA-256 (`2734DC5577DCBAB49BE037E5A074AEF9948FACA14453B52DEFB01224C196A3F5`). Replacement was forced by changing only HTTP freshness metadata in the isolated test cache. This validates actual download and generation replacement, not an upgrade between two different Chrome versions. No application was installed on the preparation machine by that test.
+
+The deployment was a warm-cache integration run, not a cold download run. These checks do not simulate a physical power interruption or prove licensing and every application's later interactive behavior.
+
 ## OSDApps 0.37.0 release-candidate validation — 13 October 2026
 
 The 0.37.0 candidate from [PR #25](https://github.com/roryvossepoel/OSDApps/pull/25) was built from commit `2a2b5f364de1efd9341a9728a975e4fe7428d841`. GitHub Actions passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38405028071)).

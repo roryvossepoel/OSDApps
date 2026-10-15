@@ -2,6 +2,16 @@
 
 OSDApps uses GitHub Actions for validation and PowerShell Gallery publishing.
 
+## Public descriptions
+
+The module description and Gallery tags live in `OSDApps.psd1`. Updates reach the Gallery with the next published version; an existing release is not republished in place.
+
+Use this concise description for the GitHub repository's **About** field:
+
+> Deploy apps and PowerShell scripts with OSDCloud v2. Stage in WinPE, run through SetupComplete, and reuse a validated USB cache.
+
+Keep the README focused on the first successful deployment. Use version-independent installation commands there; retain exact versions in release notes and test evidence. The Downloads badge uses Shields' total Gallery downloads endpoint, `/powershellgallery/dt/OSDApps`, covering all published versions.
+
 ## Continuous integration
 
 Every push to `main`, pull request, or manually started CI run validates:

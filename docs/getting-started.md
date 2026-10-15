@@ -8,14 +8,14 @@ This guide separates the three environments used by OSDApps. The commands you ru
 
 Use an OSDCloud v2 deployment that leaves time to stage applications after the Windows image has been applied and before the first Windows boot. OSDApps does not replace Windows image deployment.
 
-The examples target x64 and pin OSDApps **0.39.0**. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
+The examples target x64 and use the current Gallery release or the newest module version saved on your USB. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
 
 Decide which source types you need:
 
 | Choice | What you supply |
 | --- | --- |
 | Built-ins only | Select their dedicated `Add-OSDApp*` commands and configuration. No repository URL is needed. |
-| Repository apps | Publish your own catalog, manifests and packages; configure the catalog URL and use actual app IDs from that repository. |
+| Repository apps and scripts | Publish your own catalog, manifests and packages; configure the catalog URL and use actual app IDs from that repository. |
 | Both | Add both types to the same ordered device queue. |
 
 For an online deployment, vendor/repository access must be available when acquisition occurs. A fully offline deployment requires complete content for the selected app variants **before** reboot; supported MSI/EXE files must still pass Windows signature and expected-publisher validation.
@@ -25,13 +25,13 @@ For an online deployment, vendor/repository access must be available when acquis
 **Environment: full Windows.** This phase can write module files and USB cache content. It must not stage applications against the preparation machine's Windows installation.
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.39.0 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.39.0 -Force
+Install-Module OSDApps
+Import-Module OSDApps
 ```
 
 An OSDCloud cache volume is identified by its label, `OSDCloud` by default; its drive letter can change between machines. The cache is stored in `\OSDApps` on that volume. Storing the PowerShell module in `\Modules` keeps the module separate from installer content.
 
-The [USB preparation example](../Examples/Prepare-UsbCache.md) saves the exact module version to the stick. It can also pre-cache Teams and Firefox. Pre-caching is optional for online deployment, but necessary for the corresponding offline example. It never formats the stick; its optional repository cleanup is separated behind an explicit `-Prune` preview and confirmation.
+The [USB preparation example](../Examples/Prepare-UsbCache.md) saves the current Gallery release to the stick. It can also pre-cache Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise. Pre-caching is optional for online deployment, but necessary for the corresponding offline example. It never formats the stick; its optional repository cleanup is separated behind an explicit `-Prune` preview and confirmation.
 
 Before reusing long-lived media, inspect it without changes:
 
@@ -58,7 +58,11 @@ Load the saved module, identify the offline Windows target and then add the inte
 
 ```powershell
 # WinPE staging session, after importing OSDApps:
-Set-OSDAppConfiguration -CleanupMode OnSuccess -CacheVolumeLabel OSDCloud
+Set-OSDAppConfiguration -CleanupMode OnSuccess
+
+Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
+Add-OSDAppAdobeAcrobatUnified
+Add-OSDAppGoogleChromeEnterprise
 ```
 
 New app IDs are appended to `DeviceManifest.json` in the order they are added. Re-adding an existing ID replaces its entry and moves it to the end; it does not create another entry. Sorting the Viewer table does not change that order.
@@ -100,6 +104,7 @@ The staging directory is normally:
     DeviceManifest.json
     Invoke-OSDAppPreInstall.ps1
     Invoke-OSDAppRunner.ps1
+    Restore-OSDAppCacheGeneration.ps1
     BuiltIn\
     Packages\
 ```
@@ -118,7 +123,15 @@ A successful staging command is not a successful installation. SetupComplete is 
 
 ## 5. Check the outcome
 
-**Environment: deployed Windows after SetupComplete.** The default persistent runtime log is:
+**Environment: deployed Windows after SetupComplete.** Read the saved result directly; installing the module or opening the Viewer is not required.
+
+```powershell
+$Result = Get-Content -LiteralPath "$env:ProgramData\OSDApps\Results\Latest.json" -Raw | ConvertFrom-Json
+$Result | Format-List Status, SuccessfulApplicationCount, FailedApplicationCount, SkippedApplicationCount
+$Result.Applications | Format-Table Id, PackageType, Status, ExitCode, DurationSeconds
+```
+
+The default persistent runtime log is:
 
 ```text
 %ProgramData%\OSDApps\Logs\Runtime.log

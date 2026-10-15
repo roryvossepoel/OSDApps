@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.39.1
+
+### Documentation and discovery
+
+- Rework the README around a short WinPE example using Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise.
+- Remove release pins and unnecessary switches from installation examples; USB workflows discover the newest version saved on the selected stick.
+- Correct the workflow diagrams: independent package sources, optional cache preparation, machine-context scripts and one-shot SetupComplete processing. Use explicit backgrounds for readable diagrams in light and dark GitHub themes.
+- Show total PowerShell Gallery downloads across all versions and update the module description and discovery tags.
+- Document existing Application/Script labeling in all relevant Viewer tabs. No public commands, UI behavior, installer logic or cache transaction behavior changed.
+
 ## 0.39.0
 
 ### Cache resilience
@@ -34,7 +44,7 @@
 ### Cache resilience
 
 - Microsoft 365 Apps refresh timeout handling now terminates the complete ODT process tree through bounded waits before falling back to an already staged payload.
-- After a successful Office refresh and active-version validation, standalone PreInstall and `Sync-OSDAppMicrosoft365Apps` remove older version directories and their `v32_<version>.cab` / `v64_<version>.cab` files while preserving the active build and non-versioned shared data. Failed or timed-out refreshes never prune fallback content.
+- Microsoft 365 Apps refresh builds and validates a complete replacement generation before switching the active cache directory. The previous directory is removed only after promotion. An earlier selective version-folder/CAB pruning approach was superseded during validation; individual Office payload files must not be pruned from an active generation.
 
 ## 0.37.0
 

@@ -4,7 +4,7 @@
 
 **Run on the target PC in WinPE after OSDCloud has applied Windows, before its first Windows boot.** Do not run this on the full-Windows preparation machine.
 
-This example assumes an x64 target and the module saved by [Prepare a USB cache](Prepare-UsbCache.md). Keep the cache stick and working network connection available through SetupComplete. The script stages two built-ins; it neither formats a disk nor clears a cache nor reboots automatically.
+This example assumes an x64 target and the module saved by [Prepare a USB cache](Prepare-UsbCache.md). Keep the cache stick and working network connection available through SetupComplete. The script stages three built-ins; it neither formats a disk nor clears a cache nor reboots automatically.
 
 ## 1. Import the module and stage built-ins
 
@@ -23,7 +23,11 @@ $Usb = @(Get-Volume | Where-Object {
 })
 if ($Usb.Count -ne 1) { throw 'Expected exactly one OSDCloud cache volume.' }
 $UsbRoot = "$($Usb[0].DriveLetter):\"
-$ModulePath = Join-Path $UsbRoot 'Modules\OSDApps\0.39.0\OSDApps.psd1'
+$SavedVersions = @(Get-ChildItem -LiteralPath (Join-Path $UsbRoot 'Modules\OSDApps') -Directory |
+    Where-Object { $_.Name -as [version] } |
+    Sort-Object { [version]$_.Name } -Descending)
+if ($SavedVersions.Count -eq 0) { throw 'No saved OSDApps version found on this USB.' }
+$ModulePath = Join-Path $SavedVersions[0].FullName 'OSDApps.psd1'
 if (-not (Test-Path -LiteralPath $ModulePath -PathType Leaf)) {
     throw 'Saved module missing. Complete the Windows USB preparation example first.'
 }
@@ -53,9 +57,9 @@ Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud -CleanupMode OnSuccess
 Write-Host "Windows target: $WindowsPath"
 Write-Host "USB cache: $(Join-Path $UsbRoot 'OSDApps')"
 
-Add-OSDAppMicrosoftTeams -Architecture x64 -WindowsPath $WindowsPath
-Add-OSDAppMozillaFirefoxEnterprise `
-    -Channel Rapid -Language en-US -Architecture x64 -WindowsPath $WindowsPath
+Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us -WindowsPath $WindowsPath
+Add-OSDAppAdobeAcrobatUnified -WindowsPath $WindowsPath
+Add-OSDAppGoogleChromeEnterprise -WindowsPath $WindowsPath
 ```
 
 The guard against an existing manifest is part of this **example**, not a general module requirement. OSDApps can add to an existing queue, but a first-run example must not silently alter someone else's staging.
@@ -64,7 +68,7 @@ No built-in payload needs to be downloaded in WinPE for a cold online deployment
 
 ## 2. Optionally add your repository app
 
-**Run in the same WinPE session, after step 1.** Omit this section for the two-built-in example. Repository packages are synchronized and staged now, before reboot, not downloaded later by Runner.
+**Run in the same WinPE session, after step 1.** Omit this section for the three-built-in example. Repository packages are synchronized and staged now, before reboot, not downloaded later by Runner.
 
 ```powershell
 $CatalogUri = Read-Host 'Enter the HTTPS URL of your repository catalog.json'
@@ -82,13 +86,13 @@ Read the actual queue:
 
 ```powershell
 (Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json).Apps |
-    Select-Object Id, Source, Architecture, Channel, Language, Version
+    Select-Object Id, Source, PackageType, Architecture, Channel, Language, Version
 
 # Optional Viewer; requires Windows Forms and an STA session.
 Show-OSDAppUI -WindowsPath $WindowsPath -Offline
 ```
 
-Expect Teams first, Firefox second, followed by a repository app only if step 2 was used. `-Offline` here limits Viewer catalog lookup; it does **not** turn the deployment into an offline installation.
+Expect Microsoft 365 Apps first, Adobe Acrobat Unified second and Google Chrome Enterprise third, followed by a repository app only if step 2 was used. `-Offline` here limits Viewer catalog lookup; it does **not** turn the deployment into an offline installation.
 
 Close the Viewer and continue the normal deployment reboot only after staging has completed without errors. Keep LAN and the cache USB connected until SetupComplete is finished. Do not rerun step 1 to bypass a partial failure; inspect its manifest and log instead.
 

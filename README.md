@@ -1,141 +1,134 @@
 # OSDApps
 
-[![PowerShell Gallery Version](https://img.shields.io/powershellgallery/v/OSDApps?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/OSDApps)
-[![PowerShell Gallery Downloads (latest version)](https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fwww.powershellgallery.com%2Fapi%2Fv2%2FPackages%3F%2524filter%3DId%2Beq%2B%2527OSDApps%2527%2Band%2BIsAbsoluteLatestVersion%2Beq%2Btrue%26%2524select%3DVersion%252CVersionDownloadCount&query=%2F%2F*%5Blocal-name()%3D'VersionDownloadCount'%5D&label=downloads%20(latest)&color=blue&cacheSeconds=3600)](https://www.powershellgallery.com/packages/OSDApps)
+[![PowerShell Gallery](https://img.shields.io/powershellgallery/v/OSDApps?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/OSDApps)
+[![PowerShell Gallery total downloads](https://img.shields.io/powershellgallery/dt/OSDApps?label=Downloads)](https://www.powershellgallery.com/packages/OSDApps)
 [![Module CI](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml)
 [![Windows PowerShell 5.1](https://img.shields.io/badge/Windows%20PowerShell-5.1-blue)](#install-from-powershell-gallery)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Prepare applications and machine-context scripts with PowerShell. Run them through SetupComplete. Inspect the result with a read-only Viewer.**
+**Deploy Windows with the apps and scripts it needs, before the first sign-in.**
 
-OSDApps adds application deployment to OSDCloud v2: vendor-native built-ins, organization-managed repository packages, an optional USB cache, and one ordered installation queue before OOBE continues.
+OSDApps brings application and PowerShell script deployment to **OSDCloud v2**. Choose your packages in WinPE and let SetupComplete run them in order before OOBE continues. Use ready-made vendor integrations, your own repository packages, or both.
 
-[Getting started](docs/getting-started.md) · [Examples](Examples/README.md) · [Viewer](docs/viewer.md) · [Documentation](docs/README.md) · [Changelog](CHANGELOG.md)
+- **Start with a few commands.** Built-in apps need no repository or custom installer wrapper.
+- **Reuse your downloads.** An optional USB cache serves multiple devices; validated replacements keep it current.
+- **Bring your own apps and scripts.** Both share one ordered queue and the same package integrity checks.
+- **Leave a clean deployment.** Successful runs remove temporary staging while keeping logs and results. No module installation is required in the deployed Windows system.
 
-## How it works
-
-![OSDApps end-to-end architecture](docs/images/osdapps-architecture.svg)
-
-| Phase | Runs in | Responsibility |
-| --- | --- | --- |
-| Prepare cache, optionally | Full Windows | `Sync-OSDApp*` downloads content to an OSDCloud cache volume. |
-| Stage | WinPE, after Windows is applied | `Add-OSDApp*` writes the device queue, copies available content and prepares SetupComplete. Repository packages are synchronized here when requested. |
-| Acquire and install | First Windows boot | Standalone PreInstall refreshes built-ins or uses a usable local fallback; Runner attempts each independent queue entry once and records partial failures. |
-| Validate and inspect | WinPE or Windows | `Test-OSDAppDeployment` checks staged readiness before reboot; `Show-OSDAppUI` displays state; `Get-OSDAppDeploymentResult` reads the final machine result. |
-
-The CLI owns configuration and automation. The Viewer does not add or remove apps. The OSDApps module does **not** need to be installed in the deployed Windows installation: the required runtime scripts are staged automatically.
+[Get started](#quick-start) · [Built-in apps](docs/built-in-apps.md) · [USB preparation](Examples/Prepare-UsbCache.md) · [Apps and scripts](docs/repository.md) · [Documentation](docs/README.md)
 
 ## Install from PowerShell Gallery
 
-**Run on a full Windows preparation machine**, or in an online WinPE session with PowerShellGet available. These examples pin **0.39.0**:
+Run in PowerShell on your Windows preparation machine, or in online WinPE with PowerShellGet available:
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.39.0 -Scope CurrentUser -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.39.0 -Force
+Install-Module OSDApps
+Import-Module OSDApps
 ```
 
-For offline WinPE, save the module to USB first; see [Prepare a USB cache](Examples/Prepare-UsbCache.md). PowerShellGet is the documented WinPE/Windows PowerShell 5.1 installation path. `Install-PSResource` is an alternative only on a machine where PSResourceGet is already available.
+For WinPE without Gallery access, [save the module to your USB stick](Examples/Prepare-UsbCache.md) first. Installation uses your PowerShellGet defaults; use an elevated session if your installation scope requires it.
 
 ## Quick start
 
-**Run this in WinPE after OSDCloud has applied Windows, before the first Windows boot.** The module must already be loaded. Internet is needed during the first Windows boot unless suitable content was cached beforehand.
-
-This minimal example uses two built-ins and does not require a repository:
+**In WinPE, after OSDCloud has applied Windows and before rebooting**, load OSDApps and stage your apps:
 
 ```powershell
-$ErrorActionPreference = 'Stop'
-
-if (-not (Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Control\MiniNT')) {
-    throw 'Run this staging example in WinPE, not on the Windows preparation machine.'
-}
-
 Set-OSDAppConfiguration -CleanupMode OnSuccess
 
-Add-OSDAppMicrosoftTeams -Architecture x64
-Add-OSDAppMozillaFirefoxEnterprise -Channel Rapid -Language en-US -Architecture x64
-
-# Optional: inspect the queue without querying an online repository.
-Show-OSDAppUI -Offline
+Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
+Add-OSDAppAdobeAcrobatUnified
+Add-OSDAppGoogleChromeEnterprise
 ```
 
-The Add cmdlets discover the offline Windows target, or accept an explicit `-WindowsPath`. They prepare installation; they do **not** install these apps in WinPE. Keep the cache USB attached through SetupComplete when it is being used, and close the Viewer before rebooting.
+That's the queue: **Microsoft 365 Apps → Adobe Acrobat Unified → Google Chrome Enterprise**. These commands use x64 by default. Change the Office channel and language to suit your deployment; use the same settings when preparing its cache.
 
-SetupComplete is intentionally one-shot. OSDApps does not install a retry task or RunOnce entry. A normal installer/source failure is recorded per application and independent remaining entries continue; a manifest, repository-integrity or supported-publisher trust failure aborts the queue. Any unsuccessful entry retains local staging and makes the final machine result `Failed`.
+OSDApps discovers the offline Windows installation and prepares SetupComplete automatically. Apps are installed during the first Windows boot, not in WinPE. Keep networking available for downloads, or [prepare matching content for offline use](Examples/WinPE-Offline.md). Leave the cache USB connected until OOBE appears when your deployment uses it.
 
-Repository packages may be classified as `Application` or `Script`. Both use
-the same versioned `Package.zip`, `Package/Install.ps1`, SHA-256 enforcement,
-ordered queue and failure contract; the type changes presentation and reporting,
-not execution privileges or trust.
-
-For a complete workflow, use the [online WinPE example](Examples/WinPE-Online.md) or the [offline WinPE example](Examples/WinPE-Offline.md). Neither example formats a disk or reboots automatically.
-
-## Application sources
-
-| Source | Content owner | Version and acquisition |
-| --- | --- | --- |
-| Built-in | Software vendor | OSDApps uses a vendor-native acquisition path and refreshes content in full Windows. |
-| Repository | Your organization | You publish `catalog.json`, per-app manifests and `Package.zip` archives. OSDApps resolves the selected variant and verifies its SHA-256. |
-
-The six built-ins are **Microsoft 365 Apps, Microsoft Teams, Adobe Acrobat Unified, Google Chrome Enterprise, Mozilla Firefox Enterprise and Cisco Webex**. Their supported architectures and configuration options differ; see [Built-in applications](docs/built-in-apps.md).
-
-Repository apps use `Add-OSDApp -Name <Id>`. Configure your own `CatalogUri` first, or use a previously synchronized repository cache with `-SkipCacheRefresh`. Names such as Notepad++ and Omnissa Horizon Client in the test reports are **example repository packages**, not bundled built-ins. See [Repository applications](docs/repository.md).
-
-Long-lived cache media can be audited without mutation using
-`Get-OSDAppCacheHealth`. Repository owners can declare retired aliases, preview
-complete desired-state reconciliation with
-`Sync-OSDAppRepository -Prune -WhatIf`, and optionally retain valid canonical
-packages with `-PinnedId`.
-Replacements are hash-validated before the transactional commit; selective
-synchronization remains non-destructive. See [cache health and
-reconciliation](docs/repository.md#cache-health-and-reconciliation).
-
-Built-in refreshes replace complete directories, not individual files in the
-active cache. A sibling `.osdapps-new-<guid>` holds the candidate and
-`.osdapps-old-<guid>` temporarily holds the previous generation. If a process
-stops between the directory renames, the next full-Windows built-in sync or
-PreInstall invocation can restore a validated old generation before attempting
-downloads or offline restaging. Recovery never overwrites an existing active
-directory or promotes unfinished `.new` content. If no old candidate validates,
-or multiple candidates validate, it preserves them and reports the ambiguity.
-Successful refresh removes obsolete transaction directories. Read-only cache
-inspection does not perform recovery. This does not retry SetupComplete or
-recover an interrupted Windows installation; use one writer per cache.
-
-OSDApps does not bundle or redistribute vendor installer payloads. Built-ins are downloaded directly from their vendors; repository content is the repository owner's responsibility.
-
-## OSDApps Viewer
-
-The read-only Viewer has four tabs: **Staged for device · Apps · Cache · Logs**. It shows the actual manifest configuration, app sources and vendors, recorded cache versions, integrity/signature results, and structured log entries.
+Optionally inspect the queue before continuing your normal reboot:
 
 ```powershell
-# Full Windows: inspect the current Windows target and connected cache.
 Show-OSDAppUI -Offline
 ```
 
-`-Offline` disables online repository discovery; it does not disable Windows certificate trust/revocation traffic. On full Windows the Viewer checks supported built-in signatures by default. WinPE reports that signature checks are unavailable. `-TestMode` is only for an existing isolated GUI test folder, not normal deployment.
+The Viewer is read-only. Here, `-Offline` skips online repository discovery; it does not change the deployment's network behavior. Close the Viewer before rebooting.
 
-See the [Viewer guide](docs/viewer.md) for launch options and the meaning of each status. **Staged does not mean installed.**
+## Built-in apps
 
-## Security and offline use
+| Application | Stage in WinPE |
+| --- | --- |
+| Microsoft 365 Apps | `Add-OSDAppMicrosoft365Apps` |
+| Microsoft Teams | `Add-OSDAppMicrosoftTeams` |
+| Adobe Acrobat Unified | `Add-OSDAppAdobeAcrobatUnified` |
+| Google Chrome Enterprise | `Add-OSDAppGoogleChromeEnterprise` |
+| Mozilla Firefox Enterprise | `Add-OSDAppMozillaFirefoxEnterprise` |
+| Cisco Webex | `Add-OSDAppCiscoWebex` |
 
-Repository ZIPs are checked against their manifest SHA-256. Supported built-in MSI/EXE files must have a Windows-trusted signature and the expected publisher organization during full-Windows sync and PreInstall.
+Installers come directly from their vendors. Supported architectures and options differ by application; see the [built-in guide](docs/built-in-apps.md) for Office configuration, Firefox channels and other settings. OSDApps does not bundle vendor installers or provide product licenses.
 
-The checks have explicit boundaries: Office checks `setup.exe`, Teams checks its bootstrapper, and Chrome/Firefox/Webex check their MSI. The Office data tree, Teams MSIX and Adobe's outer ZIP are **not covered by those MSI/EXE signature checks**. Offline use also depends on the device's available certificate trust data; a populated cache alone is not a guarantee of a successful trust check.
+## Your apps. Your scripts. One queue.
 
-Read the [built-in publisher policy](docs/built-in-apps.md#authenticode-and-publisher-policy-0340) and [FAQ](docs/faq.md). `-SkipSignatureVerification` skips **Viewer inspection only**; it does not weaken synchronization or SetupComplete enforcement.
+Use a repository for applications you package yourself and PowerShell scripts that configure the machine. Classify a package as `Application` or `Script`; both use the same `Package.zip` layout, SHA-256 validation and `Add-OSDApp` command. Add them alongside built-ins in the order you want them to run.
 
-## Results and troubleshooting
+Configure your own catalog URL, then stage a package using its actual repository ID:
 
-The OSDApps 0.35.0 release candidate completed a physical online deployment from a populated USB cache on 12 October 2026. Hard offline-readiness preflight passed before reboot, the correlated PreInstall and final JSON results reported **8/8 successful installations**, and `OnSuccess` removed temporary staging while preserving the result and log. This is installer/provisioning evidence, not proof of licensing or every application's interactive behavior.
+```powershell
+Set-OSDAppConfiguration -CatalogUri 'https://packages.example.com/osdapps/catalog.json'
+Add-OSDApp -Name 'YourPackageId'
+```
 
-Detailed results, timing limitations and older release history are preserved in the [validation matrix](docs/testing.md), [performance measurements](docs/performance.md) and [changelog](CHANGELOG.md).
+The URL and ID above are placeholders. No hosted sample repository or built-in script collection is included. Scripts run as **SYSTEM**, must be unattended and must not restart Windows. See [repository packaging](docs/repository.md) and the [package example](Examples/README.md#build-a-repository-package).
 
-The default persistent log is `%ProgramData%\OSDApps\Logs\Runtime.log`. The runtime also writes an atomic machine-readable result to `%ProgramData%\OSDApps\Results\Latest.json`; read it with `Get-OSDAppDeploymentResult`. Look for individual app outcomes and the final status—a successful staging command is not the final installation result. See [Runtime and cleanup](docs/runtime.md).
+## How it works
 
-## Documentation and contribution
+![OSDApps workflow: stage apps and scripts in WinPE, acquire and run them through SetupComplete, then continue to OOBE](docs/images/osdapps-architecture.svg)
 
-Start with the [documentation index](docs/README.md) for user guides, examples, architecture, public metadata and development/release instructions. Contributions and built-in requests are described in [CONTRIBUTING.md](CONTRIBUTING.md).
+| When | What OSDApps does |
+| --- | --- |
+| Optional preparation on a Windows PC | Save the module and download reusable content to an OSDCloud USB cache. |
+| WinPE, after applying Windows | Stage selected repository packages, built-in configuration and available cached content. Create one ordered queue and the standalone runtime. |
+| First Windows boot, during SetupComplete | PreInstall prepares built-in content. Runner installs apps and executes scripts from local staging in queue order. |
+| After processing | Keep per-package results and logs. Clean temporary staging on success and let the normal Windows setup flow continue. |
 
-Reading a packaged copy of this README? The module package does not contain the full documentation/image tree; use the [online documentation](https://github.com/roryvossepoel/OSDApps/blob/main/docs/README.md).
+SetupComplete runs **once**. OSDApps creates no automatic retry task, service or RunOnce entry. Ordinary package failures are recorded while independent entries continue; manifest, repository-integrity and supported-publisher trust failures stop processing. A failed or skipped entry retains staging for investigation. Reaching OOBE alone does not prove that every package succeeded.
+
+## A reusable cache you can inspect
+
+The optional cache lives under `\OSDApps` on the volume labeled `OSDCloud`. Prepare it on a Windows PC, then reuse it across deployments. Built-in updates validate a complete replacement before switching the active directory; repository updates verify package hashes before committing changes.
+
+Check existing cache health without changing it:
+
+```powershell
+Get-OSDAppCacheHealth -Offline
+```
+
+Use the [USB preparation guide](Examples/Prepare-UsbCache.md) to get started, [cache reconciliation](docs/repository.md#cache-health-and-reconciliation) to retire repository content, and [cache generation recovery](docs/architecture.md#cache-generation-recovery) for interrupted updates. Only one process should write to a cache at a time.
+
+## Inspect before deployment. Keep the results afterward.
+
+**OSDApps Viewer** shows the staged queue, available packages, cache and logs. The **Package Type** column distinguishes `Application` from `Script` in the Staged for device, Apps and Cache tabs. Use it in WinPE to review staging or on a preparation machine to inspect the cache. See the [Viewer guide](docs/viewer.md).
+
+![OSDApps Viewer in WinPE showing Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise staged in order, with Office configuration details](docs/images/viewer-staged-winpe.png)
+
+*A real WinPE staging session. The detail pane shows the selected Office configuration; channel, language and cached versions reflect that session. [See the Apps and Cache views](docs/viewer.md#screenshots-from-winpe).*
+
+The deployed Windows system keeps its results without needing the module or Viewer:
+
+| File | Purpose |
+| --- | --- |
+| `%ProgramData%\OSDApps\Results\Latest.json` | Overall result and individual package outcomes |
+| `%ProgramData%\OSDApps\Logs\Runtime.log` | Detailed acquisition, execution and cleanup events |
+
+See [results and troubleshooting](docs/getting-started.md#5-check-the-outcome) for inspection commands. Recorded hardware tests and timing measurements are in the [validation matrix](docs/testing.md) and [performance notes](docs/performance.md).
+
+## Go further
+
+- [Getting started](docs/getting-started.md): preparation, staging and results.
+- [Online](Examples/WinPE-Online.md) and [offline](Examples/WinPE-Offline.md) workflows: complete examples for the target PC.
+- [Security and publisher checks](docs/built-in-apps.md#authenticode-and-publisher-policy-0340): exactly what is checked and the requirements for offline trust.
+- [Runtime and cleanup](docs/runtime.md): execution order, failures and retained diagnostics.
+- [Contributing](CONTRIBUTING.md): improvements and built-in requests.
+- [Changelog](CHANGELOG.md): release history.
+
+Reading a packaged copy? The full guides and images are in the [online documentation](https://github.com/roryvossepoel/OSDApps/blob/main/docs/README.md).
 
 OSDApps is licensed under the [MIT License](LICENSE).
