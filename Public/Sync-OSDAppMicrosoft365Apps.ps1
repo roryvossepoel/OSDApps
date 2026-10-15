@@ -139,6 +139,13 @@ function Sync-OSDAppMicrosoft365Apps {
         throw
     }
     if (Test-Path -LiteralPath $backupRoot -PathType Container) { Remove-Item -LiteralPath $backupRoot -Recurse -Force }
+    # A previous interrupted run may have left an uncommitted candidate next
+    # to the restored old generation. Delete only owned siblings, and only
+    # after this new complete Office generation has passed validation/promotion.
+    $residuePattern = '^' + [regex]::Escape((Split-Path $root -Leaf)) + '\.osdapps-(?:new|old)-[0-9a-f]{32}$'
+    Get-ChildItem -LiteralPath (Split-Path $root -Parent) -Directory -ErrorAction Stop |
+        Where-Object { $_.Name -match $residuePattern } |
+        ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop }
     $removedVersions = @()
 
     Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root; Channel = $Channel; Architecture = $Architecture; RemovedVersions=$removedVersions; SourcePolicy='Evergreen'; SyncMethod='OfficeDeploymentTool' }
