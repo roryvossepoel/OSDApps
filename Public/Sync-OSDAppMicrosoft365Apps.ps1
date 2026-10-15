@@ -49,6 +49,8 @@ function Sync-OSDAppMicrosoft365Apps {
 
     if (-not $PSCmdlet.ShouldProcess($root, 'Configure and synchronize Microsoft 365 Apps built-in cache')) { return }
 
+    Restore-OSDAppBuiltInCache -Root $root -Id Microsoft365Apps -LogPath $clientLogPath
+
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'Microsoft 365 Apps cache synchronization' -LogPath $clientLogPath | Out-Null
     Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft 365 Apps built-in cache.'
 

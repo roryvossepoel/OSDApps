@@ -7,11 +7,13 @@ function Sync-OSDAppVendorBuiltInCache {
         [Parameter(Mandatory)][string]$Architecture,
         [Parameter(Mandatory)][string]$PackageFileName,
         [Parameter(Mandatory)][string]$Activity,
+        [string]$LogPath,
         [hashtable]$AdditionalMetadata = @{},
         [switch]$SignedPackage,
         [switch]$ZipPackage
     )
 
+    Restore-OSDAppBuiltInCache -Root $Root -Id $Id -LogPath $LogPath
     $activePackage = Join-Path $Root $PackageFileName
     $activeCacheInfo = Join-Path $Root 'CacheInfo.json'
     $previousCacheInfo = $null

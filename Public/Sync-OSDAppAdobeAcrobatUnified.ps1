@@ -7,7 +7,7 @@ function Sync-OSDAppAdobeAcrobatUnified {
     if(-not $PSCmdlet.ShouldProcess($root,"Transactionally synchronize Adobe Acrobat Unified built-in cache ($Architecture)")){return}
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation "Adobe Acrobat Unified $Architecture cache synchronization" -LogPath $log|Out-Null
     Write-OSDAppLog -LogPath $log -Component AdobeAcrobatUnified -Event BuiltInSyncStart -Message 'Synchronizing Adobe Acrobat Unified built-in cache.' -Data @{Architecture=$Architecture;Transactional=$true}
-    $sync=Sync-OSDAppVendorBuiltInCache -Id AdobeAcrobatUnified -Root $root -PackageUri $PackageUri -Architecture $Architecture -PackageFileName Package.zip -Activity "Downloading Adobe Acrobat Unified $Architecture package" -ZipPackage
+    $sync=Sync-OSDAppVendorBuiltInCache -Id AdobeAcrobatUnified -Root $root -PackageUri $PackageUri -Architecture $Architecture -PackageFileName Package.zip -Activity "Downloading Adobe Acrobat Unified $Architecture package" -LogPath $log -ZipPackage
     Write-OSDAppLog -LogPath $log -Component AdobeAcrobatUnified -Event BuiltInSyncComplete -Message 'Adobe Acrobat Unified built-in cache synchronized.' -Data @{Architecture=$Architecture;Updated=$sync.Updated;Path=$root;Transactional=$true}
     [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='AdobeAcrobatUnified';Version=$sync.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=$sync.Updated}
 }

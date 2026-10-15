@@ -7,7 +7,7 @@ function Sync-OSDAppGoogleChromeEnterprise {
     if(-not $PSCmdlet.ShouldProcess($root,"Transactionally synchronize Google Chrome Enterprise built-in cache ($Architecture)")){return}
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation "Google Chrome Enterprise $Architecture cache synchronization" -LogPath $log|Out-Null
     Write-OSDAppLog -LogPath $log -Component GoogleChromeEnterprise -Event BuiltInSyncStart -Message 'Synchronizing Google Chrome Enterprise built-in cache.' -Data @{Architecture=$Architecture;Transactional=$true}
-    $sync=Sync-OSDAppVendorBuiltInCache -Id GoogleChromeEnterprise -Root $root -PackageUri $PackageUri -Architecture $Architecture -PackageFileName Package.msi -Activity "Downloading Google Chrome Enterprise $Architecture MSI" -SignedPackage
+    $sync=Sync-OSDAppVendorBuiltInCache -Id GoogleChromeEnterprise -Root $root -PackageUri $PackageUri -Architecture $Architecture -PackageFileName Package.msi -Activity "Downloading Google Chrome Enterprise $Architecture MSI" -LogPath $log -SignedPackage
     Write-OSDAppLog -LogPath $log -Component GoogleChromeEnterprise -Event BuiltInSyncComplete -Message 'Google Chrome Enterprise built-in cache synchronized.' -Data @{Architecture=$Architecture;Updated=$sync.Updated;Path=$root;Transactional=$true}
     [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='GoogleChromeEnterprise';Version=$sync.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=$sync.Updated}
 }

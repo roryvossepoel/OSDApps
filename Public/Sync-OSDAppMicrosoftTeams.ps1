@@ -11,6 +11,7 @@ function Sync-OSDAppMicrosoftTeams {
     if(-not $PSCmdlet.ShouldProcess($root,"Transactionally synchronize Microsoft Teams built-in cache ($Architecture)")){return}
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'Microsoft Teams cache synchronization' -LogPath $log|Out-Null
     Write-OSDAppLog -LogPath $log -Component MicrosoftTeams -Event BuiltInSyncStart -Message 'Synchronizing Microsoft Teams built-in cache.' -Data @{Architecture=$Architecture;Transactional=$true}
+    Restore-OSDAppBuiltInCache -Root $root -Id MicrosoftTeams -LogPath $log
     $remote=Get-OSDAppRemoteFileMetadata -Uri $msixUri;$previous=$null;$activeInfo=Join-Path $root 'CacheInfo.json';$activeMsix=Join-Path $root 'teams.msix'
     if(Test-Path -LiteralPath $activeInfo -PathType Leaf){try{$previous=Get-Content -LiteralPath $activeInfo -Raw -Encoding UTF8|ConvertFrom-Json}catch{}}
     $matches=$false

@@ -5,6 +5,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Restore-OSDAppCacheGeneration.ps1')
 Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
 $logPath = [Environment]::ExpandEnvironmentVariables('%ProgramData%\OSDApps\Logs\Runtime.log')
@@ -380,6 +381,26 @@ function Test-LocalMsiSource {
     return (Test-Path -LiteralPath (Join-Path $Root 'Package.msi') -PathType Leaf)
 }
 
+function Restore-PreInstallBuiltInCache {
+    param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Id)
+    $recovery = Restore-OSDAppCacheGeneration -Root $Root -Validate {
+        param($candidate)
+        Assert-OSDAppRecoverableBuiltInGeneration -Root $candidate -Id $Id -SignatureValidator {
+            param($appId, $file)
+            Assert-PreInstallSignedPayload -Id $appId -Path $file
+        } -OfficeValidator {
+            param($officeRoot, $version, $architecture)
+            Test-OfficeCacheGeneration -OfficeRoot $officeRoot -ExpectedVersion $version -Architecture $architecture | Out-Null
+        } -TeamsVersionReader {
+            param($file)
+            Get-MicrosoftTeamsPackageVersion -Path $file
+        }
+    }
+    if ($recovery) {
+        Write-PreInstallLog -Event 'CacheGenerationRecovered' -Message 'Validated previous USB cache generation restored after an interrupted directory swap.' -Data @{Id=$Id;Path=$Root;PreviousPath=$recovery.PreviousPath}
+    }
+}
+
 function Remove-PreInstallTransactionResidue {
     param([Parameter(Mandatory)][string]$Root)
     $parent=Split-Path -Path $Root -Parent;$leaf=Split-Path -Path $Root -Leaf
@@ -444,6 +465,7 @@ function Sync-PreInstallVendorMsi {
     New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
 
     $acquireRoot = if ($usbRoot) { Join-Path $usbRoot $RelativeRoot } else { $localRoot }
+    if ($usbRoot) { Restore-PreInstallBuiltInCache -Root $acquireRoot -Id $id }
     New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
 
     if ($usbRoot -and -not (Test-LocalMsiSource -Root $localRoot) -and (Test-LocalMsiSource -Root $acquireRoot)) {
@@ -605,6 +627,7 @@ try {
                 $localRoot=Join-Path $StagedPath 'BuiltIn\Microsoft365Apps'
                 New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
                 $acquireRoot=if($usbRoot){Join-Path $usbRoot 'BuiltIn\Microsoft365Apps'}else{$localRoot}
+                if($usbRoot){Restore-PreInstallBuiltInCache -Root $acquireRoot -Id 'Microsoft365Apps'}
                 New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
                 $localConfig=Join-Path $localRoot 'configuration.xml'
                 if(-not (Test-Path -LiteralPath $localConfig -PathType Leaf)){throw 'Microsoft 365 Apps configuration.xml is missing from the staged deployment intent.'}
@@ -673,7 +696,9 @@ try {
             }
             'MicrosoftTeams' {
                 $localRoot=Join-Path $StagedPath 'BuiltIn\MicrosoftTeams'; New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
-                $acquireRoot=if($usbRoot){Join-Path $usbRoot 'BuiltIn\MicrosoftTeams'}else{$localRoot}; New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
+                $acquireRoot=if($usbRoot){Join-Path $usbRoot 'BuiltIn\MicrosoftTeams'}else{$localRoot}
+                if($usbRoot){Restore-PreInstallBuiltInCache -Root $acquireRoot -Id 'MicrosoftTeams'}
+                New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
                 if($usbRoot -and -not (Test-LocalMicrosoftTeamsSource -Root $localRoot) -and (Test-LocalMicrosoftTeamsSource -Root $acquireRoot)){
                     Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $acquireRoot 'teamsbootstrapper.exe')
                     Copy-Item -LiteralPath (Join-Path $acquireRoot 'teamsbootstrapper.exe') -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force
@@ -722,6 +747,7 @@ try {
                 $localRoot=Join-Path $StagedPath (Join-Path 'BuiltIn\AdobeAcrobatUnified' $architecture)
                 New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
                 $acquireRoot=if($usbRoot){Join-Path $usbRoot (Join-Path 'BuiltIn\AdobeAcrobatUnified' $architecture)}else{$localRoot}
+                if($usbRoot){Restore-PreInstallBuiltInCache -Root $acquireRoot -Id 'AdobeAcrobatUnified'}
                 New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
 
                 if($usbRoot -and -not (Test-LocalAdobeAcrobatUnifiedSource -Root $localRoot) -and (Test-LocalAdobeAcrobatUnifiedSource -Root $acquireRoot)){

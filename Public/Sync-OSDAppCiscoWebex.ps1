@@ -7,7 +7,7 @@ function Sync-OSDAppCiscoWebex {
     if(-not $PSCmdlet.ShouldProcess($root,"Transactionally synchronize Cisco Webex built-in cache ($Architecture)")){return}
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation "Cisco Webex $Architecture cache synchronization" -LogPath $log|Out-Null
     Write-OSDAppLog -LogPath $log -Component CiscoWebex -Event BuiltInSyncStart -Message 'Synchronizing Cisco Webex built-in cache.' -Data @{Architecture=$Architecture;Transactional=$true}
-    $sync=Sync-OSDAppVendorBuiltInCache -Id CiscoWebex -Root $root -PackageUri $PackageUri -Architecture $Architecture -PackageFileName Package.msi -Activity "Downloading Cisco Webex $Architecture MSI" -SignedPackage
+    $sync=Sync-OSDAppVendorBuiltInCache -Id CiscoWebex -Root $root -PackageUri $PackageUri -Architecture $Architecture -PackageFileName Package.msi -Activity "Downloading Cisco Webex $Architecture MSI" -LogPath $log -SignedPackage
     Write-OSDAppLog -LogPath $log -Component CiscoWebex -Event BuiltInSyncComplete -Message 'Cisco Webex built-in cache synchronized.' -Data @{Architecture=$Architecture;Updated=$sync.Updated;Path=$root;Transactional=$true}
     [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='CiscoWebex';Version=$sync.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=$sync.Updated}
 }

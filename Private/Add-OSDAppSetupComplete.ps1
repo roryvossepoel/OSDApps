@@ -14,6 +14,7 @@ function Add-OSDAppSetupComplete {
     $moduleRoot = Split-Path $PSScriptRoot -Parent
     $runnerSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'
     $preInstallSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1'
+    $recoverySource = Join-Path $moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1'
 
     if (-not (Test-Path -LiteralPath $runnerSource -PathType Leaf)) {
         throw "OSD App runner was not found: $runnerSource"
@@ -22,12 +23,16 @@ function Add-OSDAppSetupComplete {
     if (-not (Test-Path -LiteralPath $preInstallSource -PathType Leaf)) {
         throw "OSD App pre-install runtime was not found: $preInstallSource"
     }
+    if (-not (Test-Path -LiteralPath $recoverySource -PathType Leaf)) {
+        throw "OSD App cache recovery runtime was not found: $recoverySource"
+    }
 
     if ($PSCmdlet.ShouldProcess($stagedRoot, 'Stage OSD Apps runtime scripts')) {
         New-Item -ItemType Directory -Path $scriptsPath -Force | Out-Null
         New-Item -ItemType Directory -Path $stagedRoot -Force | Out-Null
         Copy-Item -LiteralPath $runnerSource -Destination (Join-Path $stagedRoot 'Invoke-OSDAppRunner.ps1') -Force
         Copy-Item -LiteralPath $preInstallSource -Destination (Join-Path $stagedRoot 'Invoke-OSDAppPreInstall.ps1') -Force
+        Copy-Item -LiteralPath $recoverySource -Destination (Join-Path $stagedRoot 'Restore-OSDAppCacheGeneration.ps1') -Force
     }
 
     $preInstallMarker = ':: OSDApps PreInstall'

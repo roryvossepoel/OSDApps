@@ -89,6 +89,18 @@ Replacements are hash-validated before the transactional commit; selective
 synchronization remains non-destructive. See [cache health and
 reconciliation](docs/repository.md#cache-health-and-reconciliation).
 
+Built-in refreshes replace complete directories, not individual files in the
+active cache. A sibling `.osdapps-new-<guid>` holds the candidate and
+`.osdapps-old-<guid>` temporarily holds the previous generation. If a process
+stops between the directory renames, the next full-Windows built-in sync or
+PreInstall invocation can restore a validated old generation before attempting
+downloads or offline restaging. Recovery never overwrites an existing active
+directory or promotes unfinished `.new` content. If no old candidate validates,
+or multiple candidates validate, it preserves them and reports the ambiguity.
+Successful refresh removes obsolete transaction directories. Read-only cache
+inspection does not perform recovery. This does not retry SetupComplete or
+recover an interrupted Windows installation; use one writer per cache.
+
 OSDApps does not bundle or redistribute vendor installer payloads. Built-ins are downloaded directly from their vendors; repository content is the repository owner's responsibility.
 
 ## OSDApps Viewer
