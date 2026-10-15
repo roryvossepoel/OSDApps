@@ -86,6 +86,37 @@ Successful refresh removes obsolete transaction directories. Read-only cache
 inspection does not perform recovery. This does not retry SetupComplete or
 recover an interrupted Windows installation; use one writer per cache.
 
+## Cache transaction space checks
+
+Before a candidate is created, public built-in synchronization and standalone
+PreInstall check the acquisition volume. The budget is the larger of the
+configured minimum and the expected new payload plus 20% and 64 MB of overhead.
+Known HTTP lengths are preferred; without one, the current generation provides
+an estimate. Office retains its 8 GB default minimum because ODT does not expose
+a complete download length up front. Teams retains 2 GB, Adobe 3 GB and the
+other built-ins 1 GB. Existing content already occupies disk space, so it is not
+counted again: moving it to the sibling backup does not copy its payload.
+
+Repository synchronization sums only archives that need acquisition. Local
+sources use their file lengths; remote archives use a HEAD request bounded to
+15 seconds. Missing/rejected lengths fall back to the larger of the existing
+package size and 1 GB per changed package. The batch budget adds the same 20%
+and 64 MB allowance and is rechecked for remaining work before each archive.
+The cache stores ZIPs without extracting them. Pending prune removals are not
+credited as free space before commit. `-WhatIf` skips these probes and checks.
+
+Unchanged MSI/ZIP generations can be reused without replacement space. Teams
+still prepares a fresh candidate containing a bootstrapper and a copied or
+newly downloaded MSIX. A blocked PreInstall refresh uses the existing acceptable
+staged payload when available; without a fallback, acquisition fails normally.
+
+These checks apply to local acquisition volumes, including the Windows disk
+when no USB cache is present. They are estimates, not disk reservations: a
+server can omit or misreport size, Office content can grow, and other processes
+can consume space afterward. Transaction validation/rollback remain necessary.
+They do not size application installation or extraction workspace, nor change
+`Test-OSDAppDeployment -MinimumFreeSpaceGB` on the offline Windows target.
+
 ## Runtime locations
 
 | Location | Contents |

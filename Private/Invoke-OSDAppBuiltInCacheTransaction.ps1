@@ -3,8 +3,12 @@ function Invoke-OSDAppBuiltInCacheTransaction {
     param(
         [Parameter(Mandatory)][string]$Root,
         [Parameter(Mandatory)][scriptblock]$Build,
-        [Parameter(Mandatory)][scriptblock]$Validate
+        [Parameter(Mandatory)][scriptblock]$Validate,
+        [ValidateRange(0, [double]::MaxValue)][double]$ExpectedBytes = 0,
+        [ValidateRange(0, [double]::MaxValue)][double]$MinimumFreeSpaceGB = 0
     )
+
+    Assert-OSDAppTransactionSpace -Path $Root -ExistingPath $Root -ExpectedBytes $ExpectedBytes -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'built-in cache generation preparation' | Out-Null
 
     $transactionRoot = "$Root.osdapps-new-$([guid]::NewGuid().ToString('N'))"
     $backupRoot = "$Root.osdapps-old-$([guid]::NewGuid().ToString('N'))"

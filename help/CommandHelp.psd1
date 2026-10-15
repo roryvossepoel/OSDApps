@@ -5,7 +5,7 @@
         WindowsPath = 'Root of the intended Windows volume, for example D:\, not D:\Windows. When omitted, deployment commands discover a Windows installation. Use Add deployment commands in WinPE after applying Windows, not on the preparation computer.'
         Architecture = 'Requested package architecture; match the target and offline cache variant. Allowed values and source defaults are included below.'
         PackageUri = 'Optional vendor-owned package URL overriding the built-in source. Does not bypass signature/publisher validation for supported MSI packages.'
-        MinimumFreeSpaceGB = 'Minimum free space on the configured cache volume before synchronization, in PowerShell GB units. A preflight threshold, not a guarantee that every download will fit.'
+        MinimumFreeSpaceGB = 'Minimum free space before preparing a replacement cache generation, in PowerShell GB units. A larger payload estimate plus working margin can require more. Unchanged MSI/ZIP reuse skips this check. This does not reserve space or guarantee that an unknown download will fit.'
         InstallTimeoutMinutes = 'Maximum installer runtime in minutes during SetupComplete. Does not configure download timeouts.'
         Channel = 'Vendor release channel. Match the channel used to prepare offline content.'
         Language = 'Vendor language identifier or identifiers. Match the language used to prepare offline content.'

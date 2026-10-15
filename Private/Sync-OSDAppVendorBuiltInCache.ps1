@@ -10,7 +10,8 @@ function Sync-OSDAppVendorBuiltInCache {
         [string]$LogPath,
         [hashtable]$AdditionalMetadata = @{},
         [switch]$SignedPackage,
-        [switch]$ZipPackage
+        [switch]$ZipPackage,
+        [ValidateRange(0, [double]::MaxValue)][double]$MinimumFreeSpaceGB = 1
     )
 
     Restore-OSDAppBuiltInCache -Root $Root -Id $Id -LogPath $LogPath
@@ -46,7 +47,7 @@ function Sync-OSDAppVendorBuiltInCache {
         }
     }
 
-    Invoke-OSDAppBuiltInCacheTransaction -Root $Root -Build {
+    Invoke-OSDAppBuiltInCacheTransaction -Root $Root -ExpectedBytes ([double]$remoteMetadata.ContentLength) -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Build {
         param($candidateRoot)
         $candidatePackage = Join-Path $candidateRoot $PackageFileName
         if ($SignedPackage) {

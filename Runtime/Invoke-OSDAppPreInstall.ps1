@@ -6,6 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Restore-OSDAppCacheGeneration.ps1')
+. (Join-Path $PSScriptRoot 'Assert-OSDAppTransactionSpace.ps1')
 Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
 $logPath = [Environment]::ExpandEnvironmentVariables('%ProgramData%\OSDApps\Logs\Runtime.log')
@@ -516,6 +517,7 @@ function Sync-PreInstallVendorMsi {
         $updated = $false
         $generationRoot = $acquireRoot
         if (-not $matches) {
+            Assert-OSDAppTransactionSpace -Path $acquireRoot -ExistingPath $acquireRoot -ExpectedBytes ([double]$remote.ContentLength) -MinimumFreeSpaceGB 1 -Operation "$id cache refresh" | Out-Null
             $transactionRoot = "$acquireRoot.osdapps-new-$([guid]::NewGuid().ToString('N'))"
             $backupRoot = "$acquireRoot.osdapps-old-$([guid]::NewGuid().ToString('N'))"
             New-Item -ItemType Directory -Path $transactionRoot -Force | Out-Null
@@ -647,6 +649,7 @@ try {
 
                 $transactionRoot=$null;$backupRoot=$null
                 try {
+                    Assert-OSDAppTransactionSpace -Path $acquireRoot -ExistingPath $acquireRoot -MinimumFreeSpaceGB 8 -Operation 'Microsoft 365 Apps cache refresh' | Out-Null
                     $transactionRoot="$acquireRoot.osdapps-new-$([guid]::NewGuid().ToString('N'))"
                     $backupRoot="$acquireRoot.osdapps-old-$([guid]::NewGuid().ToString('N'))"
                     New-Item -ItemType Directory -Path $transactionRoot -Force | Out-Null
@@ -721,6 +724,7 @@ try {
                     $msixPath=Join-Path $acquireRoot 'teams.msix'; $bootstrapperPath=Join-Path $acquireRoot 'teamsbootstrapper.exe'
                     $remote=Get-RemoteMetadata -Uri $msixUri; $matches=$false
                     if((Test-Path -LiteralPath $msixPath -PathType Leaf) -and $cacheInfo){if($remote.ETag -and $cacheInfo.RemoteETag){$matches=$remote.ETag -eq [string]$cacheInfo.RemoteETag}elseif($remote.LastModified -and $cacheInfo.RemoteLastModified -and $remote.ContentLength -and $cacheInfo.RemoteContentLength){$matches=($remote.LastModified -eq [string]$cacheInfo.RemoteLastModified -and [int64]$remote.ContentLength -eq [int64]$cacheInfo.RemoteContentLength)}}
+                    Assert-OSDAppTransactionSpace -Path $acquireRoot -ExistingPath $acquireRoot -ExpectedBytes ([double]$remote.ContentLength) -MinimumFreeSpaceGB 2 -Operation 'Microsoft Teams cache refresh' | Out-Null
                     $transactionRoot="$acquireRoot.osdapps-new-$([guid]::NewGuid().ToString('N'))";$backupRoot="$acquireRoot.osdapps-old-$([guid]::NewGuid().ToString('N'))";New-Item -ItemType Directory -Path $transactionRoot -Force|Out-Null
                     $candidateBootstrapper=Join-Path $transactionRoot 'teamsbootstrapper.exe';$candidateMsix=Join-Path $transactionRoot 'teams.msix'
                     Save-PreInstallDownload -Uri $bootstrapperUri -DestinationPath $candidateBootstrapper -Id 'MicrosoftTeams' -Description 'Microsoft Teams bootstrapper' -TimeoutMinutes 5;Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path $candidateBootstrapper
@@ -787,6 +791,7 @@ try {
 
                     $updated=$false;$generationRoot=$acquireRoot
                     if(-not $matches){
+                        Assert-OSDAppTransactionSpace -Path $acquireRoot -ExistingPath $acquireRoot -ExpectedBytes ([double]$remote.ContentLength) -MinimumFreeSpaceGB 3 -Operation 'Adobe Acrobat Unified cache refresh' | Out-Null
                         $transactionRoot="$acquireRoot.osdapps-new-$([guid]::NewGuid().ToString('N'))";$backupRoot="$acquireRoot.osdapps-old-$([guid]::NewGuid().ToString('N'))"
                         New-Item -ItemType Directory -Path $transactionRoot -Force|Out-Null;$generationRoot=$transactionRoot;$packagePath=Join-Path $generationRoot 'Package.zip'
                         Save-PreInstallDownload -Uri $packageUri -DestinationPath $packagePath -Id 'AdobeAcrobatUnified' -Description "Adobe Acrobat Unified $architecture package" -TimeoutMinutes 30

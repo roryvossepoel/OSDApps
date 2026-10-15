@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.40.0
+
+- Check free space before preparing a replacement built-in cache generation, using the known payload length or an existing-generation estimate plus a 20% allowance and 64 MB overhead, subject to the configured minimum.
+- Apply the same check in standalone PreInstall; an insufficient-space refresh follows the existing staged-fallback policy instead of replacing the active cache.
+- Budget the complete changed repository batch before downloading and recheck remaining work before each archive. Reused packages are excluded; pending pruning is not counted as available space.
+- Keep MSI/ZIP cache reuse independent of replacement-space thresholds. Teams still prepares a candidate bootstrapper and MSIX, including when the MSIX is reused.
+- Stage and validate the shared space helper without adding public commands. Unknown download lengths remain estimates; checks do not reserve disk capacity or guarantee installer workspace.
+
 ## 0.39.1
 
 ### Documentation and discovery
