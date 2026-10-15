@@ -101,17 +101,44 @@ jobs:
           }
 
           function Test-PublishedContent {
+              param(
+                  [ValidateRange(1,60)][int]$MaximumAttempts = 12,
+                  [ValidateRange(1,60)][int]$RetryDelaySeconds = 10
+              )
+
               $downloadPath = Join-Path $env:RUNNER_TEMP 'gallery-verify'
-              if (Test-Path -LiteralPath $downloadPath) {
-                  Remove-Item -LiteralPath $downloadPath -Recurse -Force
+              $downloaded = $false
+              $lastDownloadError = $null
+              for ($attempt = 1; $attempt -le $MaximumAttempts; $attempt++) {
+                  # Each attempt starts clean; partial downloads cannot satisfy verification.
+                  if (Test-Path -LiteralPath $downloadPath) {
+                      Remove-Item -LiteralPath $downloadPath -Recurse -Force -ErrorAction Stop
+                  }
+                  New-Item -ItemType Directory -Path $downloadPath -Force -ErrorAction Stop | Out-Null
+                  try {
+                      Save-Module -Name OSDApps -RequiredVersion $version -Repository PSGallery -Path $downloadPath -Force -ErrorAction Stop
+                      $downloaded = $true
+                      break
+                  }
+                  catch {
+                      $lastDownloadError = $_.Exception.Message
+                      Write-Warning "Gallery verification download attempt $attempt/$MaximumAttempts failed: $lastDownloadError"
+                  }
+                  if ($attempt -lt $MaximumAttempts) { Start-Sleep -Seconds $RetryDelaySeconds }
               }
-              Save-Module -Name OSDApps -RequiredVersion $version -Repository PSGallery -Path $downloadPath -Force -ErrorAction Stop
+              if (-not $downloaded) {
+                  throw "Unable to download OSDApps $version for verification after $MaximumAttempts attempts. Publication is not verified. Last download error: $lastDownloadError"
+              }
+
+              # Retrieval can be delayed after a successful push. Content mismatches
+              # are not retrieval failures and must fail immediately without a retry.
               $publishedPath = Join-Path $downloadPath "OSDApps\$version"
               if (-not (Test-Path -LiteralPath $publishedPath -PathType Container)) {
                   throw "Published OSDApps $version was not downloaded for verification."
               }
 
               $localFiles = @(Get-ChildItem -LiteralPath $modulePath -Recurse -File)
+              if ($localFiles.Count -eq 0) { throw "Release package contains no files: $modulePath" }
               foreach ($file in $localFiles) {
                   $relative = $file.FullName.Substring($modulePath.Length).TrimStart('\','/')
                   $publishedFile = Join-Path $publishedPath $relative
@@ -146,16 +173,8 @@ jobs:
               if ($_.Exception.Message -notmatch '409|already exists and cannot be modified') { throw }
           }
 
-          $visible = $false
-          for ($attempt = 1; $attempt -le 12; $attempt++) {
-              if (Find-PublishedVersion) { $visible = $true; break }
-              Start-Sleep -Seconds 10
-          }
-          if (-not $visible) {
-              if ($publishError) { throw $publishError }
-              throw "Publish-Module returned successfully, but OSDApps $version was not found in PSGallery after 120 seconds."
-          }
-
+          # Save-Module is the readiness check: discovery alone can succeed before
+          # the exact package is downloadable. Retry retrieval, never the push.
           # A 409 can occur after a successful push. Never treat it as success
           # unless the Gallery package matches our built, immutable release.
           Test-PublishedContent
