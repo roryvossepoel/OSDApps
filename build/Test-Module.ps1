@@ -28,7 +28,8 @@ $analysisTargets = @(
     (Join-Path $root 'Public'),
     (Join-Path $root 'Private'),
     (Join-Path $root 'Runtime'),
-    (Join-Path $root 'build')
+    (Join-Path $root 'build'),
+    (Join-Path $root 'tools')
 )
 $analysis = @(
     foreach ($target in $analysisTargets) {

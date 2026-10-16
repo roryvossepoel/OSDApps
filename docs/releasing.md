@@ -81,6 +81,8 @@ A normal `main` push without an `OSDApps.psd1` change does not trigger a new rel
 - When a viewer reads the JSON from `main`, verify both JSON and icon assets after merge; do not break the schema without updating consumers
 - Distinguish supported architectures from field-validated architectures
 
+For a reusable read-only check of an existing release, use the [maintenance tool](maintenance.md#check-a-published-release). It reports workflow status and exact Gallery visibility without publishing or downloading packages.
+
 ## Local validation
 
 The same validation used by CI can be run locally:

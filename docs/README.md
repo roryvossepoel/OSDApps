@@ -33,6 +33,7 @@ OSDApps is CLI-first. Use PowerShell to configure, cache and stage applications 
 | [Architecture](architecture.md) | Acquisition, cache, local staging and the ordered device manifest |
 | [Public metadata](public-metadata.md) | `metadata/builtins.json`, icons and external Viewer consumers |
 | [Contributing](../CONTRIBUTING.md) | Contribution and built-in app request policy |
+| [Maintenance](maintenance.md) | Optional read-only USB, release and saved-result checks on the preparation PC |
 | [Releasing](releasing.md) | CI, module build, release tags and verified PowerShell Gallery publication |
 
 ## Evidence and history
