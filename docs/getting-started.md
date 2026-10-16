@@ -57,16 +57,12 @@ Load the module from Gallery and add the intended applications. OSDApps discover
 This complete online example needs PowerShellGet and Gallery access in WinPE:
 
 ```powershell
-$ErrorActionPreference = 'Stop'
-
 Install-Module OSDApps -Force -SkipPublisherCheck
 Import-Module OSDApps -Force
 
 Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
 Add-OSDAppAdobeAcrobatUnified
 Add-OSDAppGoogleChromeEnterprise
-
-Test-OSDAppDeployment -ThrowOnFailure
 ```
 
 The defaults already use cache label `OSDCloud` and cleanup mode `OnSuccess`. No version pin, explicit Windows path or configuration call is needed for this example. `-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDApps installer signature checks.
@@ -81,7 +77,7 @@ For repository apps, configure your actual catalog URL and use app IDs that it c
 
 ## 3. Inspect before reboot
 
-**Environment: the same WinPE session.** Run the deployment preflight after the last Add command:
+**Environment: the same WinPE session.** Optionally run the deployment preflight after the last Add command:
 
 ```powershell
 Test-OSDAppDeployment -ThrowOnFailure |

@@ -35,21 +35,17 @@ For WinPE without Gallery access, [save the module to your USB stick](Examples/P
 **Run this complete example in online WinPE, after OSDCloud has applied Windows and before the first reboot.** It stages three apps for the target PC:
 
 ```powershell
-$ErrorActionPreference = 'Stop'
-
 Install-Module OSDApps -Force -SkipPublisherCheck
 Import-Module OSDApps -Force
 
 Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
 Add-OSDAppAdobeAcrobatUnified
 Add-OSDAppGoogleChromeEnterprise
-
-Test-OSDAppDeployment -ThrowOnFailure
 ```
 
 That's the queue: **Microsoft 365 Apps → Adobe Acrobat Unified → Google Chrome Enterprise**. These commands use x64 by default. Change the Office channel and language to suit your deployment; use the same settings when preparing its cache.
 
-OSDApps discovers the offline Windows installation, prepares SetupComplete and removes temporary staging after success by default. Apps are installed during the first Windows boot, not in WinPE. Continue your normal deployment reboot only after the preflight check passes.
+OSDApps discovers the offline Windows installation, prepares SetupComplete and removes temporary staging after success by default. Apps are installed during the first Windows boot, not in WinPE. Continue your normal deployment reboot after staging completes without errors.
 
 **The same commands work with or without a cache USB:**
 
@@ -58,7 +54,7 @@ OSDApps discovers the offline Windows installation, prepares SetupComplete and r
 
 Keep networking available for either online route. No module copy on the stick is needed when loading from the Gallery. For a fully disconnected deployment, [prepare matching content and save the module first](Examples/WinPE-Offline.md).
 
-Optionally inspect the queue before continuing your normal reboot:
+For an optional preflight check before rebooting, run `Test-OSDAppDeployment -ThrowOnFailure`. You can also inspect the queue in the Viewer:
 
 ```powershell
 Show-OSDAppUI -Offline

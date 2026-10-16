@@ -9,16 +9,12 @@ This example uses the current PowerShell Gallery release and three x64 built-ins
 ## 1. Import the module and stage built-ins
 
 ```powershell
-$ErrorActionPreference = 'Stop'
-
 Install-Module OSDApps -Force -SkipPublisherCheck
 Import-Module OSDApps -Force
 
 Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
 Add-OSDAppAdobeAcrobatUnified
 Add-OSDAppGoogleChromeEnterprise
-
-Test-OSDAppDeployment -ThrowOnFailure
 ```
 
 Change the Office channel and language to suit your deployment. OSDApps discovers the offline Windows installation automatically. If multiple installations are found, specify the intended root with `-WindowsPath` on each Add command and on the preflight check.
@@ -45,15 +41,19 @@ $RepoAppId = Read-Host 'Enter an application Id present in that repository'
 
 Set-OSDAppConfiguration -CatalogUri $CatalogUri
 Add-OSDApp -Name $RepoAppId
-
-Test-OSDAppDeployment -ThrowOnFailure
 ```
 
 Use your own published catalog and app Id. Notepad++ and Omnissa Horizon Client are examples of user-supplied packages, not built-ins supplied by OSDApps. The same command stages a repository package classified as `Script`.
 
 ## 3. Review before continuing
 
-The preflight must pass after the last Add command. For a fresh built-in deployment without cache, `OfflineReady=False` and `NetworkRequired=True` are expected; `Valid=True` means staging passed, not that installation has happened.
+Optionally run the preflight after the last Add command:
+
+```powershell
+Test-OSDAppDeployment -ThrowOnFailure
+```
+
+If you run this check, resolve any reported failure before rebooting. For a fresh built-in deployment without cache, `OfflineReady=False` and `NetworkRequired=True` are expected; `Valid=True` means staging passed, not that installation has happened.
 
 Optionally inspect the queue in the read-only Viewer:
 
