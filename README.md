@@ -1,6 +1,6 @@
 # OSDApps
 
-![OSDApps — Your apps. Ready before OOBE. Stage in WinPE. Install apps and run scripts before OOBE starts.](docs/images/osdapps-banner.svg)
+![OSDApps — Your apps. Ready before OOBE. Built-in apps and your own repository, with optional USB flash drive caching.](docs/images/osdapps-banner.svg)
 
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/OSDApps?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/OSDApps)
 [![PowerShell Gallery total downloads](https://img.shields.io/powershellgallery/dt/OSDApps?label=Downloads)](https://www.powershellgallery.com/packages/OSDApps)
