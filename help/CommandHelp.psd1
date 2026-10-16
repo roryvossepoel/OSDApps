@@ -114,11 +114,12 @@
                 CatalogUri = 'Explicit HTTP/HTTPS root catalog used as desired repository state. Cannot be combined with CatalogPath or Offline.'
                 CatalogPath = 'Explicit local catalog.json used as desired repository state. Cannot be combined with CatalogUri or Offline.'
                 Offline = 'Do not query the configured repository catalog. Locally cataloged packages can still be Active when their recorded SHA-256 passes.'
+                Architecture = 'Desired repository target architecture: x64 or arm64. Defaults to the host architecture for desired-state comparison. Offline inspection does not select variants.'
                 PinnedId = 'Repository cache Ids intentionally retained outside desired state. A pin does not make missing, corrupt or renamed content healthy.'
             }
             Examples = @(
                 @{ Code = 'Get-OSDAppCacheHealth -Offline | Select-Object Healthy, ActiveCount, CorruptCount'; Remarks = 'Inspect local integrity without any repository request.' },
-                @{ Code = '$health = Get-OSDAppCacheHealth -CatalogPath ''C:\Work\Repository\catalog.json''; $health.Entries | Where-Object Action -ne ''None'''; Remarks = 'Preview desired-state differences from a local repository before pruning.' }
+                @{ Code = '$health = Get-OSDAppCacheHealth -CatalogPath ''C:\Work\Repository\catalog.json'' -Architecture x64; $health.Entries | Where-Object Action -ne ''None'''; Remarks = 'Preview desired-state differences from a local repository before pruning.' }
             )
             Link = 'docs/repository.md'
         }
@@ -227,10 +228,11 @@
             Parameters = @{
                 Name = 'Optional exact canonical Ids or declared aliases. Omit to synchronize all compatible catalog packages. Cannot be combined with Prune.'
                 Prune = 'Reconcile the complete catalog and transactionally remove unpinned renamed, obsolete and orphaned repository folders. Preview with WhatIf.'
+                Architecture = 'Repository target architecture: x64 or arm64. Defaults to the host architecture. Exact variants take precedence over any. One variant is cached per Id; changing architecture can replace that Id.'
                 PinnedId = 'Canonical cached package Ids to retain outside desired state during Prune. Pins must already be valid and cannot name aliases.'
             }
             Examples = @(
-                @{ Code = 'Sync-OSDAppRepository -Name ''ExampleApp'''; Remarks = 'Use your own published catalog Id or alias; may update USB cache files.' },
+                @{ Code = 'Sync-OSDAppRepository -Name ''ExampleApp'' -Architecture x64'; Remarks = 'Use your own published catalog Id or alias; may update USB cache files.' },
                 @{ Code = 'Sync-OSDAppRepository -Prune -PinnedId ''LegacyApp'' -WhatIf'; Remarks = 'Preview complete desired-state reconciliation while retaining one valid legacy package.' }
             )
             Link = 'docs/repository.md'

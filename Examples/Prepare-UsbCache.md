@@ -84,7 +84,7 @@ $CatalogUri = Read-Host 'Enter the HTTPS URL of your repository catalog.json'
 $RepoAppId = Read-Host 'Enter an application Id present in that repository'
 
 Set-OSDAppConfiguration -CatalogUri $CatalogUri
-Sync-OSDAppRepository -Name $RepoAppId
+Sync-OSDAppRepository -Name $RepoAppId -Architecture x64
 
 Get-OSDAppCache -Name $RepoAppId |
     Select-Object Id, DisplayName, Vendor, Version, Architecture, Valid
@@ -95,13 +95,15 @@ long-lived repository cache against the complete configured catalog, inspect
 the plan first and approve it separately:
 
 ```powershell
-Get-OSDAppCacheHealth
-Sync-OSDAppRepository -Prune -WhatIf
+Get-OSDAppCacheHealth -Architecture x64
+Sync-OSDAppRepository -Architecture x64 -Prune -WhatIf
 # After reviewing the exact cache volume and WhatIf output:
-Sync-OSDAppRepository -Prune -Confirm
+Sync-OSDAppRepository -Architecture x64 -Prune -Confirm
 ```
 
-Repository synchronization resolves a variant for the **current host architecture**. When preparing media on an ARM64 machine for an x64 target, do not assume that a host-selected repository variant is suitable for that target. These paired examples assume an x64 preparation/deployment workflow; verify the architecture shown in the cache results.
+From 0.43.0, `-Architecture x64` explicitly prepares repository packages for the x64 target, including from an ARM64 preparation machine. Use `arm64` for an ARM64 target. Without the parameter, synchronization and desired-state health checks use the host architecture. An exact variant is preferred over an architecture-neutral `any` package.
+
+The cache stores **one variant per repository Id**. Synchronizing the same Id for another architecture can replace its existing variant; use separately prepared media when both variants must remain available. Keep the same architecture on health, WhatIf and actual synchronization commands. This choice does not change built-in parameters or the target selected later in WinPE.
 
 ## 4. Move the stick to the target
 

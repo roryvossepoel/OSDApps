@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.43.0
+
+- Add optional `-Architecture x64|arm64` to `Sync-OSDAppRepository` and `Get-OSDAppCacheHealth` for preparing and checking repository content for another target architecture.
+- Keep the host architecture as the default and prefer an exact variant before `any`. Missing compatible variants fail before cache mutation; existing transaction, hash, locking and pruning rules still apply.
+- Keep one cached variant per repository Id. Switching architecture replaces that Id transactionally; it does not create a multi-architecture cache layout or alter WinPE/SetupComplete target selection.
+- Show acquisition outcomes and refresh warnings alongside installation results in the getting-started guide.
+
 ## 0.42.0
 
 - Record each built-in's current-deployment acquisition outcome in PreInstall and Runner results: `Downloaded`, `CacheReused`, `OfflineCacheUsed`, `FallbackCacheUsed` or `Failed`.
