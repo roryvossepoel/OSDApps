@@ -126,6 +126,7 @@ See [results and troubleshooting](docs/getting-started.md#5-check-the-outcome) f
 - [Online](Examples/WinPE-Online.md) and [offline](Examples/WinPE-Offline.md) workflows: complete examples for the target PC.
 - [Security and publisher checks](docs/built-in-apps.md#authenticode-and-publisher-policy-0340): exactly what is checked and the requirements for offline trust.
 - [Runtime and cleanup](docs/runtime.md): execution order, failures and retained diagnostics.
+- [Maintenance checks](docs/maintenance.md): read-only USB, release and saved-result inspection on the preparation PC.
 - [Contributing](CONTRIBUTING.md): improvements and built-in requests.
 - [Changelog](CHANGELOG.md): release history.
 
