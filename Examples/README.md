@@ -7,11 +7,11 @@ Choose an example for the environment you are using. These are reference workflo
 | Example | Run on | Changes made |
 | --- | --- | --- |
 | [Prepare a USB cache](Prepare-UsbCache.md) | Full Windows preparation machine | Saves module files, optionally downloads/refreshes content, and shows explicit repository health/prune preview; does not stage apps against Windows. |
-| [Online WinPE deployment](WinPE-Online.md) | WinPE after OSDCloud has applied Windows | Stages app intent/content and SetupComplete on the discovered offline target; optional repository sync downloads packages. |
+| [Online WinPE deployment](WinPE-Online.md) | WinPE after OSDCloud has applied Windows | Loads the module from Gallery and stages apps with or without a cache USB; optional repository sync downloads packages. |
 | [Offline WinPE deployment](WinPE-Offline.md) | WinPE with complete matching cache and networking disconnected | Stages cached content and SetupComplete without repository refresh. |
 | [Build a repository package](#build-a-repository-package) | Full Windows authoring machine | Creates a package archive and local repository metadata. |
 
-The deployment examples use x64 Microsoft 365 Apps (MonthlyEnterprise/en-us), Adobe Acrobat Unified and Google Chrome Enterprise. Preparation and staging select the same variants. They discover the USB by label and load the newest module version saved on that stick, without formatting disks or rebooting automatically. Repository pruning appears only as a separate preview-and-confirm maintenance step.
+The deployment examples use x64 Microsoft 365 Apps (MonthlyEnterprise/en-us), Adobe Acrobat Unified and Google Chrome Enterprise. Preparation and staging select the same variants. The online example loads the module from Gallery and discovers an optional cache USB by label. The offline example loads the newest saved module from the stick and requires prepared content. Staging does not format disks or reboot automatically; the online guide shows a separate manual reboot command. Repository pruning appears only as a separate preview-and-confirm maintenance step.
 
 Add other apps only after selecting their intended configuration. For example, match Office architecture, channel, language and products between cache preparation and staging. See [Built-in applications](../docs/built-in-apps.md).
 

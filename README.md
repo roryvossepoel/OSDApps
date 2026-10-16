@@ -22,27 +22,41 @@ OSDApps brings application and PowerShell script deployment to **OSDCloud v2**. 
 Run in PowerShell on your Windows preparation machine, or in online WinPE with PowerShellGet available:
 
 ```powershell
-Install-Module OSDApps
-Import-Module OSDApps
+Install-Module OSDApps -Force -SkipPublisherCheck
+Import-Module OSDApps -Force
 ```
+
+`-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDApps installer signature checks.
 
 For WinPE without Gallery access, [save the module to your USB stick](Examples/Prepare-UsbCache.md) first. Installation uses your PowerShellGet defaults; use an elevated session if your installation scope requires it.
 
 ## Quick start
 
-**In WinPE, after OSDCloud has applied Windows and before rebooting**, load OSDApps and stage your apps:
+**Run this complete example in online WinPE, after OSDCloud has applied Windows and before the first reboot.** It stages three apps for the target PC:
 
 ```powershell
-Set-OSDAppConfiguration -CleanupMode OnSuccess
+$ErrorActionPreference = 'Stop'
+
+Install-Module OSDApps -Force -SkipPublisherCheck
+Import-Module OSDApps -Force
 
 Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
 Add-OSDAppAdobeAcrobatUnified
 Add-OSDAppGoogleChromeEnterprise
+
+Test-OSDAppDeployment -ThrowOnFailure
 ```
 
 That's the queue: **Microsoft 365 Apps → Adobe Acrobat Unified → Google Chrome Enterprise**. These commands use x64 by default. Change the Office channel and language to suit your deployment; use the same settings when preparing its cache.
 
-OSDApps discovers the offline Windows installation and prepares SetupComplete automatically. Apps are installed during the first Windows boot, not in WinPE. Keep networking available for downloads, or [prepare matching content for offline use](Examples/WinPE-Offline.md). Leave the cache USB connected until OOBE appears when your deployment uses it.
+OSDApps discovers the offline Windows installation, prepares SetupComplete and removes temporary staging after success by default. Apps are installed during the first Windows boot, not in WinPE. Continue your normal deployment reboot only after the preflight check passes.
+
+**The same commands work with or without a cache USB:**
+
+- **With an OSDCloud-labeled stick:** matching cached content is staged as fallback. SetupComplete checks for updates and can refresh the cache. Leave the stick connected until OOBE appears.
+- **Without a cache stick:** SetupComplete downloads built-in content directly to local staging. Keep the PC online until OOBE appears.
+
+Keep networking available for either online route. No module copy on the stick is needed when loading from the Gallery. For a fully disconnected deployment, [prepare matching content and save the module first](Examples/WinPE-Offline.md).
 
 Optionally inspect the queue before continuing your normal reboot:
 
