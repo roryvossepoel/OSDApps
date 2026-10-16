@@ -5,7 +5,10 @@ function Sync-OSDAppRepository {
 
         [switch]$Prune,
 
-        [string[]]$PinnedId
+        [string[]]$PinnedId,
+
+        [ValidateSet('x64','arm64')]
+        [string]$Architecture
     )
 
     if ($Prune -and $Name) {
@@ -29,9 +32,13 @@ function Sync-OSDAppRepository {
     else {
         "Synchronize repository cache$(if ($Name) { ': ' + ($Name -join ', ') } else { '' })"
     }
+    if ($Architecture) { $action += " for $Architecture" }
     if (-not $PSCmdlet.ShouldProcess($cachePath, $action)) { return }
 
-    Sync-OSDAppCache `
+    $variantParameters = @{}
+    if ($PSBoundParameters.ContainsKey('Architecture')) { $variantParameters.Architecture = $Architecture }
+
+    Sync-OSDAppCache @variantParameters `
         -CatalogUri $sourceUri `
         -CachePath $cachePath `
         -Name $Name `

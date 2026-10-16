@@ -160,6 +160,28 @@ First boot / SetupComplete
 
 This makes repository applications deterministic at first boot: the package that was selected and cached in WinPE is the package that SetupComplete installs.
 
+## Preparing content for another architecture
+
+From 0.43.0, choose the repository target explicitly when the preparation machine and target differ:
+
+```powershell
+Sync-OSDAppRepository -Name 'YourPackageId' -Architecture x64
+Get-OSDAppCacheHealth -Architecture x64
+```
+
+Both commands use the host architecture when `-Architecture` is omitted. Supported target values are `x64` and `arm64`; an exact catalog variant is preferred over `any`. `any` describes a neutral package, not a target architecture. If no compatible variant exists, synchronization fails before changing the cache. Offline health inspection checks locally recorded content and does not select a desired variant.
+
+The existing layout stores one variant per repository Id. Changing target architecture for that Id replaces its cached content through the same transaction and hash checks. It does not retain parallel x64/ARM64 versions. Selective sync preserves unrelated Ids; `-Prune` still reconciles the complete catalog, with explicit pins retaining valid exceptions. Use the same target for preview and execution:
+
+```powershell
+Get-OSDAppCacheHealth -Architecture x64
+Sync-OSDAppRepository -Architecture x64 -Prune -WhatIf
+# After reviewing the intended target and removals:
+Sync-OSDAppRepository -Architecture x64 -Prune -Confirm
+```
+
+This is a preparation choice, not a persisted deployment setting. WinPE staging still resolves repository variants for its host architecture. Built-in synchronizers retain their own architecture options. Use separate media if both variants of the same Id must remain cached.
+
 ## Cache health and reconciliation
 
 Inspecting health is read-only. With a desired catalog, OSDApps compares the

@@ -131,7 +131,22 @@ A successful staging command is not a successful installation. SetupComplete is 
 $Result = Get-Content -LiteralPath "$env:ProgramData\OSDApps\Results\Latest.json" -Raw | ConvertFrom-Json
 $Result | Format-List Status, SuccessfulApplicationCount, FailedApplicationCount, SkippedApplicationCount
 $Result.Applications | Format-Table Id, PackageType, Status, ExitCode, DurationSeconds
+$Result | Select-Object -ExpandProperty PreInstall -ErrorAction SilentlyContinue |
+    Format-List Status, HasAcquisitionWarnings, FallbackApplicationCount, OfflineCacheApplicationCount
+$Result.Applications | Format-Table Id, AcquisitionOutcome, RefreshFailureType
 ```
+
+Check installation and acquisition separately: `Succeeded` means processing succeeded, while `FallbackCacheUsed` means a refresh failed and an acceptable cached payload was used. `OfflineCacheUsed` records intentionally or automatically detected offline use. `CacheReused` means vendor metadata allowed reuse; `Downloaded` records acquired content. Repository entries report `NotApplicable` for this built-in acquisition field. Older results may omit these fields or report `Unknown`.
+
+If a refresh needs investigation, inspect its error without confusing it with the installer error:
+
+```powershell
+$Result.Applications |
+    Where-Object AcquisitionOutcome -eq 'FallbackCacheUsed' |
+    Format-List Id, Status, AcquisitionOutcome, RefreshFailureType, RefreshError, Error
+```
+
+See [acquisition outcomes](runtime.md#acquisition-and-installation-are-separate-results) for the full field definitions. You can also copy `Latest.json` to the preparation PC and use the [read-only maintenance check](maintenance.md#inspect-a-saved-deployment-result).
 
 The default persistent runtime log is:
 
@@ -144,7 +159,7 @@ When the OSDApps module is available, read the atomic machine result first:
 ```powershell
 $Result = Get-OSDAppDeploymentResult
 $Result | Format-List Status, DeploymentId, SuccessfulApplicationCount, FailedApplicationCount, SkippedApplicationCount, DurationSeconds
-$Result.Applications | Format-Table Id, Status, FailureType, ExitCode, Version, DurationSeconds
+$Result.Applications | Format-Table Id, Status, AcquisitionOutcome, FailureType, ExitCode, Version, DurationSeconds
 ```
 
 The default file is `%ProgramData%\OSDApps\Results\Latest.json`. It remains outside local staging, so `CleanupMode OnSuccess` does not remove it. Without the module, the JSON can be read with `Get-Content -Raw | ConvertFrom-Json`.
@@ -158,7 +173,7 @@ if (-not (Test-Path -LiteralPath $Log -PathType Leaf)) {
 }
 
 Get-Content -LiteralPath $Log |
-    Select-String 'BuiltInSignatureVerified|BuiltInRefreshSkipped|BuiltInRefreshFailed|ApplicationRefreshFailed|PreInstallComplete|ApplicationInstallComplete|ApplicationInstallFailed|ApplicationInstallSkipped|InstallComplete|InstallCompletedWithErrors|RefreshFailed|InstallFailed'
+    Select-String 'ApplicationAcquisitionComplete|BuiltInSignatureVerified|BuiltInRefreshSkipped|BuiltInRefreshFailed|ApplicationRefreshFailed|PreInstallComplete|ApplicationInstallComplete|ApplicationInstallFailed|ApplicationInstallSkipped|InstallComplete|InstallCompletedWithErrors|RefreshFailed|InstallFailed'
 ```
 
 Look for individual install/provisioning outcomes and exactly one final `InstallComplete`, `InstallCompletedWithErrors` or `InstallFailed` outcome. In an intentionally offline deployment, `BuiltInRefreshSkipped` reports use of existing staged content; it is recorded as a warning, not an installer failure.

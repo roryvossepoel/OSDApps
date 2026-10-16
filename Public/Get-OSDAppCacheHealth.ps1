@@ -13,7 +13,10 @@ function Get-OSDAppCacheHealth {
         [Parameter(ParameterSetName = 'Automatic')]
         [switch]$Offline,
 
-        [string[]]$PinnedId
+        [string[]]$PinnedId,
+
+        [ValidateSet('x64','arm64')]
+        [string]$Architecture
     )
 
     $resolvedCachePath = $null
@@ -76,10 +79,11 @@ function Get-OSDAppCacheHealth {
         }
 
         if ($desiredStateAvailable) {
+            $targetArchitecture = if ($Architecture) { $Architecture } else { Get-OSDAppHostArchitecture }
             $desiredPackages = @(
                 Resolve-OSDAppCatalogPackageVariant `
                     -Package @($sourceCatalog.Packages) `
-                    -Architecture (Get-OSDAppHostArchitecture)
+                    -Architecture $targetArchitecture
             )
         }
     }

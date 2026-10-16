@@ -14,7 +14,10 @@ function Sync-OSDAppCache {
 
         [switch]$Prune,
 
-        [string[]]$PinnedId
+        [string[]]$PinnedId,
+
+        [ValidateSet('x64','arm64')]
+        [string]$Architecture
     )
 
     $logPath = Join-Path $CachePath 'Logs\\Client.log'
@@ -37,8 +40,9 @@ function Sync-OSDAppCache {
     }
 
     $hostArchitecture = Get-OSDAppHostArchitecture
+    $targetArchitecture = if ($Architecture) { $Architecture } else { $hostArchitecture }
     $allPackages = @($sourceCatalog.Packages)
-    $packages = @(Resolve-OSDAppCatalogPackageVariant -Package $allPackages -Architecture $hostArchitecture)
+    $packages = @(Resolve-OSDAppCatalogPackageVariant -Package $allPackages -Architecture $targetArchitecture)
 
 
     $packagesRoot = Join-Path $CachePath 'Packages'
@@ -261,7 +265,7 @@ function Sync-OSDAppCache {
     Assert-OSDAppTransactionSpace -Path $CachePath -ExpectedBytes $remainingBytes -Operation 'repository cache batch preparation' | Out-Null
 
     Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'SyncStart' -Message 'Starting transactional repository synchronization.' -Data @{ CachePath = $CachePath; RequestedCount = $packages.Count; AcquireCount = $toAcquire.Count; Prune = [bool]$Prune; PruneCount = $toRemove.Count; PinnedIds = $pins }
-    Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'ArchitectureResolved' -Message 'Resolved package variants.' -Data @{ HostArchitecture = $hostArchitecture; Packages = @($packages | ForEach-Object { "$($_.Id):$($_.Architecture)" }) }
+    Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'ArchitectureResolved' -Message 'Resolved package variants.' -Data @{ HostArchitecture = $hostArchitecture; TargetArchitecture = $targetArchitecture; Packages = @($packages | ForEach-Object { "$($_.Id):$($_.Architecture)" }) }
 
     # Everything is downloaded and hash-validated BEFORE an existing package is replaced.
     # All backups live on the same cache volume and are retained if rollback fails.
