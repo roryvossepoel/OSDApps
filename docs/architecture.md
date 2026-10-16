@@ -36,7 +36,7 @@ A repository is owner-managed static content: `catalog.json`, per-app manifests 
 
 Runner checks every available selected staged archive before starting the first installer, then extracts it for `Package/Install.ps1` execution. A hash mismatch is a queue-blocking trust failure. Runner does not contact the repository to refresh packages during SetupComplete.
 
-Full-Windows `Sync-OSDAppRepository` can also prepare media ahead of deployment. Repository variants are selected for the synchronization host's architecture; preparation on a different architecture needs explicit care. Repository content, licensing and hosting remain the repository owner's responsibility.
+Full-Windows `Sync-OSDAppRepository` can also prepare media ahead of deployment. Repository variants default to the synchronization host's architecture. From 0.43.0, use `-Architecture x64` or `-Architecture arm64` to prepare another target, and use the same parameter on desired-state cache-health checks. The cache still holds one variant per Id; see [repository target selection](repository.md#preparing-content-for-another-architecture). Repository content, licensing and hosting remain the repository owner's responsibility.
 
 `Get-OSDAppCacheHealth` compares physical cache content, local metadata and an
 optional desired catalog without changing files. Explicit
