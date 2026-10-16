@@ -31,7 +31,7 @@ Import-Module OSDApps -Force
 
 An OSDCloud cache volume is identified by its label, `OSDCloud` by default; its drive letter can change between machines. The cache is stored in `\OSDApps` on that volume. Storing the PowerShell module in `\Modules` keeps the module separate from installer content.
 
-The [USB preparation example](../Examples/Prepare-UsbCache.md) saves the current Gallery release to the stick. It can also pre-cache Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise. Pre-caching is optional for online deployment, but necessary for the corresponding offline example. It never formats the stick; its optional repository cleanup is separated behind an explicit `-Prune` preview and confirmation.
+The [USB preparation example](../Examples/Prepare-UsbCache.md) saves the current Gallery release to the USB flash drive. It can also pre-cache Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise. Pre-caching is optional for online deployment, but necessary for the corresponding offline example. It never formats the USB flash drive; its optional repository cleanup is separated behind an explicit `-Prune` preview and confirmation.
 
 Before reusing long-lived media, inspect it without changes:
 
@@ -51,7 +51,7 @@ before approving removals.
 
 Load the module from Gallery and add the intended applications. OSDApps discovers the offline Windows target automatically. Choose the appropriate workflow:
 
-- [Online WinPE deployment](../Examples/WinPE-Online.md): use the current Gallery module with or without a cache USB; optionally add repository packages.
+- [Online WinPE deployment](../Examples/WinPE-Online.md): use the current Gallery module with or without a USB flash drive; optionally add repository packages.
 - [Offline WinPE deployment](../Examples/WinPE-Offline.md): validate the expected cache entries, stage them locally and skip repository refresh explicitly.
 
 This complete online example needs PowerShellGet and Gallery access in WinPE:
@@ -67,7 +67,7 @@ Add-OSDAppGoogleChromeEnterprise
 
 The defaults already use cache label `OSDCloud` and cleanup mode `OnSuccess`. No version pin, explicit Windows path or configuration call is needed for this example. `-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDApps installer signature checks.
 
-With an OSDCloud-labeled stick connected, matching cache content is staged as fallback and PreInstall can reuse or refresh it. Leave the stick connected until OOBE appears. Without a cache stick, PreInstall downloads built-in content to local staging. Keep the PC online in either case. To test without cache, disconnect the stick before staging on a fresh deployment; removing it after staging may leave cached fallback content on the target.
+With an OSDCloud-labeled USB flash drive connected, matching cache content is staged as fallback and PreInstall can reuse or refresh it. Leave the USB flash drive connected until OOBE appears. Without a USB flash drive, PreInstall downloads built-in content to local staging. Keep the PC online in either case. To test without cache, disconnect the USB flash drive before staging on a fresh deployment; removing it after staging may leave cached fallback content on the target.
 
 If you need different settings, `Set-OSDAppConfiguration` applies to the **current PowerShell session**. Set overrides before adding apps. Runtime settings are copied into the device manifest during staging; changing the session afterward does not rewrite an existing manifest by itself. If multiple Windows installations are found, specify `-WindowsPath` on the Add and preflight commands.
 
@@ -114,7 +114,7 @@ The staging directory is normally:
 
 Built-in payloads can still be absent before the first boot in an online cold deployment. That is different from an offline deployment, where matching content must already be available. Repository packages are downloaded/staged before reboot, not acquired later by SetupComplete.
 
-Close the Viewer before continuing the deployment. Keep the cache USB attached until OOBE is reached when it is part of the workflow. Use your existing OSDCloud deployment's reboot step; the examples do not trigger it automatically.
+Close the Viewer before continuing the deployment. Keep the USB flash drive attached until OOBE is reached when it is part of the workflow. Use your existing OSDCloud deployment's reboot step; the examples do not trigger it automatically.
 
 ## 4. First Windows boot — let SetupComplete run
 

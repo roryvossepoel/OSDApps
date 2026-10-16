@@ -1,10 +1,10 @@
 # Read-only maintenance checks
 
-Use [`tools/Test-OSDAppsMaintenance.ps1`](../tools/Test-OSDAppsMaintenance.ps1) on the Windows preparation PC when reviewing a USB stick, a release or a saved deployment result. This optional repository tool is separate from the Gallery module: it adds no exported commands and is not part of SetupComplete.
+Use [`tools/Test-OSDAppsMaintenance.ps1`](../tools/Test-OSDAppsMaintenance.ps1) on the Windows preparation PC when reviewing a USB flash drive, a release or a saved deployment result. This optional repository tool is separate from the Gallery module: it adds no exported commands and is not part of SetupComplete.
 
 Download the script from the repository, or run it from a checkout. Windows PowerShell 5.1 and PowerShell 7 are supported. The examples below assume the repository root is the current directory.
 
-## Check a USB stick
+## Check a USB flash drive
 
 ```powershell
 $report = & .\tools\Test-OSDAppsMaintenance.ps1 -Mode Usb -UsbRoot D:\

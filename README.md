@@ -28,7 +28,7 @@ Import-Module OSDApps -Force
 
 `-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDApps installer signature checks.
 
-For WinPE without Gallery access, [save the module to your USB stick](Examples/Prepare-UsbCache.md) first. Installation uses your PowerShellGet defaults; use an elevated session if your installation scope requires it.
+For WinPE without Gallery access, [save the module to your USB flash drive](Examples/Prepare-UsbCache.md) first. Installation uses your PowerShellGet defaults; use an elevated session if your installation scope requires it.
 
 ## Quick start
 
@@ -47,12 +47,12 @@ That's the queue: **Microsoft 365 Apps → Adobe Acrobat Unified → Google Chro
 
 OSDApps discovers the offline Windows installation, prepares SetupComplete and removes temporary staging after success by default. Apps are installed during the first Windows boot, not in WinPE. Continue your normal deployment reboot after staging completes without errors.
 
-**The same commands work with or without a cache USB:**
+**The same commands work with or without a USB flash drive:**
 
-- **With an OSDCloud-labeled stick:** matching cached content is staged as fallback. SetupComplete checks for updates and can refresh the cache. Leave the stick connected until OOBE appears.
-- **Without a cache stick:** SetupComplete downloads built-in content directly to local staging. Keep the PC online until OOBE appears.
+- **With an OSDCloud-labeled USB flash drive:** matching cached content is staged as fallback. SetupComplete checks for updates and can refresh the cache. Leave the USB flash drive connected until OOBE appears.
+- **Without a USB flash drive:** SetupComplete downloads built-in content directly to local staging. Keep the PC online until OOBE appears.
 
-Keep networking available for either online route. No module copy on the stick is needed when loading from the Gallery. For a fully disconnected deployment, [prepare matching content and save the module first](Examples/WinPE-Offline.md).
+Keep networking available for either online route. No module copy on the USB flash drive is needed when loading from the Gallery. For a fully disconnected deployment, [prepare matching content and save the module first](Examples/WinPE-Offline.md).
 
 For an optional preflight check before rebooting, run `Test-OSDAppDeployment -ThrowOnFailure`. You can also inspect the queue in the Viewer:
 

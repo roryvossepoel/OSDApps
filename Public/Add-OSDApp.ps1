@@ -104,7 +104,7 @@ function Add-OSDApp {
         }
         else {
             if (-not (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf)) {
-                throw 'No cached repository catalog is available. Configure CatalogUri and synchronize first, or attach a USB drive with a populated OSDApps cache.'
+                throw 'No cached repository catalog is available. Configure CatalogUri and synchronize first, or attach a USB flash drive with a populated OSDApps cache.'
             }
 
             $apps = @(Resolve-OSDAppCachedPackageId -CachePath $cachePath -Name $apps)

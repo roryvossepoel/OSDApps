@@ -45,7 +45,7 @@ These automated tests also confirm that partial or fatal failure retains staging
 
 ### Physical one-shot failure and normal-control pair
 
-Two freshly applied x64 PCs used the same online OSDCloud USB stick and the same ordered eight-app queue as the 0.36.0 pair. Both machines loaded the exact 0.37.0 release-candidate module in WinPE, passed pre-reboot validation and retained the USB and network connection through SetupComplete.
+Two freshly applied x64 PCs used the same online OSDCloud USB flash drive and the same ordered eight-app queue as the 0.36.0 pair. Both machines loaded the exact 0.37.0 release-candidate module in WinPE, passed pre-reboot validation and retained the USB and network connection through SetupComplete.
 
 On PC 1, only the staged `NotepadPlusPlus` queue slot was replaced with a controlled repository-style failure probe whose installer wrote a marker and exited with code `42`. SetupComplete recorded that entry once as `Failed` with `FailureType=InstallerFailed`, then continued to the following `OmnissaHorizonClient` entry, which succeeded. The final record contained eight results: seven succeeded, one failed and none were skipped. It reported final status `Failed` with `FailureType=ApplicationFailures`; staging and the probe archive were retained, and no scheduled task, service or RunOnce retry was created. Runtime evidence included `ApplicationInstallFailed`, the later Omnissa completion, `InstallCompletedWithErrors` and `CleanupSkipped`.
 
@@ -70,7 +70,7 @@ The transaction log recorded `AcquireCount=0` and `PruneCount=1` for the control
 
 ### Cold and warm SetupComplete pair
 
-Two freshly applied x64 Windows installations used the same online OSDCloud USB stick and the same ordered eight-app queue documented below. Both machines loaded the exact 0.36.0 module in WinPE, retained the USB and network connection through SetupComplete, and were checked after OOBE.
+Two freshly applied x64 Windows installations used the same online OSDCloud USB flash drive and the same ordered eight-app queue documented below. Both machines loaded the exact 0.36.0 module in WinPE, retained the USB and network connection through SetupComplete, and were checked after OOBE.
 
 For PC 1, the healthy active cache payload was moved to the recoverable `OSDApps-0.36.0-PreColdBackup` folder outside the active `OSDApps` root. The cold preflight reported `Valid=True`, `OfflineReady=False` and `NetworkRequired=True`, as expected. SetupComplete acquired all six built-ins, synchronized the USB cache and installed all six built-ins plus both SHA-256-validated repository packages.
 
@@ -211,7 +211,7 @@ The unchanged build number in test 4 does **not** mean the Office configuration 
 
 ## Offline end-to-end validation — OSDApps 0.30.0 test 5 (9 October 2026)
 
-Test 5 started with a fully populated `OSDCloud` USB cache. All expected built-in source files were checked on the USB stick before reboot, and the two repository packages had already been staged. The network connection was physically disconnected before boot and remained unavailable throughout SetupComplete.
+Test 5 started with a fully populated `OSDCloud` USB cache. All expected built-in source files were checked on the USB flash drive before reboot, and the two repository packages had already been staged. The network connection was physically disconnected before boot and remained unavailable throughout SetupComplete.
 
 The `Runtime.log` confirmed `CacheVolumeFound`, `CacheUsed=True`, `BuiltInRefreshSkipped` for Office, Teams, Chrome and Adobe, and no online refresh. PreInstall completed in **7.6 s**; Runner completed in **380.7 s**. All six entries had successful install/provisioning exit codes (`0`), with a measured total of **388.3 s (6:28)**, excluding WinPE preparation.
 
@@ -306,7 +306,7 @@ For a no-USB run, module-side logging may be on the Windows volume, while the st
 
 ## Historical cold/warm benchmark — OSDApps 0.29.1
 
-The earlier 0.29.1 benchmark is retained separately, using the same hardware, USB stick, application set and install order for its cold/warm pair.
+The earlier 0.29.1 benchmark is retained separately, using the same hardware, USB flash drive, application set and install order for its cold/warm pair.
 
 | Phase | Cold USB | Warm USB |
 | --- | ---: | ---: |

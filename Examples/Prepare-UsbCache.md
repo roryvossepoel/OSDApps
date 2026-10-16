@@ -6,7 +6,7 @@
 
 Use Windows PowerShell 5.1 with PowerShellGet available and internet access. Attach exactly one intended cache volume labeled `OSDCloud`; prepare/label the media separately before running this example. There must be enough free space for the module and selected payloads, including any existing content.
 
-## 1. Save the module to the stick
+## 1. Save the module to the USB flash drive
 
 ```powershell
 $ErrorActionPreference = 'Stop'
@@ -105,7 +105,7 @@ From 0.43.0, `-Architecture x64` explicitly prepares repository packages for the
 
 The cache stores **one variant per repository Id**. Synchronizing the same Id for another architecture can replace its existing variant; use separately prepared media when both variants must remain available. Keep the same architecture on health, WhatIf and actual synchronization commands. This choice does not change built-in parameters or the target selected later in WinPE.
 
-## 4. Move the stick to the target
+## 4. Move the USB flash drive to the target
 
 Wait for all commands and file activity to finish. The relevant layout is:
 

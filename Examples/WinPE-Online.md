@@ -4,7 +4,7 @@
 
 **Run on the target PC in WinPE after OSDCloud has applied Windows, before its first Windows boot.** Do not run this on the full-Windows preparation machine.
 
-This example uses the current PowerShell Gallery release and three x64 built-ins. WinPE needs PowerShellGet and Gallery access. Keep the PC online until OOBE appears. A cache USB is optional; no module copy on the stick is required.
+This example uses the current PowerShell Gallery release and three x64 built-ins. WinPE needs PowerShellGet and Gallery access. Keep the PC online until OOBE appears. A USB flash drive is optional; no module copy on the USB flash drive is required.
 
 ## 1. Import the module and stage built-ins
 
@@ -21,15 +21,15 @@ Change the Office channel and language to suit your deployment. OSDApps discover
 
 The defaults already select the `OSDCloud` cache label and `OnSuccess` cleanup. `-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDApps installer signature checks.
 
-### With a cache USB
+### With a USB flash drive
 
-Connect the OSDCloud-labeled stick before staging and leave it connected until OOBE appears. Matching cached content is staged as fallback. During SetupComplete, PreInstall checks vendor sources and can reuse or refresh the cache. A connected stick does not disable online update checks.
+Connect the OSDCloud-labeled USB flash drive before staging and leave it connected until OOBE appears. Matching cached content is staged as fallback. During SetupComplete, PreInstall checks vendor sources and can reuse or refresh the cache. A connected USB flash drive does not disable online update checks.
 
-### Without a cache USB
+### Without a USB flash drive
 
-For a fresh deployment without cache, disconnect the cache stick **before running the staging commands** and leave it disconnected through SetupComplete. Existing stick content is preserved. PreInstall downloads the built-in payloads directly to local Windows staging during the first boot.
+For a fresh deployment without cache, disconnect the USB flash drive **before running the staging commands** and leave it disconnected through SetupComplete. Existing USB flash drive content is preserved. PreInstall downloads the built-in payloads directly to local Windows staging during the first boot.
 
-Removing the stick only after staging is not a clean no-cache test: cached content may already have been copied to the target.
+Removing the USB flash drive only after staging is not a clean no-cache test: cached content may already have been copied to the target.
 
 ## 2. Optionally add your repository app
 

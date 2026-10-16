@@ -35,7 +35,7 @@
 ### Documentation and discovery
 
 - Rework the README around a short WinPE example using Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise.
-- Remove release pins and unnecessary switches from installation examples; USB workflows discover the newest version saved on the selected stick.
+- Remove release pins and unnecessary switches from installation examples; USB workflows discover the newest version saved on the selected USB flash drive.
 - Correct the workflow diagrams: independent package sources, optional cache preparation, machine-context scripts and one-shot SetupComplete processing. Use explicit backgrounds for readable diagrams in light and dark GitHub themes.
 - Show total PowerShell Gallery downloads across all versions and update the module description and discovery tags.
 - Document existing Application/Script labeling in all relevant Viewer tabs. No public commands, UI behavior, installer logic or cache transaction behavior changed.
@@ -116,7 +116,7 @@
 - Added file-backed tests for desired-state classification, offline health, corruption despite pins, repository alias conflicts and authoring, canonical alias staging, successful prune, empty desired state, valid pin retention, `WhatIf`, commit-failure rollback, dynamic named clearing and guarded Teams alias cleanup.
 - The release candidate passed **235/235 tests** on both Windows PowerShell 5.1 and PowerShell 7, with **31/31 packaged command-help topics** verified on each engine and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38364310573)).
 - Full-Windows testing on a populated eight-entry USB cache passed offline and online desired-state health checks, prune `WhatIf`, a controlled transactional orphan prune with unchanged retained package hashes, and guarded migration of a temporary `BuiltIn\Teams` alias with the canonical Teams MSIX unchanged.
-- Two freshly applied x64 PCs passed the complete online eight-app SetupComplete path with the same USB stick. The recoverably cleared cold run repopulated a healthy cache in `PreInstall 215.3 s + Runner 364.8 s`; all six built-ins were updated. The subsequent warm run passed hard offline-readiness and completed in `PreInstall 45.3 s + Runner 364.1 s` with no built-in updates. Both correlated result sets reported **8/8 successful installations**, no runtime warnings or errors, successful `OnSuccess` cleanup and a final healthy eight-entry cache.
+- Two freshly applied x64 PCs passed the complete online eight-app SetupComplete path with the same USB flash drive. The recoverably cleared cold run repopulated a healthy cache in `PreInstall 215.3 s + Runner 364.8 s`; all six built-ins were updated. The subsequent warm run passed hard offline-readiness and completed in `PreInstall 45.3 s + Runner 364.1 s` with no built-in updates. Both correlated result sets reported **8/8 successful installations**, no runtime warnings or errors, successful `OnSuccess` cleanup and a final healthy eight-entry cache.
 
 ### Compatibility and scope
 

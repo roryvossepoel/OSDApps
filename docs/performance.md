@@ -84,7 +84,7 @@ All six installer/provisioning calls exited with code `0` with networking discon
 
 ## Historical cold/warm cache benchmark — OSDApps 0.29.1
 
-The following benchmark was captured with OSDApps 0.29.1 using the same hardware, the same OSDCloud USB stick, the same application order, and the same deployment configuration.
+The following benchmark was captured with OSDApps 0.29.1 using the same hardware, the same OSDCloud USB flash drive, the same application order, and the same deployment configuration.
 
 ![OSDApps 0.29.1 cold vs warm cache benchmark](images/cold-warm-benchmark.svg)
 

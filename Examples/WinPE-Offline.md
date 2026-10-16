@@ -96,7 +96,7 @@ Do not run full-Windows built-in `Sync-OSDApp*` commands here. The content has a
 Omit this section for built-ins-only deployment. The app must already exist as a valid, compatible package in `CacheCatalog.json` and the USB cache. `-SkipCacheRefresh` explicitly prevents a repository synchronization attempt.
 
 ```powershell
-$RepoAppId = Read-Host 'Enter a repository application Id already cached on this stick'
+$RepoAppId = Read-Host 'Enter a repository application Id already cached on this USB flash drive'
 Add-OSDApp -Name $RepoAppId -SkipCacheRefresh -WindowsPath $WindowsPath
 ```
 
@@ -118,7 +118,7 @@ Require a complete staged payload before continuing:
 Test-OSDAppDeployment -WindowsPath $WindowsPath -RequireOfflineReady -ThrowOnFailure
 ```
 
-Review the queue, then close the Viewer. Reboot through your normal deployment process only after staging succeeds. This example does not reboot automatically. Keep the cache stick attached and LAN/Wi-Fi disconnected through SetupComplete.
+Review the queue, then close the Viewer. Reboot through your normal deployment process only after staging succeeds. This example does not reboot automatically. Keep the USB flash drive attached and LAN/Wi-Fi disconnected through SetupComplete.
 
 ## 5. Confirm actual offline behavior
 
