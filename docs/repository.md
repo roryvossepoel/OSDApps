@@ -1,6 +1,6 @@
 # Repository applications
 
-![Self-maintained repository contract](images/repository-contract.svg)
+![OSDApps repository: catalog, package manifest, archive layout and static publishing](images/repository-contract.svg)
 
 
 OSD Apps repositories are static content. A separate repository service or PowerShell module is not required.

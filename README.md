@@ -3,7 +3,7 @@
 ![OSDApps — Your apps. Ready before OOBE. Built-in apps and your own repository, with optional USB flash drive caching.](docs/images/osdapps-banner.svg)
 
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/OSDApps?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/OSDApps)
-[![PowerShell Gallery total downloads](https://img.shields.io/powershellgallery/dt/OSDApps?label=Downloads)](https://www.powershellgallery.com/packages/OSDApps)
+[![PowerShell Gallery total downloads](https://raw.githubusercontent.com/roryvossepoel/OSDApps/badges/gallery-downloads.svg)](https://www.powershellgallery.com/packages/OSDApps)
 [![Module CI](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml)
 [![Windows PowerShell 5.1](https://img.shields.io/badge/Windows%20PowerShell-5.1-blue)](#install-from-powershell-gallery)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
