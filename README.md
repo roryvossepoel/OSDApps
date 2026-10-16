@@ -1,14 +1,14 @@
 # OSDApps
 
+![OSDApps — Your apps. Ready before OOBE. Stage in WinPE. Install apps and run scripts before OOBE starts.](docs/images/osdapps-banner.svg)
+
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/OSDApps?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/OSDApps)
 [![PowerShell Gallery total downloads](https://img.shields.io/powershellgallery/dt/OSDApps?label=Downloads)](https://www.powershellgallery.com/packages/OSDApps)
 [![Module CI](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml)
 [![Windows PowerShell 5.1](https://img.shields.io/badge/Windows%20PowerShell-5.1-blue)](#install-from-powershell-gallery)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Deploy Windows with the apps and scripts it needs, before the first sign-in.**
-
-OSDApps brings application and PowerShell script deployment to **OSDCloud v2**. Choose your packages in WinPE and let SetupComplete run them in order before OOBE continues. Use ready-made vendor integrations, your own repository packages, or both.
+Stage apps and PowerShell scripts in WinPE **after OSDCloud has applied Windows**. OSDApps runs them in order during the first Windows boot, just before OOBE starts. Use ready-made vendor integrations, your own repository packages, or both.
 
 - **Start with a few commands.** Built-in apps need no repository or custom installer wrapper.
 - **Reuse your downloads.** An optional USB cache serves multiple devices; validated replacements keep it current.
