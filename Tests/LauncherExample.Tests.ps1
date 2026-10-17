@@ -17,8 +17,6 @@ Describe 'Launcher staging example process contract' {
         param($Failure, $ExitCode, $Expected)
         $wrapper = Join-Path $TestDrive "$Failure.ps1"
         $trace = Join-Path $TestDrive "$Failure.trace"
-        $stdout = Join-Path $TestDrive "$Failure.stdout"
-        $stderr = Join-Path $TestDrive "$Failure.stderr"
         # Exercise the unchanged example in a child process. Replace external
         # actions with trace-only commands: no downloads, staging or reboot.
         $harness = @'
@@ -68,24 +66,34 @@ exit $LASTEXITCODE
             Replace('__TRACE__', $trace.Replace("'", "''")).
             Replace('__EXAMPLE__', $example.Replace("'", "''"))
         Set-Content -LiteralPath $wrapper -Value $harness -Encoding UTF8
-        $child = Start-Process -FilePath $engine -ArgumentList @(
-            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"{0}"' -f $wrapper)
-        ) -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+        # Own the process handle from launch. Start-Process without -Wait followed
+        # by Refresh can lose ExitCode on Windows PowerShell 5.1/.NET Framework.
+        $child = [System.Diagnostics.Process]::new()
+        $child.StartInfo.FileName = $engine
+        $child.StartInfo.Arguments = '-NoProfile -ExecutionPolicy Bypass -File "{0}"' -f $wrapper
+        $child.StartInfo.UseShellExecute = $false
+        $child.StartInfo.CreateNoWindow = $true
+        $child.StartInfo.RedirectStandardOutput = $true
+        $child.StartInfo.RedirectStandardError = $true
+        $started = $false
         try {
+            $started = $child.Start()
+            if (-not $started) { throw 'Could not start launcher example test.' }
+            $outputTask = $child.StandardOutput.ReadToEndAsync()
+            $errorTask = $child.StandardError.ReadToEndAsync()
             if (-not $child.WaitForExit(20000)) { throw 'Launcher example test exceeded its time limit.' }
-            $child.Refresh()
             $child.ExitCode | Should -Be $ExitCode
             ((Get-Content -LiteralPath $trace) -join ',') | Should -Be $Expected
-            $output = Get-Content -LiteralPath $stdout -Raw
+            $output = $outputTask.GetAwaiter().GetResult()
             if ($ExitCode -eq 0) {
                 $output | Should -Match 'OSDApps staging passed'
             } else {
                 $output | Should -Not -Match 'OSDApps staging passed'
-                (Get-Content -LiteralPath $stderr -Raw) | Should -Match 'Do not reboot'
+                $errorTask.GetAwaiter().GetResult() | Should -Match 'Do not reboot'
             }
         }
         finally {
-            if (-not $child.HasExited) { $child.Kill() }
+            if ($started -and -not $child.HasExited) { $child.Kill() }
             $child.Dispose()
         }
     }
