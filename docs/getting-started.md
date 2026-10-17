@@ -22,16 +22,16 @@ For an online deployment, vendor/repository access must be available when acquis
 
 ## 1. Preparation machine — install or save the module
 
-**Environment: full Windows.** This phase can write module files and USB cache content. It must not stage applications against the preparation machine's Windows installation.
+**Environment: full Windows.** This preparation step is optional for online deployment: the WinPE example below loads the module directly from Gallery. Preparation can write module files and USB cache content. It must not stage applications against the preparation machine's Windows installation.
 
 ```powershell
-Install-Module OSDApps
-Import-Module OSDApps
+Install-Module OSDApps -Force -SkipPublisherCheck
+Import-Module OSDApps -Force
 ```
 
 An OSDCloud cache volume is identified by its label, `OSDCloud` by default; its drive letter can change between machines. The cache is stored in `\OSDApps` on that volume. Storing the PowerShell module in `\Modules` keeps the module separate from installer content.
 
-The [USB preparation example](../Examples/Prepare-UsbCache.md) saves the current Gallery release to the stick. It can also pre-cache Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise. Pre-caching is optional for online deployment, but necessary for the corresponding offline example. It never formats the stick; its optional repository cleanup is separated behind an explicit `-Prune` preview and confirmation.
+The [USB preparation example](../Examples/Prepare-UsbCache.md) saves the current Gallery release to the USB flash drive. It can also pre-cache Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise. Pre-caching is optional for online deployment, but necessary for the corresponding offline example. It never formats the USB flash drive; its optional repository cleanup is separated behind an explicit `-Prune` preview and confirmation.
 
 Before reusing long-lived media, inspect it without changes:
 
@@ -49,21 +49,27 @@ before approving removals.
 
 **Environment: WinPE, after OSDCloud has applied Windows and before the first Windows boot.** Run this phase on the target machine, not the preparation machine.
 
-Load the saved module, identify the offline Windows target and then add the intended applications. The complete examples handle USB/target discovery and refuse to run outside WinPE:
+Load the module from Gallery and add the intended applications. OSDApps discovers the offline Windows target automatically. Choose the appropriate workflow:
 
-- [Online WinPE deployment](../Examples/WinPE-Online.md): prepare built-ins for vendor acquisition and optionally synchronize repository packages.
+- [Online WinPE deployment](../Examples/WinPE-Online.md): use the current Gallery module with or without a USB flash drive; optionally add repository packages.
 - [Offline WinPE deployment](../Examples/WinPE-Offline.md): validate the expected cache entries, stage them locally and skip repository refresh explicitly.
 
-`Set-OSDAppConfiguration` applies to the **current PowerShell session**. Set the required values in the same session before adding apps. Runtime values such as `CleanupMode`, `CacheVolumeLabel`, `LogPath` and `ResultPath` are copied into the device manifest during staging; changing the session later does not rewrite an already staged manifest by itself.
+This complete online example needs PowerShellGet and Gallery access in WinPE:
 
 ```powershell
-# WinPE staging session, after importing OSDApps:
-Set-OSDAppConfiguration -CleanupMode OnSuccess
+Install-Module OSDApps -Force -SkipPublisherCheck
+Import-Module OSDApps -Force
 
 Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
 Add-OSDAppAdobeAcrobatUnified
 Add-OSDAppGoogleChromeEnterprise
 ```
+
+The defaults already use cache label `OSDCloud` and cleanup mode `OnSuccess`. No version pin, explicit Windows path or configuration call is needed for this example. `-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDApps installer signature checks.
+
+With an OSDCloud-labeled USB flash drive connected, matching cache content is staged as fallback and PreInstall can reuse or refresh it. Leave the USB flash drive connected until OOBE appears. Without a USB flash drive, PreInstall downloads built-in content to local staging. Keep the PC online in either case. To test without cache, disconnect the USB flash drive before staging on a fresh deployment; removing it after staging may leave cached fallback content on the target.
+
+If you need different settings, `Set-OSDAppConfiguration` applies to the **current PowerShell session**. Set overrides before adding apps. Runtime settings are copied into the device manifest during staging; changing the session afterward does not rewrite an existing manifest by itself. If multiple Windows installations are found, specify `-WindowsPath` on the Add and preflight commands.
 
 New app IDs are appended to `DeviceManifest.json` in the order they are added. Re-adding an existing ID replaces its entry and moves it to the end; it does not create another entry. Sorting the Viewer table does not change that order.
 
@@ -71,22 +77,17 @@ For repository apps, configure your actual catalog URL and use app IDs that it c
 
 ## 3. Inspect before reboot
 
-**Environment: the same WinPE session.** Run the deployment preflight after the last Add command:
+**Environment: the same WinPE session.** Optionally run the deployment preflight after the last Add command:
 
 ```powershell
-$Preflight = Test-OSDAppDeployment -WindowsPath 'C:\'
-$Preflight | Format-List Valid, OfflineReady, NetworkRequired, ApplicationCount
-
-if (-not $Preflight.Valid) {
-    $Preflight.Checks | Where-Object { $_.Required -and -not $_.Passed }
-    throw 'OSDApps staging did not pass preflight.'
-}
+Test-OSDAppDeployment -ThrowOnFailure |
+    Format-List Valid, OfflineReady, NetworkRequired, ApplicationCount
 ```
 
 `Valid=True` means the manifest, queue, SetupComplete integration, staged runtime and required repository packages passed. `OfflineReady=False` is allowed for an online cold deployment: it means PreInstall must acquire one or more built-ins. For a deliberately disconnected deployment, make that a hard requirement:
 
 ```powershell
-Test-OSDAppDeployment -WindowsPath 'C:\' -RequireOfflineReady -ThrowOnFailure
+Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
 ```
 
 Optional read-only visual inspection:
@@ -113,7 +114,7 @@ The staging directory is normally:
 
 Built-in payloads can still be absent before the first boot in an online cold deployment. That is different from an offline deployment, where matching content must already be available. Repository packages are downloaded/staged before reboot, not acquired later by SetupComplete.
 
-Close the Viewer before continuing the deployment. Keep the cache USB attached until OOBE is reached when it is part of the workflow. Use your existing OSDCloud deployment's reboot step; the examples do not trigger it automatically.
+Close the Viewer before continuing the deployment. Keep the USB flash drive attached until OOBE is reached when it is part of the workflow. Use your existing OSDCloud deployment's reboot step; the examples do not trigger it automatically.
 
 ## 4. First Windows boot — let SetupComplete run
 

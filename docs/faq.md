@@ -59,21 +59,21 @@ Run `Sync-OSDAppMicrosoftTeams` on full Windows. OSDApps prepares the canonical 
 
 This does not reintroduce the old `Add-OSDAppTeams` or `Sync-OSDAppTeams` commands, and the SetupComplete runtime still accepts only the canonical identity. The original rename is recorded in the [0.31.0 changelog](../CHANGELOG.md#0310).
 
-## Do built-in apps require an OSDCloud USB stick?
+## Do built-in apps require an OSDCloud USB flash drive?
 
 No. With no cache volume, the Add cmdlets can stage intent and PreInstall can acquire built-ins directly to the local Windows runtime when online. Repository Add commands can use a temporary cache on the offline Windows disk when no USB cache is present.
 
 A volume with the configured label, `OSDCloud` by default, is automatically used as the cache when present. Keep module files and installer cache content conceptually separate: `\Modules` is a convenient module location; `\OSDApps` is the cache directory.
 
-## What does a blank OSDCloud USB stick need?
+## What does a blank OSDCloud USB flash drive need?
 
-For **OSDApps cache use**, a suitable volume with the configured label is enough; `\OSDApps` and its content folders can be created by the acquisition path. This is not a claim that an otherwise blank USB stick can boot WinPE or deploy Windows. Boot media preparation belongs to OSDCloud, outside these examples.
+For **OSDApps cache use**, a suitable volume with the configured label is enough; `\OSDApps` and its content folders can be created by the acquisition path. This is not a claim that an otherwise blank USB flash drive can boot WinPE or deploy Windows. Boot media preparation belongs to OSDCloud, outside these examples.
 
 An empty application cache works for online acquisition. It cannot supply apps for a fully offline deployment.
 
 <a id="can-the-osdcloud-usb-be-completely-blank"></a>
 
-## Can I pre-cache an OSDCloud USB stick?
+## Can I pre-cache an OSDCloud USB flash drive?
 
 Yes. See [Prepare a USB cache](../Examples/Prepare-UsbCache.md). Full-Windows built-in commands include:
 
@@ -122,7 +122,7 @@ See [Cache health and reconciliation](repository.md#cache-health-and-reconciliat
 
 It may no longer be available for the intended cache refresh or for missing content. A deployment can work without USB when its local content or online acquisition path is sufficient, but do not assume that a partially prepared target is self-contained.
 
-Keep the cache stick attached through SetupComplete until OOBE appears when following the USB examples. Do not move one stick between two PCs while either is still using it.
+Keep the USB flash drive attached through SetupComplete until OOBE appears when following the USB examples. Do not move one USB flash drive between two PCs while either is still using it.
 
 ## What happens if there is no network?
 

@@ -75,7 +75,7 @@ function Add-OSDAppMicrosoft365Apps {
     if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=Microsoft365Apps; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
 
     if ($cachePath -and -not $script:OSDAppCacheMediaWarningShown) {
-        Write-Warning 'OSDCloud cache media detected. Keep the USB device connected until OOBE is displayed.'
+        Write-Warning 'OSDCloud cache media detected. Keep the USB flash drive connected until OOBE is displayed.'
         $script:OSDAppCacheMediaWarningShown = $true
     }
 

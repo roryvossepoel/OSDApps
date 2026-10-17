@@ -1,16 +1,81 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
-<title id="title">OSDApps repository contract</title><desc id="desc">A self-maintained static repository consists of catalog.json, package manifests and Package.zip files containing Package/Install.ps1 and payload.</desc>
-<style>text{font-family:Segoe UI,Arial,sans-serif;fill:#172033}.h{font-size:28px;font-weight:700}.sh{font-size:20px;font-weight:700}.t{font-size:16px;font-weight:600}.s{font-size:14px}.mono{font-size:14px;font-family:Consolas,monospace}.box{fill:#fff;stroke:#9fb1c8;stroke-width:2}.repo{fill:#f4f7fb;stroke:#6b83a3;stroke-width:2}.accent{fill:#233b5f}.white{fill:#fff;font-size:16px;font-weight:700}.arrow{stroke:#4a5a73;stroke-width:3;fill:none;marker-end:url(#a)}</style>
-<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#4a5a73"/></marker></defs>
-<text x="600" y="42" text-anchor="middle" class="h">Self-maintained repository contract</text>
-<rect x="70" y="85" width="1060" height="52" rx="10" class="accent"/><text x="600" y="118" text-anchor="middle" class="white">You own the repository, versions, packages and publishing lifecycle</text>
-<rect x="80" y="180" width="280" height="110" rx="12" class="repo"/><text x="220" y="215" text-anchor="middle" class="sh">catalog.json</text><text x="220" y="248" text-anchor="middle" class="s">Application index</text><text x="220" y="272" text-anchor="middle" class="s">Points to package manifests</text>
-<rect x="460" y="180" width="280" height="145" rx="12" class="box"/><text x="600" y="215" text-anchor="middle" class="sh">manifest.json</text><text x="600" y="247" text-anchor="middle" class="s">Id · DisplayName · Version</text><text x="600" y="272" text-anchor="middle" class="s">Architecture · SuccessCodes</text><text x="600" y="297" text-anchor="middle" class="s">Archive.FileName · SHA256</text>
-<rect x="840" y="180" width="280" height="145" rx="12" class="repo"/><text x="980" y="215" text-anchor="middle" class="sh">Package.zip</text><text x="980" y="247" text-anchor="middle" class="mono">Package/</text><text x="980" y="272" text-anchor="middle" class="mono">├─ Install.ps1</text><text x="980" y="297" text-anchor="middle" class="mono">└─ payload</text>
-<path d="M360 235 H460" class="arrow"/><path d="M740 252 H840" class="arrow"/>
-<text x="410" y="220" text-anchor="middle" class="s">references</text><text x="790" y="237" text-anchor="middle" class="s">validates SHA256</text>
-<rect x="220" y="390" width="760" height="165" rx="14" class="box"/>
-<text x="600" y="425" text-anchor="middle" class="sh">Published static structure</text>
-<text x="285" y="460" class="mono">Repository/</text><text x="315" y="486" class="mono">├─ catalog.json</text><text x="315" y="512" class="mono">└─ Apps/&lt;Id&gt;/&lt;Version&gt;/&lt;Architecture&gt;/</text><text x="355" y="538" class="mono">├─ manifest.json</text><text x="355" y="564" class="mono">└─ Package.zip</text>
-<text x="600" y="615" text-anchor="middle" class="s">Host on any HTTP/HTTPS endpoint that preserves these paths · no repository service required</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">Your repository. Your packages.</title>
+  <desc id="desc">A static OSDApps repository contains a root catalog.json pointing to package manifests. Each manifest describes an application or script and records the SHA-256 of its adjacent Package.zip. The archive contains Package/Install.ps1 and any supporting files. Publish the repository over HTTP or HTTPS while preserving its paths.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#425c75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  </defs>
+  <style>
+    text { font-family: 'Segoe UI', Arial, sans-serif; fill: #172b42; }
+    .brand { font-size: 18px; font-weight: 700; fill: #203e60; letter-spacing: 2px; }
+    .headline { font-size: 42px; font-weight: 700; }
+    .body { font-size: 21px; fill: #425c75; }
+    .label { font-size: 25px; font-weight: 700; }
+    .small { font-size: 18px; fill: #425c75; }
+    .mono { font-family: Consolas, 'DejaVu Sans Mono', monospace; font-size: 18px; }
+    .icon { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .connector { fill: none; stroke: #425c75; stroke-width: 2.5; marker-end: url(#arrow); }
+  </style>
+  <rect x="1" y="1" width="1198" height="898" rx="20" fill="#f6f8fb" stroke="#cad6e3"/>
+  <rect x="56" y="44" width="5" height="22" rx="2.5" fill="#8db69d"/>
+  <text x="76" y="62" class="brand">OSDApps / REPOSITORY</text>
+  <text x="56" y="119" class="headline">Your repository. Your packages.</text>
+  <text x="58" y="157" class="body">Static files. Versioned content. One contract for apps and scripts.</text>
+
+  <!-- Equal cards separate the three files and their responsibilities. -->
+  <rect x="56" y="196" width="320" height="260" rx="16" fill="#eaf5ee" stroke="#8db69d"/>
+  <g class="icon" stroke="#426c53" transform="translate(80 220)">
+    <rect width="44" height="46" rx="6"/><path d="M12 13 H32 M12 23 H32 M12 33 H25"/>
+  </g>
+  <text x="140" y="248" class="small">01 / INDEX</text>
+  <text x="80" y="310" class="label">catalog.json</text>
+  <text x="80" y="350" class="small">Lists package IDs and variants.</text>
+  <text x="80" y="380" class="small">Points to the current manifest</text>
+  <text x="80" y="407" class="small">for each architecture.</text>
+
+  <path d="M389 326 H426" class="connector"/>
+  <rect x="440" y="196" width="320" height="260" rx="16" fill="#eef2fa" stroke="#9caed0"/>
+  <g class="icon" stroke="#203e60" transform="translate(464 220)">
+    <path d="M8 0 H29 L44 15 V46 H8 Z M29 0 V15 H44 M18 26 H34 M18 36 H29"/>
+  </g>
+  <text x="524" y="248" class="small">02 / METADATA</text>
+  <text x="464" y="310" class="label">manifest.json</text>
+  <text x="464" y="350" class="small">ID, version and architecture.</text>
+  <text x="464" y="380" class="small">Type and success codes.</text>
+  <text x="464" y="410" class="small">Archive name and SHA-256.</text>
+
+  <path d="M773 326 H810" class="connector"/>
+  <rect x="824" y="196" width="320" height="260" rx="16" fill="#fff6e6" stroke="#cfb57f"/>
+  <g class="icon" stroke="#856a36" transform="translate(848 220)">
+    <rect width="44" height="46" rx="6"/><path d="M22 0 V27 M17 9 H22 M22 16 H27 M17 23 H22"/><rect x="17" y="28" width="10" height="9" rx="2"/>
+  </g>
+  <text x="908" y="248" class="small">03 / CONTENT</text>
+  <text x="848" y="310" class="label">Package.zip</text>
+  <text x="848" y="350" class="mono">Package/</text>
+  <path d="M858 363 V411 M858 380 H872 M858 411 H872" stroke="#cfb57f" stroke-width="2" fill="none"/>
+  <text x="884" y="385" class="mono">Install.ps1</text>
+  <text x="884" y="416" class="small">Supporting files, if needed</text>
+
+  <rect x="56" y="484" width="660" height="282" rx="16" fill="#fff" stroke="#cad6e3"/>
+  <text x="80" y="526" class="label">Published structure</text>
+  <text x="80" y="562" class="small">Keep the manifest and archive together.</text>
+  <text x="80" y="606" class="mono">Repository/</text>
+  <path d="M91 620 V665 M91 633 H110 M91 665 H110 M132 678 V735 M132 701 H151 M132 735 H151" stroke="#9caed0" stroke-width="2" fill="none"/>
+  <text x="122" y="639" class="mono">catalog.json</text>
+  <text x="122" y="671" class="mono">Apps/&lt;Id&gt;/&lt;Version&gt;/&lt;Architecture&gt;/</text>
+  <text x="163" y="707" class="mono">manifest.json</text>
+  <text x="163" y="741" class="mono">Package.zip</text>
+
+  <rect x="740" y="484" width="404" height="282" rx="16" fill="#e5edf7"/>
+  <text x="764" y="526" class="label">You own the lifecycle.</text>
+  <text x="764" y="568" class="small">Choose versions and publish updates.</text>
+  <text x="764" y="608" class="small">OSDApps checks the archive hash,</text>
+  <text x="764" y="635" class="small">stages the selected package, then runs</text>
+  <text x="764" y="662" class="small">Install.ps1 as SYSTEM before OOBE.</text>
+  <rect x="764" y="694" width="356" height="44" rx="9" fill="#fff"/>
+  <text x="942" y="722" text-anchor="middle" font-size="18" font-weight="600">Apps &amp; scripts · one format</text>
+
+  <rect x="56" y="790" width="1088" height="70" rx="14" fill="#203e60"/>
+  <g class="icon" stroke="#fff" transform="translate(80 809)"><path d="M0 12 V30 H35 V12 M17 22 V0 M9 8 L17 0 L25 8"/></g>
+  <text x="136" y="819" style="fill:#fff;font-size:21px;font-weight:600">Publish to a static HTTP/HTTPS location.</text>
+  <text x="136" y="845" style="fill:#dce7f3;font-size:18px">Preserve the paths. No separate repository service required.</text>
 </svg>

@@ -82,3 +82,21 @@ Why this should be a generic built-in:
 Do not request a built-in when acquiring the installer requires scraping, browser automation, traffic sniffing, temporary signed URLs, session cookies/tokens, or bypassing CDN/anti-bot controls.
 
 For niche, customer-specific, internal, authenticated, or otherwise non-generic software, use the repository model instead.
+
+## Gallery download badge
+
+The README download badge sums `VersionDownloadCount` for every OSDApps version
+returned by the Gallery, following all pagination links. The Gallery's aggregate
+`DownloadCount` can report zero despite nonzero per-version statistics.
+
+The [badge workflow](.github/workflows/gallery-downloads.yml) refreshes the SVG
+daily and supports manual runs from `main`. It writes only to the `badges` branch;
+module sources and releases are unaffected. Failed requests or invalid/incomplete
+responses fail the workflow and leave the previous badge in place. The count is a
+Gallery-reported total, not a real-time count or a count of unique users.
+
+Run the pagination and failure checks locally with:
+
+```powershell
+./build/Test-GalleryDownloads.ps1
+```

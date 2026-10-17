@@ -1,0 +1,51 @@
+name: Update Gallery download badge
+
+on:
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'build/Update-GalleryDownloads.ps1'
+      - 'build/Test-GalleryDownloads.ps1'
+      - '.github/workflows/gallery-downloads.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gallery-download-badge
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate aggregation
+        shell: pwsh
+        run: ./build/Test-GalleryDownloads.ps1
+      - name: Retrieve all version statistics
+        shell: pwsh
+        run: ./build/Update-GalleryDownloads.ps1 -OutputPath "$env:RUNNER_TEMP/gallery-downloads.svg"
+      - name: Publish badge on a separate branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin badges || true
+          if git show-ref --verify --quiet refs/remotes/origin/badges; then
+            git switch --create badges origin/badges
+          else
+            git switch --orphan badges
+          fi
+          cp "$RUNNER_TEMP/gallery-downloads.svg" gallery-downloads.svg
+          git add gallery-downloads.svg
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update total Gallery downloads'
+            git push origin HEAD:badges
+          fi
