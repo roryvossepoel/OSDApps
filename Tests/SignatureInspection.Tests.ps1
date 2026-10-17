@@ -132,7 +132,7 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
     It 'checks signatures by default in the compact GUI with explicit skip option' {
         $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
         $source | Should -Match "RowStyle\]::new\('Absolute',80\)"
-        $source | Should -Match 'Deployment overview'
+        $source | Should -Match 'Select, configure and inspect'
         $source | Should -Match 'SkipSignatureVerification'
         $source | Should -Match 'SkipSignatureVerification:\$State.SkipSignatureVerification'
         $source | Should -Match "Columns.Add\('Signature'"

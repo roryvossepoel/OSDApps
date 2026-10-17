@@ -2,7 +2,7 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Troubleshooting](faq.md)
 
-OSDApps Viewer is the read-only interface opened by `Show-OSDAppUI`. It displays what the CLI has prepared: the device queue and configuration, built-in/repository apps, script packages, USB cache and existing logs. It does not add, remove, configure, download or install applications.
+In the released Gallery version (0.43.0), `Show-OSDAppUI` opens the read-only OSDApps Viewer. It displays what the CLI has prepared: the device queue and configuration, built-in/repository apps, script packages, USB cache and existing logs. It does not add, remove, configure, download or install applications.
 
 ## Selection and configuration preview (unreleased)
 

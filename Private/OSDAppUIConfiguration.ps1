@@ -152,6 +152,7 @@ function Show-OSDAppUIEntryConfiguration {
         if ($dialog.ShowDialog($State.Form) -eq [System.Windows.Forms.DialogResult]::OK) {
             $Entry.Configuration = Copy-OSDAppUIConfiguration -Configuration $dialog.Tag.Result
             Update-OSDAppUISelectionPreview -State $State
+            $State.Status.Text = "Preview settings updated: $($Entry.DisplayName). Check the app to include it."
         }
     }
     finally { $dialog.Dispose() }
@@ -258,6 +259,7 @@ function Initialize-OSDAppUISelectionControls {
         if ($state.SelectionList.SelectedItems.Count) { $state.SelectionDetails.Text = $state.SelectionList.SelectedItems[0].SubItems[4].Text }
     })
     $State.CatalogList.Add_ItemCheck({
+        $eventArgs = $_
         $state = $script:OSDAppUIState
         if (-not $state -or $state.RenderingApplications) { return }
         $app = $state.CatalogList.Items[$_.Index].Tag
@@ -265,7 +267,10 @@ function Initialize-OSDAppUISelectionControls {
             Set-OSDAppUISelection -Draft $state.Draft -Application $app -Selected ($_.NewValue -eq [System.Windows.Forms.CheckState]::Checked)
             Update-OSDAppUISelectionPreview -State $state
         }
-        catch { $_.Exception.Message | Write-Warning }
+        catch {
+            $eventArgs.NewValue = $eventArgs.CurrentValue
+            $state.Status.Text = "Selection failed: $($_.Exception.Message)"
+        }
     })
     $State.CatalogList.Add_SelectedIndexChanged({
         if ($script:OSDAppUIState) { Update-OSDAppUISelectionButtons -State $script:OSDAppUIState }
