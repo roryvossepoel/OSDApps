@@ -15,6 +15,7 @@ Describe 'OSDApps selection preview model' {
                     $field = @($fields | Where-Object Name -eq $name)[0]
                     if ($parameter.DefaultValue) { $field.Default | Should -Be $parameter.DefaultValue.SafeGetValue() }
                     $field.Type | Should -Be $command.Parameters[$name].ParameterType
+                    if ($name -match 'Uri$') { $field.Choices.Count | Should -Be 0 }
                 }
                 { ConvertTo-OSDAppUIConfiguration -Id $definition.Id -Values (New-OSDAppUIConfiguration $definition.Id) } | Should -Not -Throw
             }

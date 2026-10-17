@@ -20,7 +20,8 @@ function Get-OSDAppUIConfigurationFields {
         if ($parameter.DefaultValue) { $default = $parameter.DefaultValue.SafeGetValue() }
         elseif ($metadata.ParameterType -in @([bool],[switch])) { $default = $false }
         $sets = @($metadata.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] })
-        $choices = if ($sets.Count) { @($sets[0].ValidValues) } else { @() }
+        $choices = @()
+        if ($sets.Count) { $choices = @($sets[0].ValidValues) }
         $label = $name -creplace '([a-z])([A-Z])','$1 $2'
         if ($name -eq 'Language' -and $metadata.ParameterType -eq [string[]]) { $label = 'Languages (one per line)' }
         if ($name -eq 'ExcludeApp') { $label = 'Exclude apps (one per line)' }
