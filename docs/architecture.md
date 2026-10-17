@@ -40,7 +40,7 @@ Full-Windows `Sync-OSDAppRepository` can also prepare media ahead of deployment.
 
 `Get-OSDAppCacheHealth` compares physical cache content, local metadata and an
 optional desired catalog without changing files. Explicit
-`Sync-OSDAppRepository -Prune` reconciles the complete host-compatible catalog
+`Sync-OSDAppRepository -Prune` reconciles the complete catalog for the selected architecture
 transactionally; normal selective synchronization remains merge-only.
 
 ### Built-in applications
@@ -153,7 +153,7 @@ They do not size application installation or extraction workspace, nor change
 | `%ProgramData%\OSDApps\Logs\Runtime.log` | Default persistent PreInstall/Runner log in deployed Windows |
 | `%ProgramData%\OSDApps\Results\Latest.json` | Default atomic final deployment result and per-app outcomes |
 
-Typical local staging contains `DeviceManifest.json`, `Invoke-OSDAppPreInstall.ps1`, `Invoke-OSDAppRunner.ps1`, `Restore-OSDAppCacheGeneration.ps1`, `Packages`, `BuiltIn` and `Work`.
+Typical local staging contains `DeviceManifest.json`, `Invoke-OSDAppPreInstall.ps1`, `Invoke-OSDAppRunner.ps1`, `Restore-OSDAppCacheGeneration.ps1`, `Assert-OSDAppTransactionSpace.ps1`, `Enter-OSDAppCacheLock.ps1`, `Packages`, `BuiltIn` and `Work`.
 
 `CleanupMode OnSuccess` schedules removal of temporary device source only after every selected application succeeded; `Never` retains it. A failed or skipped application retains source for investigation. The persistent log, result and reusable USB cache are separate from that staging directory.
 
@@ -190,4 +190,4 @@ Adding a new Id appends it. Re-adding an existing Id replaces its entry and move
 
 `Set-OSDAppConfiguration` is session-scoped. Add commands capture runtime settings in the manifest so SetupComplete does not need the module or the original PowerShell session.
 
-For exact package fields, see [Repository applications](repository.md), [Built-in applications](built-in-apps.md) and the [public metadata contract](public-metadata.md). For proven scenarios and remaining limitations, see [Validation matrix](testing.md).
+For exact package fields, see [Repository apps and scripts](repository.md), [Built-in applications](built-in-apps.md) and the [public metadata contract](public-metadata.md). For proven scenarios and remaining limitations, see [Validation matrix](testing.md).

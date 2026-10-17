@@ -4,27 +4,24 @@ OSDApps uses GitHub Actions for validation and PowerShell Gallery publishing.
 
 ## Public descriptions
 
-The module description and Gallery tags live in `OSDApps.psd1`. Updates reach the Gallery with the next published version; an existing release is not republished in place.
+The module description and Gallery tags live in `OSDApps.psd1`. Align their wording with the README when preparing the next module release. Updates reach the Gallery with that new version; an existing release is not republished in place. Do not edit the manifest just to publish documentation: a manifest change on `main` triggers the release workflow.
 
 Use this concise description for the GitHub repository's **About** field:
 
-> Deploy apps and PowerShell scripts with OSDCloud v2. Stage in WinPE, run through SetupComplete, and reuse a validated USB cache.
+> Your apps. Ready before OOBE. Stage apps and PowerShell scripts in WinPE after OSDCloud applies Windows, using built-in integrations or your own repository and optional USB flash drive caching.
 
-Keep the README focused on the first successful deployment. Use version-independent installation commands there; retain exact versions in release notes and test evidence. The Downloads badge uses Shields' total Gallery downloads endpoint, `/powershellgallery/dt/OSDApps`, covering all published versions.
+Keep the README focused on the first successful deployment. Use version-independent installation commands there; retain exact versions in release notes and test evidence. The Downloads badge sums Gallery-reported per-version downloads across all versions and is refreshed daily on the separate `badges` branch. See [badge maintenance](../CONTRIBUTING.md#gallery-download-badge); the Gallery aggregate counter can incorrectly report zero.
 
 ## Continuous integration
 
 Every push to `main`, pull request, or manually started CI run validates:
 
-```text
-module manifest
-→ PSScriptAnalyzer
-→ Pester
-→ example repository metadata
-→ distributable module build
-```
+- Module manifest, PSScriptAnalyzer and the complete Pester suite.
+- Documentation syntax, local links and public command/parameter names.
+- Distributable module build and packaged `Get-Help` in a fresh process.
+- Example catalog metadata and Gallery download aggregation.
 
-The resulting module package is uploaded as a workflow artifact named `OSDApps`.
+Both Windows PowerShell 5.1 and PowerShell 7 run independently. Their module artifacts are named `OSDApps-Windows-PowerShell-5.1` and `OSDApps-PowerShell-7`; validation reports are uploaded separately. These jobs do not run physical WinPE deployments.
 
 ## Required GitHub secret
 
@@ -94,8 +91,8 @@ The same validation used by CI can be run locally:
 Requirements:
 
 ```powershell
-Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser
-Install-Module PSScriptAnalyzer -Scope CurrentUser
+Install-Module Pester -RequiredVersion 6.2.0 -Scope CurrentUser -Force -SkipPublisherCheck
+Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
 ```
 
 Build the distributable module without publishing it:

@@ -15,6 +15,9 @@ The public Add cmdlets prepare the selected offline Windows target. Runtime sour
     DeviceManifest.json
     Invoke-OSDAppPreInstall.ps1
     Invoke-OSDAppRunner.ps1
+    Restore-OSDAppCacheGeneration.ps1
+    Assert-OSDAppTransactionSpace.ps1
+    Enter-OSDAppCacheLock.ps1
     Packages\
     BuiltIn\
     Work\
@@ -24,13 +27,11 @@ This is **device staging**, separate from the optional `\OSDApps` USB cache. `De
 
 ## SetupComplete order
 
-```text
-SetupComplete.cmd
-→ Invoke-OSDAppPreInstall.ps1
-→ stop only on a fatal PreInstall exit code
-→ Invoke-OSDAppRunner.ps1
-→ check Runner exit code
-```
+`SetupComplete.cmd` calls the phases in this order:
+
+1. Run `Invoke-OSDAppPreInstall.ps1` to prepare built-in content.
+2. Stop on a fatal PreInstall exit code; otherwise run `Invoke-OSDAppRunner.ps1`.
+3. Check the Runner exit code and retain the recorded outcome.
 
 The CLI stages these scripts and updates its owned SetupComplete blocks. Do not replace the whole SetupComplete file to change OSDApps settings; other deployment tooling may have its own commands there.
 
@@ -199,7 +200,7 @@ An offline installation is not demonstrated by a short runtime alone. Review `Bu
 
 Large runtime downloads use streaming HttpClient and a temporary `.download` file before the completed file is moved into place. `DownloadComplete` reports bytes, size, duration and average throughput. Network/download completion is distinct from signature verification of a supported installer.
 
-Office's standalone refresh timeout is 20 minutes by default. Adobe installation defaults to 15 minutes; its runner emits a waiting heartbeat while the installer is running. A timeout is not success: the process handling stops the failed installation and retains source.
+Office's standalone refresh timeout is 20 minutes by default. Adobe installation defaults to 15 minutes; its runner emits a waiting heartbeat while the installer is running. An Office refresh timeout may still lead to a successful installation from acceptable staged fallback. An installer timeout fails that queue entry and retains staging; see [failure handling](#runner).
 
 To choose a different Adobe installation timeout, set it **when staging in WinPE**:
 

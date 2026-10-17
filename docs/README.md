@@ -21,7 +21,7 @@ OSDApps is CLI-first. Use PowerShell to configure, cache and stage applications 
 | Topic | Contents |
 | --- | --- |
 | [Built-in applications](built-in-apps.md) | Per-app configuration, architectures, vendor sources and signature/publisher policy |
-| [Repository applications](repository.md) | Catalog/alias structure, package authoring, cache health, transactional reconciliation and SHA-256 integrity |
+| [Repository apps and scripts](repository.md) | Catalog/alias structure, package authoring, cache health, transactional reconciliation and SHA-256 integrity |
 | [Viewer](viewer.md) | Launch options, tab contents, cache/version/signature meanings and read-only boundaries |
 | [Runtime and cleanup](runtime.md) | SetupComplete, PreInstall, Runner, machine-readable results, configuration, logs and failure handling |
 | [FAQ and troubleshooting](faq.md) | Environment mistakes, cache and network failures, trust checks, logs and upgrades |

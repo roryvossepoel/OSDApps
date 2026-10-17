@@ -6,7 +6,7 @@
 
 Use a **full Windows preparation machine** to install/save the module, build repository packages and run built-in `Sync-OSDApp*` commands. Use **WinPE on the target PC** for deployment staging after OSDCloud has applied Windows and before its first Windows boot.
 
-The Add cmdlets write to a selected Windows target. Do not run deployment examples against your active preparation-machine Windows drive. The [examples](../Examples/README.md) state their environment and include WinPE guards where they stage applications.
+The Add cmdlets write to a selected Windows target. Do not run deployment examples against your active preparation-machine Windows drive. The [examples](../Examples/README.md) state their environment. The short online example assumes you are already in WinPE; it does not check that for you.
 
 The Viewer is different: it can inspect current Windows, an explicit Windows root, or a supported WinPE target without modifying the deployment.
 
@@ -126,7 +126,7 @@ Keep the USB flash drive attached through SetupComplete until OOBE appears when 
 
 ## What happens if there is no network?
 
-A complete, matching local payload can be used without vendor refresh. Supported built-in MSI/EXE files must **still pass signature and expected-publisher checks**, and repository archives must pass their SHA-256 checks. With no usable source, PreInstall or Runner stops instead of pretending the app was installed.
+A complete, matching local payload can be used without vendor refresh. Supported built-in MSI/EXE files must **still pass signature and expected-publisher checks**, and repository archives must pass their SHA-256 checks. With no usable source, the affected app is recorded as failed or skipped while independent entries can continue. Manifest, integrity and supported-publisher trust failures stop processing.
 
 The fully offline eight-app 0.34.0 test passed on the tested Windows trust configuration. It does not guarantee that every fresh Windows image has all certificate chain/revocation data needed for every vendor signature.
 
@@ -165,7 +165,7 @@ The Viewer reports unsupported checks separately: WinPE does not invoke Windows 
 
 ## What happens if Office refresh hangs?
 
-The standalone Office refresh has a 20-minute timeout by default. On a failed refresh, an available staged Office fallback must still satisfy its source and ODT signature/publisher checks. Without an acceptable fallback, PreInstall fails before Runner starts. The timeout is not a promise that an arbitrary cached Office configuration can satisfy a changed deployment.
+The standalone Office refresh has a 20-minute timeout by default. On a failed refresh, an available staged Office fallback must still satisfy its source and ODT signature/publisher checks. Without an acceptable fallback, Office acquisition fails and Runner skips Office while independent entries can continue. A manifest or supported-publisher trust failure remains fatal. The timeout is not a promise that an arbitrary cached Office configuration can satisfy a changed deployment.
 
 ## Where are the logs?
 
