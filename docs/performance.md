@@ -1,6 +1,8 @@
 # Performance
 
-OSDApps includes explicit runtime timing so cold-cache and warm-cache deployments can be compared without manually reconstructing every phase from timestamps.
+OSDApps records PreInstall and Runner durations separately. The measurements below describe the stated versions and conditions, not a performance guarantee for the current release.
+
+The [validation matrix](testing.md) includes newer 0.36.0 and 0.39.0 measurements and the recent Gallery workflow reports. Since the transactional Office change in 0.38.0, online Office refresh acquires a fresh complete generation; older incremental-refresh timings do not predict that cost. The recent Gallery workflow reports include no new timings.
 
 ## OSDApps 0.35.0 release candidate — populated USB cache, online (12 October 2026)
 
@@ -150,7 +152,7 @@ The complete application-processing timings were also highly consistent:
 | Notepad++ | 10.2 s | 9.2 s | -1.0 s |
 | Adobe Acrobat Unified | 109.4 s | 109.3 s | -0.1 s |
 
-This confirms that cache state primarily affects content acquisition and freshness validation, not the application installation itself.
+In this recorded pair, the difference was concentrated in acquisition rather than installation. Two runs do not establish a general performance rule.
 
 For repository applications, `ApplicationInstallComplete` includes the complete processing time for that queue item, including SHA-256 validation and extraction before `Install.ps1` is started.
 
@@ -187,7 +189,7 @@ During the warm run:
 
 The only intentional Teams download was the small Teams bootstrapper. The much larger Teams MSIX was reused from cache.
 
-This is the expected OSDApps warm-cache behavior:
+This was the observed warm-cache behavior in 0.29.1. Current Office refresh uses a fresh complete generation, as described above:
 
 ```text
 existing cache
@@ -199,7 +201,9 @@ existing cache
 
 ## Reproducing the benchmark
 
-Use the same application order for cold and warm runs:
+This is the historical 0.29.1 command sequence, including its module path and test-repository IDs. For a new test, use the current [online deployment guide](../Examples/WinPE-Online.md), supply your own repository and record the loaded module version and settings. Do not expect a current build to reproduce historical timings.
+
+The historical runs used this application order:
 
 ```powershell
 Import-Module E:\Modules\OSDApps\OSDApps.psd1 -Force

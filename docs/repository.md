@@ -1,9 +1,10 @@
-# Repository applications
+# Repository apps and scripts
+
+<a id="repository-applications"></a>
 
 ![OSDApps repository: catalog, package manifest, archive layout and static publishing](images/repository-contract.svg)
 
-
-OSD Apps repositories are static content. A separate repository service or PowerShell module is not required.
+OSDApps repositories are static content. A separate repository service or PowerShell module is not required.
 
 OSDApps defines the repository contract, provides examples, and includes optional authoring helpers to create and validate the required folders and JSON.
 
@@ -234,7 +235,7 @@ Sync-OSDAppRepository -Prune -Confirm
 ```
 
 `-Prune` cannot be combined with `-Name`. OSDApps first resolves the complete
-host-compatible plan and downloads and SHA-256-validates every replacement.
+plan for the selected architecture (the host architecture by default) and downloads and SHA-256-validates every replacement.
 Stale folders are moved into the same-volume transaction backup, new packages
 are promoted, and `CacheCatalog.json` is the commit point. A failure before
 commit restores the previous catalog and folders.
@@ -404,6 +405,6 @@ Set-OSDAppConfiguration -CatalogUri 'https://example.blob.core.windows.net/osdap
 
 ## Examples
 
-A starter repository and package source template are included under [Examples](../Examples/README.md).
+[Examples](../Examples/README.md) includes an empty catalog template and a package-layout placeholder. Supply your own unattended `Install.ps1` and payload; the placeholder does not install an application.
 
-The examples are intentionally simple: the repository contract is designed to remain understandable and maintainable without proprietary tooling.
+`Add-OSDAppPackage` writes a local repository. Uploading it to your hosting is a separate step. Publish package archives and manifests before updating `catalog.json`, so clients never discover references to files that are not yet available.

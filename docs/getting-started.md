@@ -6,7 +6,7 @@ This guide separates the three environments used by OSDApps. The commands you ru
 
 ## Before you start
 
-Use an OSDCloud v2 deployment that leaves time to stage applications after the Windows image has been applied and before the first Windows boot. OSDApps does not replace Windows image deployment.
+Run OSDApps after OSDCloud has applied the Windows image and before the first Windows boot. OSDApps does not replace Windows image deployment.
 
 The examples target x64 and use the current Gallery release or the newest module version saved on your USB. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
 
@@ -114,7 +114,7 @@ The staging directory is normally:
 
 Built-in payloads can still be absent before the first boot in an online cold deployment. That is different from an offline deployment, where matching content must already be available. Repository packages are downloaded/staged before reboot, not acquired later by SetupComplete.
 
-Close the Viewer before continuing the deployment. Keep the USB flash drive attached until OOBE is reached when it is part of the workflow. Use your existing OSDCloud deployment's reboot step; the examples do not trigger it automatically.
+Close the Viewer before continuing the deployment. Keep the USB flash drive attached until OOBE is reached when it is part of the workflow. Use your existing deployment's reboot step, or the separate manual command in the online guide. Staging itself does not reboot the PC.
 
 ## 4. First Windows boot — let SetupComplete run
 
@@ -183,4 +183,4 @@ With `CleanupMode OnSuccess`, the runtime schedules removal of temporary staging
 
 ## Next steps
 
-[Built-in configuration](built-in-apps.md) covers Office licensing flags, channels, language, Firefox variants and Webex options. [Repository applications](repository.md) explains organization-managed packages and optional Vendor metadata. [Viewer](viewer.md) explains the difference between staged, cached, version and signature information.
+[Built-in configuration](built-in-apps.md) covers Office licensing flags, channels, language, Firefox variants and Webex options. [Repository apps and scripts](repository.md) explains organization-managed packages and optional Vendor metadata. [Viewer](viewer.md) explains the difference between staged, cached, version and signature information.

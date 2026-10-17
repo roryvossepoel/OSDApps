@@ -1,8 +1,12 @@
 # Validation matrix
 
-This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging success alone is not an installation success**: the Windows `SetupComplete.cmd` phases must finish and the individual app results must be checked.
+This page tracks real OSDApps deployment scenarios after OSDCloud applies Windows. **Staging success alone is not an installation success**: the Windows `SetupComplete.cmd` phases must finish and the individual app results must be checked.
 
 ## Scenario coverage
+
+This matrix records detailed deployment evidence for the stated versions. The
+[recent Gallery workflow reports](#osdapps-0430-gallery-and-online-deployment-reports--16-october-2026)
+are listed separately because their evidence is less detailed.
 
 | Scenario | Status | Evidence / expected behavior |
 | --- | --- | --- |
@@ -10,7 +14,31 @@ This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging succ
 | Existing OSDCloud USB cache, online | **Validated — 0.36.0 warm run (13 Oct 2026)** | Hard offline-readiness preflight passed; all six built-ins used cached content, correlated results reported 8/8 successful, cleanup completed and the cache remained healthy. |
 | No USB cache, online | **Validated — 0.30.0 test 1** | Built-ins acquired on Windows volume; repository apps staged in WinPE |
 | Existing OSDCloud USB cache, offline | **Validated — 0.34.0 PC 2 (11 Oct 2026)** | LAN disconnected; six BuiltInRefreshSkipped events, five built-in signer/publisher checks and 8/8 successful installations. Earlier 0.30.0 six-app test also passed. |
-| No USB, offline | **Not yet validated** | Without a complete staged fallback, PreInstall is expected to stop before Runner |
+| No USB, offline | **Not yet validated** | Without complete staged content, affected apps cannot install; ordinary acquisition failures are recorded and independent entries may continue. |
+
+## OSDApps 0.43.0 Gallery and online deployment reports — 16 October 2026
+
+The operator reported the following checks while using the Gallery-based
+workflow. These reports supplement the historical matrix above; they do not
+replace its more detailed, correlated result evidence.
+
+| Check | Reported observation | Evidence available |
+| --- | --- | --- |
+| Gallery import and read-only USB health on the preparation PC | Imported 0.43.0 with 31 exported commands; architecture parameters found. All eight cache entries were active and healthy, with no obsolete, orphaned, renamed, incomplete or corrupt entries. | Pasted summary output with module version, path and cache counts. |
+| Online WinPE deployment without a USB flash drive | Office, Adobe Acrobat Unified and Chrome were staged using the short Gallery command flow; the operator reported successful installation after reboot without the USB flash drive. | Operator confirmation in the development conversation. |
+| Online WinPE deployment with a USB flash drive | The same command flow succeeded with the USB flash drive connected; the operator confirmed cache use. | Operator confirmation in the development conversation. |
+
+The queue used Office `MonthlyEnterprise` with `nl-nl`, followed by Adobe Acrobat
+Unified and Google Chrome Enterprise. The public example uses configurable
+`en-us`. The operator also confirmed that module installation in that WinPE
+session needed `-SkipPublisherCheck`; the documented install command includes it.
+
+The preceding Gallery check confirmed 0.43.0. No separate deployment result JSON,
+deployment IDs, exact loaded-version output, timing measurements or cleanup
+checks were supplied for these two installation reports. Do not interpret them
+as proof of a cold cache rebuild, a fully offline deployment, all architectures,
+or a fresh complete eight-app regression run. Cache use does not by itself prove
+that every vendor update check succeeded or that no download occurred.
 
 ## OSDApps 0.39.0 cache and deployment validation — 15 October 2026
 
@@ -239,7 +267,7 @@ Cisco Webex was added with x64 and ARM64 non-localized MSI sources, an architect
 
 The offline log demonstrates the USB cache was **detected** during SetupComplete, not that the installer ran directly from the USB volume; the payload had already been copied locally in WinPE. Both SetupComplete deployments used a one-app `CiscoWebex` queue. These measured durations cover only their named phases, not WinPE/OOBE or the entire deployment. The first online run did not populate the USB cache because the volume was not detected at runtime.
 
-**Remaining limitations:** ARM64 MSI retrieval, signature and installation have **not** been field-validated; the combined seven-app SetupComplete scenario has not been run. USB cache re-use across an additional **online SetupComplete** run and recovery under other network failures are also not established by these tests.
+**Scope of these 0.32.0 checks:** they did not validate ARM64, a combined queue or online SetupComplete cache reuse. Later eight-app runs recorded above include Webex; ARM64 and other network-failure conditions still require separate evidence.
 
 ## Repository script packages and bounded Office fallback — 0.38.0
 
@@ -271,7 +299,8 @@ Still requiring separate end-to-end checks:
 - Mozilla Firefox Enterprise Rapid x86
 - Mozilla Firefox Enterprise ESR x64/x86
 - Adobe Acrobat Unified x86
-- Microsoft Teams x86 / arm64 and Microsoft 365 Apps x86 (new public architecture contract)
+- Microsoft Teams x86 / arm64 and Microsoft 365 Apps x86
+- Cisco Webex arm64
 
 ## Success criteria and logs
 

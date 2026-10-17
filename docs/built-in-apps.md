@@ -1,17 +1,19 @@
 # Built-in applications
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Repository apps and scripts](repository.md)
+
 Built-in applications use vendor-native acquisition and installation instead of the repository package contract.
 
-Currently supported:
+All built-ins default to x64. Supported choices differ by product; support in the interface is separate from [field validation](testing.md#validated-built-ins-and-remaining-variants).
 
-```text
-Microsoft365Apps
-MicrosoftTeams
-AdobeAcrobatUnified
-GoogleChromeEnterprise
-MozillaFirefoxEnterprise
-CiscoWebex
-```
+| Built-in | Architectures | Main configuration choices |
+| --- | --- | --- |
+| [Microsoft 365 Apps](#microsoft-365-apps) | x64, x86 | Channel, languages, products, licensing flags or custom XML |
+| [Microsoft Teams](#microsoft-teams) | x64, x86, arm64 | Architecture |
+| [Adobe Acrobat Unified](#adobe-acrobat-unified) | x64, x86 | Architecture and installation timeout |
+| [Google Chrome Enterprise](#google-chrome-enterprise) | x64, x86 | Architecture |
+| [Mozilla Firefox Enterprise](#mozilla-firefox-enterprise) | x64, x86 | Rapid/ESR channel and language |
+| [Cisco Webex](#cisco-webex) | x64, arm64 | Architecture and supported MSI options |
 
 ## Machine-readable metadata
 
@@ -84,7 +86,7 @@ relax built-in sync or SetupComplete security policy. The existing
 
 ## Configuration and synchronization
 
-Each built-in has its own cmdlet and parameter set.
+Each built-in has its own cmdlet and parameter set. Run `Sync-OSDApp*` on the full-Windows preparation machine and `Add-OSDApp*` in WinPE after Windows has been applied. Examples below show configuration alternatives; they are not a single script to run in one environment.
 
 ### Microsoft 365 Apps
 
@@ -131,7 +133,7 @@ The Office cache contains the Office Deployment Tool, `configuration.xml`, and `
 The built-in Office configuration uses a shared XML generator for `Add-OSDAppMicrosoft365Apps` and `Sync-OSDAppMicrosoft365Apps`. The common parameters are `Architecture` (x86/x64, x64 by default), `Channel`, `ProductId`, `Language`, `UpdatesEnabled`, `AcceptEula`, `SharedComputerLicensing`, `DeviceBasedLicensing`, and `ExcludeApp`. Optional `IncludeVisio` and `IncludeProject` switches include `VisioProRetail` and `ProjectProRetail` as separate Office Deployment Tool products. Each product gets the requested languages; exclusions apply only to Microsoft 365 Apps. The respective licenses must be assigned separately.
 
 ```powershell
-# Default: Enterprise x64, Current channel, en-us, updates on
+# Without cached configuration: Enterprise x64, Current channel, en-us, updates on
 Add-OSDAppMicrosoft365Apps
 
 # Typical Dutch Office with monthly enterprise updates and Visio/Project
@@ -143,9 +145,11 @@ Add-OSDAppMicrosoft365Apps -SharedComputerLicensing $true
 # Specialized device-based licensing, requiring an eligible device license
 Add-OSDAppMicrosoft365Apps -DeviceBasedLicensing $true
 
-# Disable Office updates (Windows update management must be handled elsewhere)
+# Disable Office updates (manage Office updates separately)
 Add-OSDAppMicrosoft365Apps -UpdatesEnabled $false
 ```
+
+When no Office configuration parameter is supplied to `Add-OSDAppMicrosoft365Apps`, a usable cached configuration can be retained. Specify the channel, language and other required choices explicitly when you want to override it. The README does this for MonthlyEnterprise/en-us.
 
 For advanced or unusual configurations, export XML from Microsoft's Office Customization Tool and pass `-ConfigurationXml <path>`. The supplied XML is checked only for file existence and well-formed XML syntax (without DTD or external entity resolution), then preserved without modification. Office Deployment Tool validates its own products, channels, languages and other configuration semantics. Do not simultaneously supply conflicting generated configuration switches; the custom XML takes precedence.
 
@@ -345,13 +349,13 @@ The Webex glyph in `metadata/icons/ciscowebex.svg` is from [Simple Icons](https:
 
 ## How update freshness is determined
 
-Built-in applications use evergreen vendor sources, but OSDApps avoids downloading large installers again when the cached artifact is still current.
+Built-in applications use evergreen vendor sources. Most integrations can reuse payloads after an HTTP metadata check; Office deliberately builds a fresh complete generation for an online refresh.
 
 The freshness mechanism is product-specific:
 
 | Application | Update check | Download behavior |
 | --- | --- | --- |
-| Microsoft 365 Apps | Office Deployment Tool `/download` synchronizes the configured channel/product/languages | ODT decides which Office files are missing or changed. OSDApps resolves the cached build from `Office\Data\<version>` before and after synchronization. |
+| Microsoft 365 Apps | Office Deployment Tool `/download` synchronizes the configured channel/product/languages | ODT downloads into a separate new generation. OSDApps validates it before replacing the active directory; an unchanged version does not mean the download was skipped. |
 | Microsoft Teams | HTTP metadata for the official MSIX: `ETag` preferred, otherwise `Last-Modified + Content-Length` | MSIX is downloaded only when the metadata changed or no valid cached MSIX exists. The Teams bootstrapper is refreshed on every online sync. |
 | Adobe Acrobat Unified | HTTP metadata for the official Adobe ZIP: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.zip` is downloaded only when the remote metadata changed or no cached ZIP exists. |
 | Google Chrome Enterprise | HTTP metadata for the official Enterprise MSI: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.msi` is downloaded only when the remote metadata changed or no cached MSI exists. |
@@ -364,51 +368,20 @@ For Teams, Adobe Acrobat Unified, Google Chrome Enterprise, Mozilla Firefox Ente
 
 The comparison order is:
 
-```text
-1. ETag
-   └─ if both remote and cached ETag are present, compare ETag
+1. Compare `ETag` when both remote and saved values are present.
+2. Otherwise compare `Last-Modified` and `Content-Length`.
+3. Download when no usable match exists or the cached payload is missing.
 
-2. Last-Modified + Content-Length
-   └─ used when ETag is not available
+`CacheInfo.json` stores the previous `RemoteETag`, `RemoteLastModified`,
+`RemoteContentLength`, `RemoteFinalUri` and `SyncedAt` values. This avoids opening
+an MSI or extracting a ZIP just to decide whether the remote metadata changed.
+A metadata match still requires the applicable local content and publisher
+checks; it is not an independent guarantee of vendor freshness or file identity.
 
-3. No usable match
-   └─ download the current vendor artifact
-```
-
-The previous values are stored in the built-in `CacheInfo.json`, for example:
-
-```json
-{
-  "RemoteETag": "...",
-  "RemoteLastModified": "...",
-  "RemoteContentLength": 169652224,
-  "RemoteFinalUri": "...",
-  "SyncedAt": "..."
-}
-```
-
-This means OSDApps does **not** need to open an MSI or extract a ZIP just to decide whether Chrome, Firefox, or Adobe should be downloaded again. The update decision is based on cheap vendor metadata checks.
-
-A metadata match means:
-
-```text
-cached artifact exists
-+
-vendor metadata still matches
-=
-reuse cached artifact
-```
-
-A metadata change means:
-
-```text
-vendor metadata changed
-or cache metadata/artifact is missing
-=
-download current vendor artifact
-→ replace cache
-→ update CacheInfo.json
-```
+A replacement is prepared and validated in a separate directory before it becomes
+active. See [cache generation recovery](architecture.md#cache-generation-recovery)
+for swap and interruption handling. `AcquisitionOutcome` distinguishes download,
+reuse and fallback for the current deployment; see [acquisition reporting](runtime.md#acquisition-and-installation-are-separate-results).
 
 ### Microsoft 365 Apps is different
 
@@ -420,7 +393,9 @@ OSDApps runs the Office Deployment Tool in download mode with the staged configu
 setup.exe /download configuration.xml
 ```
 
-ODT is responsible for synchronizing the requested channel, architecture, product, languages, and exclusions. Existing Office content is reused by ODT where possible.
+ODT acquires the requested channel, architecture, products and languages into a new sibling directory. OSDApps does not seed that directory with the active Office data tree. It validates the complete candidate, including version-folder and CAB consistency, before switching the active directory. The previous generation is removed as a whole only after successful promotion; individual old Office files are not selectively pruned.
+
+This also requires free space for the candidate alongside the current generation. See [transaction space checks](architecture.md#cache-transaction-space-checks).
 
 OSDApps reads the concrete cached build from:
 
@@ -436,18 +411,15 @@ The Microsoft 365 Apps built-in deliberately favors freshness over the shortest 
 
 During full Windows, OSDApps lets the Office Deployment Tool synchronize the configured Office source before installation:
 
-```text
-full Windows
-→ ODT /download
-→ reuse existing Office cache where possible
-→ update changed Office content when required
-→ stage current Office content locally
-→ install
-```
+1. Run ODT `/download` into a new generation.
+2. Validate the complete candidate and promote it.
+3. Stage that content locally for installation.
+
+If refresh fails, an acceptable previously staged fallback may still be used; the result records the refresh warning.
 
 This has an important advantage: ODT is the authoritative Microsoft mechanism for acquiring Office content, so the same step that checks freshness can immediately update the cache when a newer build is available.
 
-The trade-off is that even when the cached build is unchanged, the ODT synchronization step still takes some time.
+The trade-off is a fresh acquisition and additional temporary disk space even when the Office build is unchanged. Offline or failed-refresh fallback is a different path; it uses acceptable existing staged content.
 
 If deployment speed is more important than checking Microsoft for a current Office build during SetupComplete, Microsoft 365 Apps can instead be packaged as a normal repository application.
 
@@ -481,7 +453,7 @@ The small `teamsbootstrapper.exe`, however, is intentionally downloaded again du
 
 ### Sync timing
 
-Built-in freshness checks happen in **full Windows**, during PreInstall / SetupComplete.
+Built-in freshness checks happen in **full Windows**: through a public Sync command on the preparation machine, or through PreInstall during SetupComplete.
 
 ```text
 WinPE
@@ -489,12 +461,12 @@ WinPE
 
 Full Windows
 → check vendor freshness
-→ refresh cache only where required
+→ prepare a complete Office generation or reuse/replace other payloads as appropriate
 → stage current payload locally
 → Runner installs
 ```
 
-Repository applications follow a different lifecycle: their versions and hashes are controlled by the self-maintained repository and repository synchronization occurs in **WinPE**, not during the full-Windows PreInstall phase.
+Repository versions and hashes are controlled by the repository owner. Content can be synchronized on the preparation machine or during WinPE staging; Runner uses the staged package without refreshing it during SetupComplete.
 
 ## Deployment flow
 
@@ -528,7 +500,9 @@ A completely blank `OSDCloud` volume is supported. OSDApps creates the cache str
 
 ## Fallback behavior
 
-A refresh or acquisition failure does not block deployment when a complete staged fallback is available. If no usable local or USB-cached payload exists and online acquisition also fails, PreInstall returns a fatal error and the Runner is not started.
+An ordinary refresh failure can use a complete acceptable staged fallback. If no usable source remains, PreInstall records the app-local failure and Runner skips that app while processing independent queue entries. The final deployment is still `Failed` and staging is retained. Invalid manifests, supported-publisher trust failures and other phase-level safety failures stop processing.
+
+A successful fallback installation is recorded separately from the failed refresh. See [acquisition outcomes](runtime.md#acquisition-and-installation-are-separate-results).
 
 The absence of an `OSDCloud` USB is not an error: when online, PreInstall acquires built-in content directly to the local Windows runtime.
 
@@ -579,9 +553,9 @@ Validated behavior includes:
 - unchanged Teams, Chrome, and Adobe payloads being reused after lightweight freshness checks;
 - Microsoft 365 Apps being synchronized by ODT and reporting whether the cached Office build changed;
 - successful installation from local staged content;
-- cold-cache versus warm-cache timing with stable Runner installation times.
+- historical cold-cache versus warm-cache timing with similar Runner installation times in the recorded runs.
 
-See [Validation matrix](testing.md) and [Performance](performance.md) for the current end-to-end evidence.
+See [Validation matrix](testing.md) and [Performance](performance.md) for the tested versions and limits. Earlier Office incremental-refresh timings do not predict the current complete-generation refresh cost.
 
 ## Requesting a new built-in application
 

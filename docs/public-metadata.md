@@ -26,7 +26,7 @@ optional fields require no schema change.
 | `Channels`, `DefaultChannel`, `ProductIds`, `DefaultLanguage` | Optional product-specific settings; check for presence before rendering |
 | `CachePath` | Illustrate the USB cache layout (`<architecture>` and similar segments are placeholders) |
 | `RepositoryAlternative` | Explain the organization-maintained alternative |
-| `IconUrl` | Official public repository-hosted SVG logo for the card |
+| `IconUrl` | Repository-hosted SVG icon for the card; see the relevant attribution |
 
 Use `Id` as the card key rather than display name. Render optional fields only when available. Keep the public schema backward-compatible; bump `SchemaVersion` and coordinate consumers before any future breaking change.
 
@@ -35,9 +35,11 @@ health tooling can recognize and remove an old `BuiltIn/Teams` folder after a
 valid canonical replacement exists. `MicrosoftTeams` remains the only card,
 manifest identity and public command suffix.
 
-## 0.32.0: Cisco Webex
+<a id="0320-cisco-webex"></a>
 
-The existing public catalog now includes **six** built-in applications, including `CiscoWebex` with:
+## Example: Cisco Webex
+
+The public catalog includes six built-in applications. This `CiscoWebex` entry illustrates the schema:
 
 ```json
 {
@@ -82,4 +84,4 @@ The two data sources must not be conflated: public built-ins do **not** expose o
 3. Confirm the raw `main` JSON and corresponding icon URLs are available after merge.
 4. Refresh the website/CDN cache. A viewer reading the raw `main` JSON dynamically needs no separate list update; a viewer using a compiled snapshot needs to refresh that snapshot.
 
-See [Built-in applications](built-in-apps.md), [Repository applications](repository.md) and [Release process](releasing.md).
+See [Built-in applications](built-in-apps.md), [Repository apps and scripts](repository.md) and [Release process](releasing.md).
