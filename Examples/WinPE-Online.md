@@ -47,6 +47,8 @@ Use your own published catalog and app Id. Notepad++ and Omnissa Horizon Client 
 
 ## 3. Review before continuing
 
+For an automated launcher, use the [launcher integration example](Launcher-Integration.md), which requires preflight success and a zero process exit code before continuing to reboot.
+
 Optionally run the preflight after the last Add command:
 
 ```powershell

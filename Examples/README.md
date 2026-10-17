@@ -8,6 +8,7 @@ Choose an example for the environment you are using. These are reference workflo
 | --- | --- | --- |
 | [Prepare a USB cache](Prepare-UsbCache.md) | Full Windows preparation machine | Saves module files, optionally downloads/refreshes content, and shows explicit repository health/prune preview; does not stage apps against Windows. |
 | [Online WinPE deployment](WinPE-Online.md) | WinPE after OSDCloud has applied Windows | Loads the module from Gallery and stages apps with or without a USB flash drive; optional repository sync downloads packages. |
+| [WinPE launcher integration](Launcher-Integration.md) | WinPE, called by OSDT or another launcher | Loads from Gallery, stages the example queue and returns a checked exit code; the launcher owns the reboot. |
 | [Offline WinPE deployment](WinPE-Offline.md) | WinPE with complete matching cache and networking disconnected | Stages cached content and SetupComplete without repository refresh. |
 | [Build a repository package](#build-a-repository-package) | Full Windows authoring machine | Creates a package archive and local repository metadata. |
 
