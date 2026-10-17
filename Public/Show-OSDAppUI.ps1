@@ -70,14 +70,21 @@ function Show-OSDAppUIRows {
         } -Descending:([bool]$sorting.Descending))
     }
 
+    if ($Key -eq 'Applications') { $State.RenderingApplications = $true }
     $view.BeginUpdate()
     try {
         $view.Items.Clear()
         foreach ($item in $rows) {
+            if ($Key -eq 'Applications' -and $State.ContainsKey('Draft')) {
+                $item.Checked = $State.Draft.Order.Contains((Get-OSDAppUISelectionKey -Application $item.Tag))
+            }
             [void]$view.Items.Add($item)
         }
     }
-    finally { $view.EndUpdate() }
+    finally {
+        $view.EndUpdate()
+        if ($Key -eq 'Applications') { $State.RenderingApplications = $false }
+    }
 }
 
 function Set-OSDAppUIListSort {
@@ -192,12 +199,13 @@ function Update-OSDAppUIReadOnlyView {
             [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
             [void]$item.SubItems.Add([string]$app.Architecture)
             [void]$item.SubItems.Add((Get-OSDAppUIAvailabilityLabel -Availability $app.Availability -Offline:$State.Offline))
-            [void]$item.SubItems.Add($(if ([string]$app.Id -in @($data.StagedApps.Id)) { 'Staged' } else { '-' }))
+            [void]$item.SubItems.Add($(if ((Get-OSDAppUISelectionKey $app) -in @($data.StagedApps | ForEach-Object { Get-OSDAppUISelectionKey $_ })) { 'Staged' } else { '-' }))
+            $item.Tag = $app
             $item
         }
         # Staged apps absent from the current catalog/cache remain visible.
         foreach ($app in @($data.StagedApps)) {
-            if ([string]$app.Id -in @($data.CatalogApps.Id)) { continue }
+            if ((Get-OSDAppUISelectionKey $app) -in @($data.CatalogApps | ForEach-Object { Get-OSDAppUISelectionKey $_ })) { continue }
             $displayInfo = Get-OSDAppUIDisplayInfo -Application $app -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
             $item = [System.Windows.Forms.ListViewItem]::new([string]$displayInfo.DisplayName)
             [void]$item.SubItems.Add($(if ($app.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
@@ -208,6 +216,7 @@ function Update-OSDAppUIReadOnlyView {
             [void]$item.SubItems.Add([string]$app.Architecture)
             [void]$item.SubItems.Add('Not in current catalog/cache')
             [void]$item.SubItems.Add('Staged')
+            $item.Tag = $app
             $item
         }
     )
@@ -310,7 +319,8 @@ function Show-OSDAppUI {
     <#
     .SYNOPSIS
     Read-only overview of staged OSDApps, built-in and repository catalog,
-    USB cache, and available log files. All staging and configuration stay CLI-only.
+    USB cache, and available log files, with an in-memory selection/configuration preview.
+    Preview choices never change device staging or cache.
     .EXAMPLE
     Show-OSDAppUI -Offline
     .EXAMPLE
@@ -337,7 +347,7 @@ function Show-OSDAppUI {
     catch {
         throw "Windows Forms is unavailable in this Windows/WinPE image: $($_.Exception.Message)"
     }
-    if ($script:OSDAppUIState) { throw 'OSDApps Viewer is already open.' }
+    if ($script:OSDAppUIState) { throw 'OSDApps is already open.' }
     if ($TestMode -and $PSBoundParameters.ContainsKey('WindowsPath')) {
         throw '-TestMode points to the existing isolated TEMP test folder. Do not also specify -WindowsPath.'
     }
@@ -374,7 +384,7 @@ function Show-OSDAppUI {
     }
 
     $form = [System.Windows.Forms.Form]::new()
-    $form.Text = 'OSDApps Viewer - Read-only'
+    $form.Text = 'OSDApps - Selection preview'
     $form.Size = [System.Drawing.Size]::new(980,710)
     $form.MinimumSize = [System.Drawing.Size]::new(800,580)
     $form.StartPosition = 'CenterScreen'
@@ -397,7 +407,7 @@ function Show-OSDAppUI {
     [void]$root.Controls.Add($header,0,0)
 
     $title = [System.Windows.Forms.Label]::new()
-    $title.Text = 'OSDApps Viewer'
+    $title.Text = 'OSDApps'
     $title.Font = [System.Drawing.Font]::new('Segoe UI',17,[System.Drawing.FontStyle]::Bold)
     $title.ForeColor = [System.Drawing.Color]::White
     $title.SetBounds(18,9,670,37)
@@ -405,13 +415,13 @@ function Show-OSDAppUI {
     $header.Controls.Add($title)
 
     $subtitle = [System.Windows.Forms.Label]::new()
-    $subtitle.Text = 'Deployment overview'
+    $subtitle.Text = 'Select, configure and inspect'
     $subtitle.ForeColor = [System.Drawing.Color]::Gainsboro
     $subtitle.SetBounds(20,49,560,23)
     $header.Controls.Add($subtitle)
 
     $readOnly = [System.Windows.Forms.Label]::new()
-    $readOnly.Text = 'Read-only'
+    $readOnly.Text = 'Preview only'
     $readOnly.ForeColor = [System.Drawing.Color]::White
     $readOnly.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
     $readOnly.SetBounds(811,22,110,28)
@@ -470,7 +480,7 @@ function Show-OSDAppUI {
     $catalogTab = [System.Windows.Forms.TabPage]::new('Apps')
     $cacheTab = [System.Windows.Forms.TabPage]::new('Cache')
     $logsTab = [System.Windows.Forms.TabPage]::new('Logs')
-    foreach ($tab in @($stagedTab,$catalogTab,$cacheTab,$logsTab)) { [void]$tabs.TabPages.Add($tab) }
+    foreach ($tab in @($catalogTab,$stagedTab,$cacheTab,$logsTab)) { [void]$tabs.TabPages.Add($tab) }
 
     $stagedLayout = [System.Windows.Forms.TableLayoutPanel]::new()
     $stagedLayout.Dock = 'Fill'
@@ -508,12 +518,14 @@ function Show-OSDAppUI {
 
     $catalogLayout = [System.Windows.Forms.TableLayoutPanel]::new()
     $catalogLayout.Dock = 'Fill'
-    $catalogLayout.RowCount = 2
+    $catalogLayout.RowCount = 4
     [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',38))
-    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',100))
+    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',45))
+    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',36))
+    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',55))
     $catalogTab.Controls.Add($catalogLayout)
     $catalogInfo = [System.Windows.Forms.Label]::new()
-    $catalogInfo.Text = 'Built-in and repository apps | Configure and stage using PowerShell CLI'
+    $catalogInfo.Text = 'Select built-in and repository apps or scripts. Configure a built-in before or after checking it.'
     $catalogInfo.Dock = 'Fill'
     $catalogInfo.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
     [void]$catalogLayout.Controls.Add($catalogInfo,0,0)
@@ -642,6 +654,8 @@ function Show-OSDAppUI {
         }
     }
 
+    Initialize-OSDAppUISelectionControls -State $script:OSDAppUIState -Layout $catalogLayout
+
     $stagedList.Add_SelectedIndexChanged({
         $state=$script:OSDAppUIState
         if (-not $state -or $state.StagedList.SelectedItems.Count -eq 0) { return }
@@ -712,6 +726,15 @@ function Show-OSDAppUI {
         }
     })
     $close.Add_Click({ $script:OSDAppUIState.Form.Close() })
+    $form.Add_FormClosing({
+        $state = $script:OSDAppUIState
+        if ($state -and $state.Draft.Order.Count -gt 0) {
+            $answer = [System.Windows.Forms.MessageBox]::Show($state.Form,
+                'Close and discard the selection preview? Nothing has been staged.',
+                'OSDApps','YesNo','Question')
+            if ($answer -ne [System.Windows.Forms.DialogResult]::Yes) { $_.Cancel = $true }
+        }
+    })
 
     try {
         try {

@@ -171,14 +171,14 @@
             Link = 'docs/getting-started.md'
         }
         'Show-OSDAppUI' = @{
-            Synopsis = 'Open the read-only OSDApps Viewer.'
-            Description = 'Displays staging, apps, cache and logs without changing manifest, cache or configuration. A configured repository is read unless Offline is supplied. Supported signatures are checked by default on full Windows. No app installation, staging or removal controls exist.'
+            Synopsis = 'Preview application selections and inspect OSDApps deployment state.'
+            Description = 'Select applications/scripts, configure built-ins and arrange an in-memory preview. Defaults come from the loaded cmdlets, not cache. Apply changes only the preview; closing discards it. Existing staging, cache and logs are inspected separately. No deployment, installation or cache writes are performed. A configured repository is read unless Offline is supplied. Supported signatures are checked by default on full Windows.'
             Environment = 'STA PowerShell with Windows Forms on full Windows or provisioned WinPE. Full Windows otherwise inspects its current system root.'
             Output = 'Interactive window, no deployment-result objects. Staged is not installed.'
             Parameters = @{
                 WindowsPath = 'Windows volume root to inspect, not its Windows subdirectory. Cannot combine with TestMode. WinPE otherwise discovers a target; full Windows uses its system drive.'
                 Offline = 'Skip repository lookup only. Optional, not required for read-only behavior, not a network detector; signature checks stay enabled.'
-                PreviewOnly = 'Legacy compatibility parameter. Viewer is always read-only; this does not add separate preview behavior.'
+                PreviewOnly = 'Legacy compatibility parameter. Selection is always an in-memory preview; this parameter does not enable staging or a separate mode.'
                 TestMode = 'Inspect the existing isolated TEMP\OSDApps-GUI-Staging-Test folder. Does not create it. Intended for full-Windows tests, not ordinary WinPE deployment.'
                 SkipSignatureVerification = 'Skip Viewer signature inspection, not deployment enforcement. Combine with Offline to suppress both catalog and signature requests by the Viewer.'
             }

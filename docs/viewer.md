@@ -1,8 +1,39 @@
-# OSDApps Viewer
+# OSDApps UI
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Troubleshooting](faq.md)
 
 OSDApps Viewer is the read-only interface opened by `Show-OSDAppUI`. It displays what the CLI has prepared: the device queue and configuration, built-in/repository apps, script packages, USB cache and existing logs. It does not add, remove, configure, download or install applications.
+
+## Selection and configuration preview (unreleased)
+
+The development version extends **the existing `Show-OSDAppUI` command**. PowerShell Gallery 0.43.0 still opens the read-only Viewer described below. Import the module from the reviewed source checkout to try this preview; no new release or exported cmdlet is introduced by this change.
+
+The **Apps** tab opens first. Check built-in applications or repository applications/scripts to create a selection in memory. Highlight a built-in and click **Configure selected...**; configuring an unchecked app does not select it. The configuration dialog has **Apply**, **Cancel** and **Reset defaults**. Defaults and supported choices come from the loaded built-in cmdlet, never from the USB cache. Repository packages retain their package-defined settings.
+
+For example, configure Microsoft 365 Apps with **MonthlyEnterprise**, **x64**, five languages (`nl-nl`, `en-us`, `de-de`, `fr-fr`, `es-es`), **Include Visio** and **Shared Computer Licensing**. Enter languages on separate lines; commas also work. Other supported built-ins expose their own options, including Firefox channel/language, Teams meeting add-in and Webex settings. Webex Outlook integration distinguishes **Vendor default**, **Enabled** and **Disabled**.
+
+An Office **Custom XML path** overrides the generated Office settings. Those controls are disabled while the path is populated. Apply checks that the file exists and is well-formed without editing it; this does not validate Office licensing or ODT's full configuration schema. Clear the path to use the generated settings again.
+
+The lower **Selection preview** lists the desired order and configuration summary. Select a row for the full summary, use **Move up / Move down**, configure again or remove it. Filtering, inventory sorting and Refresh preserve the draft. Unchecking an app retains its settings until the window closes. A removed item is added at the end when selected again.
+
+**Nothing is staged, downloaded, installed or written by these selection controls.** Apply changes only the in-memory preview. Existing manifests, cache and module configuration stay unchanged. Closing the window discards the preview and asks for confirmation when items are selected. There is no staging or export button in this first step.
+
+**Staged for device** remains a separate view of the actual manifest. The preview starts empty; it does not import or edit previously staged settings. Selecting an app already staged starts a new proposed configuration using cmdlet defaults. This separation also avoids presenting cached Office XML as newly chosen settings. Actual staging, dependency resolution and deployment validation will be added in a subsequent step after UI review.
+
+### Manual preview review
+
+On a development PC or in WinPE with the source module loaded, run `Show-OSDAppUI -Offline`. No deployment or reboot is needed.
+
+1. Check Office, Adobe Acrobat Unified and Google Chrome Enterprise.
+2. Configure Office as above, apply, and inspect the summary. Reopen it and cancel an edit; the prior values should remain.
+3. Move Chrome to the top. Search for Office, clear the search, sort the inventory and Refresh; the selection and desired order should remain.
+4. Uncheck and recheck Office; its configuration should remain, with Office appended to the selection.
+5. Inspect the existing **Staged for device**, **Cache** and **Logs** tabs. These remain inspection views.
+6. Close and confirm discarding the preview. Reopening starts an empty preview.
+
+The existing screenshots below show the released Viewer, not this unreleased preview. Native control tests run in Windows CI; a real WinPE screenshot/usability review is still required before the staging step.
+
+## Released Viewer (0.43.0)
 
 ## Where to run it
 
