@@ -10,7 +10,7 @@ Choose an example for the environment you are using. These are reference workflo
 | [Online WinPE deployment](WinPE-Online.md) | WinPE after OSDCloud has applied Windows | Loads the module from Gallery and stages apps with or without a USB flash drive; optional repository sync downloads packages. |
 | [WinPE launcher integration](Launcher-Integration.md) | WinPE, called by OSDT or another launcher | Loads from Gallery, stages the example queue and returns a checked exit code; the launcher owns the reboot. |
 | [Offline WinPE deployment](WinPE-Offline.md) | WinPE with complete matching cache and networking disconnected | Stages cached content and SetupComplete without repository refresh. |
-| [Build a repository package](#build-a-repository-package) | Full Windows authoring machine | Creates a package archive and local repository metadata. |
+| [Build a repository package](Build-Repository-Package.md) | Full Windows authoring machine | Creates a package archive and local repository metadata. |
 
 The deployment examples use x64 Microsoft 365 Apps (MonthlyEnterprise/en-us), Adobe Acrobat Unified and Google Chrome Enterprise. Preparation and staging select the same variants. The online example loads the module from Gallery and discovers an optional USB flash drive by label. The offline example loads the newest saved module from the USB flash drive and requires prepared content. Staging does not format disks or reboot automatically; the online guide shows a separate manual reboot command. Repository pruning appears only as a separate preview-and-confirm maintenance step.
 
@@ -18,56 +18,17 @@ Add other apps only after selecting their intended configuration. For example, m
 
 ## Build a repository package
 
-**Environment: full Windows, from the repository checkout root, with OSDApps loaded.** This example writes under `C:\OSDApps`; use a different authoring/output location as needed. It does not deploy an app to the machine.
+Follow [From Install.ps1 to a repository package](Build-Repository-Package.md)
+for a complete workflow on the Windows preparation machine:
 
-`PackageSource/ExampleApp/Install.ps1` is a layout placeholder that prints a message and exits 0. Replace it with the application's unattended installer logic and include the required payload before treating the package as a real deployment.
+1. Prepare your own unattended `Install.ps1` and supporting files.
+2. Build the ZIP, add package metadata and check validation results.
+3. Publish the static files and update the catalog last.
+4. Stage the application or script package in WinPE.
 
-```text
-PackageSource/ExampleApp/
-    Install.ps1
-    <installer payload>
-```
-
-Build the archive and publish it to a local repository directory:
-
-```powershell
-$ErrorActionPreference = 'Stop'
-Import-Module OSDApps
-
-New-OSDAppPackage `
-    -Id ExampleApp `
-    -Version 1.0.0 `
-    -SourcePath .\Examples\PackageSource\ExampleApp `
-    -OutputPath C:\OSDApps\Build\ExampleApp
-
-Add-OSDAppPackage `
-    -Id ExampleApp `
-    -DisplayName 'Example App' `
-    -Vendor 'Example Software' `
-    -Version 1.0.0 `
-    -Architecture x64 `
-    -PackageType Application `
-    -PackagePath C:\OSDApps\Build\ExampleApp\Package.zip `
-    -RepositoryPath C:\OSDApps\Repository
-
-Test-OSDAppRepository -RepositoryPath C:\OSDApps\Repository
-```
-
-`Vendor` is optional descriptive metadata, not an installer argument or trust assertion. Existing repository apps without it remain compatible. Publishing this local directory to your own hosting is a separate step; `Add-OSDAppPackage` is not an Azure upload command.
-
-For a configuration or debloat package, keep the same archive layout and use
-`-PackageType Script`. This is classification only: the script receives the
-same SHA-256 enforcement, staging, SYSTEM execution context and one-shot
-failure handling as an application package.
-
-The required archive layout is:
-
-```text
-Package.zip
-    Package/
-        Install.ps1
-        <installer payload>
-```
+The existing `PackageSource/ExampleApp/Install.ps1` file is only a layout
+placeholder that prints a message and exits 0. It does not install an application;
+replace it with your own logic before using it in a deployment.
 
 ## Repository template
 

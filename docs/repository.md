@@ -257,6 +257,8 @@ an otherwise usable deployment.
 
 ## Creating a repository
 
+For a complete walkthrough from your own `Install.ps1` to a published package, see [Build a repository package](../Examples/Build-Repository-Package.md).
+
 The complete structure may be created manually. OSDApps also includes convenience helpers.
 
 Create an empty repository:

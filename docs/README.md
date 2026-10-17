@@ -13,7 +13,7 @@ OSDApps is CLI-first. Use PowerShell to configure, cache and stage applications 
 | Deploy without network from prepared content | [Offline WinPE deployment](../Examples/WinPE-Offline.md) | WinPE and SetupComplete, with a complete matching cache |
 | Preflight staging and inspect cache, signatures and logs | [Getting started](getting-started.md#3-inspect-before-reboot) and [OSDApps Viewer](viewer.md) | WinPE or full Windows |
 | Audit or reconcile long-lived repository cache content | [Cache health and reconciliation](repository.md#cache-health-and-reconciliation) | Full Windows preparation or WinPE cache session |
-| Package your own application or machine-context script | [Repository examples](../Examples/README.md#build-a-repository-package) | Full Windows authoring machine |
+| Package your own application or machine-context script | [Package authoring walkthrough](../Examples/Build-Repository-Package.md) | Full Windows authoring machine |
 
 **Do not run deployment staging examples against your preparation machine's Windows drive.** Each example identifies its environment and what it changes. The Viewer is read-only; the Add and Sync commands are not.
 
