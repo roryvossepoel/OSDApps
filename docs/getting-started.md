@@ -183,4 +183,4 @@ With `CleanupMode OnSuccess`, the runtime schedules removal of temporary staging
 
 ## Next steps
 
-[Built-in configuration](built-in-apps.md) covers Office licensing flags, channels, language, Firefox variants and Webex options. [Repository apps and scripts](repository.md) explains organization-managed packages and optional Vendor metadata. [Viewer](viewer.md) explains the difference between staged, cached, version and signature information.
+[Built-in configuration](built-in-apps.md) covers Office licensing flags, channels, language, Firefox variants, Webex options and Zoom settings. [Repository apps and scripts](repository.md) explains organization-managed packages and optional Vendor metadata. [Viewer](viewer.md) explains the difference between staged, cached, version and signature information.
