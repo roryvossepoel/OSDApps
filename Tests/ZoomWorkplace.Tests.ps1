@@ -28,6 +28,23 @@ Describe 'Zoom Workplace built-in MSI integration' {
         (Test-Path -LiteralPath (Join-Path $script:moduleRoot 'metadata\icons\zoom.svg') -PathType Leaf) | Should -BeTrue
     }
 
+    It 'discovers the host Zoom cache and redirects generic Add to its built-in command' {
+        InModuleScope OSDApps {
+            $script:ZoomDiscoveryCache = Join-Path $TestDrive 'Discovery'
+            $entry = Join-Path $script:ZoomDiscoveryCache 'BuiltIn/ZoomWorkplace/arm64'
+            New-Item -ItemType Directory -Path $entry -Force | Out-Null
+            '{"Version":"7.2.1","Architecture":"arm64"}' | Set-Content -LiteralPath (Join-Path $entry 'CacheInfo.json')
+            Mock Get-OSDAppCachePath { $script:ZoomDiscoveryCache }
+            Mock Get-OSDAppHostArchitecture { 'arm64' }
+            $app = @(Get-OSDApp -Offline | Where-Object Id -eq 'ZoomWorkplace')
+            $app.Count | Should -Be 1
+            $app[0].Availability | Should -Be 'Cached'
+            $app[0].CachedVersion | Should -Be '7.2.1'
+            $app[0].Architecture | Should -Be 'arm64'
+            { Add-OSDApp -Name ZoomWorkplace } | Should -Throw '*Use Add-OSDAppZoomWorkplace instead*'
+        }
+    }
+
     It 'allows the public Add cmdlet to stage defaults without cached media' {
         InModuleScope OSDApps {
             $windows = Join-Path $TestDrive 'PublicAddWindows'

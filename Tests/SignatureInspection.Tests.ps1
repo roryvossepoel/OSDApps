@@ -25,7 +25,7 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
                 $result.File | Should -Be $msi
                 $result.Signer | Should -Be 'CN=Example Publisher'
             }
-            Should -Invoke Get-AuthenticodeSignature -Exactly 3 -ParameterFilter { $LiteralPath -eq $msi }
+            Should -Invoke Get-AuthenticodeSignature -Exactly 4 -ParameterFilter { $LiteralPath -eq $msi }
             (Get-FileHash -LiteralPath $msi -Algorithm SHA256).Hash | Should -Be $before
         }
     }

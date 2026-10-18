@@ -54,7 +54,7 @@ Describe 'Built-in cache version detection (read-only)' {
         }
     }
 
-    It 'routes Chrome, Webex and Firefox to MSI ProductVersion without installing software' {
+    It 'routes Chrome, Webex, Zoom and Firefox to MSI ProductVersion without installing software' {
         InModuleScope OSDApps {
             $cache = Join-Path $TestDrive 'Msi'
             New-Item -ItemType Directory -Path $cache -Force | Out-Null
@@ -65,7 +65,7 @@ Describe 'Built-in cache version detection (read-only)' {
                 $version.Version | Should -Be '155.0.999.0'
                 $version.VersionSource | Should -Be 'MsiProductVersion'
             }
-            Should -Invoke Get-OSDAppMsiProductVersion -Exactly 3
+            Should -Invoke Get-OSDAppMsiProductVersion -Exactly 4
         }
     }
 
