@@ -136,6 +136,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
             Mock Get-OSDAppConfiguration { [pscustomobject]@{CatalogUri=[uri]'https://example.org/catalog.json'} }
             Mock Get-OSDAppCachePath { throw 'No USB media attached' }
             Mock Get-OSDAppCatalogPackages { throw 'Should not query online' }
+            Mock Get-OSDAppHostArchitecture { 'x64' }
             @((Get-OSDApp -Offline) | Where-Object Source -eq 'BuiltIn').Count | Should -Be 6
             Should -Invoke Get-OSDAppCatalogPackages -Exactly 0
         }
@@ -410,8 +411,8 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
 
     It 'renders the compact Target, USB and Offline status in a single label' {
         $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
-        $source | Should -Match "form.Text = 'OSDApps Viewer - Read-only'"
-        $source | Should -Match "title.Text = 'OSDApps Viewer'"
+        $source | Should -Match "form.Text = 'OSDApps - Selection preview'"
+        $source | Should -Match "title.Text = 'OSDApps'"
         $source | Should -Match '\$contextStatus\.Text = "Target:'
         $source | Should -Match 'Target: \$\(\$State\.TargetKind\)\s+\|\s+USB: \$usbLabel\s+\|\s+\$\(\$State\.CatalogMode\)'
         $source | Should -Not -Match '\$targetStatus = \[System.Windows.Forms.Label\]'
