@@ -90,7 +90,15 @@ try {
         $cmd = $module.ExportedFunctions[$name]
         if (-not $cmd) { throw "Function $name is unavailable in the built module." }
         $defaults = @{}
-        foreach ($parameterAst in @($cmd.ScriptBlock.Ast.ParamBlock.Parameters)) {
+        $bodyAst = $cmd.ScriptBlock.Ast
+        if ($bodyAst -is [System.Management.Automation.Language.FunctionDefinitionAst]) {
+            $bodyAst = $bodyAst.Body
+        }
+        $parameterAsts = @()
+        if ($bodyAst -is [System.Management.Automation.Language.ScriptBlockAst] -and $bodyAst.ParamBlock) {
+            $parameterAsts = @($bodyAst.ParamBlock.Parameters)
+        }
+        foreach ($parameterAst in $parameterAsts) {
             if ($parameterAst.DefaultValue) {
                 $defaults[$parameterAst.Name.VariablePath.UserPath] = $parameterAst.DefaultValue.Extent.Text
             }
@@ -101,8 +109,8 @@ try {
                 if ($p.Name -notin $common -and -not $documented.ContainsKey($p.Name)) { $documented[$p.Name] = $p }
             }
         }
-        if ($spec.Parameters) {
-            foreach ($parameterName in $spec.Parameters.Keys) {
+        if ($spec['Parameters']) {
+            foreach ($parameterName in $spec['Parameters'].Keys) {
                 if (-not $documented.ContainsKey($parameterName)) { throw "Unknown help parameter $name/$parameterName." }
             }
         }
@@ -133,8 +141,8 @@ try {
         $writer.WriteStartElement('command','parameters',$commandNs)
         foreach ($parameterName in @($documented.Keys | Sort-Object)) {
             $p = $documented[$parameterName]
-            $description = if ($spec.Parameters -and $spec.Parameters.ContainsKey($parameterName)) {
-                [string]$spec.Parameters[$parameterName]
+            $description = if ($spec['Parameters'] -and $spec['Parameters'].ContainsKey($parameterName)) {
+                [string]$spec['Parameters'][$parameterName]
             } else { [string]$data.CommonParameters[$parameterName] }
             if ([string]::IsNullOrWhiteSpace($description)) { throw "No help for parameter $name/$parameterName." }
             $valid = @($cmd.Parameters[$parameterName].Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] })

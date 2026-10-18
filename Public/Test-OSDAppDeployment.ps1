@@ -151,7 +151,13 @@ function Test-OSDAppDeployment {
         return (Complete-DeploymentValidation -Manifest $null -Applications @() -OfflineReady $false -NetworkRequired $false -FreeSpaceGB $null)
     }
 
-    $apps = if ($manifest.PSObject.Properties.Name -contains 'Apps') { @($manifest.Apps | Where-Object { $null -ne $_ }) } else { @() }
+    # Capture the output of the conditional as an array. Arrays emitted inside
+    # an if branch are unrolled; a single PSCustomObject has no Count in PS 5.1.
+    $apps = @(
+        if ($manifest.PSObject.Properties.Name -contains 'Apps') {
+            $manifest.Apps | Where-Object { $null -ne $_ }
+        }
+    )
     $parsedDeploymentId = [guid]::Empty
     $deploymentIdValid = [guid]::TryParse([string]$manifest.DeploymentId, [ref]$parsedDeploymentId)
     Add-DeploymentCheck -Name 'DeploymentId' -Passed $deploymentIdValid -Required $true -Message $(
