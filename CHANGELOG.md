@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.44.0
+
+### Office cache compatibility
+
+- Check Office payload configuration compatibility before reusing cached content during staging or falling back after acquisition fails. Record payload configuration provenance separately from the requested installation configuration.
+- Keep one active Office cache generation. Changes to acquisition settings, such as architecture, channel, products or languages, require compatible content; an incompatible previous generation cannot satisfy the new request. Licensing-only settings outside the acquisition configuration do not require different payload content.
+- Continue attempting a fresh complete Office generation during online PreInstall. A validated replacement is promoted transactionally; failed acquisition preserves the old cache, but fallback is allowed only when its content is compatible with the requested configuration.
+- Document structural generation checks, configuration matching and their limits: these checks do not verify every Office payload file against a trusted hash or expected size.
+
+### Fixes and documentation
+
+- Accept valid single-application queues on Windows PowerShell 5.1 while continuing to reject empty, duplicate or invalid queues.
+- Build packaged help under inherited StrictMode and read parameter defaults from exported function bodies correctly.
+- Simplify the Gallery quick start, add a WinPE launcher example with an exit-code gate, expand repository package authoring and align documentation around USB flash drives and pre-OOBE execution.
+- Refresh workflow diagrams and aggregate Gallery downloads across versions. Align the Gallery module description with the README. No new public commands or GUI staging features are included.
+
+### Validation
+
+- The implementation candidate passed 369 tests on each of Windows PowerShell 5.1 and PowerShell 7, with zero failures or skipped tests and all 31 packaged help topics verified ([CI](https://github.com/roryvossepoel/OSDApps/actions/runs/39157805653)). Release preparation and publication validate their own source again.
+- Physical Office configuration checks and a single-Office deployment through OOBE passed on 18 October 2026: fresh acquisition, installer exit code 0, matching installed version and completed cleanup. See the [validation evidence](docs/testing.md#office-configuration-compatibility-and-deployment--18-october-2026) for tested commits and scope.
+
 ## 0.43.0
 
 - Add optional `-Architecture x64|arm64` to `Sync-OSDAppRepository` and `Get-OSDAppCacheHealth` for preparing and checking repository content for another target architecture.

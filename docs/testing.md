@@ -16,6 +16,27 @@ are listed separately because their evidence is less detailed.
 | Existing OSDCloud USB cache, offline | **Validated — 0.34.0 PC 2 (11 Oct 2026)** | LAN disconnected; six BuiltInRefreshSkipped events, five built-in signer/publisher checks and 8/8 successful installations. Earlier 0.30.0 six-app test also passed. |
 | No USB, offline | **Not yet validated** | Without complete staged content, affected apps cannot install; ordinary acquisition failures are recorded and independent entries may continue. |
 
+## Office configuration compatibility and deployment — 18 October 2026
+
+These checks used source builds still reporting module version `0.43.0`, prior
+to release preparation for `0.44.0`. Office staging/runtime came from merged
+commit `3c4a47c3443b72cb08ad3ba1df56b7004fb4adba`. The existing staging was
+revalidated with the corrected single-app validator at
+`ddb811ca499b3b38338918cf7c81f63e3aaf8a20`, without restaging or changing its manifest.
+
+| Check | Observed result |
+| --- | --- |
+| Preparation-PC configuration checks | Matching configuration accepted; changed language and added product rejected; licensing-only change accepted. Generation consistency passed. All 33 live cache files were unchanged by the read-only test. |
+| WinPE preflight | One Microsoft365Apps entry, x64, MonthlyEnterprise, nl-nl. All required checks passed, including offline readiness, compatible staged profile and matching runtime files. |
+| Windows acquisition | `AcquisitionOutcome=Downloaded`, no refresh error. PreInstall succeeded in 172.5 seconds. |
+| Installation | Office `16.0.20430.20180`, exit code 0. Registry version and Word, Excel, PowerPoint and Outlook file versions matched. One application succeeded; none failed or were skipped. |
+| Completion | Runner succeeded in 144 seconds; total Windows phases 316.5 seconds. Staging and the cleanup helper were removed. |
+
+The correlated deployment ID was `4c2be036-fc59-43af-b2f1-a376d5efa34b`.
+This validates the configuration decisions and a real online Office deployment;
+it is not a physical incompatible-configuration failure injection, a complete
+eight-app regression, or exhaustive verification of every cache payload file.
+
 ## OSDApps 0.43.0 Gallery and online deployment reports — 16 October 2026
 
 The operator reported the following checks while using the Gallery-based
