@@ -113,7 +113,7 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
             $officeVersionRoot = Join-Path $officeData $officeVersion
             New-Item -ItemType Directory -Path $windows,$office,$teams,$officeVersionRoot -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $office 'setup.exe') -Value 'setup' -Encoding Ascii
-            Set-Content -LiteralPath (Join-Path $office 'configuration.xml') -Value '<Configuration />' -Encoding Ascii
+            New-OSDAppOfficeConfiguration -Path (Join-Path $office 'configuration.xml')
             Set-Content -LiteralPath (Join-Path $officeVersionRoot 'stream.x64.x-none.dat') -Value 'payload' -Encoding Ascii
             Set-Content -LiteralPath (Join-Path $officeData 'v64.cab') -Value 'matching-cab' -Encoding Ascii
             Set-Content -LiteralPath (Join-Path $officeData "v64_$officeVersion.cab") -Value 'matching-cab' -Encoding Ascii

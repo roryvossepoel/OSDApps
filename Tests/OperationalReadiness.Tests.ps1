@@ -20,6 +20,7 @@ Describe 'Operational readiness and deployment results' {
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Enter-OSDAppCacheLock.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Assert-OSDAppTransactionSpace.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Test-OSDAppOfficeCacheCompatibility.ps1') -Destination $stage
 
             $archive = Join-Path $packageDirectory 'Package.zip'
             Set-Content -LiteralPath $archive -Value 'known package bytes' -Encoding ASCII

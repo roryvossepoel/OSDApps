@@ -393,7 +393,7 @@ OSDApps runs the Office Deployment Tool in download mode with the staged configu
 setup.exe /download configuration.xml
 ```
 
-ODT acquires the requested channel, architecture, products and languages into a new sibling directory. OSDApps does not seed that directory with the active Office data tree. It validates the complete candidate, including version-folder and CAB consistency, before switching the active directory. The previous generation is removed as a whole only after successful promotion; individual old Office files are not selectively pruned.
+ODT acquires the requested channel, architecture, products and languages into a new sibling directory. OSDApps does not seed that directory with the active Office data tree. After ODT reports a successful download, OSDApps checks the candidate's version-folder and CAB consistency before switching the active directory. These checks are described below; they are not a full verification of every payload file. The previous generation is removed as a whole only after successful promotion; individual old Office files are not selectively pruned.
 
 This also requires free space for the candidate alongside the current generation. See [transaction space checks](architecture.md#cache-transaction-space-checks).
 
@@ -405,6 +405,102 @@ Office\Data\<version>
 
 and records that value in `CacheInfo.json`. Comparing the version before and after the ODT run allows the log to report whether the cached Office build actually changed.
 
+### Office cache compatibility with deployment configuration
+
+Office generation integrity and configuration compatibility are separate checks.
+A valid version directory and matching CAB files do not establish that cached
+content was downloaded for the requested products, languages or channel.
+
+Before staging fallback content, OSDApps compares the selected XML with the
+cache's recorded download configuration. PreInstall repeats this check before
+USB restaging, offline use and failed-refresh fallback. The selected deployment
+XML is never replaced by the USB cache XML during PreInstall.
+
+- Architecture, channel, products, languages and the other `Add` settings must
+  match. The comparison is deliberately conservative: changed exclusions or
+  element order also require acquisition. It does not infer product/language
+  subset coverage from the files in `Office\Data`.
+- A pinned version must match the actual cached build. Without a pinned version,
+  an older compatible generation remains eligible for failed-refresh fallback.
+- Licensing, display and update settings outside `Add` do not change payload
+  eligibility. The deployment still uses its selected settings.
+- `SourcePath` is excluded from comparison because OSDApps manages the download
+  and local installation locations.
+- Dynamic languages such as `MatchOS`/`MatchInstalled`, conditional products,
+  implicit architecture/channel and other unresolved configuration cannot prove
+  offline compatibility. They require successful online acquisition.
+
+New cache metadata includes a `PayloadProfile` derived from the acquisition XML.
+Existing USB caches can use their original `configuration.xml`; staging records
+that profile alongside the copied payload without changing the USB cache.
+A legacy staged directory without this record is not trusted merely because its
+current XML matches: that file may already describe a different deployment.
+
+An incompatible cache is left intact. WinPE stages the requested configuration
+without copying unsuitable Office content and reports that online acquisition
+is required. Online refresh still uses a complete isolated generation. If it
+fails and no compatible staged fallback exists, PreInstall fails clearly and
+SetupComplete does not start the runner. Structural cache health remains a
+separate report; it does not promise compatibility with every future selection.
+
+Custom XML still receives the documented syntax check; the payload comparison
+additionally needs one `Add` element for the acquisition workflow.
+
+#### What is checked in the Office files?
+
+The configuration comparison is additional to physical generation checks. It
+does not replace them, and matching XML alone does not make a cache valid.
+
+| Check | What OSDApps verifies |
+| --- | --- |
+| Required paths | `setup.exe`, `configuration.xml` and `Office\Data` exist in the cache generation. |
+| Version layout | Exactly one numerically named Office version directory exists; its version must match an explicitly requested version when one is supplied. |
+| Payload presence | The active version directory contains files. The count is recorded, but is not compared with an expected inventory. |
+| CAB consistency | The architecture-specific shared CAB and active version-specific CAB both exist and have identical SHA-256 hashes. |
+| ODT executable | Separate signature checks validate Authenticode and the expected Microsoft publisher before OSDApps executes `setup.exe`. |
+| Download result | A candidate download must complete successfully before it can be validated and promoted. |
+| Configuration provenance | The recorded acquisition settings must be compatible with the requested deployment before existing content is accepted as fallback. |
+
+The two CAB hashes are compared with each other, not with an independently
+trusted Microsoft hash. Their equality establishes consistency between those
+two files; it does not prove that every Office data file is authentic or intact.
+OSDApps does not currently compare the payload against a complete expected file
+list, expected individual file sizes, a known total size, or hashes for every
+Office data file. A missing or damaged payload file can therefore escape these
+checks if the version directory remains nonempty. Reported cache sizes and
+free-space checks are not completeness checks.
+
+Configuration compatibility records what the content was acquired for. It does
+not independently inspect the Office files to prove product/language coverage
+or license entitlement. ODT performs acquisition and installation; passing the
+OSDApps checks is not a guarantee that a subsequent installation will succeed.
+
+#### One active Office cache: configuration changes
+
+The built-in maintains one active Office generation, not a collection of
+configuration-specific caches. A successful replacement is promoted as a whole;
+the previous generation is then removed as a whole. A failed acquisition or
+validation leaves the existing generation intact.
+
+| Requested change | Expected behavior |
+| --- | --- |
+| Dutch to German | The Dutch generation is incompatible. Acquire a new German generation; replace the active cache only after success. |
+| German back to Dutch | Acquire Dutch content again. The previous Dutch generation is not retained as a second cache. |
+| Add Visio, change channel or architecture | Existing content with different acquisition settings is incompatible and cannot serve as fallback. |
+| Multiple languages to a subset | Conservative matching still requires acquisition; OSDApps does not infer subset coverage. |
+| Only licensing, display or update settings outside `Add` change | Otherwise matching content remains eligible as fallback, and installation uses the selected deployment XML. |
+| Refresh fails with an incompatible cache | Preserve that cache, but do not install the requested configuration from it. Without a compatible staged fallback, PreInstall fails. |
+
+Online Office PreInstall currently attempts a fresh complete acquisition even
+when the configuration and cached build are unchanged. Compatibility makes
+existing content eligible for offline or failed-refresh fallback; it does not
+skip that online acquisition. A compatible older build is eligible for fallback
+unless a requested version pin excludes it.
+
+For multiple independently maintained Office configurations, use separate
+packages in your own repository and manage their upstream acquisition there.
+The built-in does not provide multiple retained configuration profiles.
+
 ### Choosing built-in Office or repository Office
 
 The Microsoft 365 Apps built-in deliberately favors freshness over the shortest possible deployment time.
@@ -412,7 +508,7 @@ The Microsoft 365 Apps built-in deliberately favors freshness over the shortest 
 During full Windows, OSDApps lets the Office Deployment Tool synchronize the configured Office source before installation:
 
 1. Run ODT `/download` into a new generation.
-2. Validate the complete candidate and promote it.
+2. Check the candidate's generation consistency and promote it.
 3. Stage that content locally for installation.
 
 If refresh fails, an acceptable previously staged fallback may still be used; the result records the refresh warning.

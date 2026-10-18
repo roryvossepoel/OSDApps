@@ -55,7 +55,7 @@ function Add-OSDAppMicrosoft365Apps {
         )
 
         if ($existingOfficeCache) {
-            if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'Microsoft365Apps' -Message 'Existing cache found; cached payload will be staged as fallback and refreshed during SetupComplete' }
+            if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'Microsoft365Apps' -Message 'Existing cache found; configuration compatibility will be checked before staging fallback content' }
         }
         else {
             if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Microsoft365Apps' -Message 'No existing cache found; cache will be created during SetupComplete' }
