@@ -14,6 +14,7 @@ Describe 'Per-deployment acquisition reporting' {
         if (-not $loop) { throw 'PreInstall application loop not found.' }
         $script:preparationLoop = [scriptblock]::Create($loop.Extent.Text)
         . (Join-Path $moduleRoot 'Runtime\Assert-OSDAppTransactionSpace.ps1')
+        . (Join-Path $moduleRoot 'Runtime\Test-OSDAppOfficeCacheCompatibility.ps1')
         $runnerAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'), [ref]$tokens, [ref]$errors)
         foreach ($name in @('Get-RunnerCacheInfo','New-RunnerApplicationResult','Write-RunnerResult')) {
             $definition = $runnerAst.Find({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $true)
@@ -94,10 +95,13 @@ Describe 'Per-deployment acquisition reporting' {
             else { Set-Content -LiteralPath $payload -Value fixture }
             if ($app.Id -eq 'Microsoft365Apps') {
                 New-TestOfficePayload -Root $root
-                Set-Content -LiteralPath (Join-Path $root 'configuration.xml') -Value '<Configuration><Add OfficeClientEdition="64"><Product ID="O365ProPlusRetail"><Language ID="en-us" /></Product></Add></Configuration>'
+                Set-Content -LiteralPath (Join-Path $root 'configuration.xml') -Value '<Configuration><Add OfficeClientEdition="64" Channel="Current"><Product ID="O365ProPlusRetail"><Language ID="en-us" /></Product></Add></Configuration>'
             }
-            @{ Id=$app.Id; Version='1.0.0.0'; Architecture='x64'; RemoteETag='old'; Updated=$true; Cached=$true } |
-                ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Encoding UTF8
+            $cacheInfo = @{ Id=$app.Id; Version='1.0.0.0'; Architecture='x64'; RemoteETag='old'; Updated=$true; Cached=$true }
+            if ($app.Id -eq 'Microsoft365Apps') {
+                $cacheInfo.PayloadProfile = Get-OSDAppOfficePayloadProfile -Path (Join-Path $root 'configuration.xml')
+            }
+            $cacheInfo | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Encoding UTF8
         }
     }
 
