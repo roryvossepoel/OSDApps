@@ -2,13 +2,23 @@ Describe 'Packaged help under inherited StrictMode' {
     It 'builds help and preserves parameter defaults with StrictMode enabled' {
         $root = Split-Path $PSScriptRoot -Parent
         $destination = Join-Path $TestDrive 'StrictHelp'
-        $result = & {
-            Set-StrictMode -Version Latest
-            & (Join-Path $root 'build\Build-Module.ps1') -OutputPath $destination
-        }
-        $built = @($result | Where-Object { $_.PSObject.Properties['Manifest'] })[-1]
+        # Build/import in a child process so the packaged module cannot leak
+        # into later Pester InModuleScope tests in this process.
+        $childScript = Join-Path $TestDrive 'Build-StrictHelp.ps1'
+        @'
+param([string]$Root, [string]$OutputPath)
+$ErrorActionPreference = 'Stop'
+& {
+    Set-StrictMode -Version Latest
+    & (Join-Path $Root 'build\Build-Module.ps1') -OutputPath $OutputPath | Out-Null
+}
+& (Join-Path $Root 'build\Test-PackagedHelp.ps1') -ModulePath (Join-Path $OutputPath 'OSDApps')
+'@ | Set-Content -LiteralPath $childScript -Encoding UTF8
+        $engine = (Get-Process -Id $PID).Path
+        & $engine -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $childScript -Root $root -OutputPath $destination
+        $LASTEXITCODE | Should -Be 0
+        $built = [pscustomobject]@{ Path = (Join-Path $destination 'OSDApps') }
         Test-Path -LiteralPath (Join-Path $built.Path 'OSDApps-help.xml') | Should -BeTrue
-        & (Join-Path $root 'build\Test-PackagedHelp.ps1') -ModulePath $built.Path
         [xml]$help = Get-Content -LiteralPath (Join-Path $built.Path 'OSDApps-help.xml') -Raw
         $ns = [Xml.XmlNamespaceManager]::new($help.NameTable)
         $ns.AddNamespace('command','http://schemas.microsoft.com/maml/dev/command/2004/10')
