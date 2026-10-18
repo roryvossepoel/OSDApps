@@ -16,6 +16,8 @@ function Add-OSDAppSetupComplete {
     $preInstallSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1'
     $lockSource = Join-Path $moduleRoot 'Runtime\Enter-OSDAppCacheLock.ps1'
     $spaceSource = Join-Path $moduleRoot 'Runtime\Assert-OSDAppTransactionSpace.ps1'
+    $officeCompatibilitySource = Join-Path $moduleRoot 'Runtime\Test-OSDAppOfficeCacheCompatibility.ps1'
+    if (-not (Test-Path -LiteralPath $officeCompatibilitySource -PathType Leaf)) { throw 'Office cache compatibility runtime was not found.' }
     $recoverySource = Join-Path $moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1'
 
     if (-not (Test-Path -LiteralPath $runnerSource -PathType Leaf)) {
@@ -44,6 +46,7 @@ function Add-OSDAppSetupComplete {
         Copy-Item -LiteralPath $preInstallSource -Destination (Join-Path $stagedRoot 'Invoke-OSDAppPreInstall.ps1') -Force
         Copy-Item -LiteralPath $lockSource -Destination (Join-Path $stagedRoot 'Enter-OSDAppCacheLock.ps1') -Force
         Copy-Item -LiteralPath $spaceSource -Destination (Join-Path $stagedRoot 'Assert-OSDAppTransactionSpace.ps1') -Force
+        Copy-Item -LiteralPath $officeCompatibilitySource -Destination (Join-Path $stagedRoot 'Test-OSDAppOfficeCacheCompatibility.ps1') -Force
         Copy-Item -LiteralPath $recoverySource -Destination (Join-Path $stagedRoot 'Restore-OSDAppCacheGeneration.ps1') -Force
     }
 

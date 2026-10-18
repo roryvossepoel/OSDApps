@@ -405,6 +405,49 @@ Office\Data\<version>
 
 and records that value in `CacheInfo.json`. Comparing the version before and after the ODT run allows the log to report whether the cached Office build actually changed.
 
+### Office cache compatibility with deployment configuration
+
+Office generation integrity and configuration compatibility are separate checks.
+A valid version directory and matching CAB files do not establish that cached
+content was downloaded for the requested products, languages or channel.
+
+Before staging fallback content, OSDApps compares the selected XML with the
+cache's recorded download configuration. PreInstall repeats this check before
+USB restaging, offline use and failed-refresh fallback. The selected deployment
+XML is never replaced by the USB cache XML during PreInstall.
+
+- Architecture, channel, products, languages and the other `Add` settings must
+  match. The comparison is deliberately conservative: changed exclusions or
+  element order also require acquisition. It does not infer product/language
+  subset coverage from the files in `Office\Data`.
+- A pinned version must match the actual cached build. Without a pinned version,
+  an older compatible generation remains eligible for failed-refresh fallback.
+- Licensing, display and update settings outside `Add` do not change payload
+  eligibility. The deployment still uses its selected settings.
+- `SourcePath` is excluded from comparison because OSDApps manages the download
+  and local installation locations.
+- Dynamic languages such as `MatchOS`/`MatchInstalled`, conditional products,
+  implicit architecture/channel and other unresolved configuration cannot prove
+  offline compatibility. They require successful online acquisition.
+
+New cache metadata includes a `PayloadProfile` derived from the acquisition XML.
+Existing USB caches can use their original `configuration.xml`; staging records
+that profile alongside the copied payload without changing the USB cache.
+A legacy staged directory without this record is not trusted merely because its
+current XML matches: that file may already describe a different deployment.
+
+An incompatible cache is left intact. WinPE stages the requested configuration
+without copying unsuitable Office content and reports that online acquisition
+is required. Online refresh still uses a complete isolated generation. If it
+fails and no compatible staged fallback exists, PreInstall fails clearly and
+SetupComplete does not start the runner. Structural cache health remains a
+separate report; it does not promise compatibility with every future selection.
+
+These checks validate configuration provenance, not every Office data file or
+license entitlement. ODT remains responsible for validating and installing its
+payload. Custom XML still receives the documented syntax check; the payload
+comparison additionally needs one `Add` element for the acquisition workflow.
+
 ### Choosing built-in Office or repository Office
 
 The Microsoft 365 Apps built-in deliberately favors freshness over the shortest possible deployment time.

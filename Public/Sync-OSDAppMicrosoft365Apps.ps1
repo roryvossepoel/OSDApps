@@ -73,6 +73,9 @@ function Sync-OSDAppMicrosoft365Apps {
             -ExcludeApp $ExcludeApp -IncludeVisio:$IncludeVisio -IncludeProject:$IncludeProject
     }
 
+    $payloadProfile = Get-OSDAppOfficePayloadProfile -Path $configPath
+    if ($payloadProfile.Architecture) { $Architecture = $payloadProfile.Architecture }
+
     $downloadConfigPath = Join-Path $transactionRoot 'download-configuration.xml'
     New-OSDAppOfficeDownloadConfiguration -SourcePath $configPath -DestinationPath $downloadConfigPath -DownloadRoot $transactionRoot
 
@@ -113,9 +116,10 @@ function Sync-OSDAppMicrosoft365Apps {
         SourcePolicy = 'Evergreen'
         SyncMethod = 'OfficeDeploymentTool'
         Updated = $true
-        Channel = $Channel
-        ProductId = $ProductId
-        Language = @($Language)
+        Channel = $payloadProfile.Channel
+        ProductId = @($payloadProfile.Products)[0]
+        Language = @($payloadProfile.Languages | Select-Object -Unique)
+        PayloadProfile = $payloadProfile
         AcceptEula = $AcceptEula
         SharedComputerLicensing = $SharedComputerLicensing
         DeviceBasedLicensing = $DeviceBasedLicensing
@@ -127,6 +131,7 @@ function Sync-OSDAppMicrosoft365Apps {
         SyncedAt = (Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
+    if ($payloadProfile.Version -match '^\d+\.\d+\.\d+\.\d+$' -and $resolvedVersion -ne $payloadProfile.Version) { throw 'Downloaded Office version does not match the requested version.' }
     Test-OSDAppOfficeCacheGeneration -OfficeRoot $transactionRoot -ExpectedVersion $resolvedVersion -Architecture $Architecture | Out-Null
     Remove-Item -LiteralPath $downloadConfigPath -Force
 
@@ -151,9 +156,9 @@ function Sync-OSDAppMicrosoft365Apps {
         ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop }
     $removedVersions = @()
 
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root; Channel = $Channel; Architecture = $Architecture; RemovedVersions=$removedVersions; SourcePolicy='Evergreen'; SyncMethod='OfficeDeploymentTool' }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root; Channel = $payloadProfile.Channel; Architecture = $Architecture; RemovedVersions=$removedVersions; SourcePolicy='Evergreen'; SyncMethod='OfficeDeploymentTool' }
 
-    [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id='Microsoft365Apps'; Version=$resolvedVersion; Architecture=$Architecture; Channel=$Channel; CachePath=$root; Cached=$true; RemovedVersions=$removedVersions }
+    [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id='Microsoft365Apps'; Version=$resolvedVersion; Architecture=$Architecture; Channel=$payloadProfile.Channel; CachePath=$root; Cached=$true; RemovedVersions=$removedVersions }
     }
     catch {
         if (Test-Path -LiteralPath $transactionRoot) { Remove-Item -LiteralPath $transactionRoot -Recurse -Force -ErrorAction SilentlyContinue }

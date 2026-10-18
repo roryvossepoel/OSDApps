@@ -57,18 +57,16 @@ function Add-OSDAppMicrosoft365AppsInternal {
     }
     New-Item -ItemType Directory -Path $destinationBuiltIn -Force | Out-Null
 
-    if ($cacheHasPayload) {
-        Copy-Item -Path (Join-Path $cacheRoot '*') -Destination $destinationBuiltIn -Recurse -Force
-    }
-
     $configPath = Join-Path $destinationBuiltIn 'configuration.xml'
 
+    $usedCachedConfiguration = $false
     if ($ConfigurationXml) {
         Test-OSDAppOfficeConfigurationXml -Path $ConfigurationXml | Out-Null
         Copy-Item -LiteralPath $ConfigurationXml -Destination $configPath -Force
     }
     elseif ($UseCachedConfiguration -and $cacheHasPayload -and (Test-Path -LiteralPath $cacheConfig -PathType Leaf)) {
         Copy-Item -LiteralPath $cacheConfig -Destination $configPath -Force
+        $usedCachedConfiguration = $true
     }
     else {
         if (-not $Language -or @($Language).Count -eq 0) { throw 'At least one Office language must be specified.' }
@@ -77,6 +75,27 @@ function Add-OSDAppMicrosoft365AppsInternal {
             -Language $Language -AcceptEula $AcceptEula -UpdatesEnabled $UpdatesEnabled `
             -SharedComputerLicensing $SharedComputerLicensing -DeviceBasedLicensing $DeviceBasedLicensing `
             -ExcludeApp $ExcludeApp -IncludeVisio:$IncludeVisio -IncludeProject:$IncludeProject
+    }
+
+    $payloadProfile = Get-OSDAppOfficePayloadProfile -Path $configPath
+    if ($payloadProfile.Architecture) { $Architecture = $payloadProfile.Architecture }
+    $compatibilityReasons = @()
+    if ($cacheHasPayload) {
+        $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $cacheRoot -ConfigurationPath $configPath -AllowLegacyConfiguration
+        $cacheHasPayload = $compatibility.Compatible
+        $compatibilityReasons = @($compatibility.Reasons)
+        if ($cacheHasPayload) {
+            # Preserve deployment intent; copy only payload and its provenance.
+            foreach ($name in @('setup.exe','Office')) {
+                Copy-Item -LiteralPath (Join-Path $cacheRoot $name) -Destination $destinationBuiltIn -Recurse -Force
+            }
+            $cacheInfo | Add-Member -NotePropertyName PayloadProfile -NotePropertyValue $compatibility.CachedProfile -Force
+            $cacheInfo | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $destinationBuiltIn 'CacheInfo.json') -Encoding UTF8
+        }
+        else {
+            Write-Warning ('Office cache does not match the requested configuration. Online acquisition is required. ' + ($compatibilityReasons -join ' '))
+        }
+        Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeCacheCompatibility' -Message 'Office cache compared with deployment configuration.' -Data @{ Compatible=$cacheHasPayload; Reasons=($compatibilityReasons -join ' ') }
     }
 
     if (Test-Path -LiteralPath $deviceManifestPath -PathType Leaf) {
@@ -95,17 +114,17 @@ function Add-OSDAppMicrosoft365AppsInternal {
         Setup = 'BuiltIn\Microsoft365Apps\setup.exe'
         Offline = $true
         Architecture = $Architecture
-        Channel = $Channel
-        ProductId = $ProductId
-        Language = @($Language)
+        Channel = $payloadProfile.Channel
+        ProductId = @($payloadProfile.Products)[0]
+        Language = @($payloadProfile.Languages | Select-Object -Unique)
         AcceptEula = $AcceptEula
         SharedComputerLicensing = $SharedComputerLicensing
         DeviceBasedLicensing = $DeviceBasedLicensing
         UpdatesEnabled = $UpdatesEnabled
-        IncludeVisio = [bool]$IncludeVisio
-        IncludeProject = [bool]$IncludeProject
+        IncludeVisio = 'visioproretail' -in $payloadProfile.Products
+        IncludeProject = 'projectproretail' -in $payloadProfile.Products
         ExcludeApp = @($ExcludeApp)
-        ConfigurationSource = if ($ConfigurationXml) { 'CustomXml' } else { 'Generated' }
+        ConfigurationSource = if ($ConfigurationXml) { 'CustomXml' } elseif ($usedCachedConfiguration) { 'Cache' } else { 'Generated' }
         OfficeDeploymentToolUri = $OfficeDeploymentToolUri
         CachePreferred = [bool]$CachePath
     }
@@ -126,5 +145,6 @@ function Add-OSDAppMicrosoft365AppsInternal {
         StagedPath=$destinationBuiltIn
         Source='BuiltIn'
         CacheAvailable=$cacheHasPayload
+        CacheCompatibilityReasons=@($compatibilityReasons)
     }
 }

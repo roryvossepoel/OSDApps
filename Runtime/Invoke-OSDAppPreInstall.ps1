@@ -6,6 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Enter-OSDAppCacheLock.ps1')
+. (Join-Path $PSScriptRoot 'Test-OSDAppOfficeCacheCompatibility.ps1')
 $cacheLock = $null
 . (Join-Path $PSScriptRoot 'Restore-OSDAppCacheGeneration.ps1')
 . (Join-Path $PSScriptRoot 'Assert-OSDAppTransactionSpace.ps1')
@@ -356,14 +357,30 @@ function Copy-OfficeConfigurationToCache {
 }
 
 function Test-LocalOfficeSource {
-    param([string]$Root)
+    param([string]$Root, [Parameter(Mandatory)][string]$ConfigurationPath, [switch]$AllowLegacyConfiguration)
     try{
         $cacheInfoPath=Join-Path $Root 'CacheInfo.json'
         if(-not(Test-Path -LiteralPath $cacheInfoPath -PathType Leaf)){return $false}
         $cacheInfo=Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8|ConvertFrom-Json
         Test-OfficeCacheGeneration -OfficeRoot $Root -ExpectedVersion ([string]$cacheInfo.Version) -Architecture $(if([string]$cacheInfo.Architecture -eq 'x86'){'x86'}else{'x64'})|Out-Null
-        return $true
+        $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $Root -ConfigurationPath $ConfigurationPath -AllowLegacyConfiguration:$AllowLegacyConfiguration
+        if (-not $compatibility.Compatible) {
+            Write-PreInstallLog -Event 'OfficeCacheIncompatible' -Level Warning -Message 'Office fallback does not match the requested configuration.' -Data @{ Id='Microsoft365Apps'; Reasons=($compatibility.Reasons -join ' ') }
+        }
+        return $compatibility.Compatible
     }catch{return $false}
+}
+
+function Copy-OfficeCachePayload {
+    param([string]$SourceRoot, [string]$DestinationRoot, [string]$ConfigurationPath)
+    $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $SourceRoot -ConfigurationPath $ConfigurationPath -AllowLegacyConfiguration
+    if (-not $compatibility.Compatible) { throw ('Office cache cannot satisfy this deployment. ' + ($compatibility.Reasons -join ' ')) }
+    # Never copy the cache XML over the selected deployment configuration.
+    Copy-Item -LiteralPath (Join-Path $SourceRoot 'setup.exe') -Destination (Join-Path $DestinationRoot 'setup.exe') -Force
+    Copy-DirectoryReplace -Source (Join-Path $SourceRoot 'Office') -Destination (Join-Path $DestinationRoot 'Office')
+    $info = Get-Content -LiteralPath (Join-Path $SourceRoot 'CacheInfo.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $info | Add-Member -NotePropertyName PayloadProfile -NotePropertyValue $compatibility.CachedProfile -Force
+    $info | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $DestinationRoot 'CacheInfo.json') -Encoding UTF8
 }
 
 function Test-LocalMicrosoftTeamsSource {
@@ -662,17 +679,17 @@ try {
                 $localConfig=Join-Path $localRoot 'configuration.xml'
                 if(-not (Test-Path -LiteralPath $localConfig -PathType Leaf)){throw 'Microsoft 365 Apps configuration.xml is missing from the staged deployment intent.'}
 
-                if($usbRoot -and -not (Test-LocalOfficeSource -Root $localRoot) -and (Test-LocalOfficeSource -Root $acquireRoot)){
-                    Copy-Item -LiteralPath (Join-Path $acquireRoot 'setup.exe') -Destination (Join-Path $localRoot 'setup.exe') -Force
-                    Copy-Item -LiteralPath (Join-Path $acquireRoot 'configuration.xml') -Destination $localConfig -Force
-                    if(Test-Path -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -PathType Leaf){Copy-Item -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
-                    Copy-DirectoryReplace -Source (Join-Path $acquireRoot 'Office') -Destination (Join-Path $localRoot 'Office')
+                $payloadProfile = Get-OSDAppOfficePayloadProfile -Path $localConfig
+                $officeArchitecture = if ($payloadProfile.Architecture) { $payloadProfile.Architecture } else { [string]$app.Architecture }
+
+                if($usbRoot -and -not (Test-LocalOfficeSource -Root $localRoot -ConfigurationPath $localConfig) -and (Test-LocalOfficeSource -Root $acquireRoot -ConfigurationPath $localConfig -AllowLegacyConfiguration)){
+                    Copy-OfficeCachePayload -SourceRoot $acquireRoot -DestinationRoot $localRoot -ConfigurationPath $localConfig
                     Write-PreInstallLog -Event 'BuiltInCacheRestaged' -Message 'Existing Microsoft 365 Apps USB cache was staged locally.' -Data @{Id='Microsoft365Apps'}
                 }
 
                 if(-not $networkAvailable){
-                    if(Test-LocalOfficeSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Set-PreInstallAcquisitionResult -Result $acquisition -Outcome OfflineCacheUsed;Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Office payload will be used.' -Data @{Id='Microsoft365Apps'}; continue}
-                    throw 'Microsoft 365 Apps has no staged or USB-cached payload and no network connection is available to acquire one.'
+                    if(Test-LocalOfficeSource -Root $localRoot -ConfigurationPath $localConfig){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Set-PreInstallAcquisitionResult -Result $acquisition -Outcome OfflineCacheUsed;Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Office payload will be used.' -Data @{Id='Microsoft365Apps'}; continue}
+                    throw 'Microsoft 365 Apps has no compatible staged or USB-cached payload for the requested configuration and no network connection is available to acquire one.'
                 }
 
                 $transactionRoot=$null;$backupRoot=$null
@@ -699,8 +716,9 @@ try {
                     if($process.ExitCode -ne 0){throw "Office Deployment Tool exited with code $($process.ExitCode)."}
                     $version=Get-OfficeCacheVersion -OfficeRoot $transactionRoot
                     if(-not $version){throw 'Office acquisition completed but Office\Data does not contain a resolvable version.'}
-                    Test-OfficeCacheGeneration -OfficeRoot $transactionRoot -ExpectedVersion $version -Architecture $app.Architecture | Out-Null
-                    $cacheInfo=[ordered]@{Id='Microsoft365Apps';Cached=[bool]$usbRoot;Version=$version;Architecture=$app.Architecture;Channel=$app.Channel;ProductId=$app.ProductId;Language=@($app.Language);SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';Updated=($previous -ne $version);SyncedAt=(Get-Date).ToUniversalTime().ToString('o')}
+                    if ($payloadProfile.Version -match '^\d+\.\d+\.\d+\.\d+$' -and $version -ne $payloadProfile.Version) { throw 'Downloaded Office version does not match the requested version.' }
+                    Test-OfficeCacheGeneration -OfficeRoot $transactionRoot -ExpectedVersion $version -Architecture $officeArchitecture | Out-Null
+                    $cacheInfo=[ordered]@{Id='Microsoft365Apps';Cached=[bool]$usbRoot;Version=$version;Architecture=$officeArchitecture;Channel=$payloadProfile.Channel;ProductId=@($payloadProfile.Products)[0];Language=@($payloadProfile.Languages | Select-Object -Unique);PayloadProfile=$payloadProfile;SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';Updated=($previous -ne $version);SyncedAt=(Get-Date).ToUniversalTime().ToString('o')}
                     $cacheInfoPath=Join-Path $transactionRoot 'CacheInfo.json';$cacheInfo|ConvertTo-Json -Depth 10|Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
                     Remove-Item -LiteralPath $downloadConfig -Force
                     $hadPrevious=Test-Path -LiteralPath $acquireRoot -PathType Container
@@ -722,8 +740,8 @@ try {
                 } catch {
                     if($transactionRoot -and (Test-Path -LiteralPath $transactionRoot)){Remove-Item -LiteralPath $transactionRoot -Recurse -Force -ErrorAction SilentlyContinue}
                     if($backupRoot -and (Test-Path -LiteralPath $backupRoot -PathType Container) -and -not(Test-Path -LiteralPath $acquireRoot)){Move-Item -LiteralPath $backupRoot -Destination $acquireRoot -ErrorAction SilentlyContinue}
-                    if(Test-LocalOfficeSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Set-PreInstallAcquisitionResult -Result $acquisition -Outcome FallbackCacheUsed -RefreshError $_;Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Microsoft365Apps';Fallback='ExistingStagedPayload'};continue}
-                    throw "Microsoft 365 Apps acquisition failed and no staged fallback is available. $($_.Exception.Message)"
+                    if(Test-LocalOfficeSource -Root $localRoot -ConfigurationPath $localConfig){Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe');Set-PreInstallAcquisitionResult -Result $acquisition -Outcome FallbackCacheUsed -RefreshError $_;Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Microsoft365Apps';Fallback='ExistingStagedPayload'};continue}
+                    throw "Microsoft 365 Apps acquisition failed and no compatible staged fallback is available for the requested configuration. $($_.Exception.Message)"
                 }
             }
             'MicrosoftTeams' {
