@@ -132,7 +132,7 @@ Describe 'Built-in recovery validation' {
 
     It 'validates the required layout and metadata for <Id>' -ForEach @(
         @{Id='Microsoft365Apps'}, @{Id='MicrosoftTeams'}, @{Id='GoogleChromeEnterprise'},
-        @{Id='MozillaFirefoxEnterprise'}, @{Id='CiscoWebex'}, @{Id='AdobeAcrobatUnified'}
+        @{Id='MozillaFirefoxEnterprise'}, @{Id='CiscoWebex'}, @{Id='ZoomWorkplace'}, @{Id='AdobeAcrobatUnified'}
     ) {
         $root = Join-Path $TestDrive $Id
         New-BuiltInRecoveryFixture -Root $root -Id $Id

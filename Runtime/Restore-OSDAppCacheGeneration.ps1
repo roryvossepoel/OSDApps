@@ -53,7 +53,7 @@ function Assert-OSDAppRecoverableBuiltInGeneration {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$Root,
-        [Parameter(Mandatory)][ValidateSet('Microsoft365Apps','MicrosoftTeams','GoogleChromeEnterprise','MozillaFirefoxEnterprise','CiscoWebex','AdobeAcrobatUnified')][string]$Id,
+        [Parameter(Mandatory)][ValidateSet('Microsoft365Apps','MicrosoftTeams','GoogleChromeEnterprise','MozillaFirefoxEnterprise','CiscoWebex','ZoomWorkplace','AdobeAcrobatUnified')][string]$Id,
         [Parameter(Mandatory)][scriptblock]$SignatureValidator,
         [Parameter(Mandatory)][scriptblock]$OfficeValidator,
         [Parameter(Mandatory)][scriptblock]$TeamsVersionReader

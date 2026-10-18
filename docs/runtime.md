@@ -210,7 +210,7 @@ Add-OSDAppAdobeAcrobatUnified -InstallTimeoutMinutes 20
 
 ## Vendor MSI built-ins
 
-Chrome Enterprise, Firefox Enterprise and Cisco Webex use the `VendorMsi` runtime type. The local MSI is installed through `msiexec.exe /i ... /qn /norestart`, with any validated built-in MSI properties appended.
+Chrome Enterprise, Firefox Enterprise, Cisco Webex and Zoom Workplace use the `VendorMsi` runtime type. The local MSI is installed through `msiexec.exe /i ... /qn /norestart`, with any validated built-in MSI properties appended.
 
 The generic MSI runner uses a 10-minute default installation timeout, logs waiting heartbeats, accepts exit codes `0` and `3010`, and retains source on failure. Review app-specific options before changing properties; the Viewer does not edit them.
 

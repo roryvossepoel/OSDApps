@@ -18,7 +18,7 @@ Describe 'Exclusive cache writers' {
             Mock Get-OSDAppCatalogPackages { [pscustomobject]@{SchemaVersion=1; GeneratedAt='test'; Packages=@()} }
             Mock Get-OSDAppRemoteFileMetadata { throw 'must not contact vendor while busy' }
             try {
-                foreach ($command in @('Sync-OSDAppMicrosoft365Apps','Sync-OSDAppMicrosoftTeams','Sync-OSDAppAdobeAcrobatUnified','Sync-OSDAppGoogleChromeEnterprise','Sync-OSDAppMozillaFirefoxEnterprise','Sync-OSDAppCiscoWebex','Sync-OSDAppRepository','Clear-OSDAppCache')) {
+                foreach ($command in @('Sync-OSDAppMicrosoft365Apps','Sync-OSDAppMicrosoftTeams','Sync-OSDAppAdobeAcrobatUnified','Sync-OSDAppGoogleChromeEnterprise','Sync-OSDAppMozillaFirefoxEnterprise','Sync-OSDAppCiscoWebex','Sync-OSDAppZoomWorkplace','Sync-OSDAppRepository','Clear-OSDAppCache')) {
                     { & $command -Confirm:$false } | Should -Throw '*Cannot acquire the OSDApps cache lock*'
                 }
                 (Get-FileHash -LiteralPath $catalog).Hash | Should -Be $hash
@@ -63,7 +63,7 @@ Describe 'Exclusive cache writers' {
             Mock Test-OSDAppWinPE { $false }
             Mock Get-OSDAppConfiguration { [pscustomobject]@{CatalogUri='https://example.invalid/catalog.json'} }
             Mock Enter-OSDAppCacheLock { throw 'preview must not lock' }
-            foreach ($command in @('Sync-OSDAppMicrosoft365Apps','Sync-OSDAppMicrosoftTeams','Sync-OSDAppAdobeAcrobatUnified','Sync-OSDAppGoogleChromeEnterprise','Sync-OSDAppMozillaFirefoxEnterprise','Sync-OSDAppCiscoWebex','Sync-OSDAppRepository','Clear-OSDAppCache')) {
+            foreach ($command in @('Sync-OSDAppMicrosoft365Apps','Sync-OSDAppMicrosoftTeams','Sync-OSDAppAdobeAcrobatUnified','Sync-OSDAppGoogleChromeEnterprise','Sync-OSDAppMozillaFirefoxEnterprise','Sync-OSDAppCiscoWebex','Sync-OSDAppZoomWorkplace','Sync-OSDAppRepository','Clear-OSDAppCache')) {
                 & $command -WhatIf | Out-Null
             }
             Should -Invoke Enter-OSDAppCacheLock -Exactly -Times 0

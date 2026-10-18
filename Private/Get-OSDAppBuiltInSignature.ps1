@@ -10,6 +10,7 @@ function Get-OSDAppExpectedPublisher {
         'MicrosoftTeams'           { 'Microsoft Corporation'; break }
         'GoogleChromeEnterprise'   { 'Google LLC'; break }
         'CiscoWebex'               { 'Cisco Systems, Inc.'; break }
+        'ZoomWorkplace'            { 'Zoom Communications, Inc.'; break }
         'MozillaFirefoxEnterprise' { 'Mozilla Corporation'; break }
         default                    { $null }
     }
@@ -72,6 +73,7 @@ function Get-OSDAppBuiltInSignature {
         'MicrosoftTeams'           { 'teamsbootstrapper.exe'; break }
         'GoogleChromeEnterprise'   { 'Package.msi'; break }
         'CiscoWebex'               { 'Package.msi'; break }
+        'ZoomWorkplace'            { 'Package.msi'; break }
         'MozillaFirefoxEnterprise' { 'Package.msi'; break }
         default                    { $null }
     }

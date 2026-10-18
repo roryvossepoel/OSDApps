@@ -132,6 +132,24 @@
       "CachePath": "BuiltIn/CiscoWebex/<architecture>",
       "RepositoryAlternative": true,
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/ciscowebex.svg"
+    },
+    {
+      "Id": "ZoomWorkplace",
+      "DisplayName": "Zoom Workplace",
+      "Source": "BuiltIn",
+      "Vendor": "Zoom",
+      "Acquisition": "VendorMsi",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppZoomWorkplace",
+      "SyncCommand": "Sync-OSDAppZoomWorkplace",
+      "Architectures": [
+        "x64",
+        "arm64"
+      ],
+      "DefaultArchitecture": "x64",
+      "CachePath": "BuiltIn/ZoomWorkplace/<architecture>",
+      "RepositoryAlternative": true,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/zoom.svg"
     }
   ]
 }

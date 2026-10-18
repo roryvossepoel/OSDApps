@@ -60,7 +60,7 @@ Describe 'Built-in cache version detection (read-only)' {
             New-Item -ItemType Directory -Path $cache -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $cache 'Package.msi') -Value 'test sentinel' -Encoding ASCII
             Mock Get-OSDAppMsiProductVersion { '155.0.999.0' }
-            foreach ($id in @('GoogleChromeEnterprise','CiscoWebex','MozillaFirefoxEnterprise')) {
+            foreach ($id in @('GoogleChromeEnterprise','CiscoWebex','ZoomWorkplace','MozillaFirefoxEnterprise')) {
                 $version = Get-OSDAppCachedPackageVersion -Id $id -CacheEntryPath $cache
                 $version.Version | Should -Be '155.0.999.0'
                 $version.VersionSource | Should -Be 'MsiProductVersion'

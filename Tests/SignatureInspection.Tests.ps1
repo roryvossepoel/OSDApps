@@ -18,7 +18,7 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
                     SignerCertificate=[pscustomobject]@{Subject='CN=Example Publisher'}
                 }
             }
-            foreach ($id in @('GoogleChromeEnterprise','CiscoWebex','MozillaFirefoxEnterprise')) {
+            foreach ($id in @('GoogleChromeEnterprise','CiscoWebex','ZoomWorkplace','MozillaFirefoxEnterprise')) {
                 $result = Get-OSDAppBuiltInSignature -Id $id -CacheEntryPath $dir
                 $result.Status | Should -Be 'Valid'
                 $result.Scope | Should -Be 'MSI package'

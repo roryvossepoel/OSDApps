@@ -287,6 +287,31 @@
             Examples = @(@{ Code = 'Add-OSDAppMozillaFirefoxEnterprise -Channel ESR -Architecture x64 -Language en-US -WindowsPath ''C:\'''; Remarks = 'Offline deployment requires the same ESR/x64/en-US variant prepared earlier.' })
             Link = 'docs/built-in-apps.md'
         }
+        'Add-OSDAppZoomWorkplace' = @{
+            Synopsis = 'Stage the Zoom Workplace machine-wide MSI and optional settings.'
+            Description = 'Stages cached content or acquisition intent. PreInstall verifies the Zoom publisher and refreshes transactionally; the existing MSI runner installs before OOBE. This is the standard Workplace client, not Zoom Rooms or VDI.'
+            Environment = 'WinPE after applying Windows, before first boot.'
+            Output = 'Staging summary; not installation proof.'
+            Parameters = @{
+                NoDesktopShortcut = 'Prevent the Zoom desktop shortcut by writing zNoDesktopShortCut=True. Omit to preserve the vendor default.'
+                SsoHost = 'Optional Zoom vanity host without scheme or path, passed as zSSOHost. Does not sign in a user.'
+                ZConfig = 'Hashtable of enforced Zoom settings. Boolean values become 1/0. Keys and command-line syntax are validated; vendor support and effective behavior require testing. No secrets.'
+                ZRecommend = 'Hashtable of recommended Zoom defaults that users may change. Same validation as ZConfig; enforced ZConfig takes precedence.'
+            }
+            Examples = @(
+                @{ Code = 'Add-OSDAppZoomWorkplace'; Remarks = 'Stage the x64 standard Workplace client with vendor defaults.' },
+                @{ Code = 'Add-OSDAppZoomWorkplace -NoDesktopShortcut -ZConfig @{ DisableZoomOnboarding = $true }'; Remarks = 'Disable the desktop shortcut and enforce the documented onboarding setting.' }
+            )
+            Link = 'docs/built-in-apps.md'
+        }
+        'Sync-OSDAppZoomWorkplace' = @{
+            Synopsis = 'Synchronize the Zoom Workplace MSI cache transactionally.'
+            Description = 'Downloads the standard Workplace MSI for the selected architecture and verifies its signature and Zoom publisher before promotion. Reuses a validated generation when remote metadata is unchanged. Does not install Zoom.'
+            Environment = 'Full Windows preparation machine; not WinPE.'
+            Output = 'Built-in cache summary with version, architecture and Updated.'
+            Examples = @(@{ Code = 'Sync-OSDAppZoomWorkplace -Architecture x64'; Remarks = 'Prepare the optional USB flash drive cache without installing Zoom.' })
+            Link = 'docs/built-in-apps.md'
+        }
         'Add-OSDAppCiscoWebex' = @{
             Synopsis = 'Stage Cisco Webex App MSI and per-machine settings.'
             Description = 'Stages Webex App, not separate Meetings/VDI bundles. Writes validated MSI options; SetupComplete installs after the Cisco publisher check. Sign-in hints require placeholders, not a fixed user email.'
