@@ -170,6 +170,135 @@ Describe 'OSDApps selection Windows Forms controls' -Skip:($env:OS -ne 'Windows_
             finally { $dialog.Dispose() }
         }
     }
+    It 'round-trips checked Office exclusions and resets all choices to cmdlet defaults' {
+        InModuleScope OSDApps {
+            $values = New-OSDAppUIConfiguration Microsoft365Apps
+            $values.ExcludeApp = @('Teams','OneDrive')
+            $entry = [pscustomobject]@{Id='Microsoft365Apps';DisplayName='Office';Configuration=$values}
+            $dialog = New-OSDAppUIConfigurationDialog $entry
+            try {
+                @($dialog.Tag.Tabs.TabPages.Text) | Should -Be @('Installation','Applications','Licensing','Advanced')
+                $control = $dialog.Tag.Inputs.ExcludeApp
+                $control | Should -BeOfType ([System.Windows.Forms.CheckedListBox])
+                @($control.CheckedItems) | Should -Contain 'Teams'
+                @($control.CheckedItems) | Should -Contain 'OneDrive'
+                Save-OSDAppUIConfigurationDialog $dialog
+                $dialog.Tag.Error.Text | Should -Be ''
+                @($dialog.Tag.Result.ExcludeApp) | Should -HaveCount 2
+                Set-OSDAppUIConfigurationControls $dialog (New-OSDAppUIConfiguration Microsoft365Apps)
+                @($control.CheckedItems) | Should -HaveCount 0
+                Save-OSDAppUIConfigurationDialog $dialog
+                @($dialog.Tag.Result.ExcludeApp) | Should -HaveCount 0
+                $entry.Configuration.ExcludeApp | Should -Be @('Teams','OneDrive')
+            }
+            finally { $dialog.Dispose() }
+        }
+    }
+    It 'updates Office XML mode only after accepting the file picker' {
+        InModuleScope OSDApps {
+            $entry = [pscustomobject]@{Id='Microsoft365Apps';DisplayName='Office';Configuration=(New-OSDAppUIConfiguration Microsoft365Apps)}
+            $dialog = New-OSDAppUIConfigurationDialog $entry
+            $picker = New-OSDAppUIXmlFilePicker
+            try {
+                $picker.CheckFileExists | Should -BeTrue
+                $picker.RestoreDirectory | Should -BeTrue
+                $picker.Multiselect | Should -BeFalse
+                $script:XmlPickerFixture = [pscustomobject]@{FileName='C:\Example\Office.xml'; Accepted=$false; Disposed=$false}
+                $script:XmlPickerFixture | Add-Member ScriptMethod ShowDialog {
+                    param($Owner)
+                    if ($this.Accepted) { return [System.Windows.Forms.DialogResult]::OK }
+                    return [System.Windows.Forms.DialogResult]::Cancel
+                }
+                $script:XmlPickerFixture | Add-Member ScriptMethod Dispose { $this.Disposed=$true }
+                Mock New-OSDAppUIXmlFilePicker { $script:XmlPickerFixture }
+                Select-OSDAppUIOfficeXml $dialog
+                $dialog.Tag.Inputs.ConfigurationXml.Text | Should -Be ''
+                $dialog.Tag.Inputs.Language.Enabled | Should -BeTrue
+                $script:XmlPickerFixture.Accepted = $true
+                Select-OSDAppUIOfficeXml $dialog
+                $dialog.Tag.Inputs.ConfigurationXml.Text | Should -Be 'C:\Example\Office.xml'
+                $dialog.Tag.Inputs.Language.Enabled | Should -BeFalse
+                $dialog.Tag.Inputs.ExcludeApp.Enabled | Should -BeFalse
+                $dialog.Tag.Inputs.SharedComputerLicensing.Enabled | Should -BeFalse
+                $dialog.Tag.Notice.Text | Should -Match 'Custom XML is selected'
+                $script:XmlPickerFixture.Disposed | Should -BeTrue
+            }
+            finally { $picker.Dispose(); $dialog.Dispose(); Remove-Variable XmlPickerFixture -Scope Script -ErrorAction SilentlyContinue }
+        }
+    }
+    It 'keeps five preview rows visible at the default window size and captures native layout evidence' {
+        InModuleScope OSDApps {
+            Mock Test-OSDAppWinPE { $false }
+            Mock Get-OSDAppConfiguration { [pscustomobject]@{CatalogUri=$null} }
+            Mock Get-OSDAppUIReadOnlySnapshot {
+                [pscustomobject]@{
+                    StagedApps=@(); CacheEntries=@(); Logs=@(); CachePath=$null; SetupCompleteExists=$false
+                    CatalogApps=@(Get-OSDAppUIBuiltInMetadata | ForEach-Object {
+                        [pscustomobject]@{Id=$_.Id;Source='BuiltIn';DisplayName=$_.DisplayName;Vendor=$_.Vendor;Architecture='x64';Availability='Available'}
+                    })
+                }
+            }
+            $script:OSDAppUIPreviewEvidence = @{Error=''; LastRowBottom=0; AvailableHeight=0; Completed=$false}
+            $timer = [System.Windows.Forms.Timer]::new()
+            $timer.Interval = 250
+            $timer.Add_Tick({
+                $this.Stop()
+                $state = $script:OSDAppUIState
+                try {
+                    for ($i=0; $i -lt 5; $i++) { $state.CatalogList.Items[$i].Checked=$true }
+                    $office = $state.Draft.Entries['BuiltIn:Microsoft365Apps']
+                    $office.Configuration.Language = @('nl-nl','en-us','de-de','fr-fr','es-es')
+                    $office.Configuration.IncludeVisio = $true
+                    $office.Configuration.SharedComputerLicensing = $true
+                    $office.Configuration.ExcludeApp = @('Teams','OneDrive')
+                    Update-OSDAppUISelectionPreview $state
+                    $state.SelectionList.Items[3].Selected=$true
+                    $state.Form.PerformLayout()
+                    [System.Windows.Forms.Application]::DoEvents()
+                    $script:OSDAppUIPreviewEvidence.LastRowBottom=$state.SelectionList.Items[4].Bounds.Bottom
+                    $script:OSDAppUIPreviewEvidence.AvailableHeight=$state.SelectionList.ClientSize.Height - [System.Windows.Forms.SystemInformation]::HorizontalScrollBarHeight
+                    $directory = Join-Path (Get-Module OSDApps).ModuleBase 'TestResults'
+                    New-Item -ItemType Directory -Path $directory -Force | Out-Null
+                    $bitmap = [System.Drawing.Bitmap]::new($state.Form.Width,$state.Form.Height)
+                    try {
+                        $state.Form.DrawToBitmap($bitmap,[System.Drawing.Rectangle]::new(0,0,$bitmap.Width,$bitmap.Height))
+                        $bitmap.Save((Join-Path $directory 'UI-Selection.png'),[System.Drawing.Imaging.ImageFormat]::Png)
+                    }
+                    finally { $bitmap.Dispose() }
+                    $dialog = New-OSDAppUIConfigurationDialog $office
+                    try {
+                        $dialog.Show($state.Form)
+                        foreach ($tabIndex in @(0,1,2,3)) {
+                            $dialog.Tag.Tabs.SelectedIndex = $tabIndex
+                            [System.Windows.Forms.Application]::DoEvents()
+                            $bitmap = [System.Drawing.Bitmap]::new($dialog.Width,$dialog.Height)
+                            try {
+                                $dialog.DrawToBitmap($bitmap,[System.Drawing.Rectangle]::new(0,0,$bitmap.Width,$bitmap.Height))
+                                $bitmap.Save((Join-Path $directory "UI-Office-$tabIndex.png"),[System.Drawing.Imaging.ImageFormat]::Png)
+                            }
+                            finally { $bitmap.Dispose() }
+                        }
+                    }
+                    finally { $dialog.Dispose() }
+                    $script:OSDAppUIPreviewEvidence.Completed=$true
+                }
+                catch { $script:OSDAppUIPreviewEvidence.Error=$_.ToString() + ' ' + $_.ScriptStackTrace }
+                finally {
+                    $state.Draft.Order.Clear()
+                    $state.Form.Close()
+                }
+            })
+            try {
+                $timer.Start()
+                Show-OSDAppUI -TestMode -Offline -SkipSignatureVerification
+                $script:OSDAppUIPreviewEvidence.Error | Should -Be ''
+                $script:OSDAppUIPreviewEvidence.Completed | Should -BeTrue
+                $script:OSDAppUIPreviewEvidence.LastRowBottom | Should -BeGreaterThan 0
+                $script:OSDAppUIPreviewEvidence.LastRowBottom | Should -BeLessOrEqual $script:OSDAppUIPreviewEvidence.AvailableHeight
+            }
+            finally { $timer.Stop(); $timer.Dispose(); Remove-Variable OSDAppUIPreviewEvidence -Scope Script -ErrorAction SilentlyContinue }
+        }
+    }
     It 'preserves checked items and desired order across search, sorting and inventory reconstruction' {
         InModuleScope OSDApps {
             $form = [System.Windows.Forms.Form]::new()

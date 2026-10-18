@@ -24,8 +24,10 @@ function Get-OSDAppUIConfigurationFields {
         if ($sets.Count) { $choices = @($sets[0].ValidValues) }
         $label = $name -creplace '([a-z])([A-Z])','$1 $2'
         if ($name -eq 'Language' -and $metadata.ParameterType -eq [string[]]) { $label = 'Languages (one per line)' }
-        if ($name -eq 'ExcludeApp') { $label = 'Exclude apps (one per line)' }
+        if ($name -eq 'ExcludeApp') { $label = 'Exclude apps (checked = excluded)' }
         if ($name -eq 'AdditionalMsiProperties') { $label = 'Additional MSI properties (one per line)' }
+        if ($name -eq 'AcceptEula') { $label = 'Accept EULA' }
+        if ($name -eq 'OfficeDeploymentToolUri') { $label = 'Office Deployment Tool URL' }
         if ($name -eq 'ConfigurationXml') { $label = 'Custom XML path (optional)' }
         [pscustomobject]@{
             Name=$name; Label=$label; Type=$metadata.ParameterType; Default=$default

@@ -3,7 +3,12 @@ function Set-OSDAppUIConfigurationControls {
     foreach ($field in $Dialog.Tag.Fields) {
         $control = $Dialog.Tag.Inputs[$field.Name]
         $value = $Values[$field.Name]
-        if ($control -is [System.Windows.Forms.CheckBox]) { $control.Checked = [bool]$value }
+        if ($control -is [System.Windows.Forms.CheckedListBox]) {
+            for ($index = 0; $index -lt $control.Items.Count; $index++) {
+                $control.SetItemChecked($index, ([string]$control.Items[$index] -in @($value)))
+            }
+        }
+        elseif ($control -is [System.Windows.Forms.CheckBox]) { $control.Checked = [bool]$value }
         elseif ($field.Type -eq [Nullable[bool]]) {
             $control.SelectedIndex = if ($null -eq $value) { 0 } elseif ($value) { 1 } else { 2 }
         }
@@ -19,6 +24,11 @@ function Update-OSDAppUIOfficeMode {
     param([Parameter(Mandatory)]$Dialog)
     if ($Dialog.Tag.Id -ne 'Microsoft365Apps') { return }
     $custom = -not [string]::IsNullOrWhiteSpace($Dialog.Tag.Inputs.ConfigurationXml.Text)
+    $Dialog.Tag.Notice.Text = if ($custom) {
+        'Custom XML is selected. Installation, Applications and Licensing options are ignored. Apply updates the preview only.'
+    } else {
+        'Choose your Office settings. Defaults come from the built-in command. Apply updates the preview only.'
+    }
     foreach ($field in $Dialog.Tag.Fields) {
         if ($field.Name -notin @('ConfigurationXml','OfficeDeploymentToolUri')) {
             $Dialog.Tag.Inputs[$field.Name].Enabled = -not $custom
@@ -32,7 +42,10 @@ function Save-OSDAppUIConfigurationDialog {
         $values = @{}
         foreach ($field in $Dialog.Tag.Fields) {
             $control = $Dialog.Tag.Inputs[$field.Name]
-            if ($control -is [System.Windows.Forms.CheckBox]) { $values[$field.Name] = $control.Checked }
+            if ($control -is [System.Windows.Forms.CheckedListBox]) {
+                $values[$field.Name] = @($control.CheckedItems | ForEach-Object { [string]$_ })
+            }
+            elseif ($control -is [System.Windows.Forms.CheckBox]) { $values[$field.Name] = $control.Checked }
             elseif ($field.Type -eq [Nullable[bool]]) {
                 $values[$field.Name] = if ($control.SelectedIndex -eq 0) { $null } else { $control.SelectedIndex -eq 1 }
             }
@@ -62,38 +75,53 @@ function New-OSDAppUIConfigurationDialog {
     $dialog.Font = [System.Drawing.Font]::new('Segoe UI',9)
     $layout = [System.Windows.Forms.TableLayoutPanel]::new()
     $layout.Dock = 'Fill'; $layout.RowCount = 4
-    [void]$layout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',65))
+    [void]$layout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',52))
     [void]$layout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',100))
-    [void]$layout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',65))
+    [void]$layout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',52))
     [void]$layout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',42))
     $dialog.Controls.Add($layout)
     $notice = [System.Windows.Forms.Label]::new()
     $notice.Dock = 'Fill'; $notice.Padding = [System.Windows.Forms.Padding]::new(10)
-    $notice.Text = 'New selection settings start with cmdlet defaults. Cache and existing staging do not determine these choices. Apply updates this preview only.'
-    if ($Entry.Id -eq 'Microsoft365Apps') {
-        $notice.Text += ' A custom XML file replaces the generated Office settings below.'
-    }
+    $notice.Text = 'Configure this selection. Settings start with the built-in defaults. Apply updates the preview only.'
     $layout.Controls.Add($notice,0,0)
-    $scroll = [System.Windows.Forms.Panel]::new()
-    $scroll.Dock = 'Fill'; $scroll.AutoScroll = $true
-    $layout.Controls.Add($scroll,0,1)
+    $tabs = [System.Windows.Forms.TabControl]::new()
+    $tabs.Dock = 'Fill'
+    $layout.Controls.Add($tabs,0,1)
     $fields = @(Get-OSDAppUIConfigurationFields -Id $Entry.Id)
-    $table = [System.Windows.Forms.TableLayoutPanel]::new()
-    $table.Dock = 'Top'; $table.AutoSize = $true; $table.ColumnCount = 2; $table.RowCount = $fields.Count
-    [void]$table.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',43))
-    [void]$table.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',57))
-    $scroll.Controls.Add($table)
+    $sections = if ($Entry.Id -eq 'Microsoft365Apps') {
+        @('Installation','Applications','Licensing','Advanced')
+    } else { @('Settings','Advanced') }
+    $tables = @{}
+    foreach ($section in $sections) {
+        $page = [System.Windows.Forms.TabPage]::new($section)
+        $page.AutoScroll = $true
+        [void]$tabs.TabPages.Add($page)
+        $table = [System.Windows.Forms.TableLayoutPanel]::new()
+        $table.Dock = 'Top'; $table.AutoSize = $true; $table.ColumnCount = 2; $table.RowCount = 0
+        [void]$table.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',40))
+        [void]$table.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',60))
+        $page.Controls.Add($table)
+        $tables[$section] = $table
+    }
     $inputs = @{}
-    $row = 0
     foreach ($field in $fields) {
+        $section = Get-OSDAppUIConfigurationSection -Id $Entry.Id -Name $field.Name
+        $table = $tables[$section]
+        $row = $table.RowCount
+        $table.RowCount++
         $label = [System.Windows.Forms.Label]::new()
         $label.Text = $field.Label; $label.Dock = 'Fill'; $label.TextAlign = 'MiddleLeft'
         $label.Padding = [System.Windows.Forms.Padding]::new(8,0,0,0)
-        $height = if ($field.Type -eq [string[]]) { 80 } else { 38 }
+        $height = if ($field.Name -eq 'ExcludeApp') { 250 } elseif ($field.Type -eq [string[]]) { 100 } else { 40 }
         [void]$table.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',$height))
         $table.Controls.Add($label,0,$row)
-        if ($field.Type -in @([bool],[switch])) { $control = [System.Windows.Forms.CheckBox]::new() }
-        elseif ($field.Type -eq [Nullable[bool]] -or ($field.Choices.Count -gt 0 -and $field.Type -ne [string[]])) {
+        if ($field.Type -eq [string[]] -and $field.Choices.Count -gt 0) {
+            $control = [System.Windows.Forms.CheckedListBox]::new()
+            $control.CheckOnClick = $true; $control.IntegralHeight = $false
+            $control.Items.AddRange([object[]]$field.Choices)
+        }
+        elseif ($field.Type -in @([bool],[switch])) { $control = [System.Windows.Forms.CheckBox]::new() }
+        elseif ($field.Type -eq [Nullable[bool]] -or $field.Choices.Count -gt 0) {
             $control = [System.Windows.Forms.ComboBox]::new()
             $control.DropDownStyle = 'DropDownList'
             if ($field.Type -eq [Nullable[bool]]) { $control.Items.AddRange([object[]]@('Vendor default','Enabled','Disabled')) }
@@ -107,9 +135,23 @@ function New-OSDAppUIConfigurationDialog {
             if ($field.Type -eq [string[]]) { $control.Multiline = $true; $control.ScrollBars = 'Vertical' }
         }
         $control.Name = $field.Name; $control.Dock = 'Fill'; $control.Margin = [System.Windows.Forms.Padding]::new(4,6,12,4)
-        $table.Controls.Add($control,1,$row)
+        if ($field.Name -eq 'ConfigurationXml') {
+            $pathLayout = [System.Windows.Forms.TableLayoutPanel]::new()
+            $pathLayout.Dock = 'Fill'; $pathLayout.ColumnCount = 2; $pathLayout.RowCount = 1
+            $pathLayout.Margin = [System.Windows.Forms.Padding]::new(4,6,12,4)
+            [void]$pathLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',100))
+            [void]$pathLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Absolute',85))
+            $control.Margin = [System.Windows.Forms.Padding]::new(0,2,4,0)
+            $pathLayout.Controls.Add($control,0,0)
+            $browse = [System.Windows.Forms.Button]::new()
+            $browse.Text = 'Browse...'; $browse.Name = 'BrowseXml'; $browse.Dock = 'Fill'
+            $browse.Margin = [System.Windows.Forms.Padding]::new(0)
+            $browse.Add_Click({ Select-OSDAppUIOfficeXml -Dialog $this.FindForm() })
+            $pathLayout.Controls.Add($browse,1,0)
+            $table.Controls.Add($pathLayout,1,$row)
+        }
+        else { $table.Controls.Add($control,1,$row) }
         $inputs[$field.Name] = $control
-        $row++
     }
     $errorLabel = [System.Windows.Forms.Label]::new()
     $errorLabel.Dock = 'Fill'; $errorLabel.ForeColor = [System.Drawing.Color]::Firebrick
@@ -128,7 +170,7 @@ function New-OSDAppUIConfigurationDialog {
     $reset.Text = 'Reset defaults'; $reset.Width = 120
     $buttons.Controls.Add($reset)
     $dialog.CancelButton = $cancel
-    $dialog.Tag = @{Id=$Entry.Id; Fields=$fields; Inputs=$inputs; Error=$errorLabel; Result=$null}
+    $dialog.Tag = @{Id=$Entry.Id; Fields=$fields; Inputs=$inputs; Error=$errorLabel; Result=$null; Tabs=$tabs; Notice=$notice}
     $apply.Add_Click({ Save-OSDAppUIConfigurationDialog -Dialog $this.FindForm() })
     $reset.Add_Click({
         $window = $this.FindForm()
@@ -211,10 +253,10 @@ function Initialize-OSDAppUISelectionControls {
     $Layout.Controls.Add($toolbar,0,2)
     $preview = [System.Windows.Forms.TableLayoutPanel]::new()
     $preview.Dock = 'Fill'; $preview.RowCount = 4
-    [void]$preview.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',28))
+    [void]$preview.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',24))
     [void]$preview.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',100))
+    [void]$preview.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',32))
     [void]$preview.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',36))
-    [void]$preview.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',58))
     $Layout.Controls.Add($preview,0,3)
     $info = [System.Windows.Forms.Label]::new(); $info.Dock = 'Fill'; $info.TextAlign = 'MiddleLeft'
     $preview.Controls.Add($info,0,0); $State.SelectionInfo = $info
@@ -284,4 +326,34 @@ function Initialize-OSDAppUISelectionControls {
         Show-OSDAppUIEntryConfiguration -State $state -Entry $state.Draft.Entries[$key]
     })
     Update-OSDAppUISelectionPreview -State $State
+}
+
+function Get-OSDAppUIConfigurationSection {
+    param([Parameter(Mandatory)][string]$Id, [Parameter(Mandatory)][string]$Name)
+    if ($Name -match 'Uri$' -or $Name -eq 'ConfigurationXml') { return 'Advanced' }
+    if ($Id -ne 'Microsoft365Apps') { return 'Settings' }
+    if ($Name -in @('AcceptEula','SharedComputerLicensing','DeviceBasedLicensing')) { return 'Licensing' }
+    if ($Name -in @('IncludeVisio','IncludeProject','ExcludeApp')) { return 'Applications' }
+    return 'Installation'
+}
+
+function New-OSDAppUIXmlFilePicker {
+    $picker = [System.Windows.Forms.OpenFileDialog]::new()
+    $picker.Title = 'Select Office configuration XML'
+    $picker.Filter = 'XML files (*.xml)|*.xml|All files (*.*)|*.*'
+    $picker.CheckFileExists = $true
+    $picker.Multiselect = $false
+    $picker.RestoreDirectory = $true
+    return $picker
+}
+
+function Select-OSDAppUIOfficeXml {
+    param([Parameter(Mandatory)]$Dialog)
+    $picker = New-OSDAppUIXmlFilePicker
+    try {
+        if ($picker.ShowDialog($Dialog) -eq [System.Windows.Forms.DialogResult]::OK) {
+            $Dialog.Tag.Inputs.ConfigurationXml.Text = $picker.FileName
+        }
+    }
+    finally { $picker.Dispose() }
 }

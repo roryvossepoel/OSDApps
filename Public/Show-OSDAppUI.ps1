@@ -386,7 +386,7 @@ function Show-OSDAppUI {
     $form = [System.Windows.Forms.Form]::new()
     $form.Text = 'OSDApps - Selection preview'
     $form.Size = [System.Drawing.Size]::new(980,710)
-    $form.MinimumSize = [System.Drawing.Size]::new(800,580)
+    $form.MinimumSize = [System.Drawing.Size]::new(900,700)
     $form.StartPosition = 'CenterScreen'
     $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
     $form.Font = [System.Drawing.Font]::new('Segoe UI',9)
@@ -519,10 +519,10 @@ function Show-OSDAppUI {
     $catalogLayout = [System.Windows.Forms.TableLayoutPanel]::new()
     $catalogLayout.Dock = 'Fill'
     $catalogLayout.RowCount = 4
-    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',38))
-    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',45))
-    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',36))
-    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',55))
+    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',28))
+    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',35))
+    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',32))
+    [void]$catalogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',65))
     $catalogTab.Controls.Add($catalogLayout)
     $catalogInfo = [System.Windows.Forms.Label]::new()
     $catalogInfo.Text = 'Select built-in and repository apps or scripts. Configure a built-in before or after checking it.'
