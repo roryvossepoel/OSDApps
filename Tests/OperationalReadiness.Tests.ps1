@@ -119,6 +119,46 @@ Describe 'Operational readiness and deployment results' {
             Should -BeFalse
     }
 
+    It 'accepts exactly one <Source> application on Windows PowerShell and PowerShell' -TestCases @(
+        @{ Source = 'Repository' }
+        @{ Source = 'BuiltIn' }
+    ) {
+        param($Source)
+        $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive "Single-$Source") -IncludeBuiltInPayload
+        $path = Join-Path $fixture.Stage 'DeviceManifest.json'
+        $manifest = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+        $manifest.Apps = @($manifest.Apps | Where-Object Source -eq $Source)
+        $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $path -Encoding UTF8
+
+        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root -RequireOfflineReady -ThrowOnFailure
+        $result.Valid | Should -BeTrue
+        $result.OfflineReady | Should -BeTrue
+        $result.ApplicationCount | Should -Be 1
+        ($result.Checks | Where-Object Name -eq 'ApplicationQueue').Passed | Should -BeTrue
+    }
+
+    It 'rejects an empty or invalid queue: <Case>' -TestCases @(
+        @{ Case = 'Empty' }
+        @{ Case = 'Duplicate' }
+        @{ Case = 'InvalidId' }
+    ) {
+        param($Case)
+        $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive "Queue-$Case") -IncludeBuiltInPayload
+        $path = Join-Path $fixture.Stage 'DeviceManifest.json'
+        $manifest = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+        switch ($Case) {
+            'Empty' { $manifest.Apps = @() }
+            'Duplicate' { $manifest.Apps = @($manifest.Apps[1], $manifest.Apps[1]) }
+            'InvalidId' { $manifest.Apps = @($manifest.Apps[1]); $manifest.Apps[0].Id = 'Invalid..Id' }
+        }
+        $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $path -Encoding UTF8
+
+        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
+        $result.Valid | Should -BeFalse
+        ($result.Checks | Where-Object Name -eq 'ApplicationQueue').Passed | Should -BeFalse
+        { Test-OSDAppDeployment -WindowsPath $fixture.Root -ThrowOnFailure } | Should -Throw '*Application queue*'
+    }
+
     It 'rejects a staged runtime that differs from the loaded module' {
         $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive 'RuntimeMismatch')
         Add-Content -LiteralPath (Join-Path $fixture.Stage 'Invoke-OSDAppRunner.ps1') -Value '# altered'
