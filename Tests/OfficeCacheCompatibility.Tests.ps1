@@ -54,6 +54,7 @@ __BODY__
     }
 
     BeforeEach {
+        Mock Test-OSDAppOfficeCacheCurrent { $false }
         Set-StrictMode -Version Latest
         $cache = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         $desired = Join-Path $TestDrive 'desired.xml'

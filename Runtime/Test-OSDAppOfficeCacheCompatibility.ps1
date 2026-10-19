@@ -66,6 +66,7 @@ function Get-OSDAppOfficePayloadProfile {
         Version = $version
         Products = @($products | ForEach-Object { $_.GetAttribute('ID') })
         Languages = @($languages | ForEach-Object { $_.GetAttribute('ID') })
+        CustomDownloadSource = $add.HasAttribute('DownloadPath')
         Static = [bool]$static
         PayloadKey = $key
     }
@@ -105,4 +106,43 @@ function Test-OSDAppOfficeCacheCompatibility {
         $reasons.Add('Office payload configuration could not be verified. Refresh the cache for this configuration.')
     }
     [pscustomobject]@{ Compatible=($reasons.Count -eq 0); Reasons=@($reasons); CachedProfile=$cached }
+}
+
+# Freshness only: callers must separately validate the generation and installer.
+# Never write a CDN descriptor into the active cache or repair individual CABs.
+function Test-OSDAppOfficeCacheCurrent {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$OfficeRoot,
+        [Parameter(Mandatory)][string]$ConfigurationPath
+    )
+    $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $OfficeRoot -ConfigurationPath $ConfigurationPath
+    if (-not $compatibility.Compatible) { return $false }
+    $payloadProfile = Get-OSDAppOfficePayloadProfile -Path $ConfigurationPath
+    if ($payloadProfile.CustomDownloadSource) { return $false }
+    # Compatibility already proved that an explicit build pin matches the cache.
+    if ($payloadProfile.Version -match '^\d+\.\d+\.\d+\.\d+$') { return $true }
+
+    $channels = @{
+        Current = '492350f6-3a01-4f97-b9c0-c7c6ddf67d60'
+        MonthlyEnterprise = '55336b82-a18d-4dd6-b5f6-9e5095c314a6'
+        SemiAnnual = '7ffbc6bf-bc32-4f92-8982-f9dd17fd3114'
+        CurrentPreview = '64256afe-f5d9-4f86-8936-8840a6a4f5be'
+        SemiAnnualPreview = 'b8f9b850-328d-4355-9145-c59439a0c4cf'
+        BetaChannel = '5440fd1f-7ecb-4221-8110-145efaa6372f'
+    }
+    if (-not $channels.ContainsKey($payloadProfile.Channel)) { return $false }
+    $cabName = if ($payloadProfile.Architecture -eq 'x86') { 'v32.cab' } else { 'v64.cab' }
+    $cachedCab = Join-Path (Join-Path $OfficeRoot 'Office\Data') $cabName
+    if (-not (Test-Path -LiteralPath $cachedCab -PathType Leaf)) { return $false }
+    $probe = Join-Path ([IO.Path]::GetTempPath()) ("OSDApps-OfficeFreshness-{0}.cab" -f [guid]::NewGuid().ToString('N'))
+    try {
+        $uri = 'https://officecdn.microsoft.com/pr/{0}/Office/Data/{1}' -f $channels[$payloadProfile.Channel],$cabName
+        Invoke-WebRequest -Uri $uri -OutFile $probe -UseBasicParsing -TimeoutSec 30 -Headers @{ 'Cache-Control'='no-cache' } -ErrorAction Stop | Out-Null
+        if ((Get-Item -LiteralPath $probe).Length -eq 0) { throw 'Office CDN returned an empty version descriptor.' }
+        return ((Get-FileHash -LiteralPath $probe -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $cachedCab -Algorithm SHA256).Hash)
+    }
+    finally {
+        if (Test-Path -LiteralPath $probe) { Remove-Item -LiteralPath $probe -Force -ErrorAction SilentlyContinue }
+    }
 }

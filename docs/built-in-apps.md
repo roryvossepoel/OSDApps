@@ -351,13 +351,13 @@ The Webex glyph in `metadata/icons/ciscowebex.svg` is from [Simple Icons](https:
 
 ## How update freshness is determined
 
-Built-in applications use evergreen vendor sources. Most integrations can reuse payloads after an HTTP metadata check; Office deliberately builds a fresh complete generation for an online refresh.
+Built-in applications use evergreen vendor sources. Most integrations can reuse payloads after an HTTP metadata check; Office PreInstall compares the channel version descriptor before deciding whether a new complete generation is needed.
 
 The freshness mechanism is product-specific:
 
 | Application | Update check | Download behavior |
 | --- | --- | --- |
-| Microsoft 365 Apps | Office Deployment Tool `/download` synchronizes the configured channel/product/languages | ODT downloads into a separate new generation. OSDApps validates it before replacing the active directory; an unchanged version does not mean the download was skipped. |
+| Microsoft 365 Apps | PreInstall checks configuration compatibility, generation consistency and the channel version CAB (or an exact build pin) | A current compatible generation is reused. Otherwise ODT downloads into a separate new generation, validated before replacement. Explicit `Sync-OSDAppMicrosoft365Apps` still acquires a fresh generation. |
 | Microsoft Teams | HTTP metadata for the official MSIX: `ETag` preferred, otherwise `Last-Modified + Content-Length` | MSIX is downloaded only when the metadata changed or no valid cached MSIX exists. The Teams bootstrapper is refreshed on every online sync. |
 | Adobe Acrobat Unified | HTTP metadata for the official Adobe ZIP: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.zip` is downloaded only when the remote metadata changed or no cached ZIP exists. |
 | Google Chrome Enterprise | HTTP metadata for the official Enterprise MSI: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.msi` is downloaded only when the remote metadata changed or no cached MSI exists. |
@@ -395,7 +395,23 @@ OSDApps runs the Office Deployment Tool in download mode with the staged configu
 setup.exe /download configuration.xml
 ```
 
-ODT acquires the requested channel, architecture, products and languages into a new sibling directory. OSDApps does not seed that directory with the active Office data tree. After ODT reports a successful download, OSDApps checks the candidate's version-folder and CAB consistency before switching the active directory. These checks are described below; they are not a full verification of every payload file. The previous generation is removed as a whole only after successful promotion; individual old Office files are not selectively pruned.
+Before online acquisition, PreInstall checks the staged generation and requested
+configuration. For the six supported channels it downloads only the small
+`v64.cab` or `v32.cab` descriptor from the channel's Microsoft CDN URL into a
+temporary file outside the cache. An identical SHA-256 to the cached descriptor
+permits reuse after the cached ODT publisher check. No ODT `/download` process
+is started and no active USB cache files are changed on this path.
+
+An exact requested build pin can reuse a matching generation without a current
+channel probe. Changed descriptors require acquisition even if a build number
+might be unchanged: the comparison is deliberately conservative. Custom
+`DownloadPath`, unsupported channels and dynamic configurations do not use this
+CDN shortcut. A failed metadata request is reported as `FallbackCacheUsed` only
+if the existing source is acceptable; it is never reported as confirmed reuse.
+The metadata request has a 30-second timeout. The temporary descriptor is
+removed on success and failure, and is never copied over a cached CAB.
+
+When acquisition is needed, ODT acquires the requested channel, architecture, products and languages into a new sibling directory. OSDApps does not seed that directory with the active Office data tree. After ODT reports a successful download, OSDApps checks the candidate's version-folder and CAB consistency before switching the active directory. These checks are described below; they are not a full verification of every payload file. The previous generation is removed as a whole only after successful promotion; individual old Office files are not selectively pruned.
 
 This also requires free space for the candidate alongside the current generation. See [transaction space checks](architecture.md#cache-transaction-space-checks).
 
@@ -490,14 +506,15 @@ validation leaves the existing generation intact.
 | German back to Dutch | Acquire Dutch content again. The previous Dutch generation is not retained as a second cache. |
 | Add Visio, change channel or architecture | Existing content with different acquisition settings is incompatible and cannot serve as fallback. |
 | Multiple languages to a subset | Conservative matching still requires acquisition; OSDApps does not infer subset coverage. |
-| Only licensing, display or update settings outside `Add` change | Otherwise matching content remains eligible as fallback, and installation uses the selected deployment XML. |
+| Only licensing, display or update settings outside `Add` change | Otherwise matching content can be reused after freshness checks; installation uses the selected deployment XML. |
 | Refresh fails with an incompatible cache | Preserve that cache, but do not install the requested configuration from it. Without a compatible staged fallback, PreInstall fails. |
 
-Online Office PreInstall currently attempts a fresh complete acquisition even
-when the configuration and cached build are unchanged. Compatibility makes
-existing content eligible for offline or failed-refresh fallback; it does not
-skip that online acquisition. A compatible older build is eligible for fallback
-unless a requested version pin excludes it.
+Online Office PreInstall reuses a compatible, consistent generation when its
+descriptor matches the channel CDN, or an explicit build pin matches. Missing,
+incompatible or changed content takes the complete acquisition path. A compatible
+older build remains eligible for offline or failed-refresh fallback unless a
+requested version pin excludes it. An explicit `Sync-OSDAppMicrosoft365Apps` call
+on the preparation PC still requests a fresh complete acquisition.
 
 For multiple independently maintained Office configurations, use separate
 packages in your own repository and manage their upstream acquisition there.
@@ -505,19 +522,18 @@ The built-in does not provide multiple retained configuration profiles.
 
 ### Choosing built-in Office or repository Office
 
-The Microsoft 365 Apps built-in deliberately favors freshness over the shortest possible deployment time.
+The built-in checks freshness during full Windows before installation:
 
-During full Windows, OSDApps lets the Office Deployment Tool synchronize the configured Office source before installation:
+1. Validate the existing generation and compare the requested configuration.
+2. Reuse it when the channel descriptor or explicit build pin matches.
+3. Otherwise run ODT `/download` into a new generation, validate it, promote it,
+   and stage that content locally for installation.
 
-1. Run ODT `/download` into a new generation.
-2. Check the candidate's generation consistency and promote it.
-3. Stage that content locally for installation.
-
-If refresh fails, an acceptable previously staged fallback may still be used; the result records the refresh warning.
-
-This has an important advantage: ODT is the authoritative Microsoft mechanism for acquiring Office content, so the same step that checks freshness can immediately update the cache when a newer build is available.
-
-The trade-off is a fresh acquisition and additional temporary disk space even when the Office build is unchanged. Offline or failed-refresh fallback is a different path; it uses acceptable existing staged content.
+If the metadata check or acquisition fails, an acceptable previously staged
+fallback may still be used; the result records the refresh warning. ODT remains
+the acquisition mechanism when a replacement is needed. Replacements require
+additional temporary disk space, but unchanged deployments avoid downloading
+all Office content again.
 
 If deployment speed is more important than checking Microsoft for a current Office build during SetupComplete, Microsoft 365 Apps can instead be packaged as a normal repository application.
 
@@ -559,7 +575,7 @@ WinPE
 
 Full Windows
 → check vendor freshness
-→ prepare a complete Office generation or reuse/replace other payloads as appropriate
+→ reuse current compatible payloads or prepare a complete replacement generation
 → stage current payload locally
 → Runner installs
 ```

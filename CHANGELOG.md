@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Reuse a compatible, structurally consistent Office generation during online PreInstall when its channel version CAB matches Microsoft CDN metadata, or an exact build pin matches. Skip ODT acquisition and report `CacheReused`; keep complete-generation replacement for changed or missing content.
+- Preserve requested installation XML, signature validation, offline/failure fallback and one-shot execution. Metadata failures are reported as fallback warnings, not confirmed reuse. Explicit preparation-PC Office Sync still requests a fresh generation.
+- Add regression tests for actual runtime reuse, unchanged USB content, changed configuration, inconsistent generations and metadata failure. Physical deployment validation of this correction is pending.
+
 ## 0.45.0
 
 - Add Zoom Workplace x64/ARM64 as a signed, transactionally cached VendorMsi built-in with Add and Sync commands, offline staging, acquisition reporting and cache inspection.

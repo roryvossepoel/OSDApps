@@ -42,6 +42,7 @@ Describe 'Per-deployment acquisition reporting' {
     }
 
     BeforeEach {
+        Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value 'changed CDN descriptor' }
         $ErrorActionPreference = 'Stop'
         $script:StagedPath = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Path $StagedPath -Force | Out-Null
@@ -113,6 +114,77 @@ Describe 'Per-deployment acquisition reporting' {
         @($applicationResults | Where-Object AcquisitionOutcome -ne Downloaded).Count | Should -Be 0
         (Get-Content (Join-Path $StagedPath 'BuiltIn\Microsoft365Apps\CacheInfo.json') -Raw | ConvertFrom-Json).Updated | Should -BeFalse
         @($applicationResults | Where-Object { $_.RefreshError }).Count | Should -Be 0
+    }
+
+    It 'reuses current Office without starting ODT, downloading setup, or changing staged payloads' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq Microsoft365Apps)
+        Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value fixture }
+        $root = Join-Path $StagedPath 'BuiltIn\Microsoft365Apps'
+        $before = @(Get-ChildItem $root -File -Recurse | Get-FileHash | Sort-Object Path | ForEach-Object { $_.Path + ':' + $_.Hash })
+        . $script:preparationLoop
+        $applicationResults[0].Status | Should -Be Succeeded
+        $applicationResults[0].AcquisitionOutcome | Should -Be CacheReused
+        $applicationResults[0].RefreshError | Should -BeNullOrEmpty
+        Should -Invoke Start-Process -Exactly 0
+        Should -Invoke Save-PreInstallDownload -Exactly 0
+        Should -Invoke Assert-OSDAppTransactionSpace -Exactly 0
+        Should -Invoke Assert-PreInstallSignedPayload -Exactly 1
+        $after = @(Get-ChildItem $root -File -Recurse | Get-FileHash | Sort-Object Path | ForEach-Object { $_.Path + ':' + $_.Hash })
+        Compare-Object $before $after | Should -BeNullOrEmpty
+    }
+
+    It 'restages and reuses a current USB Office generation without mutating the USB cache' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq Microsoft365Apps)
+        Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value fixture }
+        Mock Restore-PreInstallBuiltInCache { }
+        $script:usbRoot = Join-Path $TestDrive 'UsbCache'
+        $local = Join-Path $StagedPath 'BuiltIn\Microsoft365Apps'
+        $usbOffice = Join-Path $usbRoot 'BuiltIn\Microsoft365Apps'
+        New-Item (Split-Path $usbOffice -Parent) -ItemType Directory -Force | Out-Null
+        Copy-Item $local $usbOffice -Recurse
+        $before = @(Get-ChildItem $usbOffice -File -Recurse | Get-FileHash | Sort-Object Path | ForEach-Object { $_.Path + ':' + $_.Hash })
+        Remove-Item (Join-Path $local 'Office') -Recurse -Force
+        Remove-Item (Join-Path $local 'CacheInfo.json'),(Join-Path $local 'setup.exe') -Force
+        . $script:preparationLoop
+        $applicationResults[0].Status | Should -Be Succeeded
+        $applicationResults[0].AcquisitionOutcome | Should -Be CacheReused
+        Should -Invoke Start-Process -Exactly 0
+        Should -Invoke Save-PreInstallDownload -Exactly 0
+        $after = @(Get-ChildItem $usbOffice -File -Recurse | Get-FileHash | Sort-Object Path | ForEach-Object { $_.Path + ':' + $_.Hash })
+        Compare-Object $before $after | Should -BeNullOrEmpty
+        Test-LocalOfficeSource -Root $local -ConfigurationPath (Join-Path $local 'configuration.xml') | Should -BeTrue
+    }
+
+    It 'downloads when Office configuration changed even if the CDN descriptor would match' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq Microsoft365Apps)
+        Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value fixture }
+        $config = Join-Path $StagedPath 'BuiltIn\Microsoft365Apps\configuration.xml'
+        (Get-Content $config -Raw).Replace('en-us','nl-nl') | Set-Content $config
+        . $script:preparationLoop
+        $applicationResults[0].AcquisitionOutcome | Should -Be Downloaded
+        Should -Invoke Start-Process -Exactly 1
+        Should -Invoke Invoke-WebRequest -Exactly 0
+    }
+
+    It 'downloads when the staged generation is inconsistent instead of treating metadata as sufficient' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq Microsoft365Apps)
+        Set-Content (Join-Path $StagedPath 'BuiltIn\Microsoft365Apps\Office\Data\v64.cab') 'inconsistent'
+        Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value inconsistent }
+        . $script:preparationLoop
+        $applicationResults[0].AcquisitionOutcome | Should -Be Downloaded
+        Should -Invoke Start-Process -Exactly 1
+        Should -Invoke Invoke-WebRequest -Exactly 0
+    }
+
+    It 'records a freshness-check failure as fallback, never as confirmed reuse' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq Microsoft365Apps)
+        Mock Invoke-WebRequest { throw 'Office metadata request timeout.' }
+        . $script:preparationLoop
+        $applicationResults[0].Status | Should -Be Succeeded
+        $applicationResults[0].AcquisitionOutcome | Should -Be FallbackCacheUsed
+        $applicationResults[0].RefreshError | Should -Be 'Office metadata request timeout.'
+        Should -Invoke Start-Process -Exactly 0
+        Should -Invoke Save-PreInstallDownload -Exactly 0
     }
 
     It 'reports metadata-confirmed primary-payload reuse for all six HTTP built-ins' {
