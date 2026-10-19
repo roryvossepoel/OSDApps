@@ -2,6 +2,10 @@
 
 This page tracks real OSDApps deployment scenarios after OSDCloud applies Windows. **Staging success alone is not an installation success**: the Windows `SetupComplete.cmd` phases must finish and the individual app results must be checked.
 
+For the next nine-application regression using Gallery 0.45.0, follow the
+[all-app cold deployment procedure](all-apps-cold-validation.md). This is a test
+plan; it is not recorded as passed until its results have been reviewed.
+
 ## Scenario coverage
 
 This matrix records detailed deployment evidence for the stated versions. The
@@ -15,6 +19,27 @@ are listed separately because their evidence is less detailed.
 | No USB cache, online | **Validated — 0.30.0 test 1** | Built-ins acquired on Windows volume; repository apps staged in WinPE |
 | Existing OSDCloud USB cache, offline | **Validated — 0.34.0 PC 2 (11 Oct 2026)** | LAN disconnected; six BuiltInRefreshSkipped events, five built-in signer/publisher checks and 8/8 successful installations. Earlier 0.30.0 six-app test also passed. |
 | No USB, offline | **Not yet validated** | Without complete staged content, affected apps cannot install; ordinary acquisition failures are recorded and independent entries may continue. |
+
+## Zoom Workplace cold deployment — 19 October 2026
+
+The operator ran `tools/Test-OSDAppsZoom.ps1` from reviewed commit
+`f3532990d84b5ac3441cdedbed6062125a85ccbb` on a fresh x64 Windows deployment.
+The candidate still reported module version `0.44.0`; Zoom is introduced in
+release `0.45.0`. Deployment ID: `4a3bafa8-c9c8-4b00-9040-24031520df2f`.
+
+| Check | Observed result |
+| --- | --- |
+| WinPE staging | One ZoomWorkplace entry, x64, `CacheAvailable=False`, `PreflightValid=True`. |
+| Windows acquisition | `Succeeded`, `AcquisitionOutcome=Downloaded`, `CacheUsed=True`, no refresh error; acquisition took 6.1 seconds. This was a new download through the USB cache, not a warm reuse. |
+| Installation | Exit code 0; machine-wide MSI registration version `7.2.48556`, executable version `7.2.1.48556`. |
+| Settings and cleanup | Public desktop shortcut absent; staging and cleanup helper removed by the validation checks. |
+| Timing | PreInstall 9.5 seconds; Runner 8.6 seconds; total Windows phases 18.1 seconds. |
+
+The checker reported `ZOOM OOBE VALIDATION PASSED`. The generic MSI result
+reported `Current`, so `VersionCompared=False`: registration and executable
+versions were observed, not asserted equal to an exact acquisition version.
+First-user onboarding, SSO, ARM64 installation and warm-cache reuse remain
+unvalidated by this run. It is a single-app cold test, not a full-app regression.
 
 ## Office configuration compatibility and deployment — 18 October 2026
 
