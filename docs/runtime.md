@@ -117,7 +117,7 @@ report installation or a blocking preparation failure.
 | `NotApplicable` | Repository packages, including scripts, do not use this built-in PreInstall acquisition path. |
 
 Office reports `CacheReused` when configuration and generation checks pass and
-its channel descriptor matches the CDN, or an explicit requested build matches.
+its build matches the architecture-specific build advertised by the channel CDN, or an explicit requested build matches.
 If acquisition is needed, ODT builds a fresh complete generation and reports
 `Downloaded`, even when the resulting version is unchanged. A failed descriptor
 request can use acceptable content as `FallbackCacheUsed` with a warning.

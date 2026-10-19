@@ -43,6 +43,12 @@ Describe 'Per-deployment acquisition reporting' {
 
     BeforeEach {
         Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value 'changed CDN descriptor' }
+        $script:advertisedOfficeBuild = '2.0.0.0'
+        Mock Expand-OSDAppOfficeDescriptor {
+            $path = Join-Path $DestinationPath 'VersionDescriptor.xml'
+            '<Version><Available I640Version="{0}" /><DeliveryMechanism FFNRoot="492350f6-3a01-4f97-b9c0-c7c6ddf67d60" /></Version>' -f $script:advertisedOfficeBuild | Set-Content $path
+            $path
+        }
         $ErrorActionPreference = 'Stop'
         $script:StagedPath = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Path $StagedPath -Force | Out-Null
@@ -118,7 +124,7 @@ Describe 'Per-deployment acquisition reporting' {
 
     It 'reuses current Office without starting ODT, downloading setup, or changing staged payloads' {
         $script:builtInApps = @($builtInApps | Where-Object Id -eq Microsoft365Apps)
-        Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value fixture }
+        $script:advertisedOfficeBuild = '1.0.0.0'
         $root = Join-Path $StagedPath 'BuiltIn\Microsoft365Apps'
         $before = @(Get-ChildItem $root -File -Recurse | Get-FileHash | Sort-Object Path | ForEach-Object { $_.Path + ':' + $_.Hash })
         . $script:preparationLoop
@@ -135,7 +141,7 @@ Describe 'Per-deployment acquisition reporting' {
 
     It 'restages and reuses a current USB Office generation without mutating the USB cache' {
         $script:builtInApps = @($builtInApps | Where-Object Id -eq Microsoft365Apps)
-        Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value fixture }
+        $script:advertisedOfficeBuild = '1.0.0.0'
         Mock Restore-PreInstallBuiltInCache { }
         $script:usbRoot = Join-Path $TestDrive 'UsbCache'
         $local = Join-Path $StagedPath 'BuiltIn\Microsoft365Apps'
@@ -157,7 +163,7 @@ Describe 'Per-deployment acquisition reporting' {
 
     It 'downloads when Office configuration changed even if the CDN descriptor would match' {
         $script:builtInApps = @($builtInApps | Where-Object Id -eq Microsoft365Apps)
-        Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value fixture }
+        $script:advertisedOfficeBuild = '1.0.0.0'
         $config = Join-Path $StagedPath 'BuiltIn\Microsoft365Apps\configuration.xml'
         (Get-Content $config -Raw).Replace('en-us','nl-nl') | Set-Content $config
         . $script:preparationLoop

@@ -701,7 +701,7 @@ try {
                         (Test-OSDAppOfficeCacheCurrent -OfficeRoot $localRoot -ConfigurationPath $localConfig)) {
                         Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe')
                         Set-PreInstallAcquisitionResult -Result $acquisition -Outcome CacheReused
-                        Write-PreInstallLog -Event 'BuiltInCacheReused' -Message 'Compatible Microsoft 365 Apps cache matches the requested build or current CDN descriptor; ODT acquisition was skipped.' -Data @{Id='Microsoft365Apps';Version=(Get-OfficeCacheVersion -OfficeRoot $localRoot)}
+                        Write-PreInstallLog -Event 'BuiltInCacheReused' -Message 'Compatible Microsoft 365 Apps cache matches the requested build or current CDN build; ODT acquisition was skipped.' -Data @{Id='Microsoft365Apps';Version=(Get-OfficeCacheVersion -OfficeRoot $localRoot)}
                         continue
                     }
                     Assert-OSDAppTransactionSpace -Path $acquireRoot -ExistingPath $acquireRoot -MinimumFreeSpaceGB 8 -Operation 'Microsoft 365 Apps cache refresh' | Out-Null

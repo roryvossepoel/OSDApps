@@ -25,7 +25,16 @@ Describe 'Office cache freshness decisions' {
         Set-Content (Join-Path $data 'v64.cab') 'descriptor'
         Set-Content (Join-Path $data 'v32.cab') 'descriptor'
         New-FreshnessFixture
-        Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value descriptor }
+        Mock Invoke-WebRequest {
+            $script:descriptorChannel = ([uri]$Uri).Segments[2].Trim('/')
+            Set-Content -LiteralPath $OutFile -Value 'different channel CAB bytes'
+        }
+        $script:advertisedBuild = '16.0.20430.20180'
+        Mock Expand-OSDAppOfficeDescriptor {
+            $path = Join-Path $DestinationPath 'VersionDescriptor.xml'
+            '<Version><Available Build="16.0.12527.22286" I320Version="{0}" I640Version="{0}" /><DeliveryMechanism FFNRoot="{1}" /><AvailableBuilds><AvailableBuild RestrictionType="Default" Version="{0}" /></AvailableBuilds><CreatedTimeUtc Value="10/18/2026 14:39" /></Version>' -f $script:advertisedBuild,$script:descriptorChannel | Set-Content $path
+            $path
+        }
     }
     It 'uses the selected <Channel> descriptor without touching the cache' -ForEach @(
         @{Channel='Current'; Guid='492350f6-3a01-4f97-b9c0-c7c6ddf67d60'}
@@ -46,8 +55,8 @@ Describe 'Office cache freshness decisions' {
         Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config | Should -BeTrue
         Should -Invoke Invoke-WebRequest -Exactly 1 -ParameterFilter { $Uri -like '*/v32.cab' }
     }
-    It 'requires acquisition for a changed descriptor' {
-        Mock Invoke-WebRequest { Set-Content $OutFile 'new descriptor' }
+    It 'requires acquisition for a changed advertised build' {
+        $script:advertisedBuild = '16.0.20430.20200'
         Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config | Should -BeFalse
     }
     It 'accepts an exact build pin without querying the current channel' {

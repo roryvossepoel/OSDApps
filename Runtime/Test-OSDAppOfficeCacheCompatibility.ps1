@@ -108,6 +108,63 @@ function Test-OSDAppOfficeCacheCompatibility {
     [pscustomobject]@{ Compatible=($reasons.Count -eq 0); Reasons=@($reasons); CachedProfile=$cached }
 }
 
+# Read only the selected architecture's advertised build. Available/@Build can
+# refer to an old Windows release even when I640Version advertises a current build.
+function Get-OSDAppOfficeDescriptorVersion {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][ValidateSet('x64','x86')][string]$Architecture,
+        [Parameter(Mandatory)][string]$ChannelId
+    )
+    $settings = [System.Xml.XmlReaderSettings]::new()
+    $settings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+    $settings.XmlResolver = $null
+    $settings.MaxCharactersInDocument = 1MB
+    $document = [System.Xml.XmlDocument]::new()
+    $document.XmlResolver = $null
+    $reader = [System.Xml.XmlReader]::Create($Path, $settings)
+    try { $document.Load($reader) } finally { $reader.Dispose() }
+    $available = @($document.SelectNodes('/Version/Available'))
+    $delivery = @($document.SelectNodes('/Version/DeliveryMechanism'))
+    if ($available.Count -ne 1 -or $delivery.Count -ne 1 -or
+        $delivery[0].GetAttribute('FFNRoot') -ne $ChannelId) {
+        throw 'Office CDN descriptor has an ambiguous version or unexpected channel.'
+    }
+    $attribute = if ($Architecture -eq 'x86') { 'I320Version' } else { 'I640Version' }
+    $build = $available[0].GetAttribute($attribute)
+    if ($build -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+        throw 'Office CDN descriptor does not advertise a concrete build for the requested architecture.'
+    }
+    $defaults = @($document.SelectNodes('/Version/AvailableBuilds/AvailableBuild[@RestrictionType="Default"]'))
+    if ($defaults.Count -gt 1 -or ($defaults.Count -eq 1 -and $defaults[0].GetAttribute('Version') -ne $build)) {
+        throw 'Office CDN descriptor advertises conflicting default and architecture builds.'
+    }
+    return $build
+}
+
+function Expand-OSDAppOfficeDescriptor {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$CabPath,
+        [Parameter(Mandatory)][string]$DestinationPath
+    )
+    $expand = Join-Path $env:SystemRoot 'System32\expand.exe'
+    $arguments = '-F:VersionDescriptor.xml "{0}" "{1}"' -f $CabPath,$DestinationPath
+    $process = Start-Process -FilePath $expand -ArgumentList $arguments -NoNewWindow -PassThru
+    try {
+        if (-not $process.WaitForExit(10000)) {
+            try { $process.Kill() } catch { Write-Verbose 'Office descriptor expansion could not be terminated.' }
+            throw 'Office descriptor expansion exceeded its 10 second timeout.'
+        }
+        if ($process.ExitCode -ne 0) { throw 'Office CDN version descriptor could not be extracted.' }
+        $xmlPath = Join-Path $DestinationPath 'VersionDescriptor.xml'
+        if (-not (Test-Path -LiteralPath $xmlPath -PathType Leaf)) { throw 'Office CDN version descriptor XML is missing.' }
+        return $xmlPath
+    }
+    finally { $process.Dispose() }
+}
+
 # Freshness only: callers must separately validate the generation and installer.
 # Never write a CDN descriptor into the active cache or repair individual CABs.
 function Test-OSDAppOfficeCacheCurrent {
@@ -135,14 +192,21 @@ function Test-OSDAppOfficeCacheCurrent {
     $cabName = if ($payloadProfile.Architecture -eq 'x86') { 'v32.cab' } else { 'v64.cab' }
     $cachedCab = Join-Path (Join-Path $OfficeRoot 'Office\Data') $cabName
     if (-not (Test-Path -LiteralPath $cachedCab -PathType Leaf)) { return $false }
-    $probe = Join-Path ([IO.Path]::GetTempPath()) ("OSDApps-OfficeFreshness-{0}.cab" -f [guid]::NewGuid().ToString('N'))
+    $probeRoot = Join-Path ([IO.Path]::GetTempPath()) ("OSDApps-OfficeFreshness-{0}" -f [guid]::NewGuid().ToString('N'))
+    $probe = Join-Path $probeRoot $cabName
     try {
+        New-Item -ItemType Directory -Path $probeRoot -ErrorAction Stop | Out-Null
         $uri = 'https://officecdn.microsoft.com/pr/{0}/Office/Data/{1}' -f $channels[$payloadProfile.Channel],$cabName
         Invoke-WebRequest -Uri $uri -OutFile $probe -UseBasicParsing -TimeoutSec 30 -Headers @{ 'Cache-Control'='no-cache' } -ErrorAction Stop | Out-Null
         if ((Get-Item -LiteralPath $probe).Length -eq 0) { throw 'Office CDN returned an empty version descriptor.' }
-        return ((Get-FileHash -LiteralPath $probe -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $cachedCab -Algorithm SHA256).Hash)
+        if ((Get-Item -LiteralPath $probe).Length -gt 1MB) { throw 'Office CDN version descriptor exceeds the supported size.' }
+        $descriptorPath = Expand-OSDAppOfficeDescriptor -CabPath $probe -DestinationPath $probeRoot
+        $advertisedVersion = Get-OSDAppOfficeDescriptorVersion -Path $descriptorPath -Architecture $payloadProfile.Architecture -ChannelId $channels[$payloadProfile.Channel]
+        $cacheInfo = Get-Content -LiteralPath (Join-Path $OfficeRoot 'CacheInfo.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        Write-Verbose ("Office advertised build: {0}; cached build: {1}." -f $advertisedVersion,$cacheInfo.Version)
+        return ($advertisedVersion -eq [string]$cacheInfo.Version)
     }
     finally {
-        if (Test-Path -LiteralPath $probe) { Remove-Item -LiteralPath $probe -Force -ErrorAction SilentlyContinue }
+        if (Test-Path -LiteralPath $probeRoot) { Remove-Item -LiteralPath $probeRoot -Recurse -Force -ErrorAction SilentlyContinue }
     }
 }

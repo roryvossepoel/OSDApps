@@ -398,17 +398,23 @@ setup.exe /download configuration.xml
 Before online acquisition, PreInstall checks the staged generation and requested
 configuration. For the six supported channels it downloads only the small
 `v64.cab` or `v32.cab` descriptor from the channel's Microsoft CDN URL into a
-temporary file outside the cache. An identical SHA-256 to the cached descriptor
-permits reuse after the cached ODT publisher check. No ODT `/download` process
+temporary directory outside the cache. It extracts `VersionDescriptor.xml` and
+compares the advertised architecture build (`I640Version` or `I320Version`) with
+the cached build, also checking the channel identity and any default build.
+A matching build permits reuse after the cached ODT publisher check. No ODT `/download` process
 is started and no active USB cache files are changed on this path.
 
 An exact requested build pin can reuse a matching generation without a current
-channel probe. Changed descriptors require acquisition even if a build number
-might be unchanged: the comparison is deliberately conservative. Custom
+channel probe. A different advertised build requires acquisition. CAB bytes can
+change because of rollout metadata or legacy OS entries while the relevant build
+stays unchanged; those changes alone do not require a new payload. The generic
+`Available/@Build` can refer to a legacy OS and is not used for this decision. Custom
 `DownloadPath`, unsupported channels and dynamic configurations do not use this
 CDN shortcut. A failed metadata request is reported as `FallbackCacheUsed` only
 if the existing source is acceptable; it is never reported as confirmed reuse.
-The metadata request has a 30-second timeout. The temporary descriptor is
+The metadata request has a 30-second timeout and native CAB extraction has a
+10-second timeout. Ambiguous or unreadable metadata is treated as a failed check.
+The temporary descriptor is
 removed on success and failure, and is never copied over a cached CAB.
 
 When acquisition is needed, ODT acquires the requested channel, architecture, products and languages into a new sibling directory. OSDApps does not seed that directory with the active Office data tree. After ODT reports a successful download, OSDApps checks the candidate's version-folder and CAB consistency before switching the active directory. These checks are described below; they are not a full verification of every payload file. The previous generation is removed as a whole only after successful promotion; individual old Office files are not selectively pruned.
@@ -510,7 +516,7 @@ validation leaves the existing generation intact.
 | Refresh fails with an incompatible cache | Preserve that cache, but do not install the requested configuration from it. Without a compatible staged fallback, PreInstall fails. |
 
 Online Office PreInstall reuses a compatible, consistent generation when its
-descriptor matches the channel CDN, or an explicit build pin matches. Missing,
+build matches the architecture-specific build advertised by the channel CDN, or an explicit build pin matches. Missing,
 incompatible or changed content takes the complete acquisition path. A compatible
 older build remains eligible for offline or failed-refresh fallback unless a
 requested version pin excludes it. An explicit `Sync-OSDAppMicrosoft365Apps` call
@@ -525,7 +531,7 @@ The built-in does not provide multiple retained configuration profiles.
 The built-in checks freshness during full Windows before installation:
 
 1. Validate the existing generation and compare the requested configuration.
-2. Reuse it when the channel descriptor or explicit build pin matches.
+2. Reuse it when the advertised channel build or explicit build pin matches.
 3. Otherwise run ODT `/download` into a new generation, validate it, promote it,
    and stage that content locally for installation.
 
