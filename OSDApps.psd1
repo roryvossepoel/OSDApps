@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.45.0'
+    ModuleVersion     = '0.45.1'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -49,7 +49,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.45.0: Add Zoom Workplace x64/ARM64 built-in staging and synchronization with transactional caching, publisher validation and optional desktop shortcut, SSO and ZConfig/ZRecommend settings. Add discovery, help and a WinPE/OOBE validation script. Physical x64 cold acquisition and installation passed; ARM64 deployment and first-user behavior remain unvalidated.'
+            ReleaseNotes = '0.45.1: Reuse compatible Office cache content after a lightweight online build check. Preserve transactional replacement, configuration checks and fallback reporting. Physical x64 MonthlyEnterprise nl-nl warm deployment passed: CacheReused, matching Office version, exit code 0 and completed cleanup.'
             RequireLicenseAcceptance = $false
         }
     }

@@ -2,7 +2,20 @@
 
 OSDApps records PreInstall and Runner durations separately. The measurements below describe the stated versions and conditions, not a performance guarantee for the current release.
 
-The [validation matrix](testing.md) includes newer 0.36.0 and 0.39.0 measurements and the recent Gallery workflow reports. Office replacement acquires a fresh complete generation. PreInstall can now skip that acquisition when a compatible generation matches the advertised CDN build or requested build pin; physical timings for this new reuse path are not yet measured. The recent Gallery workflow reports include no new timings.
+The [validation matrix](testing.md) includes newer 0.36.0 and 0.39.0 measurements and the recent Gallery workflow reports. Office replacement acquires a fresh complete generation. PreInstall can now skip that acquisition when a compatible generation matches the advertised CDN build or requested build pin; the measured Office-only reuse path is recorded below. The recent Gallery workflow reports include no new timings.
+
+## Office online warm cache reuse — 0.45.1 implementation candidate (19 October 2026)
+
+An x64 PC staged one Office application with MonthlyEnterprise / nl-nl, no exact build pin, a populated USB cache and networking available. The implementation commit was `0ed52e56351a21d723751cbfa3e1290c14d9fbb8`; its manifest still reported 0.45.0.
+
+| Measurement | Duration | Result |
+| --- | ---: | --- |
+| Office preparation item | 0.9 s | CacheReused after online build check |
+| Complete PreInstall phase | 4.1 s | Succeeded |
+| Complete Runner phase | 151.1 s | Succeeded; Office exit code 0 |
+| **Measured Windows total** | **155.2 s** | **Matching installed build and completed cleanup** |
+
+The Office preparation item is part of PreInstall, not an additional phase. These are single-run observations for an Office-only queue, not directly comparable to the older multi-application benchmarks. Image deployment, WinPE staging, reboot and OOBE are excluded. See the [validation evidence](testing.md#office-online-warm-cache-reuse--19-october-2026).
 
 ## OSDApps 0.35.0 release candidate — populated USB cache, online (12 October 2026)
 

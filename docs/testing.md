@@ -6,6 +6,19 @@ For the next nine-application regression using Gallery 0.45.0, follow the
 [all-app cold deployment procedure](all-apps-cold-validation.md). This is a test
 plan; it is not recorded as passed until its results have been reviewed.
 
+## Office online warm cache reuse — 19 October 2026
+
+The implementation candidate for 0.45.1 (manifest version 0.45.0, commit `0ed52e56351a21d723751cbfa3e1290c14d9fbb8`) passed a physical x64 deployment with one Microsoft 365 Apps queue entry. The USB flash drive remained attached and the PC stayed online. The requested configuration was MonthlyEnterprise, nl-nl, x64, without an exact build pin.
+
+- A prior read-only check retrieved the 12,461-byte channel descriptor and confirmed that its advertised build and cached build were both `16.0.20430.20180`. Generation, configuration and publisher checks passed; before/after cache hashes were unchanged.
+- Deployment `7afbd915-ab22-4304-8845-8c109368172d` reported `AcquisitionOutcome=CacheReused`, `CacheUsed=True`, no refresh error and 0.9 seconds for the Office preparation item.
+- PreInstall completed in 4.1 seconds; Runner completed in 151.1 seconds; their measured total was 155.2 seconds.
+- The Office installation item completed in 150.6 seconds with exit code 0. Registration and Word, Excel, PowerPoint and Outlook executables matched `16.0.20430.20180`.
+- Final status was Succeeded. Runtime staging and the cleanup helper were removed.
+- Implementation CI passed 416 tests on each of Windows PowerShell 5.1 and PowerShell 7, with no failures or skips and all 33 packaged help checks passing ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/39289473974)).
+
+This validates online build checking, same-build cache reuse, installation and cleanup for the stated configuration. It does not independently validate every Office payload file, Office activation, interactive application behavior, other architectures or every configuration. Release-package validation is separate from this candidate deployment.
+
 ## Scenario coverage
 
 This matrix records detailed deployment evidence for the stated versions. The
