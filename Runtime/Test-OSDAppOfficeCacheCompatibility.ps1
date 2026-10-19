@@ -150,7 +150,9 @@ function Expand-OSDAppOfficeDescriptor {
         [Parameter(Mandatory)][string]$DestinationPath
     )
     $expand = Join-Path $env:SystemRoot 'System32\expand.exe'
-    $arguments = '-F:VersionDescriptor.xml "{0}" "{1}"' -f $CabPath,$DestinationPath
+    $extractedPath = Join-Path $DestinationPath 'Extracted'
+    New-Item -ItemType Directory -Path $extractedPath -ErrorAction Stop | Out-Null
+    $arguments = '"{0}" -F:VersionDescriptor.xml "{1}"' -f $CabPath,$extractedPath
     $process = Start-Process -FilePath $expand -ArgumentList $arguments -NoNewWindow -PassThru
     try {
         if (-not $process.WaitForExit(10000)) {
@@ -158,7 +160,7 @@ function Expand-OSDAppOfficeDescriptor {
             throw 'Office descriptor expansion exceeded its 10 second timeout.'
         }
         if ($process.ExitCode -ne 0) { throw 'Office CDN version descriptor could not be extracted.' }
-        $xmlPath = Join-Path $DestinationPath 'VersionDescriptor.xml'
+        $xmlPath = Join-Path $extractedPath 'VersionDescriptor.xml'
         if (-not (Test-Path -LiteralPath $xmlPath -PathType Leaf)) { throw 'Office CDN version descriptor XML is missing.' }
         return $xmlPath
     }
