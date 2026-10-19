@@ -2,7 +2,7 @@
 
 OSDApps records PreInstall and Runner durations separately. The measurements below describe the stated versions and conditions, not a performance guarantee for the current release.
 
-The [validation matrix](testing.md) includes newer 0.36.0 and 0.39.0 measurements and the recent Gallery workflow reports. Since the transactional Office change in 0.38.0, online Office refresh acquires a fresh complete generation; older incremental-refresh timings do not predict that cost. The recent Gallery workflow reports include no new timings.
+The [validation matrix](testing.md) includes newer 0.36.0 and 0.39.0 measurements and the recent Gallery workflow reports. Office replacement acquires a fresh complete generation. PreInstall can now skip that acquisition when a compatible generation matches the advertised CDN build or requested build pin; physical timings for this new reuse path are not yet measured. The recent Gallery workflow reports include no new timings.
 
 ## OSDApps 0.35.0 release candidate — populated USB cache, online (12 October 2026)
 
@@ -189,7 +189,7 @@ During the warm run:
 
 The only intentional Teams download was the small Teams bootstrapper. The much larger Teams MSIX was reused from cache.
 
-This was the observed warm-cache behavior in 0.29.1. Current Office refresh uses a fresh complete generation, as described above:
+This was the observed warm-cache behavior in 0.29.1. Office replacement uses a fresh complete generation, as described above:
 
 ```text
 existing cache

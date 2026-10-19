@@ -109,18 +109,21 @@ report installation or a blocking preparation failure.
 | AcquisitionOutcome | Meaning |
 | --- | --- |
 | `Downloaded` | The acquired primary payload passed the preparation checks and is ready to install. It may be the same version as before. |
-| `CacheReused` | Remote HTTP metadata matched the existing primary payload, which passed the applicable preparation checks. |
+| `CacheReused` | Vendor metadata matched the existing primary payload, or an explicit Office build pin matched; applicable preparation checks passed. |
 | `OfflineCacheUsed` | No network interface was available; acceptable staged/cache content was used without a refresh attempt. Freshness was not established. |
 | `FallbackCacheUsed` | Refresh failed, but acceptable staged content was available. `RefreshFailureType` and `RefreshError` retain the refresh failure. Freshness was not established. |
 | `Failed` | PreInstall could not prepare this entry; inspect its preparation error and Runner status. |
 | `Unknown` | Runner has no matching acquisition outcome, for example with an older PreInstall result. |
 | `NotApplicable` | Repository packages, including scripts, do not use this built-in PreInstall acquisition path. |
 
-Office builds a fresh complete generation, so a successful acquisition reports
-`Downloaded` even if the version is unchanged. Teams can report `CacheReused`
-for its MSIX while downloading the bootstrapper; reuse does not mean zero
-network traffic. `CacheReused` reflects the existing vendor metadata checks,
-not a new guarantee of remote version or content identity.
+Office reports `CacheReused` when configuration and generation checks pass and
+its build matches the architecture-specific build advertised by the channel CDN, or an explicit requested build matches.
+If acquisition is needed, ODT builds a fresh complete generation and reports
+`Downloaded`, even when the resulting version is unchanged. A failed descriptor
+request can use acceptable content as `FallbackCacheUsed` with a warning.
+Teams can report `CacheReused` for its MSIX while downloading the bootstrapper;
+reuse does not mean zero network traffic. These checks do not authenticate or
+verify every nested payload file.
 
 The embedded `PreInstall` record adds `FallbackApplicationCount`,
 `OfflineCacheApplicationCount` and `HasAcquisitionWarnings`. A fallback can
