@@ -152,14 +152,22 @@ function Expand-OSDAppOfficeDescriptor {
     $expand = Join-Path $env:SystemRoot 'System32\expand.exe'
     $extractedPath = Join-Path $DestinationPath 'Extracted'
     New-Item -ItemType Directory -Path $extractedPath -ErrorAction Stop | Out-Null
-    $arguments = '"{0}" -F:VersionDescriptor.xml "{1}"' -f $CabPath,$extractedPath
-    $process = Start-Process -FilePath $expand -ArgumentList $arguments -NoNewWindow -PassThru
+    # -R preserves the archived XML name even for a single-file cabinet.
+    $arguments = '-R "{0}" -F:VersionDescriptor.xml "{1}"' -f $CabPath,$extractedPath
+    # Own the process handle directly: Start-Process -NoNewWindow can lose
+    # ExitCode on Windows PowerShell 5.1 after a bounded WaitForExit call.
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $expand
+    $startInfo.Arguments = $arguments
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $process = [System.Diagnostics.Process]::Start($startInfo)
     try {
         if (-not $process.WaitForExit(10000)) {
             try { $process.Kill() } catch { Write-Verbose 'Office descriptor expansion could not be terminated.' }
             throw 'Office descriptor expansion exceeded its 10 second timeout.'
         }
-        if ($process.ExitCode -ne 0) { throw 'Office CDN version descriptor could not be extracted.' }
+        if ($process.ExitCode -ne 0) { throw ('Office CDN version descriptor extraction failed with exit code {0}.' -f $process.ExitCode) }
         $xmlPath = Join-Path $extractedPath 'VersionDescriptor.xml'
         if (-not (Test-Path -LiteralPath $xmlPath -PathType Leaf)) { throw 'Office CDN version descriptor XML is missing.' }
         return $xmlPath

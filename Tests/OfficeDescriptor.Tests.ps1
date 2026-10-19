@@ -42,7 +42,34 @@ Describe 'Office CDN descriptor interpretation' {
         $cab = Join-Path $folder 'v64.cab'
         & "$env:SystemRoot\System32\makecab.exe" $path $cab | Out-Null
         $LASTEXITCODE | Should -Be 0
+        [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($cab),0,4) | Should -Be 'MSCF'
         $expanded = Expand-OSDAppOfficeDescriptor -CabPath $cab -DestinationPath $folder
         Get-OSDAppOfficeDescriptorVersion -Path $expanded -Architecture x64 -ChannelId $channel | Should -Be '16.0.20430.20180'
     }
+    It 'extracts only the descriptor from a multi-file LZX cabinet' -Skip:([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
+        $folder = Join-Path $TestDrive 'multi file cabinet'
+        New-Item $folder -ItemType Directory | Out-Null
+        $extra = Join-Path $folder 'v64.hash'
+        Set-Content $extra 'unrelated metadata'
+        $ddf = Join-Path $folder 'cab.ddf'
+        @(
+            '.Set Cabinet=on'
+            '.Set Compress=on'
+            '.Set CompressionType=LZX'
+            '.Set CabinetNameTemplate=v64.cab'
+            ('.Set DiskDirectory1="{0}"' -f $folder)
+            ('.Set InfFileName="{0}"' -f (Join-Path $folder 'cab.inf'))
+            ('.Set RptFileName="{0}"' -f (Join-Path $folder 'cab.rpt'))
+            ('"{0}" VersionDescriptor.xml' -f $path)
+            ('"{0}" v64.hash' -f $extra)
+        ) | Set-Content $ddf -Encoding ASCII
+        & "$env:SystemRoot\System32\makecab.exe" /F $ddf | Out-Null
+        $LASTEXITCODE | Should -Be 0
+        $cab = Join-Path $folder 'v64.cab'
+        [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($cab),0,4) | Should -Be 'MSCF'
+        $expanded = Expand-OSDAppOfficeDescriptor -CabPath $cab -DestinationPath $folder
+        Get-OSDAppOfficeDescriptorVersion -Path $expanded -Architecture x64 -ChannelId $channel | Should -Be '16.0.20430.20180'
+        Test-Path (Join-Path (Split-Path $expanded -Parent) 'v64.hash') | Should -BeFalse
+    }
+
 }
