@@ -103,6 +103,9 @@ function Get-OSDAppCache {
                     'GoogleChromeEnterprise' {
                         Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
                     }
+                    'ZoomWorkplace' {
+                        Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
+                    }
                     'CiscoWebex' {
                         Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
                     }

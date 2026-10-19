@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add Zoom Workplace x64/ARM64 as a signed, transactionally cached VendorMsi built-in with Add and Sync commands, offline staging, acquisition reporting and cache inspection.
+- Support optional desktop shortcut suppression, SSO host and validated ZConfig/ZRecommend maps without changing vendor defaults or adding a second execution mechanism.
+- Add automated integration coverage and a staged WinPE/OOBE test procedure. Physical installation remains pending.
+
 ## 0.44.0
 
 ### Office cache compatibility

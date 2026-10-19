@@ -79,6 +79,7 @@ Describe 'Per-deployment acquisition reporting' {
             [pscustomobject]@{ Id='AdobeAcrobatUnified'; Relative='BuiltIn\AdobeAcrobatUnified\x64'; File='Package.zip' }
             [pscustomobject]@{ Id='GoogleChromeEnterprise'; Relative='BuiltIn\GoogleChromeEnterprise\x64'; File='Package.msi' }
             [pscustomobject]@{ Id='MozillaFirefoxEnterprise'; Relative='BuiltIn\MozillaFirefoxEnterprise\Rapid\x64\en-US'; File='Package.msi' }
+            [pscustomobject]@{ Id='ZoomWorkplace'; Relative='BuiltIn\ZoomWorkplace\x64'; File='Package.msi' }
             [pscustomobject]@{ Id='CiscoWebex'; Relative='BuiltIn\CiscoWebex\x64'; File='Package.msi' }
         )
         foreach ($app in $builtInApps) {
@@ -105,20 +106,20 @@ Describe 'Per-deployment acquisition reporting' {
         }
     }
 
-    It 'reports a fresh acquisition for all six built-ins even when the Office version did not change' {
+    It 'reports a fresh acquisition for all seven built-ins even when the Office version did not change' {
         . $script:preparationLoop
-        $applicationResults.Count | Should -Be 6
+        $applicationResults.Count | Should -Be 7
         @($applicationResults | Where-Object Status -ne Succeeded).Count | Should -Be 0
         @($applicationResults | Where-Object AcquisitionOutcome -ne Downloaded).Count | Should -Be 0
         (Get-Content (Join-Path $StagedPath 'BuiltIn\Microsoft365Apps\CacheInfo.json') -Raw | ConvertFrom-Json).Updated | Should -BeFalse
         @($applicationResults | Where-Object { $_.RefreshError }).Count | Should -Be 0
     }
 
-    It 'reports metadata-confirmed primary-payload reuse for all five HTTP built-ins' {
+    It 'reports metadata-confirmed primary-payload reuse for all six HTTP built-ins' {
         $script:builtInApps = @($builtInApps | Where-Object Id -ne Microsoft365Apps)
         $script:remoteMatches = $true
         . $script:preparationLoop
-        $applicationResults.Count | Should -Be 5
+        $applicationResults.Count | Should -Be 6
         @($applicationResults | Where-Object AcquisitionOutcome -ne CacheReused).Count | Should -Be 0
         Should -Invoke Save-PreInstallDownload -Exactly 1 -ParameterFilter { $Id -eq 'MicrosoftTeams' -and $Description -eq 'Microsoft Teams bootstrapper' }
         Should -Invoke Save-PreInstallDownload -Exactly 0 -ParameterFilter { $Description -ne 'Microsoft Teams bootstrapper' }
@@ -132,12 +133,12 @@ Describe 'Per-deployment acquisition reporting' {
         Should -Invoke Save-PreInstallDownload -Exactly 0
         Write-PreInstallResult -Status Succeeded
         $saved = Get-Content $preInstallResultPath -Raw | ConvertFrom-Json
-        $saved.OfflineCacheApplicationCount | Should -Be 6
+        $saved.OfflineCacheApplicationCount | Should -Be 7
         $saved.FallbackApplicationCount | Should -Be 0
         $saved.HasAcquisitionWarnings | Should -BeTrue
     }
 
-    It 'preserves refresh failure reasons for all six successful fallbacks in JSON and the log' {
+    It 'preserves refresh failure reasons for all seven successful fallbacks in JSON and the log' {
         $script:failDownload = $true
         . $script:preparationLoop
         @($applicationResults | Where-Object Status -ne Succeeded).Count | Should -Be 0
@@ -151,9 +152,9 @@ Describe 'Per-deployment acquisition reporting' {
         $saved = Get-Content $preInstallResultPath -Raw | ConvertFrom-Json
         $saved.Status | Should -Be Succeeded
         $saved.FailedBuiltInApplicationCount | Should -Be 0
-        $saved.FallbackApplicationCount | Should -Be 6
+        $saved.FallbackApplicationCount | Should -Be 7
         $saved.HasAcquisitionWarnings | Should -BeTrue
-        @(Get-Content $logPath | Select-String 'ApplicationAcquisitionComplete.*AcquisitionOutcome=FallbackCacheUsed').Count | Should -Be 6
+        @(Get-Content $logPath | Select-String 'ApplicationAcquisitionComplete.*AcquisitionOutcome=FallbackCacheUsed').Count | Should -Be 7
     }
 
     It 'does not report successful fallback when the payload is absent and continues independent entries' {

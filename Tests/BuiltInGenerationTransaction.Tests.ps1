@@ -45,7 +45,7 @@ Describe 'Built-in cache generation transactions' {
     }
 
     It 'wires all non-Office public synchronizers through complete generation validation' {
-        $ids = @('MicrosoftTeams','GoogleChromeEnterprise','MozillaFirefoxEnterprise','CiscoWebex','AdobeAcrobatUnified')
+        $ids = @('MicrosoftTeams','GoogleChromeEnterprise','MozillaFirefoxEnterprise','CiscoWebex','ZoomWorkplace','AdobeAcrobatUnified')
         foreach ($id in $ids) {
             $source = Get-Content -LiteralPath (Join-Path $moduleRoot "Public\Sync-OSDApp$id.ps1") -Raw
             $source | Should -Match 'Invoke-OSDAppBuiltInCacheTransaction|Sync-OSDAppVendorBuiltInCache'

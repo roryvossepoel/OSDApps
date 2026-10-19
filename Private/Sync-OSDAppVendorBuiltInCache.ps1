@@ -1,7 +1,7 @@
 function Sync-OSDAppVendorBuiltInCache {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][ValidateSet('GoogleChromeEnterprise','MozillaFirefoxEnterprise','CiscoWebex','AdobeAcrobatUnified')][string]$Id,
+        [Parameter(Mandatory)][ValidateSet('GoogleChromeEnterprise','MozillaFirefoxEnterprise','CiscoWebex','ZoomWorkplace','AdobeAcrobatUnified')][string]$Id,
         [Parameter(Mandatory)][string]$Root,
         [Parameter(Mandatory)][uri]$PackageUri,
         [Parameter(Mandatory)][string]$Architecture,

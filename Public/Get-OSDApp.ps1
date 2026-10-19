@@ -102,6 +102,7 @@ function Get-OSDApp {
     $adobeCacheInfo = $null
     $chromeCacheInfo = $null
     $webexCacheInfo = $null
+    $zoomCacheInfo = $null
     $firefoxCacheInfo = $null
 
     if ($cachePath) {
@@ -110,7 +111,8 @@ function Get-OSDApp {
             @{ Id='MicrosoftTeams'; Path=(Join-Path $cachePath 'BuiltIn\MicrosoftTeams\CacheInfo.json') },
             @{ Id='AdobeAcrobatUnified'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $(if ($hostArchitecture -eq 'x86') { 'x86' } else { 'x64' }) 'CacheInfo.json'))) },
             @{ Id='GoogleChromeEnterprise'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\GoogleChromeEnterprise' (Join-Path $(if ($hostArchitecture -eq 'x86') { 'x86' } else { 'x64' }) 'CacheInfo.json'))) },
-            @{ Id='CiscoWebex'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\CiscoWebex' (Join-Path $(if ($hostArchitecture -eq 'arm64') { 'arm64' } else { 'x64' }) 'CacheInfo.json'))) }
+            @{ Id='CiscoWebex'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\CiscoWebex' (Join-Path $(if ($hostArchitecture -eq 'arm64') { 'arm64' } else { 'x64' }) 'CacheInfo.json'))) },
+            @{ Id='ZoomWorkplace'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\ZoomWorkplace' (Join-Path $(if ($hostArchitecture -eq 'arm64') { 'arm64' } else { 'x64' }) 'CacheInfo.json'))) }
         )) {
             if (Test-Path -LiteralPath $definition.Path -PathType Leaf) {
                 try {
@@ -121,6 +123,7 @@ function Get-OSDApp {
                         'AdobeAcrobatUnified' { $adobeCacheInfo = $info }
                         'GoogleChromeEnterprise' { $chromeCacheInfo = $info }
                         'CiscoWebex' { $webexCacheInfo = $info }
+                        'ZoomWorkplace' { $zoomCacheInfo = $info }
                     }
                 }
                 catch { }
@@ -154,6 +157,7 @@ function Get-OSDApp {
         @{ Id='AdobeAcrobatUnified'; DisplayName='Adobe Acrobat Unified'; Info=$adobeCacheInfo },
         @{ Id='GoogleChromeEnterprise'; DisplayName='Google Chrome Enterprise'; Info=$chromeCacheInfo },
         @{ Id='CiscoWebex'; DisplayName='Cisco Webex'; Info=$webexCacheInfo },
+        @{ Id='ZoomWorkplace'; DisplayName='Zoom Workplace'; Info=$zoomCacheInfo },
         @{ Id='MozillaFirefoxEnterprise'; DisplayName='Mozilla Firefox Enterprise'; Info=$firefoxCacheInfo }
     )) {
         $apps.Add([pscustomobject]@{

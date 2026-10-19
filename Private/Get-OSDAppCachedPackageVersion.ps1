@@ -94,7 +94,7 @@ function Get-OSDAppCachedPackageVersion {
     $version = $null
     $source = $null
     switch ($Id) {
-        { $_ -in @('GoogleChromeEnterprise','CiscoWebex','MozillaFirefoxEnterprise') } {
+        { $_ -in @('GoogleChromeEnterprise','CiscoWebex','ZoomWorkplace','MozillaFirefoxEnterprise') } {
             $version = Get-OSDAppMsiProductVersion -Path (Join-Path $CacheEntryPath 'Package.msi')
             if ($version) { $source = 'MsiProductVersion' }
             break

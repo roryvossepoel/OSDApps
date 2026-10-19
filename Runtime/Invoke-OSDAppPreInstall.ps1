@@ -461,6 +461,7 @@ function Assert-PreInstallSignedPayload {
         'MicrosoftTeams'           { 'Microsoft Corporation'; break }
         'GoogleChromeEnterprise'   { 'Google LLC'; break }
         'CiscoWebex'               { 'Cisco Systems, Inc.'; break }
+        'ZoomWorkplace'            { 'Zoom Communications, Inc.'; break }
         'MozillaFirefoxEnterprise' { 'Mozilla Corporation'; break }
         default                    { $null }
     }
@@ -906,6 +907,21 @@ try {
                 }
                 $relativeRoot = Join-Path 'BuiltIn\CiscoWebex' $architecture
                 Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Cisco Webex' -Acquisition $acquisition
+            }
+            'ZoomWorkplace' {
+                $architecture = if ($app.Architecture) { [string]$app.Architecture } else { 'x64' }
+                if ($architecture -notin @('x64','arm64')) { throw "Zoom Workplace supports only x64 and arm64; received '$architecture'." }
+                $packageUri = if ($app.PackageUri) {
+                    [string]$app.PackageUri
+                }
+                else {
+                    switch ($architecture) {
+                        'x64' { 'https://zoom.us/client/latest/ZoomInstallerFull.msi?archType=x64' }
+                        'arm64' { 'https://zoom.us/client/latest/ZoomInstallerFull.msi?archType=winarm64' }
+                    }
+                }
+                $relativeRoot = Join-Path 'BuiltIn\ZoomWorkplace' $architecture
+                Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Zoom Workplace' -Acquisition $acquisition
             }
             'GoogleChromeEnterprise' {
                 $architecture = if ($app.Architecture) { [string]$app.Architecture } else { 'x64' }

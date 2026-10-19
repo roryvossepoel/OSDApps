@@ -95,7 +95,7 @@ jobs:
               $expected = @{
                   Microsoft365Apps='Microsoft'; MicrosoftTeams='Microsoft'
                   AdobeAcrobatUnified='Adobe'; GoogleChromeEnterprise='Google'
-                  MozillaFirefoxEnterprise='Mozilla'; CiscoWebex='Cisco'
+                  MozillaFirefoxEnterprise='Mozilla'; CiscoWebex='Cisco'; ZoomWorkplace='Zoom'
               }
               if ($definitions.Count -ne $expected.Count) { throw 'Built-in metadata count mismatch.' }
               foreach ($id in $expected.Keys) {

@@ -115,10 +115,10 @@ Describe 'Trusted built-in publisher enforcement' {
     It 'uses security checks in all signable full-Windows sync paths' {
         $root = Split-Path -Parent $PSScriptRoot
         $sharedVendorSync = Get-Content -LiteralPath (Join-Path $root 'Private\Sync-OSDAppVendorBuiltInCache.ps1') -Raw
-        foreach ($id in @('GoogleChromeEnterprise','CiscoWebex','MozillaFirefoxEnterprise','MicrosoftTeams','Microsoft365Apps')) {
+        foreach ($id in @('GoogleChromeEnterprise','CiscoWebex','ZoomWorkplace','MozillaFirefoxEnterprise','MicrosoftTeams','Microsoft365Apps')) {
             $path = Join-Path $root "Public\Sync-OSDApp$id.ps1"
             $source = Get-Content -LiteralPath $path -Raw
-            if ($id -in @('GoogleChromeEnterprise','CiscoWebex','MozillaFirefoxEnterprise')) {
+            if ($id -in @('GoogleChromeEnterprise','CiscoWebex','ZoomWorkplace','MozillaFirefoxEnterprise')) {
                 $source | Should -Match 'Sync-OSDAppVendorBuiltInCache'
                 $source | Should -Match '-SignedPackage'
                 $sharedVendorSync | Should -Match 'Save-OSDAppVerifiedBuiltInDownload'

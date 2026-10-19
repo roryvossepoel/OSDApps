@@ -18,14 +18,14 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
                     SignerCertificate=[pscustomobject]@{Subject='CN=Example Publisher'}
                 }
             }
-            foreach ($id in @('GoogleChromeEnterprise','CiscoWebex','MozillaFirefoxEnterprise')) {
+            foreach ($id in @('GoogleChromeEnterprise','CiscoWebex','ZoomWorkplace','MozillaFirefoxEnterprise')) {
                 $result = Get-OSDAppBuiltInSignature -Id $id -CacheEntryPath $dir
                 $result.Status | Should -Be 'Valid'
                 $result.Scope | Should -Be 'MSI package'
                 $result.File | Should -Be $msi
                 $result.Signer | Should -Be 'CN=Example Publisher'
             }
-            Should -Invoke Get-AuthenticodeSignature -Exactly 3 -ParameterFilter { $LiteralPath -eq $msi }
+            Should -Invoke Get-AuthenticodeSignature -Exactly 4 -ParameterFilter { $LiteralPath -eq $msi }
             (Get-FileHash -LiteralPath $msi -Algorithm SHA256).Hash | Should -Be $before
         }
     }

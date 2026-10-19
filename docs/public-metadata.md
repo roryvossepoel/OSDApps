@@ -39,7 +39,7 @@ manifest identity and public command suffix.
 
 ## Example: Cisco Webex
 
-The public catalog includes six built-in applications. This `CiscoWebex` entry illustrates the schema:
+The public catalog includes seven built-in applications. This `CiscoWebex` entry illustrates the schema:
 
 ```json
 {
