@@ -2,6 +2,10 @@
 
 This page tracks real OSDApps deployment scenarios after OSDCloud applies Windows. **Staging success alone is not an installation success**: the Windows `SetupComplete.cmd` phases must finish and the individual app results must be checked.
 
+For the next nine-application regression using Gallery 0.45.0, follow the
+[all-app cold deployment procedure](all-apps-cold-validation.md). This is a test
+plan; it is not recorded as passed until its results have been reviewed.
+
 ## Scenario coverage
 
 This matrix records detailed deployment evidence for the stated versions. The
