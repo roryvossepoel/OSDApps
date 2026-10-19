@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.45.1
 
 - Reuse a compatible, structurally consistent Office generation during online PreInstall when its build matches the architecture-specific build advertised by the Microsoft CDN, or an exact build pin matches. Skip ODT acquisition and report `CacheReused`; keep complete-generation replacement for changed or missing content.
 - Preserve requested installation XML, signature validation, offline/failure fallback and one-shot execution. Metadata failures are reported as fallback warnings, not confirmed reuse. Explicit preparation-PC Office Sync still requests a fresh generation.
-- Add regression tests for actual runtime reuse, unchanged USB content, changed configuration, inconsistent generations and metadata failure. Physical deployment validation of this correction is pending.
+- Add regression tests for actual runtime reuse, unchanged USB content, changed configuration, inconsistent generations and metadata failure. Windows PowerShell 5.1 and PowerShell 7 each passed 416 tests on the implementation candidate. A physical x64 warm deployment confirmed `CacheReused`, matching Office 16.0.20430.20180 executables, exit code 0 and completed cleanup. See [validation evidence](docs/testing.md#office-online-warm-cache-reuse--19-october-2026).
 
 ## 0.45.0
 
