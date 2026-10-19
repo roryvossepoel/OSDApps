@@ -1,9 +1,10 @@
 # Zoom Workplace validation
 
-This candidate adds two commands to the source module. It is not yet a Gallery
-release. Test the reviewed PR commit, not an unrelated installed module. The
-module manifest retains the current release version until release preparation;
-the commit identifies this preview.
+Zoom Workplace is introduced in OSDApps `0.45.0`. For a source-based validation,
+use the exact reviewed commit and its adjacent module; the script does not
+replace an installed module. A source candidate may retain the preceding
+release version, so record the commit as well as the manifest version.
+Gallery testing requires the published release containing the Zoom commands.
 
 ## WinPE staging
 
@@ -60,5 +61,7 @@ Automated tests cover configuration serialization, staging with and without
 cache, publisher decisions, transactional recovery, reuse and PreInstall
 acquisition/fallback. Vendor calls and installer processes in unit tests use
 fixtures. Live x64 and ARM64 endpoints were checked and the downloaded x64 MSI
-certificate organization inspected on 18 October 2026. Full Windows trust
-validation and physical pre-OOBE installation remain required before release.
+certificate organization inspected on 18 October 2026. A physical x64 cold deployment passed on 19 October 2026, including the normal
+Windows acquisition and installation path; see [the recorded evidence](testing.md#zoom-workplace-cold-deployment--19-october-2026).
+ARM64 deployment, warm reuse and first-user configuration/sign-in checks remain
+pending. The upcoming full-app cold deployment is a separate regression test.

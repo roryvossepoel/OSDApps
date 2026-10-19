@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.45.0
 
 - Add Zoom Workplace x64/ARM64 as a signed, transactionally cached VendorMsi built-in with Add and Sync commands, offline staging, acquisition reporting and cache inspection.
 - Support optional desktop shortcut suppression, SSO host and validated ZConfig/ZRecommend maps without changing vendor defaults or adding a second execution mechanism.
-- Add automated integration coverage and a staged WinPE/OOBE test procedure. Physical installation remains pending.
+- Add automated integration coverage and a staged WinPE/OOBE test procedure. Both Windows PowerShell 5.1 and PowerShell 7 passed 383 tests and all 33 packaged help checks on the implementation candidate.
+- Validate a physical x64 Zoom deployment on 19 October 2026: new download, installer exit code 0, absent desktop shortcut and completed cleanup. See [validation evidence](docs/testing.md#zoom-workplace-cold-deployment--19-october-2026). ARM64 deployment, warm reuse and first-user settings remain pending.
 
 ## 0.44.0
 
