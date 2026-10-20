@@ -12,6 +12,7 @@ $sleepLog = $null
 $cacheLock = $null
 . (Join-Path $PSScriptRoot 'Restore-OSDAppCacheGeneration.ps1')
 . (Join-Path $PSScriptRoot 'OSDApp7Zip.ps1')
+. (Join-Path $PSScriptRoot 'OSDAppVisualStudioCode.ps1')
 . (Join-Path $PSScriptRoot 'Invoke-OSDAppBuiltInCacheTransaction.ps1')
 . (Join-Path $PSScriptRoot 'Assert-OSDAppTransactionSpace.ps1')
 Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
@@ -928,6 +929,34 @@ try {
                 }
                 $relativeRoot = Join-Path 'BuiltIn\CiscoWebex' $architecture
                 Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Cisco Webex' -Acquisition $acquisition
+            }
+            'VisualStudioCode' {
+                $architecture = [string]$app.Architecture
+                $relativeRoot = Join-Path 'BuiltIn\VisualStudioCode' $architecture
+                $localRoot = Join-Path $StagedPath $relativeRoot
+                $acquireRoot = if ($usbRoot) { Join-Path $usbRoot $relativeRoot } else { $localRoot }
+                try {
+                    if (-not $networkAvailable) { throw 'No network connection is available.' }
+                    $sync = Sync-OSDAppVisualStudioCodeGeneration -Root $acquireRoot -Architecture $architecture -Download {
+                        param($uri, $destination)
+                        Save-PreInstallDownload -Uri $uri -DestinationPath $destination -Id 'VisualStudioCode' -Description 'VisualStudioCode EXE' -TimeoutMinutes 10
+                    }
+                    if ($usbRoot) {
+                        New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
+                        foreach ($file in @('Package.exe','CacheInfo.json')) {
+                            Copy-Item -LiteralPath (Join-Path $acquireRoot $file) -Destination (Join-Path $localRoot $file) -Force
+                        }
+                    }
+                    Assert-OSDAppVisualStudioCodeGeneration -Root $localRoot -Architecture $architecture -VerifyPublisher | Out-Null
+                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($sync.Updated) { 'Downloaded' } else { 'CacheReused' })
+                }
+                catch {
+                    $refreshFailure = $_
+                    # A fallback must pass the same full hash and provenance checks.
+                    try { Assert-OSDAppVisualStudioCodeGeneration -Root $localRoot -Architecture $architecture -VerifyPublisher | Out-Null }
+                    catch { throw "VisualStudioCode acquisition failed with no valid staged fallback. $($refreshFailure.Exception.Message)" }
+                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($networkAvailable) { 'FallbackCacheUsed' } else { 'OfflineCacheUsed' }) -RefreshError $refreshFailure
+                }
             }
             '7Zip' {
                 $architecture = [string]$app.Architecture

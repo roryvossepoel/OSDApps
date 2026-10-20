@@ -169,6 +169,24 @@
       "CachePath": "BuiltIn/7Zip/<architecture>",
       "RepositoryAlternative": true,
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/7zip.svg"
+    },
+    {
+      "Id": "VisualStudioCode",
+      "DisplayName": "Visual Studio Code",
+      "Source": "BuiltIn",
+      "Vendor": "Microsoft",
+      "Acquisition": "VisualStudioCodeExe",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppVisualStudioCode",
+      "SyncCommand": "Sync-OSDAppVisualStudioCode",
+      "Architectures": [
+        "x64",
+        "arm64"
+      ],
+      "DefaultArchitecture": "x64",
+      "CachePath": "BuiltIn/VisualStudioCode/<architecture>",
+      "RepositoryAlternative": true,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/vscode.svg"
     }
   ]
 }
