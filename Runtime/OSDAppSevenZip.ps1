@@ -71,6 +71,8 @@ function Sync-OSDAppSevenZipGeneration {
         [Parameter(Mandatory)][scriptblock]$Download,
         [ValidateRange(0, [double]::MaxValue)][double]$MinimumFreeSpaceGB = 1
     )
+    # Callback is invoked from the transaction build scope.
+    $downloadAction = $Download
     Restore-OSDAppCacheGeneration -Root $Root -Validate {
         param($candidate)
         Assert-OSDAppSevenZipGeneration -Root $candidate -Architecture $Architecture
@@ -82,7 +84,7 @@ function Sync-OSDAppSevenZipGeneration {
     if (-not $current) {
         Invoke-OSDAppBuiltInCacheTransaction -Root $Root -ExpectedBytes $release.Size -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Build {
             param($candidate)
-            & $Download $release.PackageUri (Join-Path $candidate 'Package.exe') | Out-Null
+            & $downloadAction $release.PackageUri (Join-Path $candidate 'Package.exe') | Out-Null
             [ordered]@{
                 Id='SevenZip'; Cached=$true; Version=$release.Version; VersionSource='GitHubRelease'; Architecture=$Architecture;
                 PackageUri=$release.PackageUri; Sha256=$release.Sha256; Size=$release.Size;

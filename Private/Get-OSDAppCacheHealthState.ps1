@@ -418,6 +418,9 @@ function Get-OSDAppCacheHealthState {
         elseif ($officeGenerationCorrupt) {
             $state = 'Corrupt'; $action = 'Refresh'; $reason = "The Microsoft 365 Apps cache generation is inconsistent. $officeGenerationReason"
         }
+        elseif ($canonicalId -eq 'SevenZip' -and -not $item.Valid) {
+            $state = 'Corrupt'; $action = 'Refresh'; $reason = 'The 7-Zip generation failed release metadata, SHA-256, size or architecture validation.'
+        }
         elseif (-not $item.Valid) {
             $state = 'Incomplete'; $action = 'Refresh'; $reason = 'Required built-in payload files are missing.'
         }
