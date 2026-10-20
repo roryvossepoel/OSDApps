@@ -1,9 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.47.0
 
 - Add Visual Studio Code Stable system-installer staging and synchronization for x64 and ARM64, with official release SHA-256, Microsoft publisher verification and transactional cache replacement.
 - Add 7Zip built-in staging and cache synchronization for x64, x86 and ARM64, with official release SHA-256 verification and transactional cache replacement.
+
+- Record successful physical x64 7Zip and Visual Studio Code deployment tests, including installed versions and runtime cleanup. See [validation evidence](docs/testing.md).
+- Gate automatic release creation on a module version increase. Other manifest changes skip publication; manual release requests retain strict tag and source validation.
 
 ## 0.46.0
 

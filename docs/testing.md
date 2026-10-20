@@ -462,3 +462,24 @@ It does not rename an already-created test cache or change existing test records
 Use `tools/Test-OSDApps7Zip.ps1 -Phase Stage` on a fresh Windows deployment;
 its copied `C:\ProgramData\OSDApps\Tests\Test-OSDApps7Zip.ps1 -Phase Validate`
 checks the correlated deployment in OOBE. Do not rerun SetupComplete.
+
+
+## Visual Studio Code physical candidate validation (2026-10-20)
+
+The x64 candidate at `9e2d204d7d2c49ba6c8b3115071193dfd7da72bd`
+([PR #51](https://github.com/roryvossepoel/OSDApps/pull/51)) passed a physical
+WinPE-to-OOBE deployment: `bb0e91a0-c45e-4fff-9743-cd4478ab362a`.
+The candidate retained module version 0.46.0; this built-in ships in 0.47.0.
+
+- Acquisition reported `Downloaded` with no refresh error (8.1 seconds).
+- Machine-wide Visual Studio Code 1.142.0 installed with exit code 0.
+- Registered, executable and reported versions matched.
+- PreInstall took 11.8 seconds; Runner took 36 seconds.
+- The OOBE validator passed its installation and cleanup checks; staging was removed.
+- Validation was read-only and did not rerun SetupComplete.
+
+[Candidate CI](https://github.com/roryvossepoel/OSDApps/actions/runs/39479913392)
+passed on Windows PowerShell 5.1 and PowerShell 7. This physical result covers
+x64 download and installation, not ARM64 installation, warm-cache reuse or
+interactive editor behavior. The 0.47.0 release includes 7Zip's physical
+candidate evidence and naming limitation documented above.

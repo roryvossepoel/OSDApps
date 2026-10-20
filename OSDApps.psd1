@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.46.0'
+    ModuleVersion     = '0.47.0'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -25,8 +25,8 @@
         'Sync-OSDAppGoogleChromeEnterprise',
         'Sync-OSDAppCiscoWebex',
         'Sync-OSDAppZoomWorkplace',
-    'Sync-OSDApp7Zip',
-    'Sync-OSDAppVisualStudioCode',
+        'Sync-OSDApp7Zip',
+        'Sync-OSDAppVisualStudioCode',
         'Sync-OSDAppMozillaFirefoxEnterprise',
         'Clear-OSDAppCache',
         'Add-OSDApp',
@@ -36,8 +36,8 @@
         'Add-OSDAppGoogleChromeEnterprise',
         'Add-OSDAppCiscoWebex',
         'Add-OSDAppZoomWorkplace',
-    'Add-OSDApp7Zip',
-    'Add-OSDAppVisualStudioCode',
+        'Add-OSDApp7Zip',
+        'Add-OSDAppVisualStudioCode',
         'Add-OSDAppMozillaFirefoxEnterprise',
         'New-OSDAppRepository',
         'New-OSDAppPackage',
@@ -53,7 +53,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.46.0: Prevent automatic idle sleep during PreInstall and application installation with temporary Windows power requests. Enabled by default; use Set-OSDAppConfiguration -PreventSleep $false to opt out before staging. Requests are released on completion, failure or process termination without changing power plans. Validated on Windows PowerShell 5.1 and PowerShell 7 and in a physical WinPE-to-OOBE deployment.'
+            ReleaseNotes = '0.47.0: Add 7Zip and Visual Studio Code Stable system-wide installation with official release metadata, verified downloads and transactional cache replacement. Both x64 candidates passed physical WinPE-to-OOBE installation and cleanup checks. Automatically create releases only when the module version increases.'
             RequireLicenseAcceptance = $false
         }
     }
