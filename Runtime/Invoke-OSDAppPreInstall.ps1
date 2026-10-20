@@ -944,9 +944,6 @@ try {
                         param($uri, $destination)
                         Save-PreInstallDownload -Uri $uri -DestinationPath $destination -Id $spec.Id -Description 'Runtime EXE' -TimeoutMinutes 10
                     }
-                    if ($sync.SupportWarning) {
-                        Write-PreInstallLog -Event 'RuntimeSupportWarning' -Level 'Warning' -Message $sync.SupportWarning -Data @{ Id=$spec.Id; Channel=$spec.Channel }
-                    }
                     if ($usbRoot) {
                         New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
                         foreach ($file in @('Package.exe','CacheInfo.json')) {
@@ -957,6 +954,7 @@ try {
                     Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($sync.Updated) { 'Downloaded' } else { 'CacheReused' })
                 }
                 catch {
+                    if ($_.Exception -is [NotSupportedException]) { throw }
                     $refreshFailure = $_
                     # A fallback must pass the same full hash and provenance checks.
                     try { Assert-OSDAppPrerequisiteGeneration -Root $localRoot -Spec $spec -VerifyPublisher | Out-Null }

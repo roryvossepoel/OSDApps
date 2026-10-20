@@ -13,12 +13,26 @@ function Get-OSDAppPrerequisiteSpec {
         $Channel = '14'; $RuntimeType = 'Runtime'
     }
     else {
-        if ($Channel -notmatch '^[1-9][0-9]*\.0$') { throw 'Specify a .NET channel such as 8.0 or 10.0.' }
+        Assert-OSDAppDotNetChannelSupport -Channel $Channel
         $id = "DotNetRuntime-$RuntimeType-$Channel-$Architecture"
         $relative = "BuiltIn\DotNetRuntime\$RuntimeType\$Channel\$Architecture"
         $display = ".NET $RuntimeType Runtime $Channel ($Architecture)"
     }
     [pscustomobject]@{ Id=$id; Family=$Family; Architecture=$Architecture; RuntimeType=$RuntimeType; Channel=$Channel; RelativeRoot=$relative; DisplayName=$display }
+}
+
+function Assert-OSDAppDotNetChannelSupport {
+    param([Parameter(Mandatory)][string]$Channel)
+    # Offline lifecycle guard, checked at staging, acquisition and execution.
+    # Source: https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core
+    $endDates = @{ '8.0'='2026-11-10'; '9.0'='2026-11-10'; '10.0'='2028-11-14' }
+    if (-not $endDates.ContainsKey($Channel)) {
+        throw [NotSupportedException]::new(".NET channel '$Channel' is not offered. Choose a supported stable channel: 8.0, 9.0 or 10.0.")
+    }
+    $endDate = [datetime]::ParseExact($endDates[$Channel], 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+    if ((Get-Date).ToUniversalTime().Date -gt $endDate) {
+        throw [NotSupportedException]::new(".NET $Channel support ended on $($endDates[$Channel]); this channel cannot be staged, acquired or installed, including from cache.")
+    }
 }
 
 function Assert-OSDAppPrerequisitePublisher {
@@ -50,22 +64,19 @@ function Get-OSDAppPrerequisiteRelease {
         finally { $response.Close() }
         return
     }
+    Assert-OSDAppDotNetChannelSupport -Channel $Spec.Channel
     $metadata = Invoke-RestMethod -Uri "https://builds.dotnet.microsoft.com/dotnet/release-metadata/$($Spec.Channel)/releases.json" -TimeoutSec 60 -ErrorAction Stop
     if ([string]$metadata.'channel-version' -ne $Spec.Channel) {
         throw 'The .NET release metadata does not match the requested channel.'
     }
-    # Lifecycle status is advisory; installer identity and integrity remain mandatory.
     $supportProperty = $metadata.PSObject.Properties['support-phase']
     $supportPhase = if ($supportProperty) { [string]$supportProperty.Value } else { '' }
-    if ($supportPhase -in @('preview','go-live','golive')) { throw 'Preview .NET channels are not supported.' }
-    $supportWarning = ''
-    if ($supportPhase -eq 'eol') {
-        $supportWarning = ".NET $($Spec.Channel) is end of support. Continuing with the latest published stable patch in the explicitly requested channel."
+    if ($supportPhase -in @('eol','preview','go-live','golive')) {
+        throw [NotSupportedException]::new(".NET $($Spec.Channel) is not a supported stable channel (status: $supportPhase).")
     }
-    elseif ($supportPhase -notin @('active','maintenance')) {
-        $supportWarning = ".NET $($Spec.Channel) support status could not be confirmed ('$supportPhase'). Continuing only if stable release and installer validation succeed."
+    if ($supportPhase -notin @('active','maintenance')) {
+        throw 'Cannot confirm the .NET channel support status from Microsoft release metadata.'
     }
-    if ($supportWarning) { Write-Warning $supportWarning }
     $version = [string]$metadata.'latest-runtime'
     if ($version -notmatch ('^' + [regex]::Escape($Spec.Channel) + '\.\d+$')) { throw 'Invalid stable .NET runtime version.' }
     $releases = @($metadata.releases | Where-Object { [string]$_.'release-version' -eq $version })
@@ -79,12 +90,13 @@ function Get-OSDAppPrerequisiteRelease {
     $prefix = if ($Spec.RuntimeType -eq 'Desktop') { 'windowsdesktop-runtime' } else { 'dotnet-runtime' }
     $expected = "https://builds.dotnet.microsoft.com/dotnet/$segment/$version/$prefix-$version-win-$($Spec.Architecture).exe"
     if ([string]$files[0].url -cne $expected) { throw 'Unexpected .NET runtime installer URL.' }
-    [pscustomobject]@{ PackageUri=$expected; ResolvedUri=$expected; Size=0; ETag=''; LastModified=''; Version=$version; Sha512=[string]$files[0].hash; SupportWarning=$supportWarning }
+    [pscustomobject]@{ PackageUri=$expected; ResolvedUri=$expected; Size=0; ETag=''; LastModified=''; Version=$version; Sha512=[string]$files[0].hash }
 }
 
 function Assert-OSDAppPrerequisiteGeneration {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)]$Spec, $Release, [switch]$VerifyPublisher)
+    if ($Spec.Family -eq 'DotNetRuntime') { Assert-OSDAppDotNetChannelSupport -Channel $Spec.Channel }
     $info = Get-Content -LiteralPath (Join-Path $Root 'CacheInfo.json') -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
     foreach ($name in @('Architecture','RuntimeType','Channel')) {
         if ([string]$info.$name -cne [string]$Spec.$name) { throw "Runtime cache $name is incompatible." }
@@ -119,6 +131,7 @@ function Assert-OSDAppPrerequisiteGeneration {
 function Sync-OSDAppPrerequisiteGeneration {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)]$Spec, [Parameter(Mandatory)][scriptblock]$Download, [double]$MinimumFreeSpaceGB=1)
+    if ($Spec.Family -eq 'DotNetRuntime') { Assert-OSDAppDotNetChannelSupport -Channel $Spec.Channel }
     Restore-OSDAppCacheGeneration -Root $Root -Validate { param($candidate) Assert-OSDAppPrerequisiteGeneration -Root $candidate -Spec $Spec -VerifyPublisher } | Out-Null
     $release = Get-OSDAppPrerequisiteRelease -Spec $Spec
     $current = $false
@@ -149,8 +162,7 @@ function Sync-OSDAppPrerequisiteGeneration {
         } -Validate { param($candidate) Assert-OSDAppPrerequisiteGeneration -Root $candidate -Spec $Spec -Release $release -VerifyPublisher } | Out-Null
         $info = Assert-OSDAppPrerequisiteGeneration -Root $Root -Spec $Spec -VerifyPublisher
     }
-    $supportWarning = if ($release.PSObject.Properties['SupportWarning']) { [string]$release.SupportWarning } else { '' }
-    [pscustomobject]@{ Id=$Spec.Id; Version=$info.Version; Architecture=$Spec.Architecture; Root=$Root; Updated=(-not $current); SupportWarning=$supportWarning }
+    [pscustomobject]@{ Id=$Spec.Id; Version=$info.Version; Architecture=$Spec.Architecture; Root=$Root; Updated=(-not $current) }
 }
 
 function Get-OSDAppInstalledPrerequisiteVersion {

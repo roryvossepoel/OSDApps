@@ -5,6 +5,7 @@ BeforeAll {
     Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) 'OSDApps.psd1') -Force
 }
 Describe 'Runtime selection and staging' {
+    BeforeEach { InModuleScope OSDApps { Mock Get-Date { [datetime]'2026-10-21T12:00:00Z' } } }
     It 'preserves x86/x64 and multiple .NET variants, de-duplicates and orders prerequisites first' {
         InModuleScope OSDApps {
             Mock Resolve-OSDAppWindowsPath { $WindowsPath }
@@ -13,9 +14,10 @@ Describe 'Runtime selection and staging' {
             $windows = Join-Path $TestDrive 'Windows'
             New-Item -ItemType Directory $windows -Force | Out-Null
             Add-OSDAppVisualStudioCode -WindowsPath $windows
-            Add-OSDAppVisualCppRedist -WindowsPath $windows
-            Add-OSDAppDotNetRuntime -WindowsPath $windows -Channel 8.0 -RuntimeType Runtime
-            Add-OSDAppDotNetRuntime -WindowsPath $windows -Channel 10.0 -RuntimeType Desktop
+            Add-OSDAppVisualCppRedist -WindowsPath $windows -Architecture x86
+            Add-OSDAppVisualCppRedist -WindowsPath $windows -Architecture x64
+            Add-OSDAppDotNetRuntime -WindowsPath $windows -Channel 8.0 -RuntimeType Runtime -Architecture x64
+            Add-OSDAppDotNetRuntime -WindowsPath $windows -Channel 10.0 -RuntimeType Desktop -Architecture x64
             Add-OSDAppDotNetRuntime -WindowsPath $windows -Channel 10.0 -RuntimeType Runtime -Architecture x86
             Add-OSDAppVisualCppRedist -WindowsPath $windows -Architecture x64
             $stage = Join-Path $windows 'Windows/Temp/OSDApps'
@@ -36,19 +38,20 @@ Describe 'Runtime selection and staging' {
             Mock Resolve-OSDAppWindowsPath { $WindowsPath }
             Mock Get-OSDAppCachePath { throw 'No cache' }
             $windows = Join-Path $TestDrive 'WhatIf'
-            Add-OSDAppVisualCppRedist -WindowsPath $windows -WhatIf
-            Add-OSDAppDotNetRuntime -WindowsPath $windows -WhatIf
+            Add-OSDAppVisualCppRedist -WindowsPath $windows -Architecture x64 -WhatIf
+            Add-OSDAppDotNetRuntime -WindowsPath $windows -Architecture x64 -WhatIf
             Test-Path $windows | Should -BeFalse
         }
     }
     It 'rejects unsafe and preview channel strings' {
-        { Add-OSDAppDotNetRuntime -Channel '../10.0' } | Should -Throw
-        { Add-OSDAppDotNetRuntime -Channel '11.0-preview' } | Should -Throw
+        { Add-OSDAppDotNetRuntime -Architecture x64 -Channel '../10.0' } | Should -Throw
+        { Add-OSDAppDotNetRuntime -Architecture x64 -Channel '11.0-preview' } | Should -Throw
     }
 }
 Describe 'Runtime release selection and transaction integrity' {
     BeforeEach {
         InModuleScope OSDApps {
+            Mock Get-Date { [datetime]'2026-10-21T12:00:00Z' }
             $script:spec = Get-OSDAppPrerequisiteSpec -Family DotNetRuntime -Architecture x64 -RuntimeType Desktop -Channel 10.0
             $script:payload = [Text.Encoding]::UTF8.GetBytes('runtime fixture')
             $sha = [Security.Cryptography.SHA512]::Create()
@@ -85,35 +88,40 @@ Describe 'Runtime release selection and transaction integrity' {
             { Get-OSDAppPrerequisiteRelease -Spec $script:spec } | Should -Throw '*one*'
         }
     }
-    It 'warns for EOL while acquiring and reusing a fully verified stable generation' {
+    It 'rejects EOL metadata without downloading or replacing an existing valid generation' {
         InModuleScope OSDApps {
+            Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download
+            $before = (Get-FileHash (Join-Path $script:cache 'Package.exe')).Hash
             $script:metadata.'support-phase'='eol'
-            $first = Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download -WarningVariable warnings -WarningAction SilentlyContinue
-            $first.Updated | Should -BeTrue
-            $first.SupportWarning | Should -Match 'end of support'
-            ($warnings -join ' ') | Should -Match 'end of support'
-            $second = Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download -WarningAction SilentlyContinue
-            $second.Updated | Should -BeFalse
-            $second.Version | Should -Be '10.0.1'
+            { Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download } | Should -Throw '*not a supported stable channel*'
+            (Get-FileHash (Join-Path $script:cache 'Package.exe')).Hash | Should -Be $before
             $script:downloadCount | Should -Be 1
         }
     }
-    It 'tolerates missing or unknown lifecycle status under strict mode without relaxing channel checks' {
+    It 'rejects missing or unknown online support metadata and mismatched channels' {
         InModuleScope OSDApps {
             Set-StrictMode -Version Latest
             $script:metadata.PSObject.Properties.Remove('support-phase')
-            (Get-OSDAppPrerequisiteRelease -Spec $script:spec -WarningAction SilentlyContinue).SupportWarning | Should -Match 'could not be confirmed'
+            { Get-OSDAppPrerequisiteRelease -Spec $script:spec } | Should -Throw '*Cannot confirm*'
             $script:metadata | Add-Member -NotePropertyName 'support-phase' -NotePropertyValue 'future-status'
-            (Get-OSDAppPrerequisiteRelease -Spec $script:spec -WarningAction SilentlyContinue).Version | Should -Be '10.0.1'
+            { Get-OSDAppPrerequisiteRelease -Spec $script:spec } | Should -Throw '*Cannot confirm*'
             $script:metadata.'channel-version'='9.0'
             { Get-OSDAppPrerequisiteRelease -Spec $script:spec } | Should -Throw '*requested channel*'
         }
     }
-    It 'still rejects a corrupt candidate for an EOL channel' {
+    It 'enforces the support deadline offline for staging, cached content and acquisition' {
         InModuleScope OSDApps {
-            $script:metadata.'support-phase'='eol'
-            { Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download {param($u,$p) Set-Content $p 'wrong'} -WarningAction SilentlyContinue } | Should -Throw '*SHA-512*'
-            Test-Path $script:cache | Should -BeFalse
+            foreach ($channel in @('8.0','9.0')) {
+                Mock Get-Date { [datetime]'2026-11-10T23:59:59Z' }
+                { Get-OSDAppPrerequisiteSpec -Family DotNetRuntime -Architecture x64 -Channel $channel } | Should -Not -Throw
+                Mock Get-Date { [datetime]'2026-11-11T00:00:00Z' }
+                { Get-OSDAppPrerequisiteSpec -Family DotNetRuntime -Architecture x64 -Channel $channel } | Should -Throw '*support ended*'
+            }
+            Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download
+            Mock Get-Date { [datetime]'2028-11-15T00:00:00Z' }
+            { Assert-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec } | Should -Throw '*support ended*'
+            { Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download } | Should -Throw '*support ended*'
+            { Get-OSDAppPrerequisiteSpec -Family DotNetRuntime -Architecture x64 -Channel 7.0 } | Should -Throw '*not offered*'
         }
     }
     It 'reuses a verified generation and rejects content or selection mismatch' {
@@ -175,6 +183,7 @@ Describe 'Runtime PreInstall and Runner dispatch' {
         }
     }
     BeforeEach {
+        Mock Get-Date { [datetime]'2026-10-21T12:00:00Z' }
         $script:spec=Get-OSDAppPrerequisiteSpec -Family DotNetRuntime -Architecture x64 -Channel 10.0
         $script:app=[pscustomobject]@{Id=$spec.Id;Family=$spec.Family;Architecture=$spec.Architecture;RuntimeType=$spec.RuntimeType;Channel=$spec.Channel;Type='PrerequisiteExe';Package=(Join-Path $spec.RelativeRoot 'Package.exe');DisplayName=$spec.DisplayName;InstallTimeoutMinutes=10}
         $script:StagedPath=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
@@ -217,13 +226,19 @@ Describe 'Runtime PreInstall and Runner dispatch' {
         { & $script:preCase } | Should -Throw '*no valid staged fallback*'
         Should -Invoke Start-Process -Times 0 -Exactly
     }
-    It 'persists the advisory lifecycle warning in the deployment log' {
+    It 'does not fall back when Microsoft explicitly reports the channel is unsupported' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
-        Mock Sync-OSDAppPrerequisiteGeneration { [pscustomobject]@{Updated=$false;SupportWarning='.NET 10.0 is end of support.'} }
-        Mock Write-PreInstallLog { }
-        & $script:preCase
-        $acquisition.Outcome | Should -Be 'CacheReused'
-        Should -Invoke Write-PreInstallLog -Times 1 -Exactly -ParameterFilter { $Event -eq 'RuntimeSupportWarning' -and $Level -eq 'Warning' }
+        Mock Get-OSDAppPrerequisiteRelease { throw [NotSupportedException]::new('Channel is EOL') }
+        { & $script:preCase } | Should -Throw '*Channel is EOL*'
+        Should -Invoke Start-Process -Times 0 -Exactly
+    }
+    It 'rejects an expired channel before offline fallback or execution' {
+        New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
+        Mock Get-Date { [datetime]'2028-11-15T00:00:00Z' }
+        $script:networkAvailable=$false
+        { & $script:preCase } | Should -Throw '*support ended*'
+        { & $script:runCase } | Should -Throw '*support ended*'
+        Should -Invoke Start-Process -Times 0 -Exactly
     }
     It 'uses silent install without reboot and confirms the installed version' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec

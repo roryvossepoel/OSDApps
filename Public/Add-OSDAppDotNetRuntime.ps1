@@ -1,8 +1,8 @@
 function Add-OSDAppDotNetRuntime {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [ValidateSet('x86','x64')][string]$Architecture = 'x64',
-        [ValidatePattern('^[1-9][0-9]*\.0$')][string]$Channel = '10.0',
+        [Parameter(Mandatory)][ValidateSet('x86','x64')][string]$Architecture,
+        [ValidateSet('8.0','9.0','10.0')][string]$Channel = '10.0',
         [ValidateSet('Runtime','Desktop')][string]$RuntimeType = 'Desktop',
         [ValidateRange(1,120)][int]$InstallTimeoutMinutes = 10,
         [string]$WindowsPath

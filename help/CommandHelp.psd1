@@ -39,45 +39,47 @@
     }
     Commands = @{
         'Add-OSDAppVisualCppRedist' = @{
-            Parameters = @{ Architecture = 'One or both package architectures: x86 and x64. Defaults to both, with separate cache generations and deployment items.' }
+            Parameters = @{ Architecture = 'Required single package architecture: x86 or x64. No default and no combined selection.' }
             Synopsis = 'Add Microsoft runtime prerequisites.'
-            Description = 'Visual C++ defaults to x86 and x64. DotNetRuntime defaults to Desktop, channel 10.0 and x64; choose Runtime for the standalone runtime. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
+            Description = 'Specify one architecture explicitly: x86 or x64. DotNetRuntime defaults to Desktop and channel 10.0; choose Runtime for the standalone runtime. Only supported stable .NET channels are offered; expired channels cannot use cached fallback. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
             Environment = 'WinPE after applying Windows.'
             Output = 'OSDApps.StagedApp.'
-            Examples = @(@{ Code = 'Add-OSDAppVisualCppRedist'; Remarks = 'Use the default runtime selection.' })
+            Examples = @(@{ Code = 'Add-OSDAppVisualCppRedist -Architecture x64'; Remarks = 'Select x64 explicitly.' })
             Link = 'docs/built-in-apps.md'
         }
         'Sync-OSDAppVisualCppRedist' = @{
-            Parameters = @{ Architecture = 'One or both package architectures: x86 and x64. Defaults to both, with separate cache generations and deployment items.' }
+            Parameters = @{ Architecture = 'Required single package architecture: x86 or x64. No default and no combined selection.' }
             Synopsis = 'Sync Microsoft runtime prerequisites.'
-            Description = 'Visual C++ defaults to x86 and x64. DotNetRuntime defaults to Desktop, channel 10.0 and x64; choose Runtime for the standalone runtime. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
+            Description = 'Specify one architecture explicitly: x86 or x64. DotNetRuntime defaults to Desktop and channel 10.0; choose Runtime for the standalone runtime. Only supported stable .NET channels are offered; expired channels cannot use cached fallback. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
             Environment = 'Full Windows preparation computer.'
             Output = 'OSDApps.BuiltInCache.'
-            Examples = @(@{ Code = 'Sync-OSDAppVisualCppRedist'; Remarks = 'Use the default runtime selection.' })
+            Examples = @(@{ Code = 'Sync-OSDAppVisualCppRedist -Architecture x64'; Remarks = 'Select x64 explicitly.' })
             Link = 'docs/built-in-apps.md'
         }
         'Add-OSDAppDotNetRuntime' = @{
             Parameters = @{
+                Architecture = 'Required single package architecture: x86 or x64. No default and no combined selection.'
                 RuntimeType = 'Runtime selects the standalone Microsoft.NETCore.App runtime. Desktop includes Microsoft.WindowsDesktop.App and the ordinary runtime. Default: Desktop.'
-                Channel = 'Stable major.minor release channel, for example 8.0 or 10.0. Selects its newest published stable patch. Default: 10.0. Preview acquisition is rejected; EOL or unknown support status produces a warning without changing the requested channel.'
+                Channel = 'Supported stable release channel: 8.0, 9.0 or 10.0. Default: 10.0. Selects its newest stable patch. The support deadline is enforced even offline; preview and EOL channels are rejected.'
             }
             Synopsis = 'Add Microsoft runtime prerequisites.'
-            Description = 'Visual C++ defaults to x86 and x64. DotNetRuntime defaults to Desktop, channel 10.0 and x64; choose Runtime for the standalone runtime. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
+            Description = 'Specify one architecture explicitly: x86 or x64. DotNetRuntime defaults to Desktop and channel 10.0; choose Runtime for the standalone runtime. Only supported stable .NET channels are offered; expired channels cannot use cached fallback. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
             Environment = 'WinPE after applying Windows.'
             Output = 'OSDApps.StagedApp.'
-            Examples = @(@{ Code = 'Add-OSDAppDotNetRuntime'; Remarks = 'Use the default runtime selection.' })
+            Examples = @(@{ Code = 'Add-OSDAppDotNetRuntime -Architecture x64'; Remarks = 'Select x64 explicitly.' })
             Link = 'docs/built-in-apps.md'
         }
         'Sync-OSDAppDotNetRuntime' = @{
             Parameters = @{
+                Architecture = 'Required single package architecture: x86 or x64. No default and no combined selection.'
                 RuntimeType = 'Runtime selects the standalone Microsoft.NETCore.App runtime. Desktop includes Microsoft.WindowsDesktop.App and the ordinary runtime. Default: Desktop.'
-                Channel = 'Stable major.minor release channel, for example 8.0 or 10.0. Selects its newest published stable patch. Default: 10.0. Preview acquisition is rejected; EOL or unknown support status produces a warning without changing the requested channel.'
+                Channel = 'Supported stable release channel: 8.0, 9.0 or 10.0. Default: 10.0. Selects its newest stable patch. The support deadline is enforced even offline; preview and EOL channels are rejected.'
             }
             Synopsis = 'Sync Microsoft runtime prerequisites.'
-            Description = 'Visual C++ defaults to x86 and x64. DotNetRuntime defaults to Desktop, channel 10.0 and x64; choose Runtime for the standalone runtime. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
+            Description = 'Specify one architecture explicitly: x86 or x64. DotNetRuntime defaults to Desktop and channel 10.0; choose Runtime for the standalone runtime. Only supported stable .NET channels are offered; expired channels cannot use cached fallback. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
             Environment = 'Full Windows preparation computer.'
             Output = 'OSDApps.BuiltInCache.'
-            Examples = @(@{ Code = 'Sync-OSDAppDotNetRuntime'; Remarks = 'Use the default runtime selection.' })
+            Examples = @(@{ Code = 'Sync-OSDAppDotNetRuntime -Architecture x64'; Remarks = 'Select x64 explicitly.' })
             Link = 'docs/built-in-apps.md'
         }
 

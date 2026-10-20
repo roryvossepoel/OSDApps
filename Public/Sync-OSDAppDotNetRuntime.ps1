@@ -1,8 +1,8 @@
 function Sync-OSDAppDotNetRuntime {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [ValidateSet('x86','x64')][string]$Architecture = 'x64',
-        [ValidatePattern('^[1-9][0-9]*\.0$')][string]$Channel = '10.0',
+        [Parameter(Mandatory)][ValidateSet('x86','x64')][string]$Architecture,
+        [ValidateSet('8.0','9.0','10.0')][string]$Channel = '10.0',
         [ValidateSet('Runtime','Desktop')][string]$RuntimeType = 'Desktop',
         [ValidateRange(0, [double]::MaxValue)][double]$MinimumFreeSpaceGB = 1
     )

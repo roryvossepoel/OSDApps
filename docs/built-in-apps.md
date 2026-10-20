@@ -4,7 +4,7 @@
 
 Built-in applications use vendor-native acquisition and installation instead of the repository package contract.
 
-All built-ins default to x64. Supported choices differ by product; support in the interface is separate from [field validation](testing.md#validated-built-ins-and-remaining-variants).
+Application built-ins default to x64. Runtime prerequisite cmdlets require one explicit architecture (x86 or x64). Supported choices differ by product; support in the interface is separate from [field validation](testing.md#validated-built-ins-and-remaining-variants).
 
 | Built-in | Architectures | Main configuration choices |
 | --- | --- | --- |
@@ -918,8 +918,8 @@ Visual C++ v14 and modern .NET runtimes are optional built-ins. Add them in WinP
 after Windows is applied, just like applications:
 
 ```powershell
-# Both architectures, with separate queue entries and cache generations.
-Add-OSDAppVisualCppRedist
+# Select exactly one architecture per command.
+Add-OSDAppVisualCppRedist -Architecture x64
 
 # Standalone runtime for console applications and services.
 Add-OSDAppDotNetRuntime -RuntimeType Runtime -Channel 10.0 -Architecture x64
@@ -931,8 +931,9 @@ Add-OSDAppDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64
 Normally choose Runtime **or** Desktop for the same channel and architecture;
 Desktop already includes the ordinary runtime. Different .NET channels and
 architectures may coexist. `-Channel` defaults to `10.0`; `-RuntimeType` defaults
-to `Desktop`; .NET architecture defaults to `x64`. Visual C++ defaults to both
-`x86,x64`, or accepts either explicitly. Native ARM64 runtimes are not included
+to `Desktop`. All four runtime Add/Sync cmdlets require `-Architecture x86`
+or `-Architecture x64`. There is no default or combined architecture selection.
+Separate explicit calls remain separate deployment items. Native ARM64 runtimes are not included
 in this addition. Legacy .NET Framework, ASP.NET Core, SDKs, Java and older
 Visual C++ runtime families such as 2013 are separate products and are not installed.
 
@@ -951,9 +952,10 @@ continue-queue behavior still applies if a prerequisite fails.
 - .NET uses Microsoft's `builds.dotnet.microsoft.com/dotnet/release-metadata/<channel>/releases.json`.
   It selects the latest published stable patch within the requested channel and
   the exact Windows Runtime or Desktop EXE. Preview channels are rejected.
-  End-of-life or missing/unknown support status produces a warning, not a deployment
-  block. The requested channel is never silently upgraded to another major version.
-  A support warning is also recorded in the deployment log on successful acquisition.
+  Only channels `8.0`, `9.0` and `10.0` are currently offered, and only during their
+  support lifecycle. Microsoft metadata must report active or maintenance support
+  for online acquisition. EOL and preview status blocks acquisition and fallback.
+  The requested channel is never silently upgraded to another major version.
   The official SHA-512 and Microsoft
   Authenticode signature are checked before promotion and execution.
 - Each replacement is downloaded separately and validated before promotion.
@@ -964,17 +966,30 @@ continue-queue behavior still applies if a prerequisite fails.
   Without a usable fallback, that runtime fails and the deployment reports failure;
   independent queue entries follow the existing continue-queue policy. A direct
   `Sync` call reports acquisition errors and preserves the old generation rather
-  than claiming it synchronized successfully. Support warnings alone do not fail Sync.
+  than claiming it synchronized successfully. A metadata outage or missing support
+  field may use verified staged content only while the bundled lifecycle policy
+  still permits that channel; known EOL status never uses fallback.
 - Runner checks the installed version for the requested architecture and runtime
   family/channel. A suitable equal or newer installation is retained. Otherwise
   the installer runs with `/install /quiet /norestart`; exit codes 0 and 3010
   require a successful post-install version check. Existing other channels are
   not removed. No machine reboot or global runtime/PATH configuration is requested.
 
+### Supported .NET channels
+
+The bundled offline policy permits .NET 8.0 and 9.0 through November 10, 2026,
+and .NET 10.0 through November 14, 2028 (UTC dates). Staging, acquisition, cache
+validation and execution reject these channels after their deadline, even without
+internet access. The computer clock must be correct. Expired cache files and
+existing installations are not deleted automatically. Microsoft release metadata
+can reject a channel sooner; a module update is required to add a new major channel
+or adopt a changed lifecycle date. These checks enforce supported channel lifetimes,
+not a guarantee that an offline fallback is the newest available patch.
+
 ### Cache and preparation computer
 
 ```powershell
-Sync-OSDAppVisualCppRedist
+Sync-OSDAppVisualCppRedist -Architecture x64
 Sync-OSDAppDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64
 Get-OSDAppCache -Name VisualCppRedist,DotNetRuntime -VerifySignatures
 ```

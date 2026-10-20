@@ -487,8 +487,9 @@ candidate evidence and naming limitation documented above.
 ## Visual C++ and .NET prerequisite candidate
 
 `tools/Test-OSDAppsPrerequisites.ps1 -Phase Stage` stages four items on a fresh
-x64 WinPE deployment: Visual C++ x86 and x64, .NET 10 Runtime x86, and .NET 10
-Desktop Runtime x64. Use the implementation checkout, not an older Gallery
+x64 WinPE deployment: Visual C++ x86 and x64 (two explicitly selected calls),
+.NET 10 Runtime x86, and .NET 10 Desktop Runtime x64. Each Add call selects exactly
+one architecture; the test deliberately covers both variants. Use the implementation checkout, not an older Gallery
 module. The script refuses an existing queue and copies its validator to
 `C:\ProgramData\OSDApps\Tests\Test-OSDAppsPrerequisites.ps1`.
 

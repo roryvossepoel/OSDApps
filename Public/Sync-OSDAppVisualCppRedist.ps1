@@ -1,7 +1,7 @@
 function Sync-OSDAppVisualCppRedist {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [ValidateSet('x86','x64')][string[]]$Architecture = @('x86','x64'),
+        [Parameter(Mandatory)][ValidateSet('x86','x64')][string]$Architecture,
         [ValidateRange(0, [double]::MaxValue)][double]$MinimumFreeSpaceGB = 1
     )
     if (Test-OSDAppWinPE) { throw 'Use Add-OSDAppVisualCppRedist in WinPE; synchronization requires full Windows.' }

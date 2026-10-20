@@ -1,7 +1,7 @@
 function Add-OSDAppVisualCppRedist {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [ValidateSet('x86','x64')][string[]]$Architecture = @('x86','x64'),
+        [Parameter(Mandatory)][ValidateSet('x86','x64')][string]$Architecture,
         [ValidateRange(1,120)][int]$InstallTimeoutMinutes = 10,
         [string]$WindowsPath
     )

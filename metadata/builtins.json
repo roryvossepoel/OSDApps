@@ -201,15 +201,12 @@
         "x86",
         "x64"
       ],
-      "DefaultArchitecture": "x64",
+      "DefaultArchitecture": null,
       "CachePath": "BuiltIn/VisualCppRedist/<architecture>",
       "RepositoryAlternative": true,
       "Aliases": [],
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/visualcpp.svg",
-      "DefaultArchitectures": [
-        "x86",
-        "x64"
-      ]
+      "ArchitectureRequired": true
     },
     {
       "Id": "DotNetRuntime",
@@ -224,11 +221,22 @@
         "x86",
         "x64"
       ],
-      "DefaultArchitecture": "x64",
+      "DefaultArchitecture": null,
       "CachePath": "BuiltIn/DotNetRuntime/<runtime-type>/<channel>/<architecture>",
       "RepositoryAlternative": true,
       "Aliases": [],
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/dotnet.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/dotnet.svg",
+      "ArchitectureRequired": true,
+      "Channels": [
+        "8.0",
+        "9.0",
+        "10.0"
+      ],
+      "ChannelSupportEndDates": {
+        "8.0": "2026-11-10",
+        "9.0": "2026-11-10",
+        "10.0": "2028-11-14"
+      }
     }
   ]
 }
