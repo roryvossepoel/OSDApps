@@ -195,8 +195,8 @@
       "Vendor": "Microsoft",
       "Acquisition": "PrerequisiteExe",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppVisualCppRedist",
-      "SyncCommand": "Sync-OSDAppVisualCppRedist",
+      "AddCommand": "Add-OSDAppVisualCRedist",
+      "SyncCommand": "Sync-OSDAppVisualCRedist",
       "Architectures": [
         "x86",
         "x64"

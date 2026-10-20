@@ -14,12 +14,12 @@ Describe 'Runtime selection and staging' {
             $windows = Join-Path $TestDrive 'Windows'
             New-Item -ItemType Directory $windows -Force | Out-Null
             Add-OSDAppVisualStudioCode -WindowsPath $windows
-            Add-OSDAppVisualCppRedist -WindowsPath $windows -Architecture x86
-            Add-OSDAppVisualCppRedist -WindowsPath $windows -Architecture x64
+            Add-OSDAppVisualCRedist -WindowsPath $windows -Architecture x86
+            Add-OSDAppVisualCRedist -WindowsPath $windows -Architecture x64
             Add-OSDAppDotNetRuntime -WindowsPath $windows -Channel 8.0 -RuntimeType Runtime -Architecture x64
             Add-OSDAppDotNetRuntime -WindowsPath $windows -Channel 10.0 -RuntimeType Desktop -Architecture x64
             Add-OSDAppDotNetRuntime -WindowsPath $windows -Channel 10.0 -RuntimeType Runtime -Architecture x86
-            Add-OSDAppVisualCppRedist -WindowsPath $windows -Architecture x64
+            Add-OSDAppVisualCRedist -WindowsPath $windows -Architecture x64
             $stage = Join-Path $windows 'Windows/Temp/OSDApps'
             $manifest = Get-Content (Join-Path $stage 'DeviceManifest.json') -Raw | ConvertFrom-Json
             @($manifest.Apps).Count | Should -Be 6
@@ -38,7 +38,7 @@ Describe 'Runtime selection and staging' {
             Mock Resolve-OSDAppWindowsPath { $WindowsPath }
             Mock Get-OSDAppCachePath { throw 'No cache' }
             $windows = Join-Path $TestDrive 'WhatIf'
-            Add-OSDAppVisualCppRedist -WindowsPath $windows -Architecture x64 -WhatIf
+            Add-OSDAppVisualCRedist -WindowsPath $windows -Architecture x64 -WhatIf
             Add-OSDAppDotNetRuntime -WindowsPath $windows -Architecture x64 -WhatIf
             Test-Path $windows | Should -BeFalse
         }

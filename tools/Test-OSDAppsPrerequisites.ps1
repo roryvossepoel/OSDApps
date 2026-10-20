@@ -19,8 +19,8 @@ try {
         Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $testRoot 'Test-OSDAppsPrerequisites.ps1') -Force
         Write-Host '2. Staging Visual C++ x86/x64, .NET Runtime x86 and Desktop Runtime x64...' -ForegroundColor Cyan
         Set-OSDAppConfiguration -CleanupMode OnSuccess
-        Add-OSDAppVisualCppRedist -Architecture x86 -WindowsPath $windows | Format-Table
-        Add-OSDAppVisualCppRedist -Architecture x64 -WindowsPath $windows | Format-Table
+        Add-OSDAppVisualCRedist -Architecture x86 -WindowsPath $windows | Format-Table
+        Add-OSDAppVisualCRedist -Architecture x64 -WindowsPath $windows | Format-Table
         Add-OSDAppDotNetRuntime -RuntimeType Runtime -Channel 10.0 -Architecture x86 -WindowsPath $windows | Format-Table
         Add-OSDAppDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64 -WindowsPath $windows | Format-Table
         $check=Test-OSDAppDeployment -WindowsPath $windows -ThrowOnFailure

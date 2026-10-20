@@ -38,22 +38,22 @@
         SuccessCodes = 'Repository installer exit codes treated as success. Default accepts 0 and 3010.'
     }
     Commands = @{
-        'Add-OSDAppVisualCppRedist' = @{
+        'Add-OSDAppVisualCRedist' = @{
             Parameters = @{ Architecture = 'Required single package architecture: x86 or x64. No default and no combined selection.' }
             Synopsis = 'Add Microsoft runtime prerequisites.'
             Description = 'Specify one architecture explicitly: x86 or x64. DotNetRuntime defaults to Desktop and channel 10.0; choose Runtime for the standalone runtime. Only supported stable .NET channels are offered; expired channels cannot use cached fallback. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
             Environment = 'WinPE after applying Windows.'
             Output = 'OSDApps.StagedApp.'
-            Examples = @(@{ Code = 'Add-OSDAppVisualCppRedist -Architecture x64'; Remarks = 'Select x64 explicitly.' })
+            Examples = @(@{ Code = 'Add-OSDAppVisualCRedist -Architecture x64'; Remarks = 'Select x64 explicitly.' })
             Link = 'docs/built-in-apps.md'
         }
-        'Sync-OSDAppVisualCppRedist' = @{
+        'Sync-OSDAppVisualCRedist' = @{
             Parameters = @{ Architecture = 'Required single package architecture: x86 or x64. No default and no combined selection.' }
             Synopsis = 'Sync Microsoft runtime prerequisites.'
             Description = 'Specify one architecture explicitly: x86 or x64. DotNetRuntime defaults to Desktop and channel 10.0; choose Runtime for the standalone runtime. Only supported stable .NET channels are offered; expired channels cannot use cached fallback. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
             Environment = 'Full Windows preparation computer.'
             Output = 'OSDApps.BuiltInCache.'
-            Examples = @(@{ Code = 'Sync-OSDAppVisualCppRedist -Architecture x64'; Remarks = 'Select x64 explicitly.' })
+            Examples = @(@{ Code = 'Sync-OSDAppVisualCRedist -Architecture x64'; Remarks = 'Select x64 explicitly.' })
             Link = 'docs/built-in-apps.md'
         }
         'Add-OSDAppDotNetRuntime' = @{

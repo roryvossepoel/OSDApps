@@ -1,10 +1,10 @@
-function Sync-OSDAppVisualCppRedist {
+function Sync-OSDAppVisualCRedist {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)][ValidateSet('x86','x64')][string]$Architecture,
         [ValidateRange(0, [double]::MaxValue)][double]$MinimumFreeSpaceGB = 1
     )
-    if (Test-OSDAppWinPE) { throw 'Use Add-OSDAppVisualCppRedist in WinPE; synchronization requires full Windows.' }
+    if (Test-OSDAppWinPE) { throw 'Use Add-OSDAppVisualCRedist in WinPE; synchronization requires full Windows.' }
     $cachePath = Get-OSDAppCachePath
     foreach ($arch in @($Architecture | Select-Object -Unique)) {
         $spec = Get-OSDAppPrerequisiteSpec -Family VisualCppRedist -Architecture $arch

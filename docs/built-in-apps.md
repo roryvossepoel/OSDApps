@@ -919,7 +919,7 @@ after Windows is applied, just like applications:
 
 ```powershell
 # Select exactly one architecture per command.
-Add-OSDAppVisualCppRedist -Architecture x64
+Add-OSDAppVisualCRedist -Architecture x64
 
 # Standalone runtime for console applications and services.
 Add-OSDAppDotNetRuntime -RuntimeType Runtime -Channel 10.0 -Architecture x64
@@ -989,7 +989,7 @@ not a guarantee that an offline fallback is the newest available patch.
 ### Cache and preparation computer
 
 ```powershell
-Sync-OSDAppVisualCppRedist -Architecture x64
+Sync-OSDAppVisualCRedist -Architecture x64
 Sync-OSDAppDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64
 Get-OSDAppCache -Name VisualCppRedist,DotNetRuntime -VerifySignatures
 ```

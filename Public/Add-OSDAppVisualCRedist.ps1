@@ -1,4 +1,4 @@
-function Add-OSDAppVisualCppRedist {
+function Add-OSDAppVisualCRedist {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)][ValidateSet('x86','x64')][string]$Architecture,

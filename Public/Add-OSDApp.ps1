@@ -24,7 +24,10 @@ function Add-OSDApp {
             if($app -ieq 'GoogleChromeEnterprise'){throw "'GoogleChromeEnterprise' is a built-in application. Use Add-OSDAppGoogleChromeEnterprise instead."}
             if($app -ieq 'MozillaFirefoxEnterprise'){throw "'MozillaFirefoxEnterprise' is a built-in application. Use Add-OSDAppMozillaFirefoxEnterprise instead."}
             if($app -ieq 'CiscoWebex'){throw "'CiscoWebex' is a built-in application. Use Add-OSDAppCiscoWebex instead."}
-            if($app -in @('VisualCppRedist','DotNetRuntime')){throw "'$app' is a built-in runtime. Use Add-OSDApp$app instead."}
+            if($app -in @('VisualCppRedist','DotNetRuntime')){
+                $command = if ($app -eq 'VisualCppRedist') { 'Add-OSDAppVisualCRedist' } else { 'Add-OSDAppDotNetRuntime' }
+                throw "'$app' is a built-in runtime. Use $command instead."
+            }
             if($app -ieq 'VisualStudioCode'){throw "'VisualStudioCode' is a built-in application. Use Add-OSDAppVisualStudioCode instead."}
             if($app -ieq '7Zip'){throw "'7Zip' is a built-in application. Use Add-OSDApp7Zip instead."}
             if($app -ieq 'ZoomWorkplace'){throw "'ZoomWorkplace' is a built-in application. Use Add-OSDAppZoomWorkplace instead."}
