@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add 7-Zip built-in staging and cache synchronization for x64, x86 and ARM64, with official release SHA-256 verification and transactional cache replacement.
+
 ## 0.46.0
 
 - Prevent automatic idle sleep during PreInstall and Runner with a temporary process-owned Windows power request. Release it on success and failure without changing power plans; log warnings and continue if the request is unavailable.

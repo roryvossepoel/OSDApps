@@ -73,6 +73,7 @@ The Viewer is read-only. Here, `-Offline` skips online repository discovery; it 
 | Mozilla Firefox Enterprise | `Add-OSDAppMozillaFirefoxEnterprise` |
 | Cisco Webex | `Add-OSDAppCiscoWebex` |
 | Zoom Workplace | `Add-OSDAppZoomWorkplace` |
+| 7-Zip | `Add-OSDAppSevenZip` |
 
 Installers come directly from their vendors. Supported architectures and options differ by application; see the [built-in guide](docs/built-in-apps.md) for Office configuration, Firefox channels and other settings. OSDApps does not bundle vendor installers or provide product licenses.
 

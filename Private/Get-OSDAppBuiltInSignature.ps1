@@ -68,6 +68,10 @@ function Get-OSDAppBuiltInSignature {
         [switch]$CheckPublisher
     )
 
+    if ($Id -eq 'SevenZip') {
+        return [pscustomobject]@{ Status='Not assessed'; Scope='Release SHA-256 (checked separately)'; File=$null; Signer=$null; Detail='7-Zip uses the official release digest, not Authenticode publisher validation.' }
+    }
+
     $relativeFile = switch ($Id) {
         'Microsoft365Apps'         { 'setup.exe'; break }
         'MicrosoftTeams'           { 'teamsbootstrapper.exe'; break }
