@@ -85,18 +85,16 @@ For niche, customer-specific, internal, authenticated, or otherwise non-generic 
 
 ## Gallery download badge
 
-The README download badge sums `VersionDownloadCount` for every OSDApps version
-returned by the Gallery, following all pagination links. The Gallery's aggregate
-`DownloadCount` can report zero despite nonzero per-version statistics.
+The README uses a standard Shields.io dynamic XML badge. It reads the public
+PowerShell Gallery feed and sums `VersionDownloadCount` across the returned
+OSDApps versions. The ordinary `/powershellgallery/dt/OSDApps` badge reads the
+Gallery's aggregate `DownloadCount`, which currently reports zero incorrectly.
 
-The [badge workflow](.github/workflows/gallery-downloads.yml) refreshes the SVG
-daily and supports manual runs from `main`. It writes only to the `badges` branch;
-module sources and releases are unaffected. Failed requests or invalid/incomplete
-responses fail the workflow and leave the previous badge in place. The count is a
-Gallery-reported total, not a real-time count or a count of unique users.
+No GitHub Action, generated SVG or dedicated branch is required. Shields.io and
+GitHub cache the image, so updates are not immediate. These are Gallery-reported
+downloads, not unique users.
 
-Run the pagination and failure checks locally with:
-
-```powershell
-./build/Test-GalleryDownloads.ps1
-```
+The badge shows `unavailable` if the feed has no version counters or contains a
+pagination link, rather than presenting an incomplete total. Shields.io does not
+follow Gallery pagination. If that limit is reached, review the badge source;
+do not remove the guard and label a partial count as the total.
