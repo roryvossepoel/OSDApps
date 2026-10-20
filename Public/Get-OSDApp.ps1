@@ -113,7 +113,7 @@ function Get-OSDApp {
             @{ Id='AdobeAcrobatUnified'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $(if ($hostArchitecture -eq 'x86') { 'x86' } else { 'x64' }) 'CacheInfo.json'))) },
             @{ Id='GoogleChromeEnterprise'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\GoogleChromeEnterprise' (Join-Path $(if ($hostArchitecture -eq 'x86') { 'x86' } else { 'x64' }) 'CacheInfo.json'))) },
             @{ Id='CiscoWebex'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\CiscoWebex' (Join-Path $(if ($hostArchitecture -eq 'arm64') { 'arm64' } else { 'x64' }) 'CacheInfo.json'))) },
-            @{ Id='SevenZip'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\SevenZip' (Join-Path $hostArchitecture 'CacheInfo.json'))) },
+            @{ Id='7Zip'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\7Zip' (Join-Path $hostArchitecture 'CacheInfo.json'))) },
             @{ Id='ZoomWorkplace'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\ZoomWorkplace' (Join-Path $(if ($hostArchitecture -eq 'arm64') { 'arm64' } else { 'x64' }) 'CacheInfo.json'))) }
         )) {
             if (Test-Path -LiteralPath $definition.Path -PathType Leaf) {
@@ -125,7 +125,7 @@ function Get-OSDApp {
                         'AdobeAcrobatUnified' { $adobeCacheInfo = $info }
                         'GoogleChromeEnterprise' { $chromeCacheInfo = $info }
                         'CiscoWebex' { $webexCacheInfo = $info }
-                        'SevenZip' { $sevenZipCacheInfo = $info }
+                        '7Zip' { $sevenZipCacheInfo = $info }
                         'ZoomWorkplace' { $zoomCacheInfo = $info }
                     }
                 }
@@ -160,7 +160,7 @@ function Get-OSDApp {
         @{ Id='AdobeAcrobatUnified'; DisplayName='Adobe Acrobat Unified'; Info=$adobeCacheInfo },
         @{ Id='GoogleChromeEnterprise'; DisplayName='Google Chrome Enterprise'; Info=$chromeCacheInfo },
         @{ Id='CiscoWebex'; DisplayName='Cisco Webex'; Info=$webexCacheInfo },
-        @{ Id='SevenZip'; DisplayName='7-Zip'; Info=$sevenZipCacheInfo },
+        @{ Id='7Zip'; DisplayName='7Zip'; Info=$sevenZipCacheInfo },
         @{ Id='ZoomWorkplace'; DisplayName='Zoom Workplace'; Info=$zoomCacheInfo },
         @{ Id='MozillaFirefoxEnterprise'; DisplayName='Mozilla Firefox Enterprise'; Info=$firefoxCacheInfo }
     )) {

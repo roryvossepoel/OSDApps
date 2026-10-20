@@ -103,8 +103,8 @@ function Get-OSDAppCache {
                     'GoogleChromeEnterprise' {
                         Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
                     }
-                    'SevenZip' {
-                        try { Assert-OSDAppSevenZipGeneration -Root $entryRoot -Architecture ([string]$info.Architecture) | Out-Null; $true } catch { $false }
+                    '7Zip' {
+                        try { Assert-OSDApp7ZipGeneration -Root $entryRoot -Architecture ([string]$info.Architecture) | Out-Null; $true } catch { $false }
                     }
                     'ZoomWorkplace' {
                         Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf

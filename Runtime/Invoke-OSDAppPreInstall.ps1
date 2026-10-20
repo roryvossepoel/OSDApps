@@ -11,7 +11,7 @@ $sleepLog = $null
 . (Join-Path $PSScriptRoot 'Test-OSDAppOfficeCacheCompatibility.ps1')
 $cacheLock = $null
 . (Join-Path $PSScriptRoot 'Restore-OSDAppCacheGeneration.ps1')
-. (Join-Path $PSScriptRoot 'OSDAppSevenZip.ps1')
+. (Join-Path $PSScriptRoot 'OSDApp7Zip.ps1')
 . (Join-Path $PSScriptRoot 'Invoke-OSDAppBuiltInCacheTransaction.ps1')
 . (Join-Path $PSScriptRoot 'Assert-OSDAppTransactionSpace.ps1')
 Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
@@ -929,16 +929,16 @@ try {
                 $relativeRoot = Join-Path 'BuiltIn\CiscoWebex' $architecture
                 Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Cisco Webex' -Acquisition $acquisition
             }
-            'SevenZip' {
+            '7Zip' {
                 $architecture = [string]$app.Architecture
-                $relativeRoot = Join-Path 'BuiltIn\SevenZip' $architecture
+                $relativeRoot = Join-Path 'BuiltIn\7Zip' $architecture
                 $localRoot = Join-Path $StagedPath $relativeRoot
                 $acquireRoot = if ($usbRoot) { Join-Path $usbRoot $relativeRoot } else { $localRoot }
                 try {
                     if (-not $networkAvailable) { throw 'No network connection is available.' }
-                    $sync = Sync-OSDAppSevenZipGeneration -Root $acquireRoot -Architecture $architecture -Download {
+                    $sync = Sync-OSDApp7ZipGeneration -Root $acquireRoot -Architecture $architecture -Download {
                         param($uri, $destination)
-                        Save-PreInstallDownload -Uri $uri -DestinationPath $destination -Id 'SevenZip' -Description '7-Zip EXE' -TimeoutMinutes 10
+                        Save-PreInstallDownload -Uri $uri -DestinationPath $destination -Id '7Zip' -Description '7Zip EXE' -TimeoutMinutes 10
                     }
                     if ($usbRoot) {
                         New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
@@ -946,14 +946,14 @@ try {
                             Copy-Item -LiteralPath (Join-Path $acquireRoot $file) -Destination (Join-Path $localRoot $file) -Force
                         }
                     }
-                    Assert-OSDAppSevenZipGeneration -Root $localRoot -Architecture $architecture | Out-Null
+                    Assert-OSDApp7ZipGeneration -Root $localRoot -Architecture $architecture | Out-Null
                     Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($sync.Updated) { 'Downloaded' } else { 'CacheReused' })
                 }
                 catch {
                     $refreshFailure = $_
                     # A fallback must pass the same full hash and provenance checks.
-                    try { Assert-OSDAppSevenZipGeneration -Root $localRoot -Architecture $architecture | Out-Null }
-                    catch { throw "7-Zip acquisition failed with no valid staged fallback. $($refreshFailure.Exception.Message)" }
+                    try { Assert-OSDApp7ZipGeneration -Root $localRoot -Architecture $architecture | Out-Null }
+                    catch { throw "7Zip acquisition failed with no valid staged fallback. $($refreshFailure.Exception.Message)" }
                     Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($networkAvailable) { 'FallbackCacheUsed' } else { 'OfflineCacheUsed' }) -RefreshError $refreshFailure
                 }
             }

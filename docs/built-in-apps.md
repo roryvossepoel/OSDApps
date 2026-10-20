@@ -795,18 +795,18 @@ Physical SYSTEM/pre-OOBE installation and ARM64 device validation remain separat
 from automated tests; see [the Zoom test procedure](zoom-validation.md).
 
 
-## 7-Zip
+## 7Zip
 
 ```powershell
 # WinPE, after OSDCloud has applied Windows:
-Add-OSDAppSevenZip
+Add-OSDApp7Zip
 
 # Optional: prepare the USB flash drive on a full Windows development PC:
-Sync-OSDAppSevenZip
+Sync-OSDApp7Zip
 ```
 
 Both commands accept `-Architecture x64`, `x86` or `arm64`; the default is `x64`.
-`Add-OSDAppSevenZip` also accepts `-InstallTimeoutMinutes` (default 10) and the
+`Add-OSDApp7Zip` also accepts `-InstallTimeoutMinutes` (default 10) and the
 usual optional `-WindowsPath`. It stages deployment intent without downloading
 in WinPE. The official EXE is installed silently, machine-wide, with `/S` during
 the Windows phase before OOBE. File associations and user preferences are left
@@ -819,7 +819,7 @@ It requires a matching architecture asset, an expected official asset URL and a
 published SHA-256 digest. Missing or unexpected metadata fails closed; there is
 no unverified download fallback or custom `PackageUri` override for this built-in.
 
-One active generation per architecture lives at `BuiltIn/SevenZip/<architecture>`.
+One active generation per architecture lives at `BuiltIn/7Zip/<architecture>`.
 Each check reads release metadata, then compares version and SHA-256. An unchanged
 package is reused without downloading the EXE. A new candidate must match the
 release SHA-256, byte size and PE architecture before a complete directory swap.
@@ -830,11 +830,11 @@ This is **release SHA-256 validation, not Authenticode publisher validation**.
 The trust anchor for a new download is the official repository metadata over HTTPS.
 Offline validation compares against the locally recorded release digest; it does
 not protect against an attacker changing both the installer and its local metadata.
-`Get-OSDAppCache` also checks the recorded hash, size and architecture for 7-Zip.
+`Get-OSDAppCache` also checks the recorded hash, size and architecture for 7Zip.
 
 If the release API or download fails (including GitHub rate limits), PreInstall
 may use a valid staged generation, reporting `FallbackCacheUsed` and the refresh
 error. Without network it reports `OfflineCacheUsed`. With no valid fallback,
-7-Zip fails acquisition and is skipped; other queued applications can continue.
+7Zip fails acquisition and is skipped; other queued applications can continue.
 Keep access to `api.github.com`, `github.com` and GitHub's release asset CDN available.
 Use a custom repository package when you require a pinned release or custom setup.

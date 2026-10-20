@@ -1,4 +1,4 @@
-function Add-OSDAppSevenZipInternal {
+function Add-OSDApp7ZipInternal {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$CachePath,
@@ -9,14 +9,14 @@ function Add-OSDAppSevenZipInternal {
     )
 
     $destinationRoot = Join-Path $WindowsPath $StagedRelativePath
-    $destinationBuiltIn = Join-Path $destinationRoot (Join-Path 'BuiltIn\SevenZip' $Architecture)
+    $destinationBuiltIn = Join-Path $destinationRoot (Join-Path 'BuiltIn\7Zip' $Architecture)
     $deviceManifestPath = Join-Path $destinationRoot 'DeviceManifest.json'
     $clientLogPath = if ($CachePath) { Join-Path $CachePath 'Logs\Client.log' } else { Join-Path $WindowsPath 'ProgramData\OSDApps\Logs\Client.log' }
 
-    $cacheRoot = if ($CachePath) { Join-Path $CachePath (Join-Path 'BuiltIn\SevenZip' $Architecture) } else { $null }
+    $cacheRoot = if ($CachePath) { Join-Path $CachePath (Join-Path 'BuiltIn\7Zip' $Architecture) } else { $null }
     $cacheHasPayload = $cacheRoot -and (Test-Path -LiteralPath (Join-Path $cacheRoot 'Package.exe') -PathType Leaf)
 
-    if (-not $PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage 7-Zip deployment intent and available cache')) { return }
+    if (-not $PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage 7Zip deployment intent and available cache')) { return }
 
     if (Test-Path -LiteralPath $destinationBuiltIn) { Remove-Item -LiteralPath $destinationBuiltIn -Recurse -Force }
     New-Item -ItemType Directory -Path $destinationBuiltIn -Force | Out-Null
@@ -35,10 +35,10 @@ function Add-OSDAppSevenZipInternal {
 
     $manifestApp = [pscustomobject]@{
         Source = 'BuiltIn'
-        Id = 'SevenZip'
-        DisplayName = '7-Zip'
-        Type = 'SevenZipExe'
-        Package = (Join-Path 'BuiltIn\SevenZip' (Join-Path $Architecture 'Package.exe'))
+        Id = '7Zip'
+        DisplayName = '7Zip'
+        Type = '7ZipExe'
+        Package = (Join-Path 'BuiltIn\7Zip' (Join-Path $Architecture 'Package.exe'))
         Architecture = $Architecture
         InstallTimeoutMinutes = $InstallTimeoutMinutes
         CachePreferred = [bool]$CachePath
@@ -48,9 +48,9 @@ function Add-OSDAppSevenZipInternal {
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
 
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'SevenZip' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'SevenZip' -Event 'StageTarget' -Message '7-Zip deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'SevenZip' -Event 'SevenZipStageComplete' -Message '7-Zip deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$Architecture; InstallTimeoutMinutes=$InstallTimeoutMinutes }
+    Write-OSDAppLog -LogPath $clientLogPath -Component '7Zip' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
+    Write-OSDAppLog -LogPath $clientLogPath -Component '7Zip' -Event 'StageTarget' -Message '7Zip deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
+    Write-OSDAppLog -LogPath $clientLogPath -Component '7Zip' -Event '7ZipStageComplete' -Message '7Zip deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$Architecture; InstallTimeoutMinutes=$InstallTimeoutMinutes }
 
-    [pscustomobject]@{ PSTypeName='OSDApps.StagedApp'; Name='SevenZip'; CachePath=$CachePath; WindowsPath=$WindowsPath; StagedPath=$destinationBuiltIn; Source='BuiltIn'; CacheAvailable=$cacheHasPayload }
+    [pscustomobject]@{ PSTypeName='OSDApps.StagedApp'; Name='7Zip'; CachePath=$CachePath; WindowsPath=$WindowsPath; StagedPath=$destinationBuiltIn; Source='BuiltIn'; CacheAvailable=$cacheHasPayload }
 }

@@ -402,7 +402,7 @@ try {
         throw (New-RunnerFailureException -Message 'Device manifest contains an invalid or duplicate application Id.' -FailureType 'ManifestInvalid' -Fatal)
     }
 
-    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','SevenZipExe')
+    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe')
     foreach ($app in $apps) {
         $id = [string]$app.Id
         $source = [string]$app.Source
@@ -629,7 +629,7 @@ try {
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'Built-in Adobe Acrobat Unified installation completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode; DurationSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds) }
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='NotAssessed' }
             }
-            'SevenZipExe' {
+            '7ZipExe' {
                 $packagePath = Join-Path $StagedPath $app.Package
                 if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
                     throw "EXE package not found for '$($app.Id)': $packagePath"
@@ -637,9 +637,9 @@ try {
 
                 $displayName = if ($app.DisplayName) { [string]$app.DisplayName } else { [string]$app.Id }
                 $timeoutMinutes = if ($app.InstallTimeoutMinutes) { [int]$app.InstallTimeoutMinutes } else { 10 }
-                if ([string]$app.Id -ne 'SevenZip') { throw 'SevenZipExe requires the SevenZip application Id.' }
-                . (Join-Path $PSScriptRoot 'OSDAppSevenZip.ps1')
-                Assert-OSDAppSevenZipGeneration -Root (Split-Path $packagePath -Parent) -Architecture ([string]$app.Architecture) | Out-Null
+                if ([string]$app.Id -ne '7Zip') { throw '7ZipExe requires the 7Zip application Id.' }
+                . (Join-Path $PSScriptRoot 'OSDApp7Zip.ps1')
+                Assert-OSDApp7ZipGeneration -Root (Split-Path $packagePath -Parent) -Architecture ([string]$app.Architecture) | Out-Null
                 $arguments = @('/S')
 
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message "Starting built-in $displayName EXE installation." -Data @{ Id=$app.Id; Package=$packagePath; Arguments=($arguments -join ' '); Offline=$true; TimeoutMinutes=$timeoutMinutes }

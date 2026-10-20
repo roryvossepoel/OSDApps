@@ -1,4 +1,4 @@
-function Add-OSDAppSevenZip {
+function Add-OSDApp7Zip {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [ValidateSet('x64','x86','arm64')]
@@ -22,21 +22,21 @@ function Add-OSDAppSevenZip {
     }
     catch {
         if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Cache' -Message 'No OSDCloud cache volume found' }
-        if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Source' -Message '7-Zip will be acquired directly to the OS disk during SetupComplete' }
+        if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Source' -Message '7Zip will be acquired directly to the OS disk during SetupComplete' }
     }
 
     $stagedRelativePath = 'Windows\Temp\OSDApps'
     if ($cachePath) {
-        $existingCache = Test-Path -LiteralPath (Join-Path $cachePath (Join-Path 'BuiltIn\SevenZip' (Join-Path $Architecture 'Package.exe'))) -PathType Leaf
+        $existingCache = Test-Path -LiteralPath (Join-Path $cachePath (Join-Path 'BuiltIn\7Zip' (Join-Path $Architecture 'Package.exe'))) -PathType Leaf
         $message = if ($existingCache) { 'Existing cache found; cached EXE will be staged as fallback and refreshed during SetupComplete' } else { 'No existing cache found; cache will be created during SetupComplete' }
-        if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level $(if ($existingCache) { 'Success' } else { 'Info' }) -Component 'SevenZip' -Message $message }
+        if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level $(if ($existingCache) { 'Success' } else { 'Info' }) -Component '7Zip' -Message $message }
     }
 
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'SevenZip' -Message 'Staging deployment intent to the OS disk' }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component '7Zip' -Message 'Staging deployment intent to the OS disk' }
 
-    if (-not $PSCmdlet.ShouldProcess($resolvedWindowsPath, 'Stage 7-Zip and integrate SetupComplete')) { return }
+    if (-not $PSCmdlet.ShouldProcess($resolvedWindowsPath, 'Stage 7Zip and integrate SetupComplete')) { return }
 
-    $result = Add-OSDAppSevenZipInternal -CachePath $cachePath -WindowsPath $resolvedWindowsPath -Architecture $Architecture -InstallTimeoutMinutes $InstallTimeoutMinutes -StagedRelativePath $stagedRelativePath -Confirm:$false
+    $result = Add-OSDApp7ZipInternal -CachePath $cachePath -WindowsPath $resolvedWindowsPath -Architecture $Architecture -InstallTimeoutMinutes $InstallTimeoutMinutes -StagedRelativePath $stagedRelativePath -Confirm:$false
 
     $manifestPath = Join-Path (Join-Path $resolvedWindowsPath $stagedRelativePath) 'DeviceManifest.json'
     $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -45,8 +45,8 @@ function Add-OSDAppSevenZip {
 
     Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
 
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'SevenZip' -Message 'Device manifest updated and SetupComplete integration verified' }
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=SevenZip; Architecture=$Architecture; Timeout=$InstallTimeoutMinutes min; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component '7Zip' -Message 'Device manifest updated and SetupComplete integration verified' }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=7Zip; Architecture=$Architecture; Timeout=$InstallTimeoutMinutes min; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
 
     if ($cachePath -and -not $script:OSDAppCacheMediaWarningShown) {
         Write-Warning 'OSDCloud cache media detected. Keep the USB flash drive connected until OOBE is displayed.'

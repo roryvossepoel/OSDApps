@@ -445,3 +445,20 @@ Implementation commit: `53f229e7b235e289a703fe7211d8f78e84125958` ([PR #47](http
 | Total Windows phases | 286.5 seconds |
 
 This deployment verifies power-request registration and release within both real runtime phases, successful installations and cleanup. It does not independently demonstrate an actual idle sleep transition; the earlier prototype idle comparison is separate evidence. Manual sleep, lid actions and battery-policy limitations remain as documented in [Runtime](runtime.md).
+
+
+### 7Zip physical candidate validation (2026-10-20)
+
+The x64 candidate at `de96798dd5a549b13855cf78cf184ec6010995e0` passed a
+clean WinPE-to-OOBE test (deployment `3d547621-288f-400f-95fd-33698a42c15a`).
+7Zip 26.04 was downloaded, installed machine-wide with exit code 0, and its
+registered and executable versions matched. PreInstall took 4.5 seconds and
+Runner 3.1 seconds; staging cleanup passed. This was a download test, not a
+warm-cache reuse test. Native ARM64/x86 installation has not been physically tested.
+
+That candidate used the prerelease identifier `SevenZip`. The subsequent naming
+change uses `7Zip` for commands, identifiers, cache paths and test filenames.
+It does not rename an already-created test cache or change existing test records.
+Use `tools/Test-OSDApps7Zip.ps1 -Phase Stage` on a fresh Windows deployment;
+its copied `C:\ProgramData\OSDApps\Tests\Test-OSDApps7Zip.ps1 -Phase Validate`
+checks the correlated deployment in OOBE. Do not rerun SetupComplete.
