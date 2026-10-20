@@ -169,7 +169,8 @@ function Test-OSDAppDeployment {
         ([string]$manifest.Runtime.CleanupMode) -in @('OnSuccess', 'Never') -and
         -not [string]::IsNullOrWhiteSpace([string]$manifest.Runtime.LogPath) -and
         -not [string]::IsNullOrWhiteSpace([string]$manifest.Runtime.ResultPath) -and
-        -not [string]::IsNullOrWhiteSpace([string]$manifest.Runtime.CacheVolumeLabel)
+        -not [string]::IsNullOrWhiteSpace([string]$manifest.Runtime.CacheVolumeLabel) -and
+        ($null -eq $manifest.Runtime.PSObject.Properties['PreventSleep'] -or $manifest.Runtime.PreventSleep -is [bool])
     )
     Add-DeploymentCheck -Name 'RuntimeConfiguration' -Passed $runtimeValid -Required $true -Message $(
         if ($runtimeValid) { 'Runtime configuration is complete.' } else { 'Runtime configuration is incomplete or unsupported.' }
@@ -183,7 +184,7 @@ function Test-OSDAppDeployment {
         if ($queueValid) { "Application queue contains $($apps.Count) unique valid entries." } else { 'Application queue is empty, contains duplicate IDs, or contains an invalid ID.' }
     )
 
-    $runtimeFiles = @('Invoke-OSDAppPreInstall.ps1', 'Invoke-OSDAppRunner.ps1', 'Restore-OSDAppCacheGeneration.ps1', 'Assert-OSDAppTransactionSpace.ps1', 'Enter-OSDAppCacheLock.ps1', 'Test-OSDAppOfficeCacheCompatibility.ps1')
+    $runtimeFiles = @('Invoke-OSDAppPreInstall.ps1', 'Invoke-OSDAppRunner.ps1', 'Restore-OSDAppCacheGeneration.ps1', 'Assert-OSDAppTransactionSpace.ps1', 'Enter-OSDAppCacheLock.ps1', 'Test-OSDAppOfficeCacheCompatibility.ps1', 'OSDAppSleepPrevention.ps1')
     $runtimeMissing = @($runtimeFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stageRoot $_) -PathType Leaf) })
     Add-DeploymentCheck -Name 'RuntimeScripts' -Passed ($runtimeMissing.Count -eq 0) -Required $true -Message $(
         if ($runtimeMissing.Count -eq 0) { 'Standalone runtime scripts and shared cache helpers are staged.' } else { "Missing runtime script(s): $($runtimeMissing -join ', ')." }

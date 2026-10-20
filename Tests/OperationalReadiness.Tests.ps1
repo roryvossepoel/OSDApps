@@ -21,6 +21,7 @@ Describe 'Operational readiness and deployment results' {
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Assert-OSDAppTransactionSpace.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Test-OSDAppOfficeCacheCompatibility.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppSleepPrevention.ps1') -Destination $stage
 
             $archive = Join-Path $packageDirectory 'Package.zip'
             Set-Content -LiteralPath $archive -Value 'known package bytes' -Encoding ASCII
@@ -89,6 +90,33 @@ Describe 'Operational readiness and deployment results' {
         $result.DeploymentId | Should -Be $fixture.DeploymentId
         @($result.Applications).Count | Should -Be 2
         ($result.Applications | Where-Object Id -eq 'MicrosoftTeams').PayloadReady | Should -BeFalse
+    }
+
+    It 'accepts only a Boolean when optional PreventSleep is present' -TestCases @(
+        @{ Value=$true; Expected=$true }
+        @{ Value=$false; Expected=$true }
+        @{ Value='false'; Expected=$false }
+        @{ Value=$null; Expected=$false }
+    ) {
+        param($Value, $Expected)
+        $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive ([guid]::NewGuid().ToString('N')))
+        $manifestFile = Join-Path $fixture.Stage 'DeviceManifest.json'
+        $manifest = Get-Content $manifestFile -Raw | ConvertFrom-Json
+        $manifest.Runtime | Add-Member NoteProperty PreventSleep $Value
+        $manifest | ConvertTo-Json -Depth 20 | Set-Content $manifestFile -Encoding UTF8
+        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
+        ($result.Checks | Where-Object Name -eq 'RuntimeConfiguration').Passed | Should -Be $Expected
+    }
+
+    It 'rejects missing or changed sleep prevention runtime content' {
+        $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive 'SleepHelper')
+        $helper = Join-Path $fixture.Stage 'OSDAppSleepPrevention.ps1'
+        Add-Content $helper '# Unexpected change'
+        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
+        ($result.Checks | Where-Object Name -eq 'RuntimeVersion').Passed | Should -BeFalse
+        Remove-Item $helper
+        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
+        ($result.Checks | Where-Object Name -eq 'RuntimeScripts').Passed | Should -BeFalse
     }
 
     It 'enforces hard offline readiness when requested' {

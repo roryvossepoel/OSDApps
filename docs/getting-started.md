@@ -65,7 +65,7 @@ Add-OSDAppAdobeAcrobatUnified
 Add-OSDAppGoogleChromeEnterprise
 ```
 
-The defaults already use cache label `OSDCloud` and cleanup mode `OnSuccess`. No version pin, explicit Windows path or configuration call is needed for this example. `-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDApps installer signature checks.
+The defaults already use cache label `OSDCloud`, cleanup mode `OnSuccess` and automatic sleep prevention during PreInstall and Runner. Keep AC power connected; see [sleep prevention and its limits](runtime.md#automatic-sleep-prevention). No version pin, explicit Windows path or configuration call is needed for this example. `-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDApps installer signature checks.
 
 With an OSDCloud-labeled USB flash drive connected, matching cache content is staged as fallback and PreInstall can reuse or refresh it. Leave the USB flash drive connected until OOBE appears. Without a USB flash drive, PreInstall downloads built-in content to local staging. Keep the PC online in either case. To test without cache, disconnect the USB flash drive before staging on a fresh deployment; removing it after staging may leave cached fallback content on the target.
 

@@ -8,6 +8,7 @@ function Set-OSDAppManifestRuntimeConfiguration {
 
     $runtime = [pscustomobject]@{
         CleanupMode      = $configuration.CleanupMode
+        PreventSleep     = $configuration.PreventSleep
         CacheVolumeLabel = $configuration.CacheVolumeLabel
         LogPath          = $configuration.LogPath
         ResultPath       = $configuration.ResultPath

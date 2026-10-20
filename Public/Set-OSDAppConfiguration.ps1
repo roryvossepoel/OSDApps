@@ -6,6 +6,8 @@ function Set-OSDAppConfiguration {
         [ValidateSet('OnSuccess','Never')]
         [string]$CleanupMode,
 
+        [bool]$PreventSleep = $true,
+
         [ValidateNotNullOrEmpty()]
         [string]$CacheVolumeLabel,
 
@@ -31,6 +33,10 @@ function Set-OSDAppConfiguration {
         $current.CleanupMode = $CleanupMode
     }
 
+    if ($PSBoundParameters.ContainsKey('PreventSleep')) {
+        $current.PreventSleep = $PreventSleep
+    }
+
     if ($PSBoundParameters.ContainsKey('CacheVolumeLabel')) {
         $current.CacheVolumeLabel = $CacheVolumeLabel
     }
@@ -46,6 +52,7 @@ function Set-OSDAppConfiguration {
     $script:OSDAppConfiguration = [pscustomobject]@{
         CatalogUri       = $current.CatalogUri
         CleanupMode      = $current.CleanupMode
+        PreventSleep     = $current.PreventSleep
         CacheVolumeLabel = $current.CacheVolumeLabel
         LogPath          = $current.LogPath
         ResultPath       = $current.ResultPath

@@ -403,3 +403,28 @@ The earlier 0.29.1 benchmark is retained separately, using the same hardware, US
 | Measured Windows total | 455.9 s | 368.0 s |
 
 See [Performance](performance.md) for the historical benchmark details and the updated 0.30.0 comparison.
+
+
+## Isolated sleep prevention test
+
+Run `tools/Test-OSDAppsSleepPrevention.ps1` from a checkout of the implementation candidate in **elevated Windows PowerShell on a development PC**:
+
+```powershell
+.\tools\Test-OSDAppsSleepPrevention.ps1
+```
+
+To exercise a helper from a downloaded or USB module, supply its actual path:
+
+```powershell
+.\tools\Test-OSDAppsSleepPrevention.ps1 -HelperPath 'D:\Modules\OSDApps\<version>\Runtime\OSDAppSleepPrevention.ps1'
+```
+
+The test uses the real shared helper and unique power-request reasons. It checks normal completion, controlled failure, explicit disablement and forced termination of its own child process. It reads `powercfg /requests`, never clears another application's request, and changes no apps, cache files, deployment manifests or power settings. The successful output confirms registration and cleanup, not actual sleep behavior. `-HoldSeconds 120` extends only the normal-completion scenario.
+
+Physical API prototype evidence on 20 October 2026, before module integration:
+
+- Normal completion, controlled failure and forced child-process termination all released the request.
+- With AC idle sleep configured for one minute, the protected 120-second interval recorded 120 awake seconds and no measured sleep gap.
+- With no request active, Kernel-Power event 506 recorded Modern Standby after 60.5 seconds (`Idle Timeout`); event 507 recorded keyboard resume later.
+
+This evidence applies to the tested development PC. The integrated helper still needs its own Windows smoke test and one normal deployment through OOBE. During that deployment, check `SleepPreventionStarted` and `SleepPreventionStopped` for **both** PreInstall and Install components, successful application results and runtime cleanup. Do not rerun SetupComplete to validate the result.

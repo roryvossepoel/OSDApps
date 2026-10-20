@@ -6,6 +6,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$sleepRequest = $null
+$sleepLog = $null
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
 $workRoot = Join-Path $StagedPath 'Work'
 $runnerStartedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
@@ -343,6 +345,7 @@ try {
         throw "Device manifest not found: $manifestPath"
     }
 
+    . (Join-Path $PSScriptRoot 'OSDAppSleepPrevention.ps1')
     $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if (-not $manifest.Runtime) { throw 'Device manifest Runtime configuration is missing.' }
     if ($manifest.Runtime.ResultPath) {
@@ -357,6 +360,13 @@ try {
     }
 
     $logPath = Initialize-RunnerLog -ConfiguredPath ([string]$manifest.Runtime.LogPath)
+    $preventSleep = Get-OSDAppPreventSleep -Runtime $manifest.Runtime
+    $sleepLog = {
+        param($EventName, $Level, $Message)
+        Write-RunnerLog -LogPath $logPath -Event $EventName -Level $Level -Message $Message
+    }
+    $sleepRequest = Start-OSDAppSleepPrevention -Enabled $preventSleep -Reason 'OSDApps Runner is installing applications and running scripts.' -Log $sleepLog
+
     $preInstallResultPath = Join-Path (Split-Path -Path $resultPath -Parent) 'PreInstall.json'
     if (Test-Path -LiteralPath $preInstallResultPath -PathType Leaf) {
         try {
@@ -813,4 +823,7 @@ catch {
     Save-RunnerResult -Status Failed -FailureType $failure.FailureType -ErrorMessage $failureMessage
 
     exit 1
+}
+finally {
+    if ($null -ne $sleepRequest) { Stop-OSDAppSleepPrevention -Request $sleepRequest -Log $sleepLog }
 }

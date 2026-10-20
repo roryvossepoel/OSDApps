@@ -18,6 +18,8 @@ The public Add cmdlets prepare the selected offline Windows target. Runtime sour
     Restore-OSDAppCacheGeneration.ps1
     Assert-OSDAppTransactionSpace.ps1
     Enter-OSDAppCacheLock.ps1
+    Test-OSDAppOfficeCacheCompatibility.ps1
+    OSDAppSleepPrevention.ps1
     Packages\
     BuiltIn\
     Work\
@@ -71,7 +73,7 @@ Set-OSDAppConfiguration `
 
 Configure a real `CatalogUri` in the same session when staging online repository apps. It is not needed for built-ins-only deployment.
 
-The session's `CleanupMode`, `CacheVolumeLabel`, `LogPath` and `ResultPath` are written into the device manifest by the Add commands. A unique `DeploymentId` is also added when the manifest is first staged. SetupComplete therefore does not depend on the preparation machine's session or on importing the module. Changing session configuration alone does not retroactively rewrite an existing device manifest.
+The session's `CleanupMode`, `PreventSleep`, `CacheVolumeLabel`, `LogPath` and `ResultPath` are written into the device manifest by the Add commands. A unique `DeploymentId` is also added when the manifest is first staged. SetupComplete therefore does not depend on the preparation machine's session or on importing the module. Changing session configuration alone does not retroactively rewrite an existing device manifest.
 
 | CleanupMode | Behavior |
 | --- | --- |
@@ -79,6 +81,26 @@ The session's `CleanupMode`, `CacheVolumeLabel`, `LogPath` and `ResultPath` are 
 | `Never` | Retain staging, payloads and Work for troubleshooting. |
 
 On failure, source is retained automatically.
+
+## Automatic sleep prevention
+
+`PreventSleep` defaults to `true`. PreInstall and Runner each hold a temporary Windows `PowerRequestSystemRequired` request while their phase runs. This covers built-in acquisition, repository/script execution and installer waits. It does not apply to WinPE staging, development-PC cache synchronization or time spent at OOBE.
+
+The request is released in `finally` on success and failure. Windows closes the process-owned handle if the process is forcibly terminated. No power-plan settings, services or scheduled tasks are changed or created. The display can turn off normally. The two phases own separate requests; there is no persistent request between phases or after deployment.
+
+To disable it, set the session configuration **before staging apps**:
+
+```powershell
+Set-OSDAppConfiguration -PreventSleep $false
+```
+
+Use `-PreventSleep $true` to enable it again. The Add commands copy this Boolean into `DeviceManifest.json` under `Runtime.PreventSleep`. Missing values in older manifests default to `true`; non-Boolean values are rejected. Changing session configuration after staging does not change an existing deployment by itself.
+
+`Runtime.log` records `SleepPreventionStarted`, `SleepPreventionStopped` or `SleepPreventionDisabled` per phase. If registration or release fails, it records `SleepPreventionFailed` or `SleepPreventionReleaseFailed` as a warning; the original deployment outcome and exit code are preserved. Registration failure means protection is unavailable, not that deployment failed.
+
+**Keep AC power connected.** This is protection against automatic idle sleep, including Modern Standby under applicable Windows power policy. It does not prevent explicit Sleep, lid-close or power-button actions, critical-battery shutdown or power loss. On Modern Standby systems on battery power, Windows terminates system/execution requests five minutes after the sleep timeout expires. See [Microsoft PowerSetRequest documentation](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-powersetrequest).
+
+The [isolated development-PC test](testing.md#isolated-sleep-prevention-test) loads this same runtime helper without running SetupComplete or installing apps.
 
 ## Machine-readable deployment result
 
