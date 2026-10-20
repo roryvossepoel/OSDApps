@@ -427,4 +427,21 @@ Physical API prototype evidence on 20 October 2026, before module integration:
 - With AC idle sleep configured for one minute, the protected 120-second interval recorded 120 awake seconds and no measured sleep gap.
 - With no request active, Kernel-Power event 506 recorded Modern Standby after 60.5 seconds (`Idle Timeout`); event 507 recorded keyboard resume later.
 
-This evidence applies to the tested development PC. The integrated helper still needs its own Windows smoke test and one normal deployment through OOBE. During that deployment, check `SleepPreventionStarted` and `SleepPreventionStopped` for **both** PreInstall and Install components, successful application results and runtime cleanup. Do not rerun SetupComplete to validate the result.
+This prototype evidence applies to the tested development PC. Integrated-helper and deployment results are recorded below. Do not rerun SetupComplete to validate a result.
+
+## Sleep prevention deployment — 20 October 2026
+
+Implementation commit: `53f229e7b235e289a703fe7211d8f78e84125958` ([PR #47](https://github.com/roryvossepoel/OSDApps/pull/47)). The candidate retained module version 0.45.1; the feature ships in 0.46.0.
+
+- [CI](https://github.com/roryvossepoel/OSDApps/actions/runs/39407865264) passed 440 tests on each of Windows PowerShell 5.1 and PowerShell 7, with no failures or skipped tests. The real native helper test also passed on both engines.
+- On the development PC, the actual runtime helper passed normal completion, controlled failure, disabled mode and forced termination. Registered requests were released; disabled mode registered none. No power settings were changed.
+- Physical deployment `a02ec413-915e-4ad5-a2c6-b209a8f7c01e` completed from WinPE through OOBE. Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise each reported `CacheReused` and installer exit code 0.
+- PreInstall and Install each logged one successful `SleepPreventionStarted` and `SleepPreventionStopped` pair. No failed or skipped applications remained; staging and the cleanup helper were removed.
+
+| Phase | Duration |
+| --- | ---: |
+| PreInstall | 10.5 seconds |
+| Runner | 276 seconds |
+| Total Windows phases | 286.5 seconds |
+
+This deployment verifies power-request registration and release within both real runtime phases, successful installations and cleanup. It does not independently demonstrate an actual idle sleep transition; the earlier prototype idle comparison is separate evidence. Manual sleep, lid actions and battery-policy limitations remain as documented in [Runtime](runtime.md).
