@@ -3,7 +3,7 @@
 ![OSDApps — Your apps. Ready before OOBE. Built-in apps and your own repository, with optional USB flash drive caching.](docs/images/osdapps-banner.svg)
 
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/OSDApps?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/OSDApps)
-[![PowerShell Gallery total downloads](https://raw.githubusercontent.com/roryvossepoel/OSDApps/badges/gallery-downloads.svg)](https://www.powershellgallery.com/packages/OSDApps)
+[![PowerShell Gallery total downloads](https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fwww.powershellgallery.com%2Fapi%2Fv2%2FFindPackagesById%28%29%3Fid%3D%27OSDApps%27&query=concat%28substring%28string%28sum%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%29%2C1%2C32%2A%28count%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%3E0%20and%20not%28%2F%2F%2A%5Blocal-name%28%29%3D%27link%27%5D%5B%40rel%3D%27next%27%5D%29%29%29%2Csubstring%28%27unavailable%27%2C1%2C11%2Anot%28count%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%3E0%20and%20not%28%2F%2F%2A%5Blocal-name%28%29%3D%27link%27%5D%5B%40rel%3D%27next%27%5D%29%29%29%29&label=Downloads&color=blue)](https://www.powershellgallery.com/packages/OSDApps)
 [![Module CI](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml)
 [![Windows PowerShell 5.1](https://img.shields.io/badge/Windows%20PowerShell-5.1-blue)](#install-from-powershell-gallery)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)

@@ -10,7 +10,7 @@ Use this concise description for the GitHub repository's **About** field:
 
 > Your apps. Ready before OOBE. Stage apps and PowerShell scripts in WinPE after OSDCloud applies Windows, using built-in integrations or your own repository and optional USB flash drive caching.
 
-Keep the README focused on the first successful deployment. Use version-independent installation commands there; retain exact versions in release notes and test evidence. The Downloads badge sums Gallery-reported per-version downloads across all versions and is refreshed daily on the separate `badges` branch. See [badge maintenance](../CONTRIBUTING.md#gallery-download-badge); the Gallery aggregate counter can incorrectly report zero.
+Keep the README focused on the first successful deployment. Use version-independent installation commands there; retain exact versions in release notes and test evidence. The Downloads badge uses Shields.io to sum Gallery-reported per-version downloads directly, without a workflow or separate branch. It shows `unavailable` rather than an incomplete total when the feed is paginated. See [badge maintenance](../CONTRIBUTING.md#gallery-download-badge).
 
 ## Continuous integration
 
@@ -19,7 +19,7 @@ Every push to `main`, pull request, or manually started CI run validates:
 - Module manifest, PSScriptAnalyzer and the complete Pester suite.
 - Documentation syntax, local links and public command/parameter names.
 - Distributable module build and packaged `Get-Help` in a fresh process.
-- Example catalog metadata and Gallery download aggregation.
+- Example catalog metadata.
 
 Both Windows PowerShell 5.1 and PowerShell 7 run independently. Their module artifacts are named `OSDApps-Windows-PowerShell-5.1` and `OSDApps-PowerShell-7`; validation reports are uploaded separately. These jobs do not run physical WinPE deployments.
 
