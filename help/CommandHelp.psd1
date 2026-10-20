@@ -2,6 +2,7 @@
     # Build-time source for packaged Get-Help. Example code is never executed.
     SchemaVersion = 1
     CommonParameters = @{
+        PreventSleep = 'Prevent automatic idle sleep during PreInstall and Runner. Defaults to true; use -PreventSleep $false before staging to disable it. Uses a temporary power request, not a power-plan change. Keep AC power connected; explicit sleep and battery power policies can override it.'
         WindowsPath = 'Root of the intended Windows volume, for example D:\, not D:\Windows. When omitted, deployment commands discover a Windows installation. Use Add deployment commands in WinPE after applying Windows, not on the preparation computer.'
         Architecture = 'Requested package architecture; match the target and offline cache variant. Allowed values and source defaults are included below.'
         PackageUri = 'Optional vendor-owned package URL overriding the built-in source. Does not bypass signature/publisher validation for supported MSI packages.'

@@ -5,6 +5,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$sleepRequest = $null
+$sleepLog = $null
 . (Join-Path $PSScriptRoot 'Enter-OSDAppCacheLock.ps1')
 . (Join-Path $PSScriptRoot 'Test-OSDAppOfficeCacheCompatibility.ps1')
 $cacheLock = $null
@@ -632,6 +634,7 @@ function Sync-PreInstallVendorMsi {
 
 try {
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw "Device manifest not found: $manifestPath" }
+    . (Join-Path $PSScriptRoot 'OSDAppSleepPrevention.ps1')
     $manifest=Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if (-not $manifest.Runtime) { throw 'Device manifest Runtime configuration is missing.' }
     if ($manifest.Runtime.ResultPath) {
@@ -644,6 +647,13 @@ try {
     $cacheVolumeLabel = [string]$manifest.Runtime.CacheVolumeLabel
     $logPath = [Environment]::ExpandEnvironmentVariables([string]$manifest.Runtime.LogPath)
     $logDirectory = Split-Path -Path $logPath -Parent
+
+    $preventSleep = Get-OSDAppPreventSleep -Runtime $manifest.Runtime
+    $sleepLog = {
+        param($EventName, $Level, $Message)
+        Write-PreInstallLog -Event $EventName -Level $Level -Message $Message
+    }
+    $sleepRequest = Start-OSDAppSleepPrevention -Enabled $preventSleep -Reason 'OSDApps PreInstall is acquiring application content.' -Log $sleepLog
 
     $apps=if($manifest.PSObject.Properties.Name -contains 'Apps'){@($manifest.Apps)}else{@()}
     $builtInApps=@($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' })
@@ -1038,5 +1048,8 @@ try {
     exit 1
 }
 finally {
-    if ($cacheLock) { $cacheLock.Dispose() }
+    try { if ($cacheLock) { $cacheLock.Dispose() } }
+    finally {
+        if ($null -ne $sleepRequest) { Stop-OSDAppSleepPrevention -Request $sleepRequest -Log $sleepLog }
+    }
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Prevent automatic idle sleep during PreInstall and Runner with a temporary process-owned Windows power request. Release it on success and failure without changing power plans; log warnings and continue if the request is unavailable.
+- Add `Set-OSDAppConfiguration -PreventSleep $false` to opt out before staging. Defaults to true, including manifests without the optional field. Stage and preflight-check the shared helper.
+- Add isolated helper tests, standalone phase lifetime coverage and a development-PC script for real request registration, disablement and cleanup, including forced process termination.
+
 ## 0.45.1
 
 - Reuse a compatible, structurally consistent Office generation during online PreInstall when its build matches the architecture-specific build advertised by the Microsoft CDN, or an exact build pin matches. Skip ODT acquisition and report `CacheReused`; keep complete-generation replacement for changed or missing content.
