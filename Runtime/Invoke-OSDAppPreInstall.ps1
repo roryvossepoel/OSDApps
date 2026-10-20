@@ -944,6 +944,9 @@ try {
                         param($uri, $destination)
                         Save-PreInstallDownload -Uri $uri -DestinationPath $destination -Id $spec.Id -Description 'Runtime EXE' -TimeoutMinutes 10
                     }
+                    if ($sync.SupportWarning) {
+                        Write-PreInstallLog -Event 'RuntimeSupportWarning' -Level 'Warning' -Message $sync.SupportWarning -Data @{ Id=$spec.Id; Channel=$spec.Channel }
+                    }
                     if ($usbRoot) {
                         New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
                         foreach ($file in @('Package.exe','CacheInfo.json')) {

@@ -51,9 +51,21 @@ function Get-OSDAppPrerequisiteRelease {
         return
     }
     $metadata = Invoke-RestMethod -Uri "https://builds.dotnet.microsoft.com/dotnet/release-metadata/$($Spec.Channel)/releases.json" -TimeoutSec 60 -ErrorAction Stop
-    if ([string]$metadata.'channel-version' -ne $Spec.Channel -or [string]$metadata.'support-phase' -notin @('active','maintenance')) {
-        throw 'The requested .NET channel is not a supported stable channel.'
+    if ([string]$metadata.'channel-version' -ne $Spec.Channel) {
+        throw 'The .NET release metadata does not match the requested channel.'
     }
+    # Lifecycle status is advisory; installer identity and integrity remain mandatory.
+    $supportProperty = $metadata.PSObject.Properties['support-phase']
+    $supportPhase = if ($supportProperty) { [string]$supportProperty.Value } else { '' }
+    if ($supportPhase -in @('preview','go-live','golive')) { throw 'Preview .NET channels are not supported.' }
+    $supportWarning = ''
+    if ($supportPhase -eq 'eol') {
+        $supportWarning = ".NET $($Spec.Channel) is end of support. Continuing with the latest published stable patch in the explicitly requested channel."
+    }
+    elseif ($supportPhase -notin @('active','maintenance')) {
+        $supportWarning = ".NET $($Spec.Channel) support status could not be confirmed ('$supportPhase'). Continuing only if stable release and installer validation succeed."
+    }
+    if ($supportWarning) { Write-Warning $supportWarning }
     $version = [string]$metadata.'latest-runtime'
     if ($version -notmatch ('^' + [regex]::Escape($Spec.Channel) + '\.\d+$')) { throw 'Invalid stable .NET runtime version.' }
     $releases = @($metadata.releases | Where-Object { [string]$_.'release-version' -eq $version })
@@ -67,7 +79,7 @@ function Get-OSDAppPrerequisiteRelease {
     $prefix = if ($Spec.RuntimeType -eq 'Desktop') { 'windowsdesktop-runtime' } else { 'dotnet-runtime' }
     $expected = "https://builds.dotnet.microsoft.com/dotnet/$segment/$version/$prefix-$version-win-$($Spec.Architecture).exe"
     if ([string]$files[0].url -cne $expected) { throw 'Unexpected .NET runtime installer URL.' }
-    [pscustomobject]@{ PackageUri=$expected; ResolvedUri=$expected; Size=0; ETag=''; LastModified=''; Version=$version; Sha512=[string]$files[0].hash }
+    [pscustomobject]@{ PackageUri=$expected; ResolvedUri=$expected; Size=0; ETag=''; LastModified=''; Version=$version; Sha512=[string]$files[0].hash; SupportWarning=$supportWarning }
 }
 
 function Assert-OSDAppPrerequisiteGeneration {
@@ -137,7 +149,8 @@ function Sync-OSDAppPrerequisiteGeneration {
         } -Validate { param($candidate) Assert-OSDAppPrerequisiteGeneration -Root $candidate -Spec $Spec -Release $release -VerifyPublisher } | Out-Null
         $info = Assert-OSDAppPrerequisiteGeneration -Root $Root -Spec $Spec -VerifyPublisher
     }
-    [pscustomobject]@{ Id=$Spec.Id; Version=$info.Version; Architecture=$Spec.Architecture; Root=$Root; Updated=(-not $current) }
+    $supportWarning = if ($release.PSObject.Properties['SupportWarning']) { [string]$release.SupportWarning } else { '' }
+    [pscustomobject]@{ Id=$Spec.Id; Version=$info.Version; Architecture=$Spec.Architecture; Root=$Root; Updated=(-not $current); SupportWarning=$supportWarning }
 }
 
 function Get-OSDAppInstalledPrerequisiteVersion {

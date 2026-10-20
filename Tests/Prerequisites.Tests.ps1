@@ -71,10 +71,10 @@ Describe 'Runtime release selection and transaction integrity' {
             (Get-OSDAppPrerequisiteRelease -Spec $runtime).PackageUri | Should -Match '/Runtime/10.0.1/dotnet-runtime-10.0.1-win-x86.exe$'
         }
     }
-    It 'rejects EOL, preview, foreign URL, missing digest and duplicate installers' {
+    It 'rejects preview, foreign URL, missing digest and duplicate installers' {
         InModuleScope OSDApps {
-            $script:metadata.'support-phase'='eol'
-            { Get-OSDAppPrerequisiteRelease -Spec $script:spec } | Should -Throw '*supported stable*'
+            $script:metadata.'support-phase'='preview'
+            { Get-OSDAppPrerequisiteRelease -Spec $script:spec } | Should -Throw '*Preview*'
             $script:metadata.'support-phase'='active';$script:metadata.'latest-runtime'='10.0.2-rc.1'
             { Get-OSDAppPrerequisiteRelease -Spec $script:spec } | Should -Throw '*stable*'
             $script:metadata.'latest-runtime'='10.0.1';$script:component.files[0].url='https://example.com/runtime.exe'
@@ -83,6 +83,37 @@ Describe 'Runtime release selection and transaction integrity' {
             { Get-OSDAppPrerequisiteRelease -Spec $script:spec } | Should -Throw '*SHA-512*'
             $script:component.files[0].hash=$script:hash; $script:component.files=@($script:component.files[0],$script:component.files[0])
             { Get-OSDAppPrerequisiteRelease -Spec $script:spec } | Should -Throw '*one*'
+        }
+    }
+    It 'warns for EOL while acquiring and reusing a fully verified stable generation' {
+        InModuleScope OSDApps {
+            $script:metadata.'support-phase'='eol'
+            $first = Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download -WarningVariable warnings -WarningAction SilentlyContinue
+            $first.Updated | Should -BeTrue
+            $first.SupportWarning | Should -Match 'end of support'
+            ($warnings -join ' ') | Should -Match 'end of support'
+            $second = Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download -WarningAction SilentlyContinue
+            $second.Updated | Should -BeFalse
+            $second.Version | Should -Be '10.0.1'
+            $script:downloadCount | Should -Be 1
+        }
+    }
+    It 'tolerates missing or unknown lifecycle status under strict mode without relaxing channel checks' {
+        InModuleScope OSDApps {
+            Set-StrictMode -Version Latest
+            $script:metadata.PSObject.Properties.Remove('support-phase')
+            (Get-OSDAppPrerequisiteRelease -Spec $script:spec -WarningAction SilentlyContinue).SupportWarning | Should -Match 'could not be confirmed'
+            $script:metadata | Add-Member -NotePropertyName 'support-phase' -NotePropertyValue 'future-status'
+            (Get-OSDAppPrerequisiteRelease -Spec $script:spec -WarningAction SilentlyContinue).Version | Should -Be '10.0.1'
+            $script:metadata.'channel-version'='9.0'
+            { Get-OSDAppPrerequisiteRelease -Spec $script:spec } | Should -Throw '*requested channel*'
+        }
+    }
+    It 'still rejects a corrupt candidate for an EOL channel' {
+        InModuleScope OSDApps {
+            $script:metadata.'support-phase'='eol'
+            { Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download {param($u,$p) Set-Content $p 'wrong'} -WarningAction SilentlyContinue } | Should -Throw '*SHA-512*'
+            Test-Path $script:cache | Should -BeFalse
         }
     }
     It 'reuses a verified generation and rejects content or selection mismatch' {
@@ -170,6 +201,29 @@ Describe 'Runtime PreInstall and Runner dispatch' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
         $app.Architecture='x86'
         { & $script:preCase } | Should -Throw '*identity*'
+    }
+    It 'rejects corrupt, wrong-channel and untrusted staged fallback during a metadata outage' {
+        $root = Join-Path $StagedPath $spec.RelativeRoot
+        New-PrerequisiteFixture $root $spec
+        Add-Content (Join-Path $root 'Package.exe') 'corrupt'
+        { & $script:preCase } | Should -Throw '*no valid staged fallback*'
+        New-PrerequisiteFixture $root $spec
+        $info = Get-Content (Join-Path $root 'CacheInfo.json') -Raw | ConvertFrom-Json
+        $info.Channel='9.0'
+        $info | ConvertTo-Json | Set-Content (Join-Path $root 'CacheInfo.json')
+        { & $script:preCase } | Should -Throw '*no valid staged fallback*'
+        New-PrerequisiteFixture $root $spec
+        Mock Get-AuthenticodeSignature { [pscustomobject]@{Status='Valid';SignerCertificate=[pscustomobject]@{Subject='O=Other Corporation'}} }
+        { & $script:preCase } | Should -Throw '*no valid staged fallback*'
+        Should -Invoke Start-Process -Times 0 -Exactly
+    }
+    It 'persists the advisory lifecycle warning in the deployment log' {
+        New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
+        Mock Sync-OSDAppPrerequisiteGeneration { [pscustomobject]@{Updated=$false;SupportWarning='.NET 10.0 is end of support.'} }
+        Mock Write-PreInstallLog { }
+        & $script:preCase
+        $acquisition.Outcome | Should -Be 'CacheReused'
+        Should -Invoke Write-PreInstallLog -Times 1 -Exactly -ParameterFilter { $Event -eq 'RuntimeSupportWarning' -and $Level -eq 'Warning' }
     }
     It 'uses silent install without reboot and confirms the installed version' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec

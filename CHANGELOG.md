@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Add Visual C++ v14 x86/x64 and .NET Runtime/Desktop built-ins with separate variant identities, Microsoft verification, transactional caches and installed-version checks. Runtime items are staged before applications.
-
+- Treat .NET lifecycle status as advisory: warn for EOL or unknown status while preserving stable-release, hash, publisher and channel checks. Failed acquisition may use a verified compatible staged fallback.
 
 ## 0.47.0
 

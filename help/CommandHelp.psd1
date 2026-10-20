@@ -59,7 +59,7 @@
         'Add-OSDAppDotNetRuntime' = @{
             Parameters = @{
                 RuntimeType = 'Runtime selects the standalone Microsoft.NETCore.App runtime. Desktop includes Microsoft.WindowsDesktop.App and the ordinary runtime. Default: Desktop.'
-                Channel = 'Stable major.minor release channel, for example 8.0 or 10.0. Selects its newest supported stable patch. Default: 10.0. Preview and EOL acquisition are rejected.'
+                Channel = 'Stable major.minor release channel, for example 8.0 or 10.0. Selects its newest published stable patch. Default: 10.0. Preview acquisition is rejected; EOL or unknown support status produces a warning without changing the requested channel.'
             }
             Synopsis = 'Add Microsoft runtime prerequisites.'
             Description = 'Visual C++ defaults to x86 and x64. DotNetRuntime defaults to Desktop, channel 10.0 and x64; choose Runtime for the standalone runtime. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
@@ -71,7 +71,7 @@
         'Sync-OSDAppDotNetRuntime' = @{
             Parameters = @{
                 RuntimeType = 'Runtime selects the standalone Microsoft.NETCore.App runtime. Desktop includes Microsoft.WindowsDesktop.App and the ordinary runtime. Default: Desktop.'
-                Channel = 'Stable major.minor release channel, for example 8.0 or 10.0. Selects its newest supported stable patch. Default: 10.0. Preview and EOL acquisition are rejected.'
+                Channel = 'Stable major.minor release channel, for example 8.0 or 10.0. Selects its newest published stable patch. Default: 10.0. Preview acquisition is rejected; EOL or unknown support status produces a warning without changing the requested channel.'
             }
             Synopsis = 'Sync Microsoft runtime prerequisites.'
             Description = 'Visual C++ defaults to x86 and x64. DotNetRuntime defaults to Desktop, channel 10.0 and x64; choose Runtime for the standalone runtime. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'

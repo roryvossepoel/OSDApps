@@ -949,14 +949,22 @@ continue-queue behavior still applies if a prerequisite fails.
   by Microsoft and report a v14 file version. Its locally recorded SHA-256 and
   size are checked on subsequent reuse. This is not a Microsoft-published SHA-256.
 - .NET uses Microsoft's `builds.dotnet.microsoft.com/dotnet/release-metadata/<channel>/releases.json`.
-  It selects the latest stable patch within the requested supported channel and
-  the exact Windows Runtime or Desktop EXE. Preview and end-of-life channels
-  are rejected for online acquisition. The official SHA-512 and Microsoft
+  It selects the latest published stable patch within the requested channel and
+  the exact Windows Runtime or Desktop EXE. Preview channels are rejected.
+  End-of-life or missing/unknown support status produces a warning, not a deployment
+  block. The requested channel is never silently upgraded to another major version.
+  A support warning is also recorded in the deployment log on successful acquisition.
+  The official SHA-512 and Microsoft
   Authenticode signature are checked before promotion and execution.
 - Each replacement is downloaded separately and validated before promotion.
   Download or validation failure preserves the previous generation. Offline or
   failed online acquisition can use a verified compatible staged fallback;
   this is reported separately from confirmed current cache reuse.
+  Missing, corrupt, incompatible or untrusted fallback content is never executed.
+  Without a usable fallback, that runtime fails and the deployment reports failure;
+  independent queue entries follow the existing continue-queue policy. A direct
+  `Sync` call reports acquisition errors and preserves the old generation rather
+  than claiming it synchronized successfully. Support warnings alone do not fail Sync.
 - Runner checks the installed version for the requested architecture and runtime
   family/channel. A suitable equal or newer installation is retained. Otherwise
   the installer runs with `/install /quiet /norestart`; exit codes 0 and 3010
