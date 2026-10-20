@@ -5,14 +5,19 @@ Describe 'Built-in application architecture contracts' {
         $metadata = Get-Content -LiteralPath (Join-Path $moduleRoot 'metadata\builtins.json') -Raw | ConvertFrom-Json
     }
 
-    It 'defaults every built-in Add and Sync command to x64' {
+    It 'defaults applications to x64 and Visual C++ to both supported architectures' {
         foreach ($app in $metadata.Applications) {
             $app.DefaultArchitecture | Should -Be 'x64'
             foreach ($name in @($app.AddCommand,$app.SyncCommand)) {
                 $command = Get-Command $name
                 $command.Parameters['Architecture'].Attributes |
                     Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] } | Out-Null
-                $command.Definition | Should -Match '\$Architecture\s*=\s*''x64'''
+                if ($app.Id -eq 'VisualCppRedist') {
+                    $command.Definition | Should -Match '\$Architecture\s*=\s*@\(''x86'',''x64''\)'
+                    @($app.DefaultArchitectures) | Should -Be @('x86','x64')
+                } else {
+                    $command.Definition | Should -Match '\$Architecture\s*=\s*''x64'''
+                }
             }
         }
     }

@@ -483,3 +483,19 @@ passed on Windows PowerShell 5.1 and PowerShell 7. This physical result covers
 x64 download and installation, not ARM64 installation, warm-cache reuse or
 interactive editor behavior. The 0.47.0 release includes 7Zip's physical
 candidate evidence and naming limitation documented above.
+
+## Visual C++ and .NET prerequisite candidate
+
+`tools/Test-OSDAppsPrerequisites.ps1 -Phase Stage` stages four items on a fresh
+x64 WinPE deployment: Visual C++ x86 and x64, .NET 10 Runtime x86, and .NET 10
+Desktop Runtime x64. Use the implementation checkout, not an older Gallery
+module. The script refuses an existing queue and copies its validator to
+`C:\ProgramData\OSDApps\Tests\Test-OSDAppsPrerequisites.ps1`.
+
+After reboot, run that copied script with `-Phase Validate` in 64-bit Windows
+PowerShell at OOBE. It correlates deployment results, checks Visual C++ registry
+versions and DLL presence, enumerates actual .NET runtimes using the
+architecture-specific `dotnet.exe`, and checks cleanup. It accepts an already
+installed newer patch. No installation or SetupComplete rerun occurs during
+validation. Physical deployment results are pending; automated trust/process
+mocks do not establish native publisher validation or successful installation.

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add Visual C++ v14 x86/x64 and .NET Runtime/Desktop built-ins with separate variant identities, Microsoft verification, transactional caches and installed-version checks. Runtime items are staged before applications.
+
+
 ## 0.47.0
 
 - Add Visual Studio Code Stable system-installer staging and synchronization for x64 and ARM64, with official release SHA-256, Microsoft publisher verification and transactional cache replacement.

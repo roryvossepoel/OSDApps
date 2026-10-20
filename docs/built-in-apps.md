@@ -911,3 +911,77 @@ validator to `C:\ProgramData\OSDApps\Tests`. At OOBE, run that copied script wit
 registration, executable version, successful result and cleanup, and checks
 that the editor did not launch. It never reruns SetupComplete. Interactive
 first-user behavior remains a separate check.
+
+## Microsoft runtime prerequisites
+
+Visual C++ v14 and modern .NET runtimes are optional built-ins. Add them in WinPE
+after Windows is applied, just like applications:
+
+```powershell
+# Both architectures, with separate queue entries and cache generations.
+Add-OSDAppVisualCppRedist
+
+# Standalone runtime for console applications and services.
+Add-OSDAppDotNetRuntime -RuntimeType Runtime -Channel 10.0 -Architecture x64
+
+# Desktop runtime for WPF/Windows Forms; includes the ordinary .NET runtime.
+Add-OSDAppDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64
+```
+
+Normally choose Runtime **or** Desktop for the same channel and architecture;
+Desktop already includes the ordinary runtime. Different .NET channels and
+architectures may coexist. `-Channel` defaults to `10.0`; `-RuntimeType` defaults
+to `Desktop`; .NET architecture defaults to `x64`. Visual C++ defaults to both
+`x86,x64`, or accepts either explicitly. Native ARM64 runtimes are not included
+in this addition. Legacy .NET Framework, ASP.NET Core, SDKs, Java and older
+Visual C++ runtime families such as 2013 are separate products and are not installed.
+
+Runtime staging puts these prerequisites before application entries while
+preserving the relative order within each group. This is not a dependency engine:
+OSDApps does not infer which applications need which runtimes, and its normal
+continue-queue behavior still applies if a prerequisite fails.
+
+### Acquisition and verification
+
+- Visual C++ uses Microsoft's official `https://aka.ms/vc14/vc_redist.<architecture>.exe`
+  links. A HEAD request checks the resolved Microsoft URL, length, ETag and/or
+  Last-Modified before confirming reuse. The downloaded installer must be signed
+  by Microsoft and report a v14 file version. Its locally recorded SHA-256 and
+  size are checked on subsequent reuse. This is not a Microsoft-published SHA-256.
+- .NET uses Microsoft's `builds.dotnet.microsoft.com/dotnet/release-metadata/<channel>/releases.json`.
+  It selects the latest stable patch within the requested supported channel and
+  the exact Windows Runtime or Desktop EXE. Preview and end-of-life channels
+  are rejected for online acquisition. The official SHA-512 and Microsoft
+  Authenticode signature are checked before promotion and execution.
+- Each replacement is downloaded separately and validated before promotion.
+  Download or validation failure preserves the previous generation. Offline or
+  failed online acquisition can use a verified compatible staged fallback;
+  this is reported separately from confirmed current cache reuse.
+- Runner checks the installed version for the requested architecture and runtime
+  family/channel. A suitable equal or newer installation is retained. Otherwise
+  the installer runs with `/install /quiet /norestart`; exit codes 0 and 3010
+  require a successful post-install version check. Existing other channels are
+  not removed. No machine reboot or global runtime/PATH configuration is requested.
+
+### Cache and preparation computer
+
+```powershell
+Sync-OSDAppVisualCppRedist
+Sync-OSDAppDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64
+Get-OSDAppCache -Name VisualCppRedist,DotNetRuntime -VerifySignatures
+```
+
+Sync runs on full Windows, prepares the USB flash drive and installs nothing on
+the preparation computer. Run Add in WinPE. Cache paths are
+`BuiltIn/VisualCppRedist/<architecture>` and
+`BuiltIn/DotNetRuntime/<runtime-type>/<channel>/<architecture>`.
+Only the active patch is retained per variant; a different channel or architecture
+uses a different generation. Deployment IDs include the variant, for example
+`VisualCppRedist-x86` and `DotNetRuntime-Desktop-10.0-x64`.
+`Get-OSDAppCache` exposes `VariantId` and `RuntimeType` to distinguish them.
+The app list summarizes x64 Visual C++ and Desktop 10.0 x64; inspect the cache
+inventory for all variants.
+
+Sources: [Visual C++ downloads](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist),
+[.NET installers and runtime types](https://learn.microsoft.com/en-us/dotnet/core/install/windows),
+[.NET release metadata](https://github.com/dotnet/core/tree/main/release-notes).

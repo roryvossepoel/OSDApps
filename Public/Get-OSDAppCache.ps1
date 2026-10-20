@@ -103,6 +103,13 @@ function Get-OSDAppCache {
                     'GoogleChromeEnterprise' {
                         Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
                     }
+                    { $_ -in @('VisualCppRedist','DotNetRuntime') } {
+                        try {
+                            $spec = Get-OSDAppPrerequisiteSpec -Family $info.Id -Architecture $info.Architecture -RuntimeType $info.RuntimeType -Channel $info.Channel
+                            Assert-OSDAppPrerequisiteGeneration -Root $entryRoot -Spec $spec | Out-Null
+                            $true
+                        } catch { $false }
+                    }
                     'VisualStudioCode' {
                         try { Assert-OSDAppVisualStudioCodeGeneration -Root $entryRoot -Architecture ([string]$info.Architecture) | Out-Null; $true } catch { $false }
                     }
@@ -144,6 +151,9 @@ function Get-OSDAppCache {
                 $results.Add([pscustomobject]@{
                     PSTypeName   = 'OSDApps.CacheEntry'
                     Id           = [string]$info.Id
+                    VariantId    = if ($info.PSObject.Properties['VariantId']) { [string]$info.VariantId } else { $null }
+                    RuntimeType  = if ($info.PSObject.Properties['RuntimeType']) { [string]$info.RuntimeType } else { $null }
+                    DisplayName  = if ($info.PSObject.Properties['DisplayName']) { [string]$info.DisplayName } else { [string]$info.Id }
                     Source       = 'BuiltIn'
                     PackageType  = 'Application'
                     Version      = if ($resolvedVersion) { $resolvedVersion } else { $cachedVersion }

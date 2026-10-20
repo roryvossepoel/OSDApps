@@ -187,6 +187,48 @@
       "CachePath": "BuiltIn/VisualStudioCode/<architecture>",
       "RepositoryAlternative": true,
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/vscode.svg"
+    },
+    {
+      "Id": "VisualCppRedist",
+      "DisplayName": "Visual C++ v14 Redistributable",
+      "Source": "BuiltIn",
+      "Vendor": "Microsoft",
+      "Acquisition": "PrerequisiteExe",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppVisualCppRedist",
+      "SyncCommand": "Sync-OSDAppVisualCppRedist",
+      "Architectures": [
+        "x86",
+        "x64"
+      ],
+      "DefaultArchitecture": "x64",
+      "CachePath": "BuiltIn/VisualCppRedist/<architecture>",
+      "RepositoryAlternative": true,
+      "Aliases": [],
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/visualcpp.svg",
+      "DefaultArchitectures": [
+        "x86",
+        "x64"
+      ]
+    },
+    {
+      "Id": "DotNetRuntime",
+      "DisplayName": ".NET Runtime",
+      "Source": "BuiltIn",
+      "Vendor": "Microsoft",
+      "Acquisition": "PrerequisiteExe",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppDotNetRuntime",
+      "SyncCommand": "Sync-OSDAppDotNetRuntime",
+      "Architectures": [
+        "x86",
+        "x64"
+      ],
+      "DefaultArchitecture": "x64",
+      "CachePath": "BuiltIn/DotNetRuntime/<runtime-type>/<channel>/<architecture>",
+      "RepositoryAlternative": true,
+      "Aliases": [],
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/dotnet.svg"
     }
   ]
 }

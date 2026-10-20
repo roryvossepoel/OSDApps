@@ -124,6 +124,9 @@ function Get-RunnerCacheInfo {
 
     if ([string]$App.Source -ne 'BuiltIn') { return $null }
     $root = Join-Path $StagedPath (Join-Path 'BuiltIn' ([string]$App.Id))
+    if ($App.PSObject.Properties['Type'] -and $App.Type -eq 'PrerequisiteExe') {
+        $root = Split-Path (Join-Path $StagedPath $App.Package) -Parent
+    }
     if (-not (Test-Path -LiteralPath $root -PathType Container)) { return $null }
     $file = Get-ChildItem -LiteralPath $root -Filter 'CacheInfo.json' -File -Recurse -ErrorAction SilentlyContinue |
         Select-Object -First 1
@@ -402,7 +405,7 @@ try {
         throw (New-RunnerFailureException -Message 'Device manifest contains an invalid or duplicate application Id.' -FailureType 'ManifestInvalid' -Fatal)
     }
 
-    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe')
+    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe')
     foreach ($app in $apps) {
         $id = [string]$app.Id
         $source = [string]$app.Source
@@ -628,6 +631,63 @@ try {
 
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'Built-in Adobe Acrobat Unified installation completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode; DurationSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds) }
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='NotAssessed' }
+            }
+            'PrerequisiteExe' {
+                $packagePath = Join-Path $StagedPath $app.Package
+                if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
+                    throw "EXE package not found for '$($app.Id)': $packagePath"
+                }
+
+                $displayName = if ($app.DisplayName) { [string]$app.DisplayName } else { [string]$app.Id }
+                $timeoutMinutes = if ($app.InstallTimeoutMinutes) { [int]$app.InstallTimeoutMinutes } else { 10 }
+                . (Join-Path $PSScriptRoot 'OSDAppPrerequisite.ps1')
+                $spec = Get-OSDAppPrerequisiteSpec -Family $app.Family -Architecture $app.Architecture -RuntimeType $app.RuntimeType -Channel $app.Channel
+                if ($app.Id -ne $spec.Id -or $app.Package -ne (Join-Path $spec.RelativeRoot 'Package.exe')) { throw 'Invalid runtime deployment identity or path.' }
+                $info = Assert-OSDAppPrerequisiteGeneration -Root (Split-Path $packagePath -Parent) -Spec $spec -VerifyPublisher
+                $installed = Get-OSDAppInstalledPrerequisiteVersion -Spec $spec
+                if ($installed -and $installed -ge [version]$info.Version) {
+                    Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'A suitable runtime is already installed; no downgrade or repair requested.' -Data @{Id=$app.Id;Version=$installed;ExitCode=0}
+                    return [pscustomobject]@{ExitCode=0;Integrity='HashAndPublisherValidated'}
+                }
+                $arguments = @('/install','/quiet','/norestart')
+
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message "Starting built-in $displayName EXE installation." -Data @{ Id=$app.Id; Package=$packagePath; Arguments=($arguments -join ' '); Offline=$true; TimeoutMinutes=$timeoutMinutes }
+
+                $process = Start-Process -FilePath $packagePath -ArgumentList $arguments -PassThru
+                $installStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+                $nextHeartbeat = [TimeSpan]::FromMinutes(1)
+
+                while (-not $process.HasExited) {
+                    if ($installStopwatch.Elapsed.TotalMinutes -ge $timeoutMinutes) {
+                        Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallTimeout' -Level 'Error' -Message "$displayName installation exceeded its timeout." -Data @{ Id=$app.Id; ProcessId=$process.Id; ElapsedSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds); TimeoutMinutes=$timeoutMinutes }
+
+                        try {
+                            Start-Process -FilePath 'taskkill.exe' -ArgumentList @('/PID',[string]$process.Id,'/T','/F') -WindowStyle Hidden -Wait | Out-Null
+                        }
+                        catch { }
+
+                        throw "Installation of '$($app.Id)' exceeded the $timeoutMinutes minute timeout."
+                    }
+
+                    if ($installStopwatch.Elapsed -ge $nextHeartbeat) {
+                        Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallWaiting' -Message "$displayName installation is still running." -Data @{ Id=$app.Id; ProcessId=$process.Id; ElapsedSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds) }
+                        $nextHeartbeat = $nextHeartbeat.Add([TimeSpan]::FromMinutes(1))
+                    }
+
+                    Start-Sleep -Seconds 2
+                    $process.Refresh()
+                }
+
+                $installStopwatch.Stop()
+
+                if ($process.ExitCode -notin @(0,3010)) {
+                    throw "Installation of '$($app.Id)' failed with exit code $($process.ExitCode)."
+                }
+
+                $installed = Get-OSDAppInstalledPrerequisiteVersion -Spec $spec
+                if (-not $installed -or $installed -lt [version]$info.Version) { throw 'Runtime installer exited successfully, but the required installed version was not detected.' }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message "Built-in $displayName installation completed." -Data @{ Id=$app.Id; ExitCode=$process.ExitCode; DurationSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds) }
+                [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='HashAndPublisherValidated' }
             }
             'VisualStudioCodeExe' {
                 $packagePath = Join-Path $StagedPath $app.Package

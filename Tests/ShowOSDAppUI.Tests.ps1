@@ -136,7 +136,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
             Mock Get-OSDAppConfiguration { [pscustomobject]@{CatalogUri=[uri]'https://example.org/catalog.json'} }
             Mock Get-OSDAppCachePath { throw 'No USB media attached' }
             Mock Get-OSDAppCatalogPackages { throw 'Should not query online' }
-            @((Get-OSDApp -Offline) | Where-Object Source -eq 'BuiltIn').Count | Should -Be 9
+            @((Get-OSDApp -Offline) | Where-Object Source -eq 'BuiltIn').Count | Should -Be 11
             Should -Invoke Get-OSDAppCatalogPackages -Exactly 0
         }
     }
@@ -279,7 +279,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
             try {
                 $script:moduleRoot = Join-Path $TestDrive 'InvalidModuleRoot'
                 $metadata = @(Get-OSDAppUIBuiltInMetadata -ErrorAction Stop)
-                $metadata.Count | Should -Be 9
+                $metadata.Count | Should -Be 11
                 @($metadata | Where-Object Id -eq 'MicrosoftTeams')[0].Vendor |
                     Should -Be 'Microsoft'
                 @($metadata | Where-Object Id -eq 'MozillaFirefoxEnterprise')[0].Vendor |
