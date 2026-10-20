@@ -1,10 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.46.0
 
 - Prevent automatic idle sleep during PreInstall and Runner with a temporary process-owned Windows power request. Release it on success and failure without changing power plans; log warnings and continue if the request is unavailable.
 - Add `Set-OSDAppConfiguration -PreventSleep $false` to opt out before staging. Defaults to true, including manifests without the optional field. Stage and preflight-check the shared helper.
 - Add isolated helper tests, standalone phase lifetime coverage and a development-PC script for real request registration, disablement and cleanup, including forced process termination.
+
+- Validate real helper registration and cleanup on the development PC and a physical WinPE-to-OOBE deployment: Office, Adobe Acrobat and Chrome reused their caches and installed successfully; both runtime phases released their power requests and runtime cleanup completed. See [validation evidence](docs/testing.md#sleep-prevention-deployment--20-october-2026).
 
 ## 0.45.1
 
