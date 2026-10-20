@@ -22,7 +22,44 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  version-change:
+    runs-on: windows-latest
+    outputs:
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Check whether the module version increased
+        id: version
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:EVENT_NAME -eq 'workflow_dispatch') {
+              'publish=true' >> $env:GITHUB_OUTPUT
+              exit 0
+          }
+          if ($env:BEFORE_SHA -notmatch '^[0-9a-f]{40}$' -or $env:BEFORE_SHA -match '^0+$') {
+              throw 'Cannot establish the previous main version. Use a reviewed manual release.'
+          }
+          $previousText = git show "$($env:BEFORE_SHA):OSDApps.psd1"
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot read the previous module manifest.' }
+          $match = [regex]::Match(($previousText -join "`n"), '(?m)^\s*ModuleVersion\s*=\s*[''"](?<version>\d+\.\d+\.\d+(?:\.\d+)?)[''"]')
+          if (-not $match.Success) { throw 'Cannot read the previous module version.' }
+          $previous = [version]$match.Groups['version'].Value
+          $current = [version](Import-PowerShellDataFile ./OSDApps.psd1).ModuleVersion
+          if ($current -lt $previous) { throw 'The module version must not decrease.' }
+          $publish = $current -gt $previous
+          "publish=$($publish.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          Write-Host "Module version: $previous -> $current. Publish: $publish."
+
   release:
+    needs: version-change
+    if: needs.version-change.outputs.publish == 'true'
     runs-on: windows-latest
 
     steps:
