@@ -38,6 +38,23 @@
         SuccessCodes = 'Repository installer exit codes treated as success. Default accepts 0 and 3010.'
     }
     Commands = @{
+        'Add-OSDApp7Zip' = @{
+            Synopsis = 'Stage 7Zip for silent machine-wide installation before OOBE.'
+            Description = 'Stages intent and any available cache. Windows PreInstall checks the latest stable official ip7z/7zip release and validates its SHA-256, size and PE architecture. Runner rechecks the staged hash before executing the official EXE with /S. Does not change file associations or install on the preparation computer.'
+            Environment = 'WinPE after applying Windows, before first boot.'
+            Output = 'OSDApps.StagedApp.'
+            Examples = @(@{ Code = 'Add-OSDApp7Zip'; Remarks = 'Stage x64 7Zip; acquisition is deferred to Windows.' }, @{ Code = 'Add-OSDApp7Zip -Architecture arm64'; Remarks = 'Stage the native ARM64 installer.' })
+            Link = 'docs/built-in-apps.md'
+        }
+        'Sync-OSDApp7Zip' = @{
+            Synopsis = 'Synchronize a validated 7Zip generation on the configured cache volume.'
+            Description = 'Checks the latest stable official GitHub release. Reuses a hash-valid matching generation or downloads and validates a complete candidate before replacing the active generation. Requires GitHub API and release-download access. No applications are installed.'
+            Environment = 'Full Windows preparation computer with cache volume attached.'
+            Output = 'OSDApps.BuiltInCache with Version, Architecture and Updated.'
+            Examples = @(@{ Code = 'Sync-OSDApp7Zip'; Remarks = 'Prepare or update the x64 cache.' }, @{ Code = 'Sync-OSDApp7Zip -WhatIf'; Remarks = 'Preview without downloading or changing the cache.' })
+            Link = 'docs/built-in-apps.md'
+        }
+
         'Set-OSDAppConfiguration' = @{
             Synopsis = 'Configure OSDApps for the current PowerShell module session.'
             Description = 'Updates supplied settings only. Staging later records relevant settings in DeviceManifest.json. A different session does not automatically reuse them. This command does not install or stage apps.'

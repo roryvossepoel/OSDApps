@@ -402,7 +402,7 @@ try {
         throw (New-RunnerFailureException -Message 'Device manifest contains an invalid or duplicate application Id.' -FailureType 'ManifestInvalid' -Fatal)
     }
 
-    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi')
+    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe')
     foreach ($app in $apps) {
         $id = [string]$app.Id
         $source = [string]$app.Source
@@ -628,6 +628,55 @@ try {
 
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'Built-in Adobe Acrobat Unified installation completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode; DurationSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds) }
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='NotAssessed' }
+            }
+            '7ZipExe' {
+                $packagePath = Join-Path $StagedPath $app.Package
+                if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
+                    throw "EXE package not found for '$($app.Id)': $packagePath"
+                }
+
+                $displayName = if ($app.DisplayName) { [string]$app.DisplayName } else { [string]$app.Id }
+                $timeoutMinutes = if ($app.InstallTimeoutMinutes) { [int]$app.InstallTimeoutMinutes } else { 10 }
+                if ([string]$app.Id -ne '7Zip') { throw '7ZipExe requires the 7Zip application Id.' }
+                . (Join-Path $PSScriptRoot 'OSDApp7Zip.ps1')
+                Assert-OSDApp7ZipGeneration -Root (Split-Path $packagePath -Parent) -Architecture ([string]$app.Architecture) | Out-Null
+                $arguments = @('/S')
+
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message "Starting built-in $displayName EXE installation." -Data @{ Id=$app.Id; Package=$packagePath; Arguments=($arguments -join ' '); Offline=$true; TimeoutMinutes=$timeoutMinutes }
+
+                $process = Start-Process -FilePath $packagePath -ArgumentList $arguments -PassThru
+                $installStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+                $nextHeartbeat = [TimeSpan]::FromMinutes(1)
+
+                while (-not $process.HasExited) {
+                    if ($installStopwatch.Elapsed.TotalMinutes -ge $timeoutMinutes) {
+                        Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallTimeout' -Level 'Error' -Message "$displayName installation exceeded its timeout." -Data @{ Id=$app.Id; ProcessId=$process.Id; ElapsedSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds); TimeoutMinutes=$timeoutMinutes }
+
+                        try {
+                            Start-Process -FilePath 'taskkill.exe' -ArgumentList @('/PID',[string]$process.Id,'/T','/F') -WindowStyle Hidden -Wait | Out-Null
+                        }
+                        catch { }
+
+                        throw "Installation of '$($app.Id)' exceeded the $timeoutMinutes minute timeout."
+                    }
+
+                    if ($installStopwatch.Elapsed -ge $nextHeartbeat) {
+                        Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallWaiting' -Message "$displayName installation is still running." -Data @{ Id=$app.Id; ProcessId=$process.Id; ElapsedSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds) }
+                        $nextHeartbeat = $nextHeartbeat.Add([TimeSpan]::FromMinutes(1))
+                    }
+
+                    Start-Sleep -Seconds 2
+                    $process.Refresh()
+                }
+
+                $installStopwatch.Stop()
+
+                if ($process.ExitCode -notin @(0,3010)) {
+                    throw "Installation of '$($app.Id)' failed with exit code $($process.ExitCode)."
+                }
+
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message "Built-in $displayName installation completed." -Data @{ Id=$app.Id; ExitCode=$process.ExitCode; DurationSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds) }
+                [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='ReleaseSha256Validated' }
             }
             'VendorMsi' {
                 $packagePath = Join-Path $StagedPath $app.Package

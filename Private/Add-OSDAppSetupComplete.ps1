@@ -44,6 +44,9 @@ function Add-OSDAppSetupComplete {
     if ($PSCmdlet.ShouldProcess($stagedRoot, 'Stage OSD Apps runtime scripts')) {
         New-Item -ItemType Directory -Path $scriptsPath -Force | Out-Null
         New-Item -ItemType Directory -Path $stagedRoot -Force | Out-Null
+        foreach ($helper in @('OSDApp7Zip.ps1','Invoke-OSDAppBuiltInCacheTransaction.ps1')) {
+            Copy-Item -LiteralPath (Join-Path $moduleRoot (Join-Path 'Runtime' $helper)) -Destination (Join-Path $stagedRoot $helper) -Force
+        }
         Copy-Item -LiteralPath $runnerSource -Destination (Join-Path $stagedRoot 'Invoke-OSDAppRunner.ps1') -Force
         Copy-Item -LiteralPath $preInstallSource -Destination (Join-Path $stagedRoot 'Invoke-OSDAppPreInstall.ps1') -Force
         Copy-Item -LiteralPath $lockSource -Destination (Join-Path $stagedRoot 'Enter-OSDAppCacheLock.ps1') -Force

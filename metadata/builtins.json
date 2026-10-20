@@ -150,6 +150,25 @@
       "CachePath": "BuiltIn/ZoomWorkplace/<architecture>",
       "RepositoryAlternative": true,
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/zoom.svg"
+    },
+    {
+      "Id": "7Zip",
+      "DisplayName": "7Zip",
+      "Source": "BuiltIn",
+      "Vendor": "Igor Pavlov",
+      "Acquisition": "7ZipExe",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDApp7Zip",
+      "SyncCommand": "Sync-OSDApp7Zip",
+      "Architectures": [
+        "x64",
+        "x86",
+        "arm64"
+      ],
+      "DefaultArchitecture": "x64",
+      "CachePath": "BuiltIn/7Zip/<architecture>",
+      "RepositoryAlternative": true,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/7zip.svg"
     }
   ]
 }
