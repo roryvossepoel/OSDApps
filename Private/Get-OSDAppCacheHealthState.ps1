@@ -418,6 +418,9 @@ function Get-OSDAppCacheHealthState {
         elseif ($officeGenerationCorrupt) {
             $state = 'Corrupt'; $action = 'Refresh'; $reason = "The Microsoft 365 Apps cache generation is inconsistent. $officeGenerationReason"
         }
+        elseif ($canonicalId -eq 'VisualStudioCode' -and -not $item.Valid) {
+            $state = 'Corrupt'; $action = 'Refresh'; $reason = 'The VisualStudioCode generation failed release metadata, SHA-256, size or platform validation.'
+        }
         elseif ($canonicalId -eq '7Zip' -and -not $item.Valid) {
             $state = 'Corrupt'; $action = 'Refresh'; $reason = 'The 7Zip generation failed release metadata, SHA-256, size or architecture validation.'
         }

@@ -103,6 +103,9 @@ function Get-OSDAppCache {
                     'GoogleChromeEnterprise' {
                         Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
                     }
+                    'VisualStudioCode' {
+                        try { Assert-OSDAppVisualStudioCodeGeneration -Root $entryRoot -Architecture ([string]$info.Architecture) | Out-Null; $true } catch { $false }
+                    }
                     '7Zip' {
                         try { Assert-OSDApp7ZipGeneration -Root $entryRoot -Architecture ([string]$info.Architecture) | Out-Null; $true } catch { $false }
                     }

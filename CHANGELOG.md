@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add Visual Studio Code Stable system-installer staging and synchronization for x64 and ARM64, with official release SHA-256, Microsoft publisher verification and transactional cache replacement.
 - Add 7Zip built-in staging and cache synchronization for x64, x86 and ARM64, with official release SHA-256 verification and transactional cache replacement.
 
 ## 0.46.0

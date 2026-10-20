@@ -1,5 +1,6 @@
 $moduleRoot = $PSScriptRoot
 . (Join-Path $moduleRoot 'Runtime\OSDApp7Zip.ps1')
+. (Join-Path $moduleRoot 'Runtime\OSDAppVisualStudioCode.ps1')
 . (Join-Path $moduleRoot 'Runtime\Enter-OSDAppCacheLock.ps1')
 . (Join-Path $moduleRoot 'Runtime\Assert-OSDAppTransactionSpace.ps1')
 . (Join-Path $moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1')
@@ -35,6 +36,7 @@ Export-ModuleMember -Function @(
     'Sync-OSDAppCiscoWebex',
     'Sync-OSDAppZoomWorkplace',
     'Sync-OSDApp7Zip',
+    'Sync-OSDAppVisualStudioCode',
     'Sync-OSDAppMozillaFirefoxEnterprise',
     'Clear-OSDAppCache',
     'Add-OSDApp',
@@ -45,6 +47,7 @@ Export-ModuleMember -Function @(
     'Add-OSDAppCiscoWebex',
     'Add-OSDAppZoomWorkplace',
     'Add-OSDApp7Zip',
+    'Add-OSDAppVisualStudioCode',
     'Add-OSDAppMozillaFirefoxEnterprise',
     'New-OSDAppRepository',
     'New-OSDAppPackage',
