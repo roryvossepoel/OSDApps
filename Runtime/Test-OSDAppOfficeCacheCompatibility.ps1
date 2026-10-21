@@ -181,14 +181,24 @@ function Test-OSDAppOfficeCacheCurrent {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$OfficeRoot,
-        [Parameter(Mandatory)][string]$ConfigurationPath
+        [Parameter(Mandatory)][string]$ConfigurationPath,
+        [hashtable]$Decision
     )
     $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $OfficeRoot -ConfigurationPath $ConfigurationPath
-    if (-not $compatibility.Compatible) { return $false }
+    if (-not $compatibility.Compatible) {
+        if ($null -ne $Decision) { $Decision.CacheDecisionReason = 'Office cache configuration is incompatible. ' + ($compatibility.Reasons -join ' ') }
+        return $false
+    }
     $payloadProfile = Get-OSDAppOfficePayloadProfile -Path $ConfigurationPath
-    if ($payloadProfile.CustomDownloadSource) { return $false }
+    if ($payloadProfile.CustomDownloadSource) {
+        if ($null -ne $Decision) { $Decision.CacheDecisionReason = 'The requested Office configuration uses a custom download source; public CDN currency cannot be used to accept this cache.' }
+        return $false
+    }
     # Compatibility already proved that an explicit build pin matches the cache.
-    if ($payloadProfile.Version -match '^\d+\.\d+\.\d+\.\d+$') { return $true }
+    if ($payloadProfile.Version -match '^\d+\.\d+\.\d+\.\d+$') {
+        if ($null -ne $Decision) { $Decision.CacheDecisionReason = "The compatible Office cache matches the explicit build pin '$($payloadProfile.Version)'; no CDN update check is needed." }
+        return $true
+    }
 
     $channels = @{
         Current = '492350f6-3a01-4f97-b9c0-c7c6ddf67d60'
@@ -198,10 +208,16 @@ function Test-OSDAppOfficeCacheCurrent {
         SemiAnnualPreview = 'b8f9b850-328d-4355-9145-c59439a0c4cf'
         BetaChannel = '5440fd1f-7ecb-4221-8110-145efaa6372f'
     }
-    if (-not $channels.ContainsKey($payloadProfile.Channel)) { return $false }
+    if (-not $channels.ContainsKey($payloadProfile.Channel)) {
+        if ($null -ne $Decision) { $Decision.CacheDecisionReason = "No CDN currency check is available for Office channel '$($payloadProfile.Channel)'; cache currency cannot be established." }
+        return $false
+    }
     $cabName = if ($payloadProfile.Architecture -eq 'x86') { 'v32.cab' } else { 'v64.cab' }
     $cachedCab = Join-Path (Join-Path $OfficeRoot 'Office\Data') $cabName
-    if (-not (Test-Path -LiteralPath $cachedCab -PathType Leaf)) { return $false }
+    if (-not (Test-Path -LiteralPath $cachedCab -PathType Leaf)) {
+        if ($null -ne $Decision) { $Decision.CacheDecisionReason = "The Office cache descriptor '$cabName' is missing." }
+        return $false
+    }
     $probeRoot = Join-Path ([IO.Path]::GetTempPath()) ("OSDApps-OfficeFreshness-{0}" -f [guid]::NewGuid().ToString('N'))
     $probe = Join-Path $probeRoot $cabName
     try {
@@ -214,7 +230,15 @@ function Test-OSDAppOfficeCacheCurrent {
         $advertisedVersion = Get-OSDAppOfficeDescriptorVersion -Path $descriptorPath -Architecture $payloadProfile.Architecture -ChannelId $channels[$payloadProfile.Channel]
         $cacheInfo = Get-Content -LiteralPath (Join-Path $OfficeRoot 'CacheInfo.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         Write-Verbose ("Office advertised build: {0}; cached build: {1}." -f $advertisedVersion,$cacheInfo.Version)
-        return ($advertisedVersion -eq [string]$cacheInfo.Version)
+        $isCurrent = $advertisedVersion -eq [string]$cacheInfo.Version
+        if ($null -ne $Decision) {
+            $Decision.CacheDecisionReason = if ($isCurrent) {
+                "The compatible Office cached build matches the CDN-advertised build '$advertisedVersion'."
+            } else {
+                "The compatible Office cached build '$($cacheInfo.Version)' does not match the CDN-advertised build '$advertisedVersion'."
+            }
+        }
+        return $isCurrent
     }
     finally {
         if (Test-Path -LiteralPath $probeRoot) { Remove-Item -LiteralPath $probeRoot -Recurse -Force -ErrorAction SilentlyContinue }

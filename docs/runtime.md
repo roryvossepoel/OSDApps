@@ -170,6 +170,7 @@ the `ApplicationAcquisitionComplete` log event. For example:
 | Cache metadata missing or unreadable | Currency cannot be established from the recorded metadata. |
 | Office configuration incompatible | The requested payload profile differs; the reason includes the compatibility checks that failed. |
 | Office generation invalid | Generation validation failed, with the original validation message. |
+| Office custom source or unrecognized CDN channel | The public CDN check cannot establish currency for that configuration. |
 | Office build mismatch | The compatible generation does not match the explicit build pin or CDN-advertised build. |
 | HTTP metadata changed | The ETag or last-modified/length comparison differs. This does **not** prove a newer application version. |
 | HTTP metadata insufficient | Comparable metadata is unavailable, so currency cannot be established. |
