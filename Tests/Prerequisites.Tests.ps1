@@ -25,8 +25,13 @@ Describe 'Runtime selection and staging' {
             @($manifest.Apps).Count | Should -Be 6
             @($manifest.Apps.Id | Select-Object -Unique).Count | Should -Be 6
             $manifest.Apps[-1].Id | Should -Be 'VisualStudioCode'
-            $manifest.Apps.Id | Should -Contain 'VisualCppRedist-x86'
-            $manifest.Apps.Id | Should -Contain 'VisualCppRedist-x64'
+            $manifest.Apps.Id | Should -Contain 'VisualCRedist-x86'
+            $manifest.Apps.Id | Should -Contain 'VisualCRedist-x64'
+            foreach ($arch in @('x86','x64')) {
+                $entry = $manifest.Apps | Where-Object Id -eq "VisualCRedist-$arch"
+                $entry.Family | Should -Be 'VisualCRedist'
+                $entry.Package.Replace('\','/') | Should -Be "BuiltIn/VisualCRedist/$arch/Package.exe"
+            }
             $manifest.Apps.Id | Should -Contain 'DotNetRuntime-Runtime-8.0-x64'
             $manifest.Apps.Id | Should -Contain 'DotNetRuntime-Desktop-10.0-x64'
             Test-Path (Join-Path $stage 'OSDAppPrerequisite.ps1') | Should -BeTrue
@@ -177,8 +182,8 @@ Describe 'Runtime PreInstall and Runner dispatch' {
             param($Path,$Spec)
             New-Item -ItemType Directory -Path $Path -Force | Out-Null
             Set-Content (Join-Path $Path 'Package.exe') 'runtime fixture'
-            $version=if($Spec.Family -eq 'VisualCppRedist'){'14.50.1.0'}else{'10.0.1'}
-            $uri=if($Spec.Family -eq 'VisualCppRedist'){"https://aka.ms/vc14/vc_redist.$($Spec.Architecture).exe"}else{'https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/10.0.1/windowsdesktop-runtime-10.0.1-win-x64.exe'}
+            $version=if($Spec.Family -eq 'VisualCRedist'){'14.50.1.0'}else{'10.0.1'}
+            $uri=if($Spec.Family -eq 'VisualCRedist'){"https://aka.ms/vc14/vc_redist.$($Spec.Architecture).exe"}else{'https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/10.0.1/windowsdesktop-runtime-10.0.1-win-x64.exe'}
             @{ Id=$Spec.Family;VariantId=$Spec.Id;Architecture=$Spec.Architecture;RuntimeType=$Spec.RuntimeType;Channel=$Spec.Channel;Version=$version;PackageUri=$uri;Size=(Get-Item (Join-Path $Path 'Package.exe')).Length;Sha256=(Get-FileHash (Join-Path $Path 'Package.exe')).Hash;Sha512=(Get-FileHash (Join-Path $Path 'Package.exe') -Algorithm SHA512).Hash } | ConvertTo-Json | Set-Content (Join-Path $Path 'CacheInfo.json')
         }
     }
@@ -264,7 +269,7 @@ Describe 'Runtime PreInstall and Runner dispatch' {
         Should -Invoke Start-Process -Times 0 -Exactly
     }
     It 'keeps x86 Visual C++ distinct when x64 is already installed' {
-        $script:spec=Get-OSDAppPrerequisiteSpec -Family VisualCppRedist -Architecture x86
+        $script:spec=Get-OSDAppPrerequisiteSpec -Family VisualCRedist -Architecture x86
         $app.Id=$spec.Id;$app.Family=$spec.Family;$app.Architecture=$spec.Architecture;$app.Channel=$spec.Channel;$app.RuntimeType=$spec.RuntimeType;$app.Package=Join-Path $spec.RelativeRoot 'Package.exe'
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
         Mock Get-OSDAppInstalledPrerequisiteVersion { if($Spec.Architecture -eq 'x64' -or $script:installerStarted){[version]'14.50.1.0'} }

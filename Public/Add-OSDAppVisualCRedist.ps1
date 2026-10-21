@@ -9,7 +9,7 @@ function Add-OSDAppVisualCRedist {
     $cachePath = $null
     try { $cachePath = Get-OSDAppCachePath } catch { Write-Verbose 'No USB cache; acquisition will use the OS disk.' }
     foreach ($arch in @($Architecture | Select-Object -Unique)) {
-        $spec = Get-OSDAppPrerequisiteSpec -Family VisualCppRedist -Architecture $arch
+        $spec = Get-OSDAppPrerequisiteSpec -Family VisualCRedist -Architecture $arch
         if (-not $PSCmdlet.ShouldProcess($target, "Stage $($spec.DisplayName) and integrate SetupComplete")) { continue }
         $result = Add-OSDAppPrerequisiteInternal -Spec $spec -CachePath $cachePath -WindowsPath $target -InstallTimeoutMinutes $InstallTimeoutMinutes -Confirm:$false
         $manifestPath = Join-Path $target 'Windows\Temp\OSDApps\DeviceManifest.json'

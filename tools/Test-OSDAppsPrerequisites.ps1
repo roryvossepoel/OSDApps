@@ -25,7 +25,7 @@ try {
         Add-OSDAppDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64 -WindowsPath $windows | Format-Table
         $check=Test-OSDAppDeployment -WindowsPath $windows -ThrowOnFailure
         $manifest=Read-TestJson (Join-Path $stage 'DeviceManifest.json')
-        $ids=@('VisualCppRedist-x86','VisualCppRedist-x64','DotNetRuntime-Runtime-10.0-x86','DotNetRuntime-Desktop-10.0-x64')
+        $ids=@('VisualCRedist-x86','VisualCRedist-x64','DotNetRuntime-Runtime-10.0-x86','DotNetRuntime-Desktop-10.0-x64')
         if(@($manifest.Apps).Count -ne 4 -or @(Compare-Object $ids @($manifest.Apps.Id)).Count -ne 0) { throw 'Unexpected prerequisite queue.' }
         [pscustomobject]@{DeploymentId=$manifest.DeploymentId;ModuleVersion=$module.Version.ToString();ExpectedIds=$ids;PreflightValid=$check.Valid} |
             ConvertTo-Json | Set-Content (Join-Path $testRoot 'Prerequisites-Staging.json') -Encoding UTF8
@@ -47,7 +47,7 @@ try {
     $rows=@(foreach($entry in $run.Applications) {
         if($entry.ExitCode -notin @(0,3010) -or [string]$entry.Version -notmatch '^\d+\.\d+\.\d+') { throw "Missing installer success or version: $($entry.Id)" }
         $required=[version]$entry.Version
-        if($entry.Id -like 'VisualCppRedist-*') {
+        if($entry.Id -like 'VisualCRedist-*') {
             $arch=($entry.Id -split '-')[-1]
             $keys=@("HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\$arch","HKLM:\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\$arch")
             $versions=@(foreach($key in $keys) {

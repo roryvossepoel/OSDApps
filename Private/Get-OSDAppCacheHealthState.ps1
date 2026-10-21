@@ -418,7 +418,7 @@ function Get-OSDAppCacheHealthState {
         elseif ($officeGenerationCorrupt) {
             $state = 'Corrupt'; $action = 'Refresh'; $reason = "The Microsoft 365 Apps cache generation is inconsistent. $officeGenerationReason"
         }
-        elseif ($canonicalId -in @('VisualCppRedist','DotNetRuntime') -and -not $item.Valid) {
+        elseif ($canonicalId -in @('VisualCRedist','DotNetRuntime') -and -not $item.Valid) {
             $state = 'Corrupt'; $action = 'Refresh'; $reason = 'Runtime generation identity, size or hash validation failed.'
         }
         elseif ($canonicalId -eq 'VisualStudioCode' -and -not $item.Valid) {

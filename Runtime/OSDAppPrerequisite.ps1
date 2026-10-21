@@ -1,14 +1,14 @@
 # Shared runtime acquisition, validation and installed-version checks.
 function Get-OSDAppPrerequisiteSpec {
     param(
-        [Parameter(Mandatory)][ValidateSet('VisualCppRedist','DotNetRuntime')][string]$Family,
+        [Parameter(Mandatory)][ValidateSet('VisualCRedist','DotNetRuntime')][string]$Family,
         [Parameter(Mandatory)][ValidateSet('x86','x64')][string]$Architecture,
         [ValidateSet('Runtime','Desktop')][string]$RuntimeType = 'Desktop',
         [string]$Channel = '10.0'
     )
-    if ($Family -eq 'VisualCppRedist') {
-        $id = "VisualCppRedist-$Architecture"
-        $relative = "BuiltIn\VisualCppRedist\$Architecture"
+    if ($Family -eq 'VisualCRedist') {
+        $id = "VisualCRedist-$Architecture"
+        $relative = "BuiltIn\VisualCRedist\$Architecture"
         $display = "Visual C++ v14 Redistributable ($Architecture)"
         $Channel = '14'; $RuntimeType = 'Runtime'
     }
@@ -47,7 +47,7 @@ function Assert-OSDAppPrerequisitePublisher {
 function Get-OSDAppPrerequisiteRelease {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Spec)
-    if ($Spec.Family -eq 'VisualCppRedist') {
+    if ($Spec.Family -eq 'VisualCRedist') {
         $uri = "https://aka.ms/vc14/vc_redist.$($Spec.Architecture).exe"
         $request = [Net.HttpWebRequest]::Create($uri)
         $request.Method = 'HEAD'; $request.Timeout = 60000; $request.ReadWriteTimeout = 60000
@@ -103,7 +103,7 @@ function Assert-OSDAppPrerequisiteGeneration {
     }
     if ([string]$info.Id -ne $Spec.Family -or [string]$info.VariantId -ne $Spec.Id -or [string]$info.Sha256 -notmatch '^[a-fA-F0-9]{64}$' -or [long]$info.Size -le 0) { throw 'Runtime cache identity or integrity metadata is invalid.' }
     $version = [version]$info.Version
-    if ($Spec.Family -eq 'VisualCppRedist') {
+    if ($Spec.Family -eq 'VisualCRedist') {
         if ($version.Major -ne 14 -or [string]$info.PackageUri -cne "https://aka.ms/vc14/vc_redist.$($Spec.Architecture).exe") { throw 'Invalid Visual C++ cache version or source.' }
     }
     else {
@@ -145,7 +145,7 @@ function Sync-OSDAppPrerequisiteGeneration {
             & $downloadAction $release.PackageUri $package | Out-Null
             Assert-OSDAppPrerequisitePublisher -Path $package
             $version = $release.Version
-            if ($Spec.Family -eq 'VisualCppRedist') {
+            if ($Spec.Family -eq 'VisualCRedist') {
                 $fileVersion = (Get-Item -LiteralPath $package).VersionInfo.FileVersion
                 if ($fileVersion -notmatch '(?<version>14\.\d+\.\d+\.\d+)') { throw 'Cannot determine the signed Visual C++ installer version.' }
                 $version = $Matches.version
@@ -171,7 +171,7 @@ function Get-OSDAppInstalledPrerequisiteVersion {
     foreach ($view in @([Microsoft.Win32.RegistryView]::Registry32,[Microsoft.Win32.RegistryView]::Registry64)) {
         $base = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine,$view)
         try {
-            if ($Spec.Family -eq 'VisualCppRedist') {
+            if ($Spec.Family -eq 'VisualCRedist') {
                 $key = $base.OpenSubKey("SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\$($Spec.Architecture)")
                 if ($key) {
                     try {

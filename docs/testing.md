@@ -498,5 +498,16 @@ PowerShell at OOBE. It correlates deployment results, checks Visual C++ registry
 versions and DLL presence, enumerates actual .NET runtimes using the
 architecture-specific `dotnet.exe`, and checks cleanup. It accepts an already
 installed newer patch. No installation or SetupComplete rerun occurs during
-validation. Physical deployment results are pending; automated trust/process
-mocks do not establish native publisher validation or successful installation.
+validation. The initial physical deployment installed all four prerequisites with
+exit code 0: Visual C++ x86/x64 14.51.36247.0 and .NET 10.0.13 Runtime x86/Desktop
+x64. Preparation took 10.4 seconds and installation took 17.1 seconds; runtime
+staging was removed. This evidence predates the final VisualCRedist identity rename.
+
+The candidate now uses `VisualCRedist` consistently for commands, package IDs and
+`BuiltIn/VisualCRedist/<architecture>` folders. Earlier preview cache folders are
+left untouched and are not reused under the new identity. The next deployment
+therefore downloads Visual C++ into the new folders; the .NET cache can be reused
+if still current and valid. A subsequent fresh deployment with the same USB flash
+drive should report `CacheReused` for all four prerequisites, unless Microsoft has
+published a new package. Keep each deployment's acquisition results to distinguish
+a successful installation from verified cache reuse.

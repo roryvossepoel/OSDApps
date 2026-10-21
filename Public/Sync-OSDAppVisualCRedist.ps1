@@ -7,7 +7,7 @@ function Sync-OSDAppVisualCRedist {
     if (Test-OSDAppWinPE) { throw 'Use Add-OSDAppVisualCRedist in WinPE; synchronization requires full Windows.' }
     $cachePath = Get-OSDAppCachePath
     foreach ($arch in @($Architecture | Select-Object -Unique)) {
-        $spec = Get-OSDAppPrerequisiteSpec -Family VisualCppRedist -Architecture $arch
+        $spec = Get-OSDAppPrerequisiteSpec -Family VisualCRedist -Architecture $arch
         $root = Join-Path $cachePath $spec.RelativeRoot
         if (-not $PSCmdlet.ShouldProcess($root, 'Synchronize verified runtime cache')) { continue }
         $lock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'Runtime cache synchronization'

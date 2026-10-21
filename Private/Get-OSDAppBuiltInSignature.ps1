@@ -9,7 +9,7 @@ function Get-OSDAppExpectedPublisher {
         'Microsoft365Apps'         { 'Microsoft Corporation'; break }
         'MicrosoftTeams'           { 'Microsoft Corporation'; break }
         'VisualStudioCode'         { 'Microsoft Corporation'; break }
-        'VisualCppRedist'          { 'Microsoft Corporation'; break }
+        'VisualCRedist'          { 'Microsoft Corporation'; break }
         'DotNetRuntime'            { 'Microsoft Corporation'; break }
         'GoogleChromeEnterprise'   { 'Google LLC'; break }
         'CiscoWebex'               { 'Cisco Systems, Inc.'; break }
@@ -79,7 +79,7 @@ function Get-OSDAppBuiltInSignature {
         'Microsoft365Apps'         { 'setup.exe'; break }
         'MicrosoftTeams'           { 'teamsbootstrapper.exe'; break }
         'VisualStudioCode'         { 'Package.exe'; break }
-        'VisualCppRedist'          { 'Package.exe'; break }
+        'VisualCRedist'          { 'Package.exe'; break }
         'DotNetRuntime'            { 'Package.exe'; break }
         'GoogleChromeEnterprise'   { 'Package.msi'; break }
         'CiscoWebex'               { 'Package.msi'; break }

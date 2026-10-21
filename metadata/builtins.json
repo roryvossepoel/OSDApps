@@ -189,7 +189,7 @@
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/vscode.svg"
     },
     {
-      "Id": "VisualCppRedist",
+      "Id": "VisualCRedist",
       "DisplayName": "Visual C++ v14 Redistributable",
       "Source": "BuiltIn",
       "Vendor": "Microsoft",
@@ -202,10 +202,10 @@
         "x64"
       ],
       "DefaultArchitecture": null,
-      "CachePath": "BuiltIn/VisualCppRedist/<architecture>",
+      "CachePath": "BuiltIn/VisualCRedist/<architecture>",
       "RepositoryAlternative": true,
       "Aliases": [],
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/visualcpp.svg",
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/visualc.svg",
       "ArchitectureRequired": true
     },
     {

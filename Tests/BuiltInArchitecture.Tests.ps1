@@ -9,7 +9,7 @@ Describe 'Built-in application architecture contracts' {
         foreach ($app in $metadata.Applications) {
             foreach ($name in @($app.AddCommand,$app.SyncCommand)) {
                 $command = Get-Command $name
-                if ($app.Id -in @('VisualCppRedist','DotNetRuntime')) {
+                if ($app.Id -in @('VisualCRedist','DotNetRuntime')) {
                     $app.DefaultArchitecture | Should -BeNullOrEmpty
                     $app.ArchitectureRequired | Should -BeTrue
                     $command.Parameters['Architecture'].ParameterType | Should -Be ([string])

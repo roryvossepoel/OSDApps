@@ -103,7 +103,7 @@ function Get-OSDAppCache {
                     'GoogleChromeEnterprise' {
                         Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
                     }
-                    { $_ -in @('VisualCppRedist','DotNetRuntime') } {
+                    { $_ -in @('VisualCRedist','DotNetRuntime') } {
                         try {
                             $spec = Get-OSDAppPrerequisiteSpec -Family $info.Id -Architecture $info.Architecture -RuntimeType $info.RuntimeType -Channel $info.Channel
                             Assert-OSDAppPrerequisiteGeneration -Root $entryRoot -Spec $spec | Out-Null

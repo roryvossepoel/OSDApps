@@ -1018,16 +1018,16 @@ not a guarantee that an offline fallback is the newest available patch.
 ```powershell
 Sync-OSDAppVisualCRedist -Architecture x64
 Sync-OSDAppDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64
-Get-OSDAppCache -Name VisualCppRedist,DotNetRuntime -VerifySignatures
+Get-OSDAppCache -Name VisualCRedist,DotNetRuntime -VerifySignatures
 ```
 
 Sync runs on full Windows, prepares the USB flash drive and installs nothing on
 the preparation computer. Run Add in WinPE. Cache paths are
-`BuiltIn/VisualCppRedist/<architecture>` and
+`BuiltIn/VisualCRedist/<architecture>` and
 `BuiltIn/DotNetRuntime/<runtime-type>/<channel>/<architecture>`.
 Only the active patch is retained per variant; a different channel or architecture
 uses a different generation. Deployment IDs include the variant, for example
-`VisualCppRedist-x86` and `DotNetRuntime-Desktop-10.0-x64`.
+`VisualCRedist-x86` and `DotNetRuntime-Desktop-10.0-x64`.
 `Get-OSDAppCache` exposes `VariantId` and `RuntimeType` to distinguish them.
 The app list summarizes x64 Visual C++ and Desktop 10.0 x64; inspect the cache
 inventory for all variants.
