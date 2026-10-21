@@ -1,9 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.48.0
 
 - Add Visual C++ v14 x86/x64 and .NET Runtime/Desktop built-ins with separate variant identities, Microsoft verification, transactional caches and installed-version checks. Runtime items are staged before applications.
 - Require exactly one explicit architecture for all four runtime Add/Sync cmdlets. Offer only supported stable .NET channels, enforce offline support deadlines and reject known EOL channels without cached fallback. Network failures may still use verified cache content within the supported channel lifetime.
+- Use `VisualCRedist` consistently for public commands, package IDs and cache folders. Earlier preview cache folders are not migrated or deleted automatically.
+- Validate physical cold and warm deployments of Visual C++ x86/x64 and .NET 10 Runtime x86/Desktop x64, followed by a successful deployment using the final VisualCRedist names. All four installed versions and exit codes passed; staging was removed. See [validation evidence](docs/testing.md#visual-c-and-net-prerequisite-candidate).
 
 ## 0.47.0
 

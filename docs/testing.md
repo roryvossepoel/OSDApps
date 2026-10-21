@@ -503,11 +503,31 @@ exit code 0: Visual C++ x86/x64 14.51.36247.0 and .NET 10.0.13 Runtime x86/Deskt
 x64. Preparation took 10.4 seconds and installation took 17.1 seconds; runtime
 staging was removed. This evidence predates the final VisualCRedist identity rename.
 
-The candidate now uses `VisualCRedist` consistently for commands, package IDs and
-`BuiltIn/VisualCRedist/<architecture>` folders. Earlier preview cache folders are
-left untouched and are not reused under the new identity. The next deployment
-therefore downloads Visual C++ into the new folders; the .NET cache can be reused
-if still current and valid. A subsequent fresh deployment with the same USB flash
-drive should report `CacheReused` for all four prerequisites, unless Microsoft has
-published a new package. Keep each deployment's acquisition results to distinguish
-a successful installation from verified cache reuse.
+### Physical validation on 21 October 2026
+
+All three deployments ran on x64 Windows targets and installed Visual C++ x86/x64
+14.51.36247.0, .NET 10.0.13 Runtime x86, and .NET 10.0.13 Desktop Runtime x64.
+Each reported four successful installations, exit code 0, matching installed
+versions and completed staging/helper cleanup.
+
+| Deployment | Acquisition | PreInstall | Runner | Total |
+| --- | --- | --- | --- | --- |
+| `e2fd7839-9ce7-4c9d-b397-8b08ce1d3318` | All four downloaded | 10.4 s | 17.1 s | 27.5 s |
+| `41f5a1e9-f963-440f-83d0-0a5e49783b42` | All four reused the cache | 6.8 s | 15.2 s | 22.0 s |
+| `2b2ef9f4-4bc5-46fd-b65d-9f519d2a97f2` | VisualCRedist downloaded; both .NET variants reused the cache | 8.0 s | 15.2 s | 23.2 s |
+
+The final run used commit `c2452dbafa4bab9b5b3b2ed6fd3e3ae08b651aae`, with
+`VisualCRedist-x86` and `VisualCRedist-x64` IDs and
+`BuiltIn/VisualCRedist/<architecture>` folders. [Candidate CI](https://github.com/roryvossepoel/OSDApps/actions/runs/39552403526)
+passed on Windows PowerShell 5.1 and PowerShell 7. The tested candidate still
+reported module version 0.47.0; release 0.48.0 contains this implementation.
+
+The first two runs predate the final internal name change. Consequently, physical
+VisualCRedist cache reuse under the final folder name has not been separately
+demonstrated. .NET 8/9, .NET Runtime x64, Desktop Runtime x86, existing-newer
+installation handling and failure/fallback paths have automated coverage but are
+not established by these physical runs. Release preparation must pass its own CI.
+
+Earlier preview cache folders remain untouched and are not reused under the new
+identity. Keep acquisition results to distinguish successful installation from
+verified cache reuse; `CacheUsed=True` alone does not prove reuse.
