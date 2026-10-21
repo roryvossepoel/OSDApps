@@ -22,7 +22,9 @@ optional fields require no schema change.
 | `Aliases` | Optional retired built-in cache identities that resolve to `Id`; never render them as additional applications or command names |
 | `Source`, `Acquisition`, `SyncPhase` | Distinguish built-in ownership and acquisition phase |
 | `AddCommand`, `SyncCommand` | Show ready-to-copy PowerShell examples |
-| `Architectures`, `DefaultArchitecture` | Selectable architectures, not necessarily field-validated ones |
+| `Architectures`, `DefaultArchitecture` | Selectable architectures, not necessarily field-validated ones. DefaultArchitecture is null when an explicit selection is required. |
+| `ArchitectureRequired` | When true, the runtime Add/Sync commands require one explicit architecture. |
+| `Channels`, `ChannelSupportEndDates` | Runtime channel choices and UTC support deadlines; expired channels are rejected even if still listed in this static metadata. |
 | `Channels`, `DefaultChannel`, `ProductIds`, `DefaultLanguage` | Optional product-specific settings; check for presence before rendering |
 | `CachePath` | Illustrate the USB cache layout (`<architecture>` and similar segments are placeholders) |
 | `RepositoryAlternative` | Explain the organization-maintained alternative |

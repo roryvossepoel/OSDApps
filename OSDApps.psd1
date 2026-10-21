@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.47.0'
+    ModuleVersion     = '0.48.0'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -27,6 +27,8 @@
         'Sync-OSDAppZoomWorkplace',
         'Sync-OSDApp7Zip',
         'Sync-OSDAppVisualStudioCode',
+        'Sync-OSDAppVisualCRedist',
+        'Sync-OSDAppDotNetRuntime',
         'Sync-OSDAppMozillaFirefoxEnterprise',
         'Clear-OSDAppCache',
         'Add-OSDApp',
@@ -38,6 +40,8 @@
         'Add-OSDAppZoomWorkplace',
         'Add-OSDApp7Zip',
         'Add-OSDAppVisualStudioCode',
+        'Add-OSDAppVisualCRedist',
+        'Add-OSDAppDotNetRuntime',
         'Add-OSDAppMozillaFirefoxEnterprise',
         'New-OSDAppRepository',
         'New-OSDAppPackage',
@@ -53,7 +57,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.47.0: Add 7Zip and Visual Studio Code Stable system-wide installation with official release metadata, verified downloads and transactional cache replacement. Both x64 candidates passed physical WinPE-to-OOBE installation and cleanup checks. Automatically create releases only when the module version increases.'
+            ReleaseNotes = '0.48.0: Add VisualCRedist v14 and .NET Runtime/Desktop prerequisites with mandatory explicit x86 or x64 selection, supported stable .NET channels, verified downloads and transactional caches. Preserve compatible newer installations and stage prerequisites before applications. Physical cold, warm and final naming checks passed; see docs/testing.md for scope and evidence.'
             RequireLicenseAcceptance = $false
         }
     }

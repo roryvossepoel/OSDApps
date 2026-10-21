@@ -75,6 +75,8 @@ The Viewer is read-only. Here, `-Offline` skips online repository discovery; it 
 | Zoom Workplace | `Add-OSDAppZoomWorkplace` |
 | 7Zip | `Add-OSDApp7Zip` |
 | Visual Studio Code | `Add-OSDAppVisualStudioCode` |
+| Visual C++ v14 (x86 or x64) | `Add-OSDAppVisualCRedist -Architecture x64` |
+| .NET Runtime / Desktop Runtime | `Add-OSDAppDotNetRuntime -Architecture x64` |
 
 Installers come directly from their vendors. Supported architectures and options differ by application; see the [built-in guide](docs/built-in-apps.md) for Office configuration, Firefox channels and other settings. OSDApps does not bundle vendor installers or provide product licenses.
 

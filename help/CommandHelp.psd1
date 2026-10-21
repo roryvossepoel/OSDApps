@@ -38,6 +38,51 @@
         SuccessCodes = 'Repository installer exit codes treated as success. Default accepts 0 and 3010.'
     }
     Commands = @{
+        'Add-OSDAppVisualCRedist' = @{
+            Parameters = @{ Architecture = 'Required single package architecture: x86 or x64. No default and no combined selection.' }
+            Synopsis = 'Add Microsoft runtime prerequisites.'
+            Description = 'Specify one architecture explicitly: x86 or x64. DotNetRuntime defaults to Desktop and channel 10.0; choose Runtime for the standalone runtime. Only supported stable .NET channels are offered; expired channels cannot use cached fallback. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
+            Environment = 'WinPE after applying Windows.'
+            Output = 'OSDApps.StagedApp.'
+            Examples = @(@{ Code = 'Add-OSDAppVisualCRedist -Architecture x64'; Remarks = 'Select x64 explicitly.' })
+            Link = 'docs/built-in-apps.md'
+        }
+        'Sync-OSDAppVisualCRedist' = @{
+            Parameters = @{ Architecture = 'Required single package architecture: x86 or x64. No default and no combined selection.' }
+            Synopsis = 'Sync Microsoft runtime prerequisites.'
+            Description = 'Specify one architecture explicitly: x86 or x64. DotNetRuntime defaults to Desktop and channel 10.0; choose Runtime for the standalone runtime. Only supported stable .NET channels are offered; expired channels cannot use cached fallback. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
+            Environment = 'Full Windows preparation computer.'
+            Output = 'OSDApps.BuiltInCache.'
+            Examples = @(@{ Code = 'Sync-OSDAppVisualCRedist -Architecture x64'; Remarks = 'Select x64 explicitly.' })
+            Link = 'docs/built-in-apps.md'
+        }
+        'Add-OSDAppDotNetRuntime' = @{
+            Parameters = @{
+                Architecture = 'Required single package architecture: x86 or x64. No default and no combined selection.'
+                RuntimeType = 'Runtime selects the standalone Microsoft.NETCore.App runtime. Desktop includes Microsoft.WindowsDesktop.App and the ordinary runtime. Default: Desktop.'
+                Channel = 'Supported stable release channel: 8.0, 9.0 or 10.0. Default: 10.0. Selects its newest stable patch. The support deadline is enforced even offline; preview and EOL channels are rejected.'
+            }
+            Synopsis = 'Add Microsoft runtime prerequisites.'
+            Description = 'Specify one architecture explicitly: x86 or x64. DotNetRuntime defaults to Desktop and channel 10.0; choose Runtime for the standalone runtime. Only supported stable .NET channels are offered; expired channels cannot use cached fallback. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
+            Environment = 'WinPE after applying Windows.'
+            Output = 'OSDApps.StagedApp.'
+            Examples = @(@{ Code = 'Add-OSDAppDotNetRuntime -Architecture x64'; Remarks = 'Select x64 explicitly.' })
+            Link = 'docs/built-in-apps.md'
+        }
+        'Sync-OSDAppDotNetRuntime' = @{
+            Parameters = @{
+                Architecture = 'Required single package architecture: x86 or x64. No default and no combined selection.'
+                RuntimeType = 'Runtime selects the standalone Microsoft.NETCore.App runtime. Desktop includes Microsoft.WindowsDesktop.App and the ordinary runtime. Default: Desktop.'
+                Channel = 'Supported stable release channel: 8.0, 9.0 or 10.0. Default: 10.0. Selects its newest stable patch. The support deadline is enforced even offline; preview and EOL channels are rejected.'
+            }
+            Synopsis = 'Sync Microsoft runtime prerequisites.'
+            Description = 'Specify one architecture explicitly: x86 or x64. DotNetRuntime defaults to Desktop and channel 10.0; choose Runtime for the standalone runtime. Only supported stable .NET channels are offered; expired channels cannot use cached fallback. Each architecture, runtime type and channel has a separate cache and deployment identity. Downloads require Microsoft Authenticode; .NET also requires the official release SHA-512. Existing suitable installed versions are retained. No SDK, ASP.NET Core or legacy .NET Framework is installed.'
+            Environment = 'Full Windows preparation computer.'
+            Output = 'OSDApps.BuiltInCache.'
+            Examples = @(@{ Code = 'Sync-OSDAppDotNetRuntime -Architecture x64'; Remarks = 'Select x64 explicitly.' })
+            Link = 'docs/built-in-apps.md'
+        }
+
         'Add-OSDAppVisualStudioCode' = @{
             Synopsis = 'Stage Visual Studio Code Stable for all users before OOBE.'
             Description = 'Stages intent and any available cache. Windows PreInstall checks the official Microsoft update service for the x64 or ARM64 system installer. Validates SHA-256 and Microsoft Authenticode before reuse, promotion and execution. Uses silent Inno Setup arguments without launching the editor. No extensions or user settings are configured.'

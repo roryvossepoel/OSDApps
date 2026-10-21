@@ -73,6 +73,10 @@ function Test-OSDAppDeployment {
                 @(@{ Path = [string]$App.Package; Type = 'Leaf' })
                 break
             }
+            'PrerequisiteExe' {
+                @(@{ Path = [string]$App.Package; Type = 'Leaf' })
+                break
+            }
             'VisualStudioCodeExe' {
                 @(@{ Path = [string]$App.Package; Type = 'Leaf' })
                 break
@@ -88,6 +92,12 @@ function Test-OSDAppDeployment {
             default { @() }
         })
 
+        if ([string]$App.Type -eq 'PrerequisiteExe') {
+            try {
+                $spec = Get-OSDAppPrerequisiteSpec -Family $App.Family -Architecture $App.Architecture -RuntimeType $App.RuntimeType -Channel $App.Channel
+                if ($App.Id -ne $spec.Id -or $App.Package -ne (Join-Path $spec.RelativeRoot 'Package.exe')) { $requiredPaths = @() }
+            } catch { $requiredPaths = @() }
+        }
         $invalidPaths = @($requiredPaths | Where-Object { -not (Test-SafeRelativePath -Path $_.Path) })
         $missingPaths = @($requiredPaths | ForEach-Object {
             $requiredPath = [string]$_.Path
@@ -97,6 +107,11 @@ function Test-OSDAppDeployment {
                 $requiredPath
             }
         })
+
+        if ([string]$App.Type -eq 'PrerequisiteExe' -and $requiredPaths.Count -gt 0 -and $missingPaths.Count -eq 0) {
+            try { Assert-OSDAppPrerequisiteGeneration -Root (Join-Path $stageRoot $spec.RelativeRoot) -Spec $spec | Out-Null }
+            catch { $missingPaths += "Invalid runtime generation: $($_.Exception.Message)" }
+        }
 
         [pscustomobject]@{
             DefinitionValid = ($requiredPaths.Count -gt 0 -and $invalidPaths.Count -eq 0)
@@ -192,7 +207,7 @@ function Test-OSDAppDeployment {
         if ($queueValid) { "Application queue contains $($apps.Count) unique valid entries." } else { 'Application queue is empty, contains duplicate IDs, or contains an invalid ID.' }
     )
 
-    $runtimeFiles = @('Invoke-OSDAppPreInstall.ps1', 'Invoke-OSDAppRunner.ps1', 'Restore-OSDAppCacheGeneration.ps1', 'Assert-OSDAppTransactionSpace.ps1', 'Enter-OSDAppCacheLock.ps1', 'Test-OSDAppOfficeCacheCompatibility.ps1', 'OSDAppSleepPrevention.ps1', 'OSDApp7Zip.ps1','OSDAppVisualStudioCode.ps1', 'Invoke-OSDAppBuiltInCacheTransaction.ps1')
+    $runtimeFiles = @('Invoke-OSDAppPreInstall.ps1', 'Invoke-OSDAppRunner.ps1', 'Restore-OSDAppCacheGeneration.ps1', 'Assert-OSDAppTransactionSpace.ps1', 'Enter-OSDAppCacheLock.ps1', 'Test-OSDAppOfficeCacheCompatibility.ps1', 'OSDAppSleepPrevention.ps1', 'OSDApp7Zip.ps1','OSDAppVisualStudioCode.ps1','OSDAppPrerequisite.ps1', 'Invoke-OSDAppBuiltInCacheTransaction.ps1')
     $runtimeMissing = @($runtimeFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stageRoot $_) -PathType Leaf) })
     Add-DeploymentCheck -Name 'RuntimeScripts' -Passed ($runtimeMissing.Count -eq 0) -Required $true -Message $(
         if ($runtimeMissing.Count -eq 0) { 'Standalone runtime scripts and shared cache helpers are staged.' } else { "Missing runtime script(s): $($runtimeMissing -join ', ')." }

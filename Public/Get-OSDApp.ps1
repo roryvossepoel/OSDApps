@@ -103,6 +103,8 @@ function Get-OSDApp {
     $chromeCacheInfo = $null
     $webexCacheInfo = $null
     $visualStudioCodeCacheInfo = $null
+    $visualCCacheInfo = $null
+    $dotNetCacheInfo = $null
     $sevenZipCacheInfo = $null
     $zoomCacheInfo = $null
     $firefoxCacheInfo = $null
@@ -114,6 +116,8 @@ function Get-OSDApp {
             @{ Id='AdobeAcrobatUnified'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $(if ($hostArchitecture -eq 'x86') { 'x86' } else { 'x64' }) 'CacheInfo.json'))) },
             @{ Id='GoogleChromeEnterprise'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\GoogleChromeEnterprise' (Join-Path $(if ($hostArchitecture -eq 'x86') { 'x86' } else { 'x64' }) 'CacheInfo.json'))) },
             @{ Id='CiscoWebex'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\CiscoWebex' (Join-Path $(if ($hostArchitecture -eq 'arm64') { 'arm64' } else { 'x64' }) 'CacheInfo.json'))) },
+            @{ Id='VisualCRedist'; Path=(Join-Path $cachePath 'BuiltIn\VisualCRedist\x64\CacheInfo.json') },
+            @{ Id='DotNetRuntime'; Path=(Join-Path $cachePath 'BuiltIn\DotNetRuntime\Desktop\10.0\x64\CacheInfo.json') },
             @{ Id='VisualStudioCode'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\VisualStudioCode' (Join-Path $hostArchitecture 'CacheInfo.json'))) },
             @{ Id='7Zip'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\7Zip' (Join-Path $hostArchitecture 'CacheInfo.json'))) },
             @{ Id='ZoomWorkplace'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\ZoomWorkplace' (Join-Path $(if ($hostArchitecture -eq 'arm64') { 'arm64' } else { 'x64' }) 'CacheInfo.json'))) }
@@ -128,6 +132,8 @@ function Get-OSDApp {
                         'GoogleChromeEnterprise' { $chromeCacheInfo = $info }
                         'CiscoWebex' { $webexCacheInfo = $info }
                         'VisualStudioCode' { $visualStudioCodeCacheInfo = $info }
+                        'VisualCRedist' { $visualCCacheInfo = $info }
+                        'DotNetRuntime' { $dotNetCacheInfo = $info }
                         '7Zip' { $sevenZipCacheInfo = $info }
                         'ZoomWorkplace' { $zoomCacheInfo = $info }
                     }
@@ -163,6 +169,8 @@ function Get-OSDApp {
         @{ Id='AdobeAcrobatUnified'; DisplayName='Adobe Acrobat Unified'; Info=$adobeCacheInfo },
         @{ Id='GoogleChromeEnterprise'; DisplayName='Google Chrome Enterprise'; Info=$chromeCacheInfo },
         @{ Id='CiscoWebex'; DisplayName='Cisco Webex'; Info=$webexCacheInfo },
+        @{ Id='VisualCRedist'; DisplayName='Visual C++ v14 Redistributable'; Info=$visualCCacheInfo },
+        @{ Id='DotNetRuntime'; DisplayName='.NET Runtime'; Info=$dotNetCacheInfo },
         @{ Id='VisualStudioCode'; DisplayName='Visual Studio Code'; Info=$visualStudioCodeCacheInfo },
         @{ Id='7Zip'; DisplayName='7Zip'; Info=$sevenZipCacheInfo },
         @{ Id='ZoomWorkplace'; DisplayName='Zoom Workplace'; Info=$zoomCacheInfo },

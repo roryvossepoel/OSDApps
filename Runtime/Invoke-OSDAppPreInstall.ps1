@@ -13,6 +13,7 @@ $cacheLock = $null
 . (Join-Path $PSScriptRoot 'Restore-OSDAppCacheGeneration.ps1')
 . (Join-Path $PSScriptRoot 'OSDApp7Zip.ps1')
 . (Join-Path $PSScriptRoot 'OSDAppVisualStudioCode.ps1')
+. (Join-Path $PSScriptRoot 'OSDAppPrerequisite.ps1')
 . (Join-Path $PSScriptRoot 'Invoke-OSDAppBuiltInCacheTransaction.ps1')
 . (Join-Path $PSScriptRoot 'Assert-OSDAppTransactionSpace.ps1')
 Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
@@ -929,6 +930,37 @@ try {
                 }
                 $relativeRoot = Join-Path 'BuiltIn\CiscoWebex' $architecture
                 Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Cisco Webex' -Acquisition $acquisition
+            }
+            { $app.Type -eq 'PrerequisiteExe' } {
+                $spec = Get-OSDAppPrerequisiteSpec -Family $app.Family -Architecture $app.Architecture -RuntimeType $app.RuntimeType -Channel $app.Channel
+                if ($app.Id -ne $spec.Id -or $app.Package -ne (Join-Path $spec.RelativeRoot 'Package.exe')) { throw 'Invalid runtime deployment identity or path.' }
+                $architecture = [string]$app.Architecture
+                $relativeRoot = $spec.RelativeRoot
+                $localRoot = Join-Path $StagedPath $relativeRoot
+                $acquireRoot = if ($usbRoot) { Join-Path $usbRoot $relativeRoot } else { $localRoot }
+                try {
+                    if (-not $networkAvailable) { throw 'No network connection is available.' }
+                    $sync = Sync-OSDAppPrerequisiteGeneration -Root $acquireRoot -Spec $spec -Download {
+                        param($uri, $destination)
+                        Save-PreInstallDownload -Uri $uri -DestinationPath $destination -Id $spec.Id -Description 'Runtime EXE' -TimeoutMinutes 10
+                    }
+                    if ($usbRoot) {
+                        New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
+                        foreach ($file in @('Package.exe','CacheInfo.json')) {
+                            Copy-Item -LiteralPath (Join-Path $acquireRoot $file) -Destination (Join-Path $localRoot $file) -Force
+                        }
+                    }
+                    Assert-OSDAppPrerequisiteGeneration -Root $localRoot -Spec $spec -VerifyPublisher | Out-Null
+                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($sync.Updated) { 'Downloaded' } else { 'CacheReused' })
+                }
+                catch {
+                    if ($_.Exception -is [NotSupportedException]) { throw }
+                    $refreshFailure = $_
+                    # A fallback must pass the same full hash and provenance checks.
+                    try { Assert-OSDAppPrerequisiteGeneration -Root $localRoot -Spec $spec -VerifyPublisher | Out-Null }
+                    catch { throw "Runtime acquisition failed with no valid staged fallback. $($refreshFailure.Exception.Message)" }
+                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($networkAvailable) { 'FallbackCacheUsed' } else { 'OfflineCacheUsed' }) -RefreshError $refreshFailure
+                }
             }
             'VisualStudioCode' {
                 $architecture = [string]$app.Architecture

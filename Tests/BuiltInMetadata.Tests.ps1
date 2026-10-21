@@ -80,13 +80,12 @@ Describe 'Built-in metadata' {
                     $_ -like 'Add-OSDApp*' -and
                     $_ -notin @('Add-OSDApp','Add-OSDAppPackage')
                 } |
-                ForEach-Object { $_ -replace '^Add-OSDApp','' } |
                 Sort-Object
         )
 
-        $metadataIds = @($script:metadata.Applications.Id | Sort-Object)
+        $metadataCommands = @($script:metadata.Applications.AddCommand | Sort-Object)
 
-        Compare-Object -ReferenceObject $exportedBuiltIns -DifferenceObject $metadataIds |
+        Compare-Object -ReferenceObject $exportedBuiltIns -DifferenceObject $metadataCommands |
             Should -BeNullOrEmpty
     }
 }

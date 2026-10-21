@@ -5,14 +5,21 @@ Describe 'Built-in application architecture contracts' {
         $metadata = Get-Content -LiteralPath (Join-Path $moduleRoot 'metadata\builtins.json') -Raw | ConvertFrom-Json
     }
 
-    It 'defaults every built-in Add and Sync command to x64' {
+    It 'requires one explicit runtime architecture and keeps other application defaults' {
         foreach ($app in $metadata.Applications) {
-            $app.DefaultArchitecture | Should -Be 'x64'
             foreach ($name in @($app.AddCommand,$app.SyncCommand)) {
                 $command = Get-Command $name
-                $command.Parameters['Architecture'].Attributes |
-                    Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] } | Out-Null
-                $command.Definition | Should -Match '\$Architecture\s*=\s*''x64'''
+                if ($app.Id -in @('VisualCRedist','DotNetRuntime')) {
+                    $app.DefaultArchitecture | Should -BeNullOrEmpty
+                    $app.ArchitectureRequired | Should -BeTrue
+                    $command.Parameters['Architecture'].ParameterType | Should -Be ([string])
+                    @($command.Parameters['Architecture'].Attributes | Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] -and $_.Mandatory }).Count | Should -BeGreaterThan 0
+                    $command.Definition | Should -Not -Match '\$Architecture\s*='
+                    { & $name -Architecture @('x86','x64') -WhatIf } | Should -Throw
+                } else {
+                    $app.DefaultArchitecture | Should -Be 'x64'
+                    $command.Definition | Should -Match '\$Architecture\s*=\s*''x64'''
+                }
             }
         }
     }

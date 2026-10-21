@@ -483,3 +483,51 @@ passed on Windows PowerShell 5.1 and PowerShell 7. This physical result covers
 x64 download and installation, not ARM64 installation, warm-cache reuse or
 interactive editor behavior. The 0.47.0 release includes 7Zip's physical
 candidate evidence and naming limitation documented above.
+
+## Visual C++ and .NET prerequisite candidate
+
+`tools/Test-OSDAppsPrerequisites.ps1 -Phase Stage` stages four items on a fresh
+x64 WinPE deployment: Visual C++ x86 and x64 (two explicitly selected calls),
+.NET 10 Runtime x86, and .NET 10 Desktop Runtime x64. Each Add call selects exactly
+one architecture; the test deliberately covers both variants. Use the implementation checkout, not an older Gallery
+module. The script refuses an existing queue and copies its validator to
+`C:\ProgramData\OSDApps\Tests\Test-OSDAppsPrerequisites.ps1`.
+
+After reboot, run that copied script with `-Phase Validate` in 64-bit Windows
+PowerShell at OOBE. It correlates deployment results, checks Visual C++ registry
+versions and DLL presence, enumerates actual .NET runtimes using the
+architecture-specific `dotnet.exe`, and checks cleanup. It accepts an already
+installed newer patch. No installation or SetupComplete rerun occurs during
+validation. The initial physical deployment installed all four prerequisites with
+exit code 0: Visual C++ x86/x64 14.51.36247.0 and .NET 10.0.13 Runtime x86/Desktop
+x64. Preparation took 10.4 seconds and installation took 17.1 seconds; runtime
+staging was removed. This evidence predates the final VisualCRedist identity rename.
+
+### Physical validation on 21 October 2026
+
+All three deployments ran on x64 Windows targets and installed Visual C++ x86/x64
+14.51.36247.0, .NET 10.0.13 Runtime x86, and .NET 10.0.13 Desktop Runtime x64.
+Each reported four successful installations, exit code 0, matching installed
+versions and completed staging/helper cleanup.
+
+| Deployment | Acquisition | PreInstall | Runner | Total |
+| --- | --- | --- | --- | --- |
+| `e2fd7839-9ce7-4c9d-b397-8b08ce1d3318` | All four downloaded | 10.4 s | 17.1 s | 27.5 s |
+| `41f5a1e9-f963-440f-83d0-0a5e49783b42` | All four reused the cache | 6.8 s | 15.2 s | 22.0 s |
+| `2b2ef9f4-4bc5-46fd-b65d-9f519d2a97f2` | VisualCRedist downloaded; both .NET variants reused the cache | 8.0 s | 15.2 s | 23.2 s |
+
+The final run used commit `c2452dbafa4bab9b5b3b2ed6fd3e3ae08b651aae`, with
+`VisualCRedist-x86` and `VisualCRedist-x64` IDs and
+`BuiltIn/VisualCRedist/<architecture>` folders. [Candidate CI](https://github.com/roryvossepoel/OSDApps/actions/runs/39552403526)
+passed on Windows PowerShell 5.1 and PowerShell 7. The tested candidate still
+reported module version 0.47.0; release 0.48.0 contains this implementation.
+
+The first two runs predate the final internal name change. Consequently, physical
+VisualCRedist cache reuse under the final folder name has not been separately
+demonstrated. .NET 8/9, .NET Runtime x64, Desktop Runtime x86, existing-newer
+installation handling and failure/fallback paths have automated coverage but are
+not established by these physical runs. Release preparation must pass its own CI.
+
+Earlier preview cache folders remain untouched and are not reused under the new
+identity. Keep acquisition results to distinguish successful installation from
+verified cache reuse; `CacheUsed=True` alone does not prove reuse.
