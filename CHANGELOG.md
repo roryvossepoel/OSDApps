@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Explain built-in cache reuse, acquisition, offline fallback and failures with a per-deployment `CacheDecisionReason` in PreInstall results, Runner results and acquisition logs. Preserve the existing cache policies and distinguish changed HTTP metadata from a confirmed new application version.
+
 ## 0.48.0
 
 - Add Visual C++ v14 x86/x64 and .NET Runtime/Desktop built-ins with separate variant identities, Microsoft verification, transactional caches and installed-version checks. Runtime items are staged before applications.

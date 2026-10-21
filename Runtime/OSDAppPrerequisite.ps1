@@ -135,8 +135,12 @@ function Sync-OSDAppPrerequisiteGeneration {
     Restore-OSDAppCacheGeneration -Root $Root -Validate { param($candidate) Assert-OSDAppPrerequisiteGeneration -Root $candidate -Spec $Spec -VerifyPublisher } | Out-Null
     $release = Get-OSDAppPrerequisiteRelease -Spec $Spec
     $current = $false
+    $cacheDecisionReason = 'The existing generation passed integrity and selection checks against the current official release metadata.'
     try { $info = Assert-OSDAppPrerequisiteGeneration -Root $Root -Spec $Spec -Release $release -VerifyPublisher; $current = $true }
-    catch { Write-Verbose "Runtime cache requires acquisition: $($_.Exception.Message)" }
+    catch {
+        $cacheDecisionReason = 'The existing generation could not be reused. ' + $_.Exception.Message
+        Write-Verbose "Runtime cache requires acquisition: $($_.Exception.Message)"
+    }
     if (-not $current) {
         $downloadAction = $Download
         Invoke-OSDAppBuiltInCacheTransaction -Root $Root -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Build {
@@ -162,7 +166,7 @@ function Sync-OSDAppPrerequisiteGeneration {
         } -Validate { param($candidate) Assert-OSDAppPrerequisiteGeneration -Root $candidate -Spec $Spec -Release $release -VerifyPublisher } | Out-Null
         $info = Assert-OSDAppPrerequisiteGeneration -Root $Root -Spec $Spec -VerifyPublisher
     }
-    [pscustomobject]@{ Id=$Spec.Id; Version=$info.Version; Architecture=$Spec.Architecture; Root=$Root; Updated=(-not $current) }
+    [pscustomobject]@{ Id=$Spec.Id; Version=$info.Version; Architecture=$Spec.Architecture; Root=$Root; Updated=(-not $current); CacheDecisionReason=$cacheDecisionReason }
 }
 
 function Get-OSDAppInstalledPrerequisiteVersion {

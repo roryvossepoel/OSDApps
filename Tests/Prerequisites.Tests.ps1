@@ -131,13 +131,20 @@ Describe 'Runtime release selection and transaction integrity' {
     }
     It 'reuses a verified generation and rejects content or selection mismatch' {
         InModuleScope OSDApps {
-            (Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download).Updated | Should -BeTrue
-            (Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download).Updated | Should -BeFalse
+            $first = Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download
+            $first.Updated | Should -BeTrue
+            $first.CacheDecisionReason | Should -Match 'could not be reused'
+            $reused = Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download
+            $reused.Updated | Should -BeFalse
+            $reused.CacheDecisionReason | Should -Match 'passed integrity.*current official release'
             $script:downloadCount | Should -Be 1
             $other = Get-OSDAppPrerequisiteSpec -Family DotNetRuntime -Architecture x86 -Channel 10.0
             { Assert-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $other } | Should -Throw '*incompatible*'
             Add-Content (Join-Path $script:cache 'Package.exe') 'corrupt'
             { Assert-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec } | Should -Throw '*SHA-256*'
+            $repaired = Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download
+            $repaired.Updated | Should -BeTrue
+            $repaired.CacheDecisionReason | Should -Match 'size or SHA-256 mismatch'
         }
     }
     It 'preserves the old generation after a bad candidate digest and removes temporary folders' {

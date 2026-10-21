@@ -79,8 +79,12 @@ function Sync-OSDApp7ZipGeneration {
     } | Out-Null
     $release = Get-OSDApp7ZipRelease -Architecture $Architecture
     $current = $false
+    $cacheDecisionReason = 'The existing generation passed integrity and selection checks against the current official release metadata.'
     try { Assert-OSDApp7ZipGeneration -Root $Root -Architecture $Architecture -Release $release | Out-Null; $current = $true }
-    catch { Write-Verbose "7Zip cache requires acquisition: $($_.Exception.Message)" }
+    catch {
+        $cacheDecisionReason = 'The existing generation could not be reused. ' + $_.Exception.Message
+        Write-Verbose "7Zip cache requires acquisition: $($_.Exception.Message)"
+    }
     if (-not $current) {
         Invoke-OSDAppBuiltInCacheTransaction -Root $Root -ExpectedBytes $release.Size -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Build {
             param($candidate)
@@ -95,5 +99,5 @@ function Sync-OSDApp7ZipGeneration {
             Assert-OSDApp7ZipGeneration -Root $candidate -Architecture $Architecture -Release $release
         } | Out-Null
     }
-    [pscustomobject]@{ Id='7Zip'; Version=$release.Version; Architecture=$Architecture; Root=$Root; Updated=(-not $current) }
+    [pscustomobject]@{ Id='7Zip'; Version=$release.Version; Architecture=$Architecture; Root=$Root; Updated=(-not $current); CacheDecisionReason=$cacheDecisionReason }
 }

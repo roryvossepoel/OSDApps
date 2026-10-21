@@ -73,8 +73,12 @@ function Sync-OSDAppVisualStudioCodeGeneration {
     } | Out-Null
     $release = Get-OSDAppVisualStudioCodeRelease -Architecture $Architecture
     $current = $false
+    $cacheDecisionReason = 'The existing generation passed integrity and selection checks against the current official release metadata.'
     try { Assert-OSDAppVisualStudioCodeGeneration -Root $Root -Architecture $Architecture -Release $release -VerifyPublisher | Out-Null; $current = $true }
-    catch { Write-Verbose "Visual Studio Code cache requires acquisition: $($_.Exception.Message)" }
+    catch {
+        $cacheDecisionReason = 'The existing generation could not be reused. ' + $_.Exception.Message
+        Write-Verbose "Visual Studio Code cache requires acquisition: $($_.Exception.Message)"
+    }
     if (-not $current) {
         # The update API publishes a SHA-256, but no byte count. Preserve the normal
         # free-space reserve; record actual length and validate the digest after download.
@@ -93,5 +97,5 @@ function Sync-OSDAppVisualStudioCodeGeneration {
             Assert-OSDAppVisualStudioCodeGeneration -Root $candidate -Architecture $Architecture -Release $release -VerifyPublisher
         } | Out-Null
     }
-    [pscustomobject]@{ Id='VisualStudioCode'; Version=$release.Version; Architecture=$Architecture; Root=$Root; Updated=(-not $current) }
+    [pscustomobject]@{ Id='VisualStudioCode'; Version=$release.Version; Architecture=$Architecture; Root=$Root; Updated=(-not $current); CacheDecisionReason=$cacheDecisionReason }
 }
