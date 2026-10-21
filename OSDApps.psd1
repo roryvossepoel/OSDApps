@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.48.0'
+    ModuleVersion     = '0.48.1'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -57,7 +57,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.48.0: Add VisualCRedist v14 and .NET Runtime/Desktop prerequisites with mandatory explicit x86 or x64 selection, supported stable .NET channels, verified downloads and transactional caches. Preserve compatible newer installations and stage prerequisites before applications. Physical cold, warm and final naming checks passed; see docs/testing.md for scope and evidence.'
+            ReleaseNotes = '0.48.1: Explain built-in cache reuse, downloads, offline fallback and acquisition failures through CacheDecisionReason in deployment results and logs. Distinguish changed HTTP metadata from a confirmed new application version. Existing cache, download and fallback policies remain unchanged.'
             RequireLicenseAcceptance = $false
         }
     }

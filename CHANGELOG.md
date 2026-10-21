@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.48.1
 
 - Explain built-in cache reuse, acquisition, offline fallback and failures with a per-deployment `CacheDecisionReason` in PreInstall results, Runner results and acquisition logs. Preserve the existing cache policies and distinguish changed HTTP metadata from a confirmed new application version.
 
