@@ -22,6 +22,7 @@ Describe 'Office cache freshness decisions' {
         $data = Join-Path $cache 'Office/Data'
         New-Item $data -ItemType Directory -Force | Out-Null
         $config = Join-Path $cache 'configuration.xml'
+        $decision = @{}
         Set-Content (Join-Path $data 'v64.cab') 'descriptor'
         Set-Content (Join-Path $data 'v32.cab') 'descriptor'
         New-FreshnessFixture
@@ -46,27 +47,30 @@ Describe 'Office cache freshness decisions' {
     ) {
         New-FreshnessFixture -Channel $Channel
         $before = (Get-FileHash (Join-Path $data 'v64.cab')).Hash
-        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config | Should -BeTrue
+        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config -Decision $decision | Should -BeTrue
         Should -Invoke Invoke-WebRequest -Exactly 1 -ParameterFilter { $Uri -eq "https://officecdn.microsoft.com/pr/$Guid/Office/Data/v64.cab" -and $TimeoutSec -eq 30 }
         (Get-FileHash (Join-Path $data 'v64.cab')).Hash | Should -Be $before
+        $decision.CacheDecisionReason | Should -Match "cached build matches.*16.0.20430.20180"
     }
     It 'checks v32 for x86' {
         New-FreshnessFixture -Architecture x86
-        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config | Should -BeTrue
+        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config -Decision $decision | Should -BeTrue
         Should -Invoke Invoke-WebRequest -Exactly 1 -ParameterFilter { $Uri -like '*/v32.cab' }
     }
     It 'requires acquisition for a changed advertised build' {
         $script:advertisedBuild = '16.0.20430.20200'
-        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config | Should -BeFalse
+        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config -Decision $decision | Should -BeFalse
+        $decision.CacheDecisionReason | Should -Match '16.0.20430.20180.*does not match.*16.0.20430.20200'
     }
     It 'accepts an exact build pin without querying the current channel' {
         New-FreshnessFixture -Version '16.0.20430.20180'
-        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config | Should -BeTrue
+        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config -Decision $decision | Should -BeTrue
+        $decision.CacheDecisionReason | Should -Match 'explicit build pin.*no CDN update check'
         Should -Invoke Invoke-WebRequest -Exactly 0
     }
     It 'rejects a mismatched pin without querying the channel' {
         New-FreshnessFixture -Version '16.0.20430.20146'
-        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config | Should -BeFalse
+        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config -Decision $decision | Should -BeFalse
         Should -Invoke Invoke-WebRequest -Exactly 0
     }
     It 'does not equate a custom download source with the public CDN' {
@@ -76,9 +80,22 @@ Describe 'Office cache freshness decisions' {
         $info = Get-Content (Join-Path $cache 'CacheInfo.json') -Raw | ConvertFrom-Json
         $info.PayloadProfile = Get-OSDAppOfficePayloadProfile -Path $config
         $info | ConvertTo-Json -Depth 30 | Set-Content (Join-Path $cache 'CacheInfo.json')
-        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config | Should -BeFalse
+        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config -Decision $decision | Should -BeFalse
+        $decision.CacheDecisionReason | Should -Match 'custom download source'
         Should -Invoke Invoke-WebRequest -Exactly 0
     }
+    It 'explains channels without a CDN check without claiming a changed build' {
+        [xml]$xml = Get-Content $config -Raw
+        $xml.Configuration.Add.SetAttribute('Channel','PerpetualVL2024')
+        $xml.Save($config)
+        $info = Get-Content (Join-Path $cache 'CacheInfo.json') -Raw | ConvertFrom-Json
+        $info.PayloadProfile = Get-OSDAppOfficePayloadProfile -Path $config
+        $info | ConvertTo-Json -Depth 30 | Set-Content (Join-Path $cache 'CacheInfo.json')
+        Test-OSDAppOfficeCacheCurrent -OfficeRoot $cache -ConfigurationPath $config -Decision $decision | Should -BeFalse
+        $decision.CacheDecisionReason | Should -Match 'No CDN currency check.*PerpetualVL2024'
+        Should -Invoke Invoke-WebRequest -Exactly 0
+    }
+
     It 'removes temporary metadata after a failed request and propagates the failure' {
         Mock Invoke-WebRequest {
             $script:probePath = $OutFile

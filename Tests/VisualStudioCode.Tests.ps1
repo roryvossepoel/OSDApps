@@ -71,13 +71,19 @@ Describe 'VisualStudioCode release-validated built-in' {
         }
         It 'acquires once, reuses without download and detects later corruption' {
             InModuleScope OSDApps {
-                (Sync-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 -Download $script:download).Updated | Should -BeTrue
-                (Sync-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 -Download $script:download).Updated | Should -BeFalse
+                $first = Sync-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 -Download $script:download
+                $first.Updated | Should -BeTrue
+                $first.CacheDecisionReason | Should -Match 'could not be reused'
+                $reused = Sync-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 -Download $script:download
+                $reused.Updated | Should -BeFalse
+                $reused.CacheDecisionReason | Should -Match 'passed integrity.*current official release'
                 $script:downloadCount | Should -Be 1
                 $path = Join-Path $script:cache 'Package.exe'
                 $data = [IO.File]::ReadAllBytes($path); $data[255]=1; [IO.File]::WriteAllBytes($path,$data)
                 { Assert-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 } | Should -Throw '*SHA-256*'
-                (Sync-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 -Download $script:download).Updated | Should -BeTrue
+                $repaired = Sync-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 -Download $script:download
+                $repaired.Updated | Should -BeTrue
+                $repaired.CacheDecisionReason | Should -Match 'SHA-256'
                 $script:downloadCount | Should -Be 2
             }
         }

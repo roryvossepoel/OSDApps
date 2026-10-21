@@ -157,8 +157,39 @@ These are additive fields in result schema `1.0`.
 ```powershell
 $Result = Get-OSDAppDeploymentResult
 $Result.PreInstall | Select-Object Status, HasAcquisitionWarnings, FallbackApplicationCount, OfflineCacheApplicationCount
-$Result.Applications | Select-Object Id, Status, AcquisitionOutcome, RefreshFailureType, RefreshError, ExitCode, Error
+$Result.Applications | Select-Object Id, Status, AcquisitionOutcome, CacheDecisionReason, RefreshFailureType, RefreshError, ExitCode, Error
 ```
+
+`CacheDecisionReason` explains the decision made during this deployment. It is
+recorded per built-in in PreInstall, copied into Runner results and included in
+the `ApplicationAcquisitionComplete` log event. For example:
+
+| Situation | Explanation |
+|---|---|
+| Primary payload missing | The selected cache location has no payload to reuse. |
+| Cache metadata missing or unreadable | Currency cannot be established from the recorded metadata. |
+| Office configuration incompatible | The requested payload profile differs; the reason includes the compatibility checks that failed. |
+| Office generation invalid | Generation validation failed, with the original validation message. |
+| Office custom source or unrecognized CDN channel | The public CDN check cannot establish currency for that configuration. |
+| Office build mismatch | The compatible generation does not match the explicit build pin or CDN-advertised build. |
+| HTTP metadata changed | The ETag or last-modified/length comparison differs. This does **not** prove a newer application version. |
+| HTTP metadata insufficient | Comparable metadata is unavailable, so currency cannot be established. |
+| Release-validated package rejected | The existing 7Zip, Visual Studio Code or prerequisite generation failed current-release validation; the original validation message is retained. |
+| Confirmed reuse | The applicable current-build, HTTP or release checks accepted the existing payload. |
+| Offline or fallback use | Content passed the applicable fallback checks, but currency was not established. Refresh failures retain their original error. |
+| Acquisition failed | The final failure is reported, even if an earlier comparison would have allowed reuse. |
+
+These explanations describe the existing checks; they do not add downloads,
+hashing or a new cache policy. Office generation/configuration validation is not
+a full validation of every Office payload file. HTTP metadata matching is not
+a full payload hash check. Teams reuse refers to the MSIX; its bootstrapper can
+still be downloaded separately.
+
+Treat this field as human-readable diagnostic text, not a stable enumeration.
+Use `AcquisitionOutcome` for automation. Older results and repository packages
+have no built-in cache-decision reason (`null`); no reason is inferred from old
+`CacheInfo.json` metadata. A successful acquisition does not prove installation
+success: continue checking `Status`, `ExitCode` and `Error`.
 
 Use `AcquisitionOutcome` for current-deployment freshness and fallback decisions.
 Legacy `CacheUsed` describes USB/cache context, not proof of reuse or freshness;

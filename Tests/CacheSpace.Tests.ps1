@@ -108,7 +108,7 @@ Describe 'Standalone PreInstall low-space fallback' {
         . (Join-Path $root 'Runtime\Assert-OSDAppTransactionSpace.ps1')
         $tokens = $null; $errors = $null
         $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'Runtime\Invoke-OSDAppPreInstall.ps1'), [ref]$tokens, [ref]$errors)
-        foreach ($name in @('Test-LocalMsiSource','Sync-PreInstallVendorMsi','Set-PreInstallAcquisitionResult','Get-PreInstallFailureType')) {
+        foreach ($name in @('Test-LocalMsiSource','Sync-PreInstallVendorMsi','Set-PreInstallAcquisitionResult','Get-PreInstallFailureType','Get-PreInstallHttpCacheReason')) {
             $node = $ast.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name}, $true)
             . ([scriptblock]::Create($node.Extent.Text))
         }
@@ -139,6 +139,7 @@ Describe 'Standalone PreInstall low-space fallback' {
         (Get-FileHash -LiteralPath (Join-Path (Join-Path $StagedPath $relative) 'Package.msi')).Hash | Should -Be $hash
         $acquisition.Outcome | Should -Be FallbackCacheUsed
         $acquisition.RefreshFailureType | Should -Be InsufficientDiskSpace
+        $acquisition.CacheDecisionReason | Should -Match 'Refresh failed.*Insufficient free space'
         Should -Invoke Save-PreInstallDownload -Times 0 -Exactly
         Should -Invoke Write-PreInstallLog -Times 1 -Exactly -ParameterFilter { $Event -eq 'BuiltInRefreshFailed' -and $Data.Fallback -eq 'ExistingStagedPayload' -and $Message -like '*Insufficient free space*' }
     }

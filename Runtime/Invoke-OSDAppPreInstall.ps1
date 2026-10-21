@@ -161,14 +161,42 @@ function Set-PreInstallAcquisitionResult {
     param(
         [Parameter(Mandatory)][hashtable]$Result,
         [Parameter(Mandatory)][ValidateSet('Downloaded','CacheReused','OfflineCacheUsed','FallbackCacheUsed')][string]$Outcome,
-        [System.Management.Automation.ErrorRecord]$RefreshError
+        [System.Management.Automation.ErrorRecord]$RefreshError,
+        [string]$CacheDecisionReason
     )
 
     $Result.Outcome = $Outcome
+    if ($CacheDecisionReason) { $Result.CacheDecisionReason = $CacheDecisionReason }
+    # Offline/fallback outcomes supersede any earlier reason for attempting a refresh.
+    if ($Outcome -eq 'OfflineCacheUsed') {
+        $Result.CacheDecisionReason = 'No network was available; existing staged content passed the applicable fallback checks. Currency was not checked.'
+    }
+    elseif ($Outcome -eq 'FallbackCacheUsed') {
+        $Result.CacheDecisionReason = 'Refresh failed; existing staged content passed the applicable fallback checks. Currency was not confirmed.'
+        if ($RefreshError) { $Result.CacheDecisionReason += ' ' + $RefreshError.Exception.Message }
+    }
     if ($RefreshError) {
         $Result.RefreshFailureType = Get-PreInstallFailureType -ErrorRecord $RefreshError
         $Result.RefreshError = $RefreshError.Exception.Message
     }
+}
+
+function Get-PreInstallHttpCacheReason {
+    param(
+        [Parameter(Mandatory)][string]$PackagePath,
+        $CacheInfo,
+        [Parameter(Mandatory)]$Remote,
+        [Parameter(Mandatory)][bool]$MetadataMatches
+    )
+    # Explain the existing HTTP comparison; do not add a freshness or integrity check.
+    if ($MetadataMatches) { return 'The existing primary payload matches the vendor HTTP metadata.' }
+    if (-not (Test-Path -LiteralPath $PackagePath -PathType Leaf)) { return 'The primary payload is missing from the selected cache location.' }
+    if (-not $CacheInfo) { return 'CacheInfo.json is missing or unreadable; cache currency cannot be established.' }
+    if (($Remote.ETag -and $CacheInfo.RemoteETag) -or
+        ($Remote.LastModified -and $CacheInfo.RemoteLastModified -and $Remote.ContentLength -and $CacheInfo.RemoteContentLength)) {
+        return 'Vendor HTTP metadata differs from the recorded cache metadata; this does not necessarily mean a newer application version.'
+    }
+    return 'Comparable vendor/cache HTTP metadata is unavailable; cache currency cannot be established.'
 }
 
 function Test-InternetEndpoint {
@@ -363,18 +391,31 @@ function Copy-OfficeConfigurationToCache {
 }
 
 function Test-LocalOfficeSource {
-    param([string]$Root, [Parameter(Mandatory)][string]$ConfigurationPath, [switch]$AllowLegacyConfiguration)
+    param([string]$Root, [Parameter(Mandatory)][string]$ConfigurationPath, [switch]$AllowLegacyConfiguration, [hashtable]$Decision)
     try{
         $cacheInfoPath=Join-Path $Root 'CacheInfo.json'
-        if(-not(Test-Path -LiteralPath $cacheInfoPath -PathType Leaf)){return $false}
+        if(-not(Test-Path -LiteralPath $cacheInfoPath -PathType Leaf)){
+            if ($null -ne $Decision) { $Decision.CacheDecisionReason = 'The checked Office location has no recorded generation; CacheInfo.json is missing.' }
+            return $false
+        }
         $cacheInfo=Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8|ConvertFrom-Json
         Test-OfficeCacheGeneration -OfficeRoot $Root -ExpectedVersion ([string]$cacheInfo.Version) -Architecture $(if([string]$cacheInfo.Architecture -eq 'x86'){'x86'}else{'x64'})|Out-Null
         $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $Root -ConfigurationPath $ConfigurationPath -AllowLegacyConfiguration:$AllowLegacyConfiguration
+        if ($null -ne $Decision) {
+            $Decision.CacheDecisionReason = if ($compatibility.Compatible) {
+                'The Office generation and requested configuration passed validation.'
+            } else {
+                'The Office cache is incompatible with the requested configuration. ' + ($compatibility.Reasons -join ' ')
+            }
+        }
         if (-not $compatibility.Compatible) {
             Write-PreInstallLog -Event 'OfficeCacheIncompatible' -Level Warning -Message 'Office fallback does not match the requested configuration.' -Data @{ Id='Microsoft365Apps'; Reasons=($compatibility.Reasons -join ' ') }
         }
         return $compatibility.Compatible
-    }catch{return $false}
+    }catch{
+        if ($null -ne $Decision) { $Decision.CacheDecisionReason = 'Office generation validation failed. ' + $_.Exception.Message }
+        return $false
+    }
 }
 
 function Copy-OfficeCachePayload {
@@ -561,6 +602,7 @@ function Sync-PreInstallVendorMsi {
             }
         }
 
+        $acquisition.CacheDecisionReason = Get-PreInstallHttpCacheReason -PackagePath $packagePath -CacheInfo $cacheInfo -Remote $remote -MetadataMatches $matches
         $updated = $false
         $generationRoot = $acquireRoot
         if (-not $matches) {
@@ -682,7 +724,7 @@ try {
         $builtInStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         $applicationError = $null
         $applicationFailureType = $null
-        $acquisition = @{ Outcome = 'Failed'; RefreshFailureType = $null; RefreshError = $null }
+        $acquisition = @{ Outcome = 'Failed'; CacheDecisionReason = $null; RefreshFailureType = $null; RefreshError = $null }
         try {
             switch($app.Id){
             'Microsoft365Apps' {
@@ -697,7 +739,8 @@ try {
                 $payloadProfile = Get-OSDAppOfficePayloadProfile -Path $localConfig
                 $officeArchitecture = if ($payloadProfile.Architecture) { $payloadProfile.Architecture } else { [string]$app.Architecture }
 
-                if($usbRoot -and -not (Test-LocalOfficeSource -Root $localRoot -ConfigurationPath $localConfig) -and (Test-LocalOfficeSource -Root $acquireRoot -ConfigurationPath $localConfig -AllowLegacyConfiguration)){
+                $officeUsbDecision = @{ CacheDecisionReason = $null }
+                if($usbRoot -and -not (Test-LocalOfficeSource -Root $localRoot -ConfigurationPath $localConfig) -and (Test-LocalOfficeSource -Root $acquireRoot -ConfigurationPath $localConfig -AllowLegacyConfiguration -Decision $officeUsbDecision)){
                     Copy-OfficeCachePayload -SourceRoot $acquireRoot -DestinationRoot $localRoot -ConfigurationPath $localConfig
                     Write-PreInstallLog -Event 'BuiltInCacheRestaged' -Message 'Existing Microsoft 365 Apps USB cache was staged locally.' -Data @{Id='Microsoft365Apps'}
                 }
@@ -711,12 +754,16 @@ try {
                 try {
                     # Keep the existing generation read-only. Only a compatible,
                     # consistent and current source can bypass ODT acquisition.
-                    if ((Test-LocalOfficeSource -Root $localRoot -ConfigurationPath $localConfig) -and
-                        (Test-OSDAppOfficeCacheCurrent -OfficeRoot $localRoot -ConfigurationPath $localConfig)) {
+                    $officeSourceCompatible = Test-LocalOfficeSource -Root $localRoot -ConfigurationPath $localConfig -Decision $acquisition
+                    if ($officeSourceCompatible -and
+                        (Test-OSDAppOfficeCacheCurrent -OfficeRoot $localRoot -ConfigurationPath $localConfig -Decision $acquisition)) {
                         Assert-PreInstallSignedPayload -Id 'Microsoft365Apps' -Path (Join-Path $localRoot 'setup.exe')
                         Set-PreInstallAcquisitionResult -Result $acquisition -Outcome CacheReused
                         Write-PreInstallLog -Event 'BuiltInCacheReused' -Message 'Compatible Microsoft 365 Apps cache matches the requested build or current CDN build; ODT acquisition was skipped.' -Data @{Id='Microsoft365Apps';Version=(Get-OfficeCacheVersion -OfficeRoot $localRoot)}
                         continue
+                    }
+                    if (-not $officeSourceCompatible -and $officeUsbDecision.CacheDecisionReason) {
+                        $acquisition.CacheDecisionReason += ' USB cache assessment: ' + $officeUsbDecision.CacheDecisionReason
                     }
                     Assert-OSDAppTransactionSpace -Path $acquireRoot -ExistingPath $acquireRoot -MinimumFreeSpaceGB 8 -Operation 'Microsoft 365 Apps cache refresh' | Out-Null
                     $transactionRoot="$acquireRoot.osdapps-new-$([guid]::NewGuid().ToString('N'))"
@@ -795,6 +842,8 @@ try {
                     $msixPath=Join-Path $acquireRoot 'teams.msix'; $bootstrapperPath=Join-Path $acquireRoot 'teamsbootstrapper.exe'
                     $remote=Get-RemoteMetadata -Uri $msixUri; $matches=$false
                     if((Test-Path -LiteralPath $msixPath -PathType Leaf) -and $cacheInfo){if($remote.ETag -and $cacheInfo.RemoteETag){$matches=$remote.ETag -eq [string]$cacheInfo.RemoteETag}elseif($remote.LastModified -and $cacheInfo.RemoteLastModified -and $remote.ContentLength -and $cacheInfo.RemoteContentLength){$matches=($remote.LastModified -eq [string]$cacheInfo.RemoteLastModified -and [int64]$remote.ContentLength -eq [int64]$cacheInfo.RemoteContentLength)}}
+                    $acquisition.CacheDecisionReason = Get-PreInstallHttpCacheReason -PackagePath $msixPath -CacheInfo $cacheInfo -Remote $remote -MetadataMatches $matches
+                    $acquisition.CacheDecisionReason += ' This decision concerns the Teams MSIX; the bootstrapper is downloaded separately.'
                     Assert-OSDAppTransactionSpace -Path $acquireRoot -ExistingPath $acquireRoot -ExpectedBytes ([double]$remote.ContentLength) -MinimumFreeSpaceGB 2 -Operation 'Microsoft Teams cache refresh' | Out-Null
                     $transactionRoot="$acquireRoot.osdapps-new-$([guid]::NewGuid().ToString('N'))";$backupRoot="$acquireRoot.osdapps-old-$([guid]::NewGuid().ToString('N'))";New-Item -ItemType Directory -Path $transactionRoot -Force|Out-Null
                     $candidateBootstrapper=Join-Path $transactionRoot 'teamsbootstrapper.exe';$candidateMsix=Join-Path $transactionRoot 'teams.msix'
@@ -862,6 +911,7 @@ try {
                         }
                     }
 
+                    $acquisition.CacheDecisionReason = Get-PreInstallHttpCacheReason -PackagePath $packagePath -CacheInfo $cacheInfo -Remote $remote -MetadataMatches $matches
                     $updated=$false;$generationRoot=$acquireRoot
                     if(-not $matches){
                         Assert-OSDAppTransactionSpace -Path $acquireRoot -ExistingPath $acquireRoot -ExpectedBytes ([double]$remote.ContentLength) -MinimumFreeSpaceGB 3 -Operation 'Adobe Acrobat Unified cache refresh' | Out-Null
@@ -951,7 +1001,7 @@ try {
                         }
                     }
                     Assert-OSDAppPrerequisiteGeneration -Root $localRoot -Spec $spec -VerifyPublisher | Out-Null
-                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($sync.Updated) { 'Downloaded' } else { 'CacheReused' })
+                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($sync.Updated) { 'Downloaded' } else { 'CacheReused' }) -CacheDecisionReason $sync.CacheDecisionReason
                 }
                 catch {
                     if ($_.Exception -is [NotSupportedException]) { throw }
@@ -980,7 +1030,7 @@ try {
                         }
                     }
                     Assert-OSDAppVisualStudioCodeGeneration -Root $localRoot -Architecture $architecture -VerifyPublisher | Out-Null
-                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($sync.Updated) { 'Downloaded' } else { 'CacheReused' })
+                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($sync.Updated) { 'Downloaded' } else { 'CacheReused' }) -CacheDecisionReason $sync.CacheDecisionReason
                 }
                 catch {
                     $refreshFailure = $_
@@ -1008,7 +1058,7 @@ try {
                         }
                     }
                     Assert-OSDApp7ZipGeneration -Root $localRoot -Architecture $architecture | Out-Null
-                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($sync.Updated) { 'Downloaded' } else { 'CacheReused' })
+                    Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($sync.Updated) { 'Downloaded' } else { 'CacheReused' }) -CacheDecisionReason $sync.CacheDecisionReason
                 }
                 catch {
                     $refreshFailure = $_
@@ -1095,6 +1145,7 @@ try {
                 DurationSeconds = [math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)
                 CacheUsed       = [bool]$usbRoot
                 AcquisitionOutcome = if ($applicationError) { 'Failed' } else { $acquisition.Outcome }
+                CacheDecisionReason = if ($applicationError) { 'Acquisition failed. ' + $applicationError } else { $acquisition.CacheDecisionReason }
                 RefreshFailureType = $acquisition.RefreshFailureType
                 RefreshError    = $acquisition.RefreshError
                 FailureType     = $applicationFailureType
@@ -1106,6 +1157,7 @@ try {
                 Id = $app.Id
                 Status = $applicationResult.Status
                 AcquisitionOutcome = $applicationResult.AcquisitionOutcome
+                CacheDecisionReason = $applicationResult.CacheDecisionReason
                 RefreshFailureType = $applicationResult.RefreshFailureType
                 RefreshError = $applicationResult.RefreshError
             }

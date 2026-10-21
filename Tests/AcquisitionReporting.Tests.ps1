@@ -120,6 +120,10 @@ Describe 'Per-deployment acquisition reporting' {
         @($applicationResults | Where-Object AcquisitionOutcome -ne Downloaded).Count | Should -Be 0
         (Get-Content (Join-Path $StagedPath 'BuiltIn\Microsoft365Apps\CacheInfo.json') -Raw | ConvertFrom-Json).Updated | Should -BeFalse
         @($applicationResults | Where-Object { $_.RefreshError }).Count | Should -Be 0
+        ($applicationResults | Where-Object Id -eq Microsoft365Apps).CacheDecisionReason | Should -Match 'does not match.*build'
+        foreach ($result in @($applicationResults | Where-Object Id -ne Microsoft365Apps)) {
+            $result.CacheDecisionReason | Should -Match 'HTTP metadata differs'
+        }
     }
 
     It 'reuses current Office without starting ODT, downloading setup, or changing staged payloads' {
@@ -131,6 +135,7 @@ Describe 'Per-deployment acquisition reporting' {
         $applicationResults[0].Status | Should -Be Succeeded
         $applicationResults[0].AcquisitionOutcome | Should -Be CacheReused
         $applicationResults[0].RefreshError | Should -BeNullOrEmpty
+        $applicationResults[0].CacheDecisionReason | Should -Match 'cached build matches'
         Should -Invoke Start-Process -Exactly 0
         Should -Invoke Save-PreInstallDownload -Exactly 0
         Should -Invoke Assert-OSDAppTransactionSpace -Exactly 0
@@ -168,6 +173,7 @@ Describe 'Per-deployment acquisition reporting' {
         (Get-Content $config -Raw).Replace('en-us','nl-nl') | Set-Content $config
         . $script:preparationLoop
         $applicationResults[0].AcquisitionOutcome | Should -Be Downloaded
+        $applicationResults[0].CacheDecisionReason | Should -Match 'incompatible.*configuration'
         Should -Invoke Start-Process -Exactly 1
         Should -Invoke Invoke-WebRequest -Exactly 0
     }
@@ -178,6 +184,7 @@ Describe 'Per-deployment acquisition reporting' {
         Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value inconsistent }
         . $script:preparationLoop
         $applicationResults[0].AcquisitionOutcome | Should -Be Downloaded
+        $applicationResults[0].CacheDecisionReason | Should -Match 'Office generation validation failed'
         Should -Invoke Start-Process -Exactly 1
         Should -Invoke Invoke-WebRequest -Exactly 0
     }
@@ -189,6 +196,7 @@ Describe 'Per-deployment acquisition reporting' {
         $applicationResults[0].Status | Should -Be Succeeded
         $applicationResults[0].AcquisitionOutcome | Should -Be FallbackCacheUsed
         $applicationResults[0].RefreshError | Should -Be 'Office metadata request timeout.'
+        $applicationResults[0].CacheDecisionReason | Should -Match 'Refresh failed.*Office metadata request timeout'
         Should -Invoke Start-Process -Exactly 0
         Should -Invoke Save-PreInstallDownload -Exactly 0
     }
@@ -198,6 +206,8 @@ Describe 'Per-deployment acquisition reporting' {
         $script:remoteMatches = $true
         . $script:preparationLoop
         $applicationResults.Count | Should -Be 6
+        foreach ($result in $applicationResults) { $result.CacheDecisionReason | Should -Match 'matches the vendor HTTP metadata' }
+        ($applicationResults | Where-Object Id -eq MicrosoftTeams).CacheDecisionReason | Should -Match 'bootstrapper is downloaded separately'
         @($applicationResults | Where-Object AcquisitionOutcome -ne CacheReused).Count | Should -Be 0
         Should -Invoke Save-PreInstallDownload -Exactly 1 -ParameterFilter { $Id -eq 'MicrosoftTeams' -and $Description -eq 'Microsoft Teams bootstrapper' }
         Should -Invoke Save-PreInstallDownload -Exactly 0 -ParameterFilter { $Description -ne 'Microsoft Teams bootstrapper' }
@@ -212,6 +222,7 @@ Describe 'Per-deployment acquisition reporting' {
         Write-PreInstallResult -Status Succeeded
         $saved = Get-Content $preInstallResultPath -Raw | ConvertFrom-Json
         $saved.OfflineCacheApplicationCount | Should -Be 7
+        foreach ($result in $saved.Applications) { $result.CacheDecisionReason | Should -Match 'No network.*Currency was not checked' }
         $saved.FallbackApplicationCount | Should -Be 0
         $saved.HasAcquisitionWarnings | Should -BeTrue
     }
@@ -224,6 +235,7 @@ Describe 'Per-deployment acquisition reporting' {
         @($applicationResults | Where-Object RefreshFailureType -ne Timeout).Count | Should -Be 0
         foreach ($result in $applicationResults) {
             $result.RefreshError | Should -Be 'HTTP download timeout in fixture.'
+            $result.CacheDecisionReason | Should -Match 'Refresh failed.*HTTP download timeout'
             $result.Error | Should -BeNullOrEmpty
         }
         Write-PreInstallResult -Status Succeeded
@@ -232,6 +244,8 @@ Describe 'Per-deployment acquisition reporting' {
         $saved.FailedBuiltInApplicationCount | Should -Be 0
         $saved.FallbackApplicationCount | Should -Be 7
         $saved.HasAcquisitionWarnings | Should -BeTrue
+        foreach ($result in $saved.Applications) { $result.CacheDecisionReason | Should -Match 'Refresh failed.*HTTP download timeout' }
+        @(Get-Content $logPath | Select-String 'ApplicationAcquisitionComplete.*CacheDecisionReason=Refresh failed').Count | Should -Be 7
         @(Get-Content $logPath | Select-String 'ApplicationAcquisitionComplete.*AcquisitionOutcome=FallbackCacheUsed').Count | Should -Be 7
     }
 
@@ -243,6 +257,7 @@ Describe 'Per-deployment acquisition reporting' {
         $applicationResults[0].Status | Should -Be Failed
         $applicationResults[0].AcquisitionOutcome | Should -Be Failed
         $applicationResults[0].Error | Should -Match 'no staged fallback'
+        $applicationResults[0].CacheDecisionReason | Should -Match '^Acquisition failed.*no staged fallback'
         $applicationResults[1].AcquisitionOutcome | Should -Be FallbackCacheUsed
     }
 
@@ -254,6 +269,7 @@ Describe 'Per-deployment acquisition reporting' {
         $applicationResults[0].Status | Should -Be Failed
         $applicationResults[0].AcquisitionOutcome | Should -Be Failed
         $applicationResults[0].FailureType | Should -Be TrustValidationFailed
+        $applicationResults[0].CacheDecisionReason | Should -Match '^Acquisition failed.*Publisher rejected'
     }
 
     It 'carries fallback into both successful and failed installer results independently of stale cache metadata' {
@@ -271,6 +287,8 @@ Describe 'Per-deployment acquisition reporting' {
         $failed.FailureType | Should -Be InstallerFailed
         $failed.RefreshError | Should -Be 'HTTP download timeout in fixture.'
         $failed.Error | Should -Be 'Installer exit code 42.'
+        $failed.CacheDecisionReason | Should -Be $success.CacheDecisionReason
+        $success.CacheDecisionReason | Should -Match 'Refresh failed.*HTTP download timeout'
         $applicationResults.Clear(); $applicationResults.Add($success)
         $apps = $builtInApps; $cleanupMode = 'OnSuccess'
         $runnerStopwatch = [Diagnostics.Stopwatch]::StartNew(); $runnerStartedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
@@ -280,6 +298,67 @@ Describe 'Per-deployment acquisition reporting' {
         $latest.Status | Should -Be Succeeded
         $latest.PreInstall.FallbackApplicationCount | Should -Be 1
         $latest.Applications[0].AcquisitionOutcome | Should -Be FallbackCacheUsed
+        $latest.Applications[0].CacheDecisionReason | Should -Be $success.CacheDecisionReason
+    }
+
+
+    It 'explains absent, unreadable and insufficient HTTP cache metadata without claiming a new version' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq GoogleChromeEnterprise)
+        $root = Join-Path $StagedPath 'BuiltIn\GoogleChromeEnterprise\x64'
+        $infoPath = Join-Path $root 'CacheInfo.json'
+        $script:remoteMatches = $true
+        Remove-Item -LiteralPath (Join-Path $root 'Package.msi')
+        . $script:preparationLoop
+        $applicationResults[0].AcquisitionOutcome | Should -Be Downloaded
+        $applicationResults[0].CacheDecisionReason | Should -Match 'primary payload is missing'
+
+        $applicationResults.Clear()
+        Set-Content -LiteralPath $infoPath -Value 'invalid JSON'
+        . $script:preparationLoop
+        $applicationResults[0].CacheDecisionReason | Should -Match 'CacheInfo.json is missing or unreadable'
+
+        $applicationResults.Clear()
+        Mock Get-RemoteMetadata { [pscustomobject]@{ ETag=$null; LastModified=$null; ContentLength=100; FinalUri='https://example.test/package' } }
+        . $script:preparationLoop
+        $applicationResults[0].AcquisitionOutcome | Should -Be Downloaded
+        $applicationResults[0].CacheDecisionReason | Should -Match 'Comparable.*metadata is unavailable'
+    }
+
+    It 'explains last-modified and length comparisons when ETags are absent' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq GoogleChromeEnterprise)
+        $path = Join-Path $StagedPath 'BuiltIn\GoogleChromeEnterprise\x64\CacheInfo.json'
+        $info = Get-Content $path -Raw | ConvertFrom-Json
+        $info | Add-Member -NotePropertyName RemoteETag -NotePropertyValue $null -Force
+        $info | Add-Member -NotePropertyName RemoteLastModified -NotePropertyValue '2026-01-01' -Force
+        $info | Add-Member -NotePropertyName RemoteContentLength -NotePropertyValue 100 -Force
+        $info | ConvertTo-Json | Set-Content $path
+        Mock Get-RemoteMetadata { [pscustomobject]@{ ETag=$null; LastModified='2026-01-01'; ContentLength=100; FinalUri='https://example.test/package' } }
+        . $script:preparationLoop
+        $applicationResults[0].AcquisitionOutcome | Should -Be CacheReused
+        $applicationResults[0].CacheDecisionReason | Should -Match 'matches the vendor HTTP metadata'
+        $applicationResults.Clear()
+        Mock Get-RemoteMetadata { [pscustomobject]@{ ETag=$null; LastModified='2026-01-02'; ContentLength=101; FinalUri='https://example.test/package' } }
+        . $script:preparationLoop
+        $applicationResults[0].AcquisitionOutcome | Should -Be Downloaded
+        $applicationResults[0].CacheDecisionReason | Should -Match 'HTTP metadata differs'
+    }
+
+    It 'retains the incompatible USB Office assessment when only intent was staged locally' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq Microsoft365Apps)
+        Mock Restore-PreInstallBuiltInCache { }
+        $script:usbRoot = Join-Path $TestDrive 'UsbCache'
+        $local = Join-Path $StagedPath 'BuiltIn\Microsoft365Apps'
+        $usbOffice = Join-Path $usbRoot 'BuiltIn\Microsoft365Apps'
+        New-Item (Split-Path $usbOffice -Parent) -ItemType Directory -Force | Out-Null
+        Copy-Item $local $usbOffice -Recurse
+        Remove-Item (Join-Path $local 'Office') -Recurse -Force
+        Remove-Item (Join-Path $local 'CacheInfo.json'),(Join-Path $local 'setup.exe') -Force
+        $config = Join-Path $local 'configuration.xml'
+        (Get-Content $config -Raw).Replace('en-us','nl-nl') | Set-Content $config
+        . $script:preparationLoop
+        $applicationResults[0].Status | Should -Be Succeeded
+        $applicationResults[0].AcquisitionOutcome | Should -Be Downloaded
+        $applicationResults[0].CacheDecisionReason | Should -Match 'USB cache assessment:.*incompatible'
     }
 
     It 'keeps older PreInstall results readable and does not infer freshness from old CacheInfo' {
@@ -287,7 +366,10 @@ Describe 'Per-deployment acquisition reporting' {
         $result = New-RunnerApplicationResult -App $builtInApps[1] -Status Succeeded
         $result.AcquisitionOutcome | Should -Be Unknown
         $result.RefreshError | Should -BeNullOrEmpty
+        $result.CacheDecisionReason | Should -BeNullOrEmpty
         $repositoryApp = [pscustomobject]@{ Id='CustomScript'; Source='Repository'; PackageType='Script' }
-        (New-RunnerApplicationResult -App $repositoryApp -Status Succeeded).AcquisitionOutcome | Should -Be NotApplicable
+        $repositoryResult = New-RunnerApplicationResult -App $repositoryApp -Status Succeeded
+        $repositoryResult.AcquisitionOutcome | Should -Be NotApplicable
+        $repositoryResult.CacheDecisionReason | Should -BeNullOrEmpty
     }
 }
