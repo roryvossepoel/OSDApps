@@ -942,6 +942,33 @@ preserving the relative order within each group. This is not a dependency engine
 OSDApps does not infer which applications need which runtimes, and its normal
 continue-queue behavior still applies if a prerequisite fails.
 
+### Why Visual C++ has one evergreen family
+
+`Add-OSDAppVisualCRedist` and `Sync-OSDAppVisualCRedist` offer the latest supported
+v14 redistributable through Microsoft's official evergreen endpoint. There is no
+year or legacy-version selector. Visual Studio 2017, 2019, 2022 and 2026 use the
+same v14 runtime family; the redistributable must be at least as recent as the
+build tools used by the application. Microsoft also documents upgrading the
+original 2015 redistributable in place to the current v14 runtime.
+
+Separate 2017/2019/2022 built-ins would duplicate this selection. Some older v14
+servicing branches remain supported, but this built-in deliberately follows the
+latest supported release instead of pinning a servicing branch. Select exactly
+one architecture explicitly per command; x64 does not satisfy an x86 application's
+runtime requirement.
+
+Visual C++ 2013 (v12), 2012 (v11), 2010 (v10), 2008 (v9) and 2005 (v8) are separate
+legacy families outside general support. The latest v14 does not replace their
+dependencies. Do not remove them from an existing computer simply because v14 is
+installed. A legacy dependency, or a vendor-required pinned branch, belongs in an
+explicitly maintained [repository package](repository.md) for the application
+that needs it, rather than another evergreen built-in. Packaging it yourself does
+not restore Microsoft support. Microsoft's limited product-specific support
+exceptions do not make those old runtimes generally supported.
+
+See Microsoft's [runtime lifecycle FAQ](https://learn.microsoft.com/en-us/lifecycle/faq/visual-c-faq)
+and [latest supported downloads](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist).
+
 ### Acquisition and verification
 
 - Visual C++ uses Microsoft's official `https://aka.ms/vc14/vc_redist.<architecture>.exe`
