@@ -1,9 +1,11 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-Read-only maintenance checks for an OSDApps USB, release or saved deployment result.
+Maintenance checks and diagnostic export for OSDApps.
 .DESCRIPTION
-Run on the preparation PC. This standalone repository tool does not update modules,
+Run checks on the preparation PC or export diagnostics on the deployed PC.
+Diagnostics writes a local ZIP with results and logs; source files are only read.
+This standalone repository tool does not update modules,
 change cache content, publish packages, install apps or rerun SetupComplete.
 .EXAMPLE
 .\Test-OSDAppsMaintenance.ps1 -Mode Usb -ExpectedVersion 0.42.0
@@ -11,14 +13,20 @@ change cache content, publish packages, install apps or rerun SetupComplete.
 .\Test-OSDAppsMaintenance.ps1 -Mode Release -ExpectedVersion 0.42.0
 .EXAMPLE
 .\Test-OSDAppsMaintenance.ps1 -Mode Result -ResultPath C:\Temp\Latest.json
+.EXAMPLE
+.\Test-OSDAppsMaintenance.ps1 -Mode Diagnostics -OutputPath C:\Temp\OSDApps-Diagnostics.zip
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('Usb','Release','Result')][string]$Mode = 'Usb',
+    [ValidateSet('Usb','Release','Result','Diagnostics')][string]$Mode = 'Usb',
     [string]$UsbRoot,
     [version]$ExpectedVersion,
     [string]$ResultPath,
     [string]$DeploymentId,
+    [string]$OutputPath,
+    [string]$LogPath,
+    [string[]]$InstallerLogDirectory,
+    [string[]]$AdditionalLogPath,
     [switch]$ThrowOnFailure
 )
 
@@ -62,7 +70,159 @@ function Add-MaintenanceWorkflowCheck {
     catch { Add-MaintenanceCheck $Name Warning "Could not query workflow state: $($_.Exception.Message)" }
 }
 
+function Export-MaintenanceDiagnosticBundle {
+    param([string]$ResultFile, [string]$Destination, [string]$ExpectedDeployment,
+        [string]$RuntimeLog, [string[]]$InstallerDirectories, [string[]]$ExtraLogs)
+
+    if (-not $Destination -or [IO.Path]::GetExtension($Destination) -ne '.zip') { throw 'Specify -OutputPath with a new .zip filename.' }
+    $Destination = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Destination)
+    if (Test-Path -LiteralPath $Destination) { throw 'The output file already exists; choose another name.' }
+    $parent = Split-Path $Destination -Parent
+    if (-not (Test-Path -LiteralPath $parent -PathType Container)) { throw 'The output directory must already exist.' }
+    $files = [Collections.Generic.List[object]]::new()
+    $seen = @{}
+    $state = @{ Bytes=0L; Copied=0 }
+    $bundleRoot = Join-Path ([IO.Path]::GetTempPath()) ('OSDApps-Diagnostics-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $bundleRoot | Out-Null
+
+    function Assert-DiagnosticPath {
+        param([string]$Path)
+        if ($Path -match '^[\\/]{2}') { throw 'Network paths are not collected.' }
+        $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+        if ($item.PSProvider.Name -ne 'FileSystem') { throw 'Only filesystem paths are collected.' }
+        $ancestor = $item
+        while ($null -ne $ancestor) {
+            if (($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Linked paths are not collected.' }
+            $ancestor = if ($ancestor -is [IO.DirectoryInfo]) { $ancestor.Parent } else { $ancestor.Directory }
+        }
+        return $item
+    }
+    function Copy-DiagnosticFile {
+        param([string]$Path, [string]$Kind)
+        if ([string]::IsNullOrWhiteSpace($Path) -or $seen.ContainsKey($Path)) { return }
+        $seen[$Path] = $true
+        $entry = [ordered]@{ Source=$Path; Kind=$Kind; Status='Skipped'; ArchivePath=$null; Bytes=0; Sha256=$null; Reason=$null }
+        $inputStream=$null; $outputStream=$null; $target=$null
+        try {
+            $item = Assert-DiagnosticPath $Path
+            if ($item.PSIsContainer) { throw 'Expected a file.' }
+            if ($state.Copied -ge 100) { throw 'The 100-file bundle limit was reached.' }
+            $inputStream = [IO.File]::Open($item.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+            $length = $inputStream.Length
+            if ($length -gt 20MB -or ($state.Bytes + $length) -gt 100MB) { throw 'The 20 MB per-file or 100 MB bundle limit would be exceeded.' }
+            $leaf = '{0:D3}-{1}' -f $state.Copied, $item.Name
+            $target = Join-Path $bundleRoot $leaf
+            $outputStream = [IO.File]::Open($target,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+            $buffer = New-Object byte[] 65536
+            $remaining = $length
+            while ($remaining -gt 0) {
+                $read = $inputStream.Read($buffer,0,[int][math]::Min($buffer.Length,$remaining))
+                if ($read -eq 0) { throw 'Source became shorter during collection.' }
+                $outputStream.Write($buffer,0,$read)
+                $remaining -= $read
+            }
+            $outputStream.Dispose(); $outputStream=$null
+            $entry.Status='Copied'; $entry.ArchivePath=$leaf; $entry.Bytes=$length
+            $entry.Sha256=(Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash
+            $state.Bytes += $length; $state.Copied++
+        }
+        catch {
+            $entry.Reason=$_.Exception.Message
+            Add-MaintenanceCheck DiagnosticFile Warning "$Path : $($entry.Reason)"
+        }
+        finally {
+            if ($outputStream) { $outputStream.Dispose() }
+            if ($inputStream) { $inputStream.Dispose() }
+            if ($target -and $entry.Status -ne 'Copied') { Remove-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue }
+            $files.Add([pscustomobject]$entry)
+        }
+    }
+    try {
+        if (-not $ResultFile) { $ResultFile = [Environment]::ExpandEnvironmentVariables('%ProgramData%\OSDApps\Results\Latest.json') }
+        $ResultFile = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ResultFile)
+        Copy-DiagnosticFile $ResultFile Result
+        $resultEntry = @($files | Where-Object { $_.Kind -eq 'Result' -and $_.Status -eq 'Copied' })
+        $result=$null
+        if ($resultEntry.Count -eq 1) {
+            try { $result = Get-Content -LiteralPath (Join-Path $bundleRoot $resultEntry[0].ArchivePath) -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop }
+            catch { Add-MaintenanceCheck DiagnosticResult Warning "Result JSON could not be read: $($_.Exception.Message)" }
+        }
+        $actualId = [string](Get-MaintenanceValue $result DeploymentId)
+        $pre = Get-MaintenanceValue $result PreInstall
+        $prePath = Join-Path (Split-Path $ResultFile -Parent) 'PreInstall.json'
+        if (Test-Path -LiteralPath $prePath -PathType Leaf) {
+            # Keep the embedded, correlated PreInstall record in Latest.json. Do not silently mix a later standalone run.
+            try {
+                $preItem=Assert-DiagnosticPath $prePath
+                if ($preItem.Length -gt 20MB) { throw 'PreInstall result exceeds 20 MB.' }
+                $separate = Get-Content -LiteralPath $prePath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                if (-not $result -and -not $actualId) {
+                    $actualId = [string](Get-MaintenanceValue $separate DeploymentId)
+                    $pre = $separate
+                }
+                if ($actualId -and [string](Get-MaintenanceValue $separate DeploymentId) -eq $actualId) { Copy-DiagnosticFile $prePath PreInstall }
+                else { Add-MaintenanceCheck DiagnosticPreInstall Warning 'Standalone PreInstall.json was omitted because its deployment identity could not be correlated.' }
+            }
+            catch { Add-MaintenanceCheck DiagnosticPreInstall Warning $_.Exception.Message }
+        }
+        if ($ExpectedDeployment -and $actualId -ne $ExpectedDeployment) { throw 'Result is missing or belongs to another deployment; no bundle was exported.' }
+        if (-not $RuntimeLog) { $RuntimeLog = [string](Get-MaintenanceValue $result LogPath) }
+        if (-not $RuntimeLog) { $RuntimeLog = [Environment]::ExpandEnvironmentVariables('%ProgramData%\OSDApps\Logs\Runtime.log') }
+        $RuntimeLog = [Environment]::ExpandEnvironmentVariables($RuntimeLog)
+        Copy-DiagnosticFile $RuntimeLog RuntimeLog
+        foreach ($suffix in @('.1','.2','.3')) {
+            if (Test-Path -LiteralPath "$RuntimeLog$suffix" -PathType Leaf) { Copy-DiagnosticFile "$RuntimeLog$suffix" RotatedRuntimeLog }
+        }
+        foreach ($path in $ExtraLogs) { Copy-DiagnosticFile $path ExplicitLog }
+        $startText = [string](Get-MaintenanceValue $pre StartedAtUtc (Get-MaintenanceValue $result StartedAtUtc))
+        $endText = [string](Get-MaintenanceValue $result CompletedAtUtc (Get-MaintenanceValue $pre CompletedAtUtc))
+        $start=[datetimeoffset]::MinValue; $end=[datetimeoffset]::MinValue
+        $hasWindow = [datetimeoffset]::TryParse($startText,[ref]$start) -and [datetimeoffset]::TryParse($endText,[ref]$end) -and $end -ge $start
+        if ($hasWindow) {
+            $from=$start.UtcDateTime.AddMinutes(-5); $until=$end.UtcDateTime.AddMinutes(5)
+            if (-not $InstallerDirectories) {
+                $InstallerDirectories = @([IO.Path]::GetTempPath())
+                if ($env:windir) {
+                    $InstallerDirectories += @((Join-Path $env:windir 'Temp'),(Join-Path $env:windir 'SystemTemp'),(Join-Path $env:windir 'System32\config\systemprofile\AppData\Local\Temp'))
+                }
+            }
+            foreach ($directory in @($InstallerDirectories | Select-Object -Unique)) {
+                if (-not (Test-Path -LiteralPath $directory -PathType Container)) { continue }
+                try {
+                    $null=Assert-DiagnosticPath $directory
+                    # Top-level only. Office ODT machine/date logs plus known vendor installer names.
+                    $candidates = @(Get-ChildItem -LiteralPath $directory -File -Force -ErrorAction Stop | Where-Object {
+                        $_.Name -match '^(?:.+-\d{8}-\d{4}\.log|teamsprovision\..+\.log|chrome_installer\.log|dd_vcredist[^\\/]*\.log|AdobePDFPrinterInstall\.log|adobegc\.log)$' -and
+                        $_.LastWriteTimeUtc -ge $from -and $_.LastWriteTimeUtc -le $until
+                    } | Sort-Object LastWriteTimeUtc -Descending)
+                    if ($candidates.Count -gt 100) { Add-MaintenanceCheck DiagnosticLimit Warning "More than 100 installer candidates in $directory; only the newest 100 were considered." }
+                    foreach ($candidate in @($candidates | Select-Object -First 100)) { Copy-DiagnosticFile $candidate.FullName InstallerLogCandidate }
+                }
+                catch { Add-MaintenanceCheck DiagnosticSearch Warning "$directory : $($_.Exception.Message)" }
+            }
+        }
+        else { Add-MaintenanceCheck DiagnosticWindow Warning 'No valid completed deployment time window; automatic installer-log discovery was skipped. Use -AdditionalLogPath for explicit files.' }
+        if ($state.Copied -eq 0) { throw 'No diagnostic files could be collected.' }
+        $summary = [ordered]@{
+            SchemaVersion='1.0'; CollectedAtUtc=(Get-Date).ToUniversalTime().ToString('o'); DeploymentId=$actualId
+            RecordedStatus=(Get-MaintenanceValue $result Status); Files=@($files.ToArray()); Checks=@($checks.ToArray())
+            Notes='Read-only source collection. Logs are not an atomic snapshot and may contain other deployments. Installer candidates match filename and time, not proven deployment identity. Contents are not redacted. Review before sharing. No installers, scripts or Office configuration XML are collected automatically.'
+        }
+        $summary | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $bundleRoot 'Bundle.json') -Encoding UTF8
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        # ZipFile uses CreateNew: never replace an existing destination, including a competing export.
+        [IO.Compression.ZipFile]::CreateFromDirectory($bundleRoot,$Destination)
+        $details.Bundle = [pscustomobject]@{ Path=$Destination; DeploymentId=$actualId; FileCount=$state.Copied; SourceBytes=$state.Bytes; Sha256=(Get-FileHash -LiteralPath $Destination).Hash }
+        Add-MaintenanceCheck DiagnosticBundle Passed "Collected $($state.Copied) files: $Destination. Bundle creation does not establish deployment success."
+    }
+    finally { Remove-Item -LiteralPath $bundleRoot -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
 switch ($Mode) {
+    'Diagnostics' {
+        try { Export-MaintenanceDiagnosticBundle -ResultFile $ResultPath -Destination $OutputPath -ExpectedDeployment $DeploymentId -RuntimeLog $LogPath -InstallerDirectories $InstallerLogDirectory -ExtraLogs $AdditionalLogPath }
+        catch { Add-MaintenanceCheck Diagnostics Failed $_.Exception.Message }
+    }
     'Usb' {
         try {
             if ($env:OS -eq 'Windows_NT' -and (Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Control\MiniNT')) {
