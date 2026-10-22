@@ -12,7 +12,10 @@ function Sync-OSDAppVisualCRedist {
         if (-not $PSCmdlet.ShouldProcess($root, 'Synchronize verified runtime cache')) { continue }
         $lock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'Runtime cache synchronization'
         try {
-            $sync = Sync-OSDAppPrerequisiteGeneration -Root $root -Spec $spec -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Download {
+            $sync = Sync-OSDAppPrerequisiteGeneration -Root $root -Spec $spec -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Log {
+                param($record)
+                Write-OSDAppLog -LogPath (Join-Path $cachePath 'Logs\Client.log') -Component CacheCleanup -Event $record.Event -Level $record.Level -Message $record.Message -Data $record.Data -ErrorAction Stop
+            } -Download {
                 param($uri,$destination)
                 Save-OSDAppDownload -PreserveFileName -Uri $uri -DestinationPath $destination -Activity 'Downloading Microsoft runtime'
             }

@@ -10,7 +10,10 @@ function Sync-OSDApp7Zip {
     if (-not $PSCmdlet.ShouldProcess($root, "Transactionally synchronize 7Zip cache ($Architecture)")) { return }
     $cacheLock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation '7Zip cache synchronization'
     try {
-        $sync = Sync-OSDApp7ZipGeneration -Root $root -Architecture $Architecture -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Download {
+        $sync = Sync-OSDApp7ZipGeneration -Root $root -Architecture $Architecture -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Log {
+            param($record)
+            Write-OSDAppLog -LogPath (Join-Path $cachePath 'Logs\Client.log') -Component CacheCleanup -Event $record.Event -Level $record.Level -Message $record.Message -Data $record.Data -ErrorAction Stop
+        } -Download {
             param($uri, $destination)
             Save-OSDAppDownload -PreserveFileName -Uri $uri -DestinationPath $destination -Activity 'Downloading 7Zip'
         }

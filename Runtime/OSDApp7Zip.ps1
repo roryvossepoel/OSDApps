@@ -70,7 +70,8 @@ function Sync-OSDApp7ZipGeneration {
         [Parameter(Mandatory)][string]$Root,
         [Parameter(Mandatory)][ValidateSet('x64','x86','arm64')][string]$Architecture,
         [Parameter(Mandatory)][scriptblock]$Download,
-        [ValidateRange(0, [double]::MaxValue)][double]$MinimumFreeSpaceGB = 1
+        [ValidateRange(0, [double]::MaxValue)][double]$MinimumFreeSpaceGB = 1,
+        [scriptblock]$Log
     )
     # Callback is invoked from the transaction build scope.
     $downloadAction = $Download
@@ -100,7 +101,7 @@ function Sync-OSDApp7ZipGeneration {
             Assert-OSDApp7ZipGeneration -Root $candidate -Architecture $Architecture -Release $release
         } | Out-Null
     }
-    Remove-OSDAppRetiredCacheVariant -Root $Root -Id 7Zip -Architecture $Architecture -Validate {
+    Remove-OSDAppRetiredCacheVariant -Root $Root -Id 7Zip -Architecture $Architecture -Log $Log -Validate {
         param($candidate)
         Assert-OSDApp7ZipGeneration -Root $candidate -Architecture $Architecture -Release $release
     }

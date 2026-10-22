@@ -131,7 +131,7 @@ function Assert-OSDAppPrerequisiteGeneration {
 
 function Sync-OSDAppPrerequisiteGeneration {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)]$Spec, [Parameter(Mandatory)][scriptblock]$Download, [double]$MinimumFreeSpaceGB=1)
+    param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)]$Spec, [Parameter(Mandatory)][scriptblock]$Download, [double]$MinimumFreeSpaceGB=1, [scriptblock]$Log)
     if ($Spec.Family -eq 'DotNetRuntime') { Assert-OSDAppDotNetChannelSupport -Channel $Spec.Channel }
     Restore-OSDAppCacheGeneration -Root $Root -Validate { param($candidate) Assert-OSDAppPrerequisiteGeneration -Root $candidate -Spec $Spec -VerifyPublisher } | Out-Null
     $release = Get-OSDAppPrerequisiteRelease -Spec $Spec
@@ -169,7 +169,7 @@ function Sync-OSDAppPrerequisiteGeneration {
         $info = Assert-OSDAppPrerequisiteGeneration -Root $Root -Spec $Spec -VerifyPublisher
     }
     if ($Spec.Family -eq 'VisualCRedist') {
-        Remove-OSDAppRetiredCacheVariant -Root $Root -Id VisualCRedist -Architecture $Spec.Architecture -Validate {
+        Remove-OSDAppRetiredCacheVariant -Root $Root -Id VisualCRedist -Architecture $Spec.Architecture -Log $Log -Validate {
             param($candidate)
             Assert-OSDAppPrerequisiteGeneration -Root $candidate -Spec $Spec -Release $release -VerifyPublisher
         }
