@@ -6,6 +6,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'OSDAppPayloadFile.ps1')
 $sleepRequest = $null
 $sleepLog = $null
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
@@ -551,7 +552,7 @@ try {
                 $arguments = @('-p')
 
                 if ($app.OfflinePackage) {
-                    $offlinePackagePath = Join-Path $StagedPath $app.OfflinePackage
+                    $offlinePackagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.OfflinePackage)
                     if (-not (Test-Path -LiteralPath $offlinePackagePath -PathType Leaf)) {
                         throw "Teams offline MSIX not found: $offlinePackagePath"
                     }
@@ -575,7 +576,7 @@ try {
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='PublisherValidatedByPreInstall' }
             }
             'AdobeAcrobatUnifiedZip' {
-                $packagePath = Join-Path $StagedPath $app.Package
+                $packagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.Package)
                 if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
                     throw "Adobe Acrobat Unified package not found: $packagePath"
                 }
@@ -636,7 +637,7 @@ try {
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='NotAssessed' }
             }
             'PrerequisiteExe' {
-                $packagePath = Join-Path $StagedPath $app.Package
+                $packagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.Package)
                 if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
                     throw "EXE package not found for '$($app.Id)': $packagePath"
                 }
@@ -693,7 +694,7 @@ try {
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='HashAndPublisherValidated' }
             }
             'VisualStudioCodeExe' {
-                $packagePath = Join-Path $StagedPath $app.Package
+                $packagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.Package)
                 if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
                     throw "EXE package not found for '$($app.Id)': $packagePath"
                 }
@@ -742,7 +743,7 @@ try {
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='ReleaseSha256AndPublisherValidated' }
             }
             '7ZipExe' {
-                $packagePath = Join-Path $StagedPath $app.Package
+                $packagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.Package)
                 if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
                     throw "EXE package not found for '$($app.Id)': $packagePath"
                 }
@@ -791,7 +792,7 @@ try {
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='ReleaseSha256Validated' }
             }
             'VendorMsi' {
-                $packagePath = Join-Path $StagedPath $app.Package
+                $packagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.Package)
                 if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
                     throw "MSI package not found for '$($app.Id)': $packagePath"
                 }

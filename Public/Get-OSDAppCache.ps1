@@ -83,51 +83,59 @@ function Get-OSDAppCache {
                 $bytes = ($files | Measure-Object -Property Length -Sum).Sum
                 if ($null -eq $bytes) { $bytes = 0 }
 
-                $payloadValid = switch ([string]$info.Id) {
-                    'Microsoft365Apps' {
-                        $officeArchitecture = if ([string]$info.Architecture -eq 'x86') { 'x86' } else { 'x64' }
-                        $officeValidation = Test-OSDAppOfficeCacheGeneration `
-                            -OfficeRoot $entryRoot `
-                            -ExpectedVersion ([string]$info.Version) `
-                            -Architecture $officeArchitecture `
-                            -PassThru
-                        $officeValidation.Valid
+                $payloadError = $null
+                try {
+                    $payloadValid = switch ([string]$info.Id) {
+                        'Microsoft365Apps' {
+                            $officeArchitecture = if ([string]$info.Architecture -eq 'x86') { 'x86' } else { 'x64' }
+                            $officeValidation = Test-OSDAppOfficeCacheGeneration `
+                                -OfficeRoot $entryRoot `
+                                -ExpectedVersion ([string]$info.Version) `
+                                -Architecture $officeArchitecture `
+                                -PassThru
+                            $officeValidation.Valid
+                        }
+                        'MicrosoftTeams' {
+                            (Test-Path -LiteralPath (Join-Path $entryRoot 'teamsbootstrapper.exe') -PathType Leaf) -and
+                            (Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'teams.msix'))) -PathType Leaf)
+                        }
+                        'AdobeAcrobatUnified' {
+                            Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.zip'))) -PathType Leaf
+                        }
+                        'GoogleChromeEnterprise' {
+                            Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
+                        }
+                        { $_ -in @('VisualCRedist','DotNetRuntime') } {
+                            try {
+                                $spec = Get-OSDAppPrerequisiteSpec -Family $info.Id -Architecture $info.Architecture -RuntimeType $info.RuntimeType -Channel $info.Channel
+                                Assert-OSDAppPrerequisiteGeneration -Root $entryRoot -Spec $spec | Out-Null
+                                $true
+                            } catch { $false }
+                        }
+                        'VisualStudioCode' {
+                            try { Assert-OSDAppVisualStudioCodeGeneration -Root $entryRoot -Architecture ([string]$info.Architecture) | Out-Null; $true } catch { $false }
+                        }
+                        '7Zip' {
+                            try { Assert-OSDApp7ZipGeneration -Root $entryRoot -Architecture ([string]$info.Architecture) | Out-Null; $true } catch { $false }
+                        }
+                        'ZoomWorkplace' {
+                            Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
+                        }
+                        'CiscoWebex' {
+                            Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
+                        }
+                        'MozillaFirefoxEnterprise' {
+                            Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
+                        }
+                        default {
+                            $files.Count -gt 0
+                        }
                     }
-                    'MicrosoftTeams' {
-                        (Test-Path -LiteralPath (Join-Path $entryRoot 'teamsbootstrapper.exe') -PathType Leaf) -and
-                        (Test-Path -LiteralPath (Join-Path $entryRoot 'teams.msix') -PathType Leaf)
-                    }
-                    'AdobeAcrobatUnified' {
-                        Test-Path -LiteralPath (Join-Path $entryRoot 'Package.zip') -PathType Leaf
-                    }
-                    'GoogleChromeEnterprise' {
-                        Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
-                    }
-                    { $_ -in @('VisualCRedist','DotNetRuntime') } {
-                        try {
-                            $spec = Get-OSDAppPrerequisiteSpec -Family $info.Id -Architecture $info.Architecture -RuntimeType $info.RuntimeType -Channel $info.Channel
-                            Assert-OSDAppPrerequisiteGeneration -Root $entryRoot -Spec $spec | Out-Null
-                            $true
-                        } catch { $false }
-                    }
-                    'VisualStudioCode' {
-                        try { Assert-OSDAppVisualStudioCodeGeneration -Root $entryRoot -Architecture ([string]$info.Architecture) | Out-Null; $true } catch { $false }
-                    }
-                    '7Zip' {
-                        try { Assert-OSDApp7ZipGeneration -Root $entryRoot -Architecture ([string]$info.Architecture) | Out-Null; $true } catch { $false }
-                    }
-                    'ZoomWorkplace' {
-                        Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
-                    }
-                    'CiscoWebex' {
-                        Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
-                    }
-                    'MozillaFirefoxEnterprise' {
-                        Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
-                    }
-                    default {
-                        $files.Count -gt 0
-                    }
+
+                }
+                catch {
+                    $payloadValid = $false
+                    $payloadError = $_.Exception.Message
                 }
 
                 $cachedVersion = if ($null -ne $info.Version) { ([string]$info.Version).Trim() } else { $null }
@@ -166,8 +174,9 @@ function Get-OSDAppCache {
                     LastSynced   = $info.SyncedAt
                     SizeMB       = [math]::Round([double]$bytes / 1MB, 1)
                     Valid        = [bool]$payloadValid
+                    PayloadError = $payloadError
                     CachePath    = $entryRoot
-                    SignatureStatus = if (-not $payloadValid) { 'File missing' } elseif ($signature) { [string]$signature.Status } else { 'Not checked' }
+                    SignatureStatus = if ($payloadError) { 'Invalid payload' } elseif (-not $payloadValid) { 'File missing' } elseif ($signature) { [string]$signature.Status } else { 'Not checked' }
                     SignatureScope = if ($signature) { [string]$signature.Scope } else { $null }
                     SignatureFile = if ($signature) { $signature.File } else { $null }
                     SignatureSigner = if ($signature) { $signature.Signer } else { $null }

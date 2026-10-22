@@ -92,6 +92,20 @@ Describe '7Zip release-validated built-in' {
                 @(Get-ChildItem (Split-Path $script:cache -Parent) -Directory | Where-Object Name -like '*.osdapps-*').Count | Should -Be 0
             }
         }
+        It 'validates a native release filename and reuses it without renaming or downloading again' {
+            InModuleScope OSDApps {
+                $download = {
+                    param($uri, $destination)
+                    $native = Join-Path (Split-Path $destination -Parent) '7z2604-x64.exe'
+                    [IO.File]::WriteAllBytes($native, $script:payload)
+                }
+                (Sync-OSDApp7ZipGeneration -Root $script:cache -Architecture x64 -Download $download).Updated | Should -BeTrue
+                (Sync-OSDApp7ZipGeneration -Root $script:cache -Architecture x64 -Download { throw 'Unexpected download' }).Updated | Should -BeFalse
+                Test-Path (Join-Path $script:cache '7z2604-x64.exe') | Should -BeTrue
+                Test-Path (Join-Path $script:cache 'Package.exe') | Should -BeFalse
+                (Assert-OSDApp7ZipGeneration -Root $script:cache -Architecture x64).Version | Should -Be '26.04'
+            }
+        }
         It 'rejects a downloaded hash mismatch without promoting the candidate' {
             InModuleScope OSDApps {
                 { Sync-OSDApp7ZipGeneration -Root $script:cache -Architecture x64 -Download { param($u,$p); [IO.File]::WriteAllBytes($p,(New-Object byte[] 256)) } } | Should -Throw '*SHA-256*'

@@ -28,7 +28,7 @@ function Test-OSDAppBuiltInCacheGeneration {
     }
 
     foreach ($relativePath in $RequiredFile) {
-        $path = Join-Path $Root $relativePath
+        $path = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root $relativePath))
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
             throw "Built-in cache generation '$Id' is missing required file '$relativePath'."
         }
@@ -39,7 +39,7 @@ function Test-OSDAppBuiltInCacheGeneration {
 
     if ($ValidateZip) {
         Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
-        $zipPath = Join-Path $Root $RequiredFile[0]
+        $zipPath = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root $RequiredFile[0]))
         $archive = $null
         try {
             $archive = [System.IO.Compression.ZipFile]::OpenRead($zipPath)

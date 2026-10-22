@@ -16,6 +16,29 @@ Application built-ins default to x64. Runtime prerequisite cmdlets require one e
 | [Zoom Workplace](#zoom-workplace) | x64, arm64 | Architecture, desktop shortcut, SSO host and Zoom settings |
 | [Cisco Webex](#cisco-webex) | x64, arm64 | Architecture and supported MSI options |
 
+
+## Installer filenames
+
+Built-in downloads retain the filename supplied by the vendor: the HTTP
+`Content-Disposition` filename when present, otherwise the final redirected URL's
+filename. The same name is retained in the USB cache and local Windows staging.
+Unsafe names or a file extension that differs from the expected payload format
+are rejected before promotion. Downloads, signature/hash checks and complete
+cache-generation replacement follow the existing validation policies.
+
+Each built-in variant has one primary payload per format. Multiple MSI, EXE, ZIP
+or MSIX payloads of the same format in that variant are ambiguous and are rejected;
+OSDApps does not guess which version to install. Office keeps its ODT-managed layout.
+
+Existing caches named `Package.msi`, `Package.exe`, `Package.zip` or `teams.msix`
+remain readable without renaming or redownloading solely to change a filename.
+Their next normal refresh replaces the complete generation with vendor-named
+files. The manifest's legacy package path remains an internal payload reference;
+preflight and the runner resolve it to the actual filename in that variant.
+
+**Custom repository apps and scripts still use `Package.zip`.** That repository
+archive contract is separate from built-in vendor installers.
+
 ## Machine-readable metadata
 
 The current built-in application catalog is also published as:
@@ -59,11 +82,11 @@ Enterprise requires:
 | --- | --- | --- |
 | Microsoft 365 Apps | `setup.exe` | Microsoft Corporation |
 | Microsoft Teams | `teamsbootstrapper.exe` | Microsoft Corporation |
-| Google Chrome Enterprise | `Package.msi` | Google LLC |
-| Cisco Webex | `Package.msi` | Cisco Systems, Inc. |
-| Zoom Workplace | `Package.msi` | Zoom Communications, Inc. |
-| Mozilla Firefox Enterprise | `Package.msi` | Mozilla Corporation |
-| Adobe Acrobat Unified | Outer `Package.zip` not assessed | N/A |
+| Google Chrome Enterprise | Vendor MSI | Google LLC |
+| Cisco Webex | Vendor MSI | Cisco Systems, Inc. |
+| Zoom Workplace | Vendor MSI | Zoom Communications, Inc. |
+| Mozilla Firefox Enterprise | Vendor MSI | Mozilla Corporation |
+| Adobe Acrobat Unified | Outer vendor ZIP not assessed | N/A |
 
 For MSI/EXE synchronization, candidate downloads are checked **before**
 replacing an existing cached file. A rejected candidate leaves the previous
@@ -171,10 +194,10 @@ arm64
 
 The Teams cache contains:
 - `teamsbootstrapper.exe`
-- `teams.msix`
+- The vendor-named Teams MSIX (for example, `MSTeams-x64.msix`)
 - `CacheInfo.json`
 
-The canonical built-in ID is `MicrosoftTeams`. Its USB cache and WinPE staging location is `BuiltIn\MicrosoftTeams`, containing `teamsbootstrapper.exe`, `teams.msix` and `CacheInfo.json`. The 0.31.0 rename intentionally introduced no legacy commands or runtime identity. From 0.36.0, metadata recognizes `Teams` only as a retired **cache alias**: full-Windows `Sync-OSDAppMicrosoftTeams` and standalone PreInstall remove the old folder only after the canonical payload is complete and the bootstrapper passes the Microsoft trust gate. A PreInstall cleanup failure is logged as a warning rather than failing an otherwise usable deployment. The old cmdlet names and SetupComplete identity remain unsupported. Re-synchronize existing media before booting WinPE for an offline deployment.
+The canonical built-in ID is `MicrosoftTeams`. Its USB cache and WinPE staging location is `BuiltIn\MicrosoftTeams`, containing `teamsbootstrapper.exe`, the vendor-named MSIX and `CacheInfo.json`. The 0.31.0 rename intentionally introduced no legacy commands or runtime identity. From 0.36.0, metadata recognizes `Teams` only as a retired **cache alias**: full-Windows `Sync-OSDAppMicrosoftTeams` and standalone PreInstall remove the old folder only after the canonical payload is complete and the bootstrapper passes the Microsoft trust gate. A PreInstall cleanup failure is logged as a warning rather than failing an otherwise usable deployment. The old cmdlet names and SetupComplete identity remain unsupported. Re-synchronize existing media before booting WinPE for an offline deployment.
 
 Teams freshness is checked using HTTP metadata. ETag is preferred; Last-Modified plus Content-Length is the fallback.
 
@@ -197,10 +220,10 @@ The cache contains:
 ```text
 BuiltIn\AdobeAcrobatUnified\
 ├── x64\
-│   ├── Package.zip
+│   ├── Acrobat_DC_Web_x64_WWMUI.zip
 │   └── CacheInfo.json
 └── x86\
-    ├── Package.zip
+    ├── Acrobat_DC_Web_WWMUI.zip
     └── CacheInfo.json
 ```
 
@@ -218,7 +241,7 @@ Add-OSDAppAdobeAcrobatUnified -InstallTimeoutMinutes 20
 
 x64 is used when `-Architecture` is omitted. x86 and x64 caches are kept separately so a single OSDCloud USB can hold both variants.
 
-During WinPE, a populated USB cache is staged to the **same architecture-specific relative path** on the Windows disk: `Windows\Temp\OSDApps\BuiltIn\AdobeAcrobatUnified\x64\Package.zip` (or `x86`). `DeviceManifest.json` and the SetupComplete runner reference that exact path. If the cache is empty, the runtime downloads it later; if a cached archive is copied, staging verifies that the expected file exists and its size matches the USB source.
+During WinPE, a populated USB cache is staged to the same architecture-specific directory on the Windows disk, retaining the vendor ZIP filename. For example: `Windows\Temp\OSDApps\BuiltIn\AdobeAcrobatUnified\x64\Acrobat_DC_Web_x64_WWMUI.zip`. If the cache is empty, the runtime downloads it later. Staging verifies that the copied file exists and its size matches the USB source.
 
 ### Google Chrome Enterprise
 
@@ -239,17 +262,17 @@ Cache layout:
 ```text
 BuiltIn\GoogleChromeEnterprise\
 ├── x64\
-│   ├── Package.msi
+│   ├── googlechromestandaloneenterprise64.msi
 │   └── CacheInfo.json
 └── x86\
-    ├── Package.msi
+    ├── googlechromestandaloneenterprise.msi
     └── CacheInfo.json
 ```
 
 Installation uses Windows Installer:
 
 ```text
-msiexec.exe /i Package.msi /qn /norestart
+msiexec.exe /i "<vendor-installer>.msi" /qn /norestart
 ```
 
 ### Mozilla Firefox Enterprise
@@ -277,14 +300,14 @@ BuiltIn\MozillaFirefoxEnterprise\
 └── <Rapid|ESR>\
     └── <x64|x86>\
         └── <language>\
-            ├── Package.msi
+            ├── Firefox <version>.msi
             └── CacheInfo.json
 ```
 
 Installation uses:
 
 ```text
-msiexec.exe /i Package.msi /qn /norestart
+msiexec.exe /i "<vendor-installer>.msi" /qn /norestart
 ```
 
 Mozilla notes that its MSI is a signed wrapper around the full Firefox installer, but it supports the standard MSI deployment options needed here.
@@ -323,14 +346,14 @@ Cache and WinPE destination (the same relative path, preventing staging mismatch
 ```text
 BuiltIn\CiscoWebex\
 ├── x64\
-│   ├── Package.msi
+│   ├── Webex_en.msi
 │   └── CacheInfo.json
 └── arm64\
-    ├── Package.msi
+    ├── Webex_en.msi
     └── CacheInfo.json
 ```
 
-The generic `VendorMsi` runner uses `msiexec.exe /i Package.msi /qn /norestart` plus the manifest's `MsiProperties`, accepts exit codes 0 and 3010, and honors `-InstallTimeoutMinutes` (default 10). OSDApps caches the installer for **future OS deployments**; Webex's own user-session update mechanism is independent of the MSI cache.
+The generic `VendorMsi` runner uses `msiexec.exe /i "<vendor-installer>.msi" /qn /norestart` plus the manifest's `MsiProperties`, accepts exit codes 0 and 3010, and honors `-InstallTimeoutMinutes` (default 10). OSDApps caches the installer for **future OS deployments**; Webex's own user-session update mechanism is independent of the MSI cache.
 
 | Add parameter | Default | MSI behavior |
 | --- | --- | --- |
@@ -359,9 +382,9 @@ The freshness mechanism is product-specific:
 | --- | --- | --- |
 | Microsoft 365 Apps | PreInstall checks configuration compatibility, generation consistency and the channel version CAB (or an exact build pin) | A current compatible generation is reused. Otherwise ODT downloads into a separate new generation, validated before replacement. Explicit `Sync-OSDAppMicrosoft365Apps` still acquires a fresh generation. |
 | Microsoft Teams | HTTP metadata for the official MSIX: `ETag` preferred, otherwise `Last-Modified + Content-Length` | MSIX is downloaded only when the metadata changed or no valid cached MSIX exists. The Teams bootstrapper is refreshed on every online sync. |
-| Adobe Acrobat Unified | HTTP metadata for the official Adobe ZIP: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.zip` is downloaded only when the remote metadata changed or no cached ZIP exists. |
-| Google Chrome Enterprise | HTTP metadata for the official Enterprise MSI: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.msi` is downloaded only when the remote metadata changed or no cached MSI exists. |
-| Mozilla Firefox Enterprise | HTTP metadata for the Mozilla latest MSI endpoint: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.msi` is downloaded only when the remote metadata changed or no cached MSI exists. Channel, architecture, and language are cached separately. |
+| Adobe Acrobat Unified | HTTP metadata for the official Adobe ZIP: `ETag` preferred, otherwise `Last-Modified + Content-Length` | The vendor ZIP is downloaded only when the remote metadata changed or no cached ZIP exists. |
+| Google Chrome Enterprise | HTTP metadata for the official Enterprise MSI: `ETag` preferred, otherwise `Last-Modified + Content-Length` | The vendor MSI is downloaded only when the remote metadata changed or no cached MSI exists. |
+| Mozilla Firefox Enterprise | HTTP metadata for the Mozilla latest MSI endpoint: `ETag` preferred, otherwise `Last-Modified + Content-Length` | The vendor MSI is downloaded only when the remote metadata changed or no cached MSI exists. Channel, architecture, and language are cached separately. |
 | Cisco Webex | Cisco MSI HTTP metadata, `ETag` preferred, otherwise `Last-Modified + Content-Length` | Reuse the MSI when unchanged; download when missing or changed. Separate x64/ARM64 cache folders. |
 
 ### HTTP metadata comparison
@@ -763,7 +786,7 @@ Downloads use Zoom's latest MSI endpoints:
 - x64: <https://zoom.us/client/latest/ZoomInstallerFull.msi?archType=x64>
 - ARM64: <https://zoom.us/client/latest/ZoomInstallerFull.msi?archType=winarm64>
 
-Each architecture uses `BuiltIn/ZoomWorkplace/<architecture>/Package.msi` and
+Each architecture uses `BuiltIn/ZoomWorkplace/<architecture>/ZoomInstallerFull.msi` and
 `CacheInfo.json`. HTTP metadata decides reuse versus acquisition. Windows checks
 Authenticode and the expected organization **Zoom Communications, Inc.** before
 accepting signed content. A candidate is validated before the active generation

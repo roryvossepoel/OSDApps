@@ -35,7 +35,7 @@ function Add-OSDAppZoomWorkplace {
 
     $stagedRelativePath = 'Windows\Temp\OSDApps'
     if ($cachePath) {
-        $existingCache = Test-Path -LiteralPath (Join-Path $cachePath (Join-Path 'BuiltIn\ZoomWorkplace' (Join-Path $Architecture 'Package.msi'))) -PathType Leaf
+        $existingCache = Test-Path -LiteralPath (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cachePath (Join-Path 'BuiltIn\ZoomWorkplace' (Join-Path $Architecture 'Package.msi')))) -PathType Leaf
         $message = if ($existingCache) { 'Existing cached MSI will be staged to the OS disk and refreshed during SetupComplete' } else { 'No cached MSI found; cache will be populated during SetupComplete' }
         if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level $(if ($existingCache) { 'Success' } else { 'Info' }) -Component 'ZoomWorkplace' -Message $message }
     }

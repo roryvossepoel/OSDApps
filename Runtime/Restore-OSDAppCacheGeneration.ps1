@@ -1,3 +1,4 @@
+. (Join-Path $PSScriptRoot 'OSDAppPayloadFile.ps1')
 # Shared by the module and standalone PreInstall. No deployment is started here.
 function Restore-OSDAppCacheGeneration {
     [CmdletBinding()]
@@ -70,7 +71,7 @@ function Assert-OSDAppRecoverableBuiltInGeneration {
         default { 'Package.msi' }
     }
     foreach ($file in $required) {
-        $path = Join-Path $Root $file
+        $path = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root $file))
         if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or (Get-Item -LiteralPath $path).Length -le 0) {
             throw "Recovery generation '$Id' is missing nonempty '$file'."
         }
@@ -85,19 +86,19 @@ function Assert-OSDAppRecoverableBuiltInGeneration {
         }
         'MicrosoftTeams' {
             & $SignatureValidator $Id (Join-Path $Root 'teamsbootstrapper.exe') | Out-Null
-            $version = & $TeamsVersionReader (Join-Path $Root 'teams.msix')
+            $version = & $TeamsVersionReader ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'teams.msix')))
             if (-not $version -or [string]$version -ne [string]$info.Version) {
                 throw 'Teams recovery package version does not match its metadata.'
             }
         }
         'AdobeAcrobatUnified' {
             Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
-            $archive = [IO.Compression.ZipFile]::OpenRead((Join-Path $Root 'Package.zip'))
+            $archive = [IO.Compression.ZipFile]::OpenRead(((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'Package.zip'))))
             try {
                 if ($archive.Entries.Count -eq 0) { throw 'Adobe recovery archive is empty.' }
             }
             finally { $archive.Dispose() }
         }
-        default { & $SignatureValidator $Id (Join-Path $Root 'Package.msi') | Out-Null }
+        default { & $SignatureValidator $Id ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'Package.msi'))) | Out-Null }
     }
 }
