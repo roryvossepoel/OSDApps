@@ -155,7 +155,9 @@ Unlike `Clear-OSDAppCache -BuiltIn` alone, adding `-Prune` **retains every curre
 
 Registered aliases, filesystem links and transaction/recovery content are preserved for review and reported in the result's `Review` property. Registered aliases use their canonical app's replacement-validation flow. Pruning does not clean arbitrary nested files inside a current app directory; each app's generation handling owns that layout. Missing or invalid current app content remains visible to cache health and requires synchronization or investigation, not namespace pruning.
 
-This is explicit USB maintenance, not an automatic deletion during staging or every deployment. The apply operation uses the cache writer lock and honors confirmation. `-WhatIf` does not create a lock or log. Repository cache and target staging remain separate; app synchronization continues to replace superseded managed generations transactionally.
+Known retired variants are cleaned automatically after successful synchronization, both through Sync cmdlets and Windows PreInstall: `VisualCppRedist` becomes `VisualCRedist`, and `SevenZip` becomes `7Zip`. Only the matching architecture is removed, after revalidating its current replacement and confirming the old metadata identity. Other variants, unknown folders, links and recovery content remain untouched. Cleanup failure warns without failing the successfully synchronized app. The empty retired parent is removed after its last variant.
+
+The broader namespace prune above remains explicit USB maintenance. The apply operation uses the cache writer lock and honors confirmation. `-WhatIf` does not create a lock or log. Repository cache and target staging remain separate; app synchronization continues to replace superseded managed generations transactionally.
 
 ## What happens if the USB is removed too early?
 
