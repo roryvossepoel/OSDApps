@@ -22,6 +22,56 @@ Run while no synchronization or other cache writer is active. The read-only heal
 powershell.exe -NoProfile -File .\tools\Test-OSDAppsMaintenance.ps1 -Mode Usb -UsbRoot D:\ -ThrowOnFailure
 ```
 
+## What a cache check proves
+
+`Healthy`, `Valid`, configuration compatibility and vendor freshness answer different questions. Read the per-entry details as well as the summary. These inspection commands do not synchronize, repair or prune the cache.
+
+| Inspection | Evidence and limits |
+| --- | --- |
+| `Get-OSDAppCacheHealth -Offline` | Checks local repository metadata and archive hashes, built-in identity/layout and the app-specific checks below. Reports missing, corrupt, orphaned and renamed content. It does not query vendor releases or compare an Office deployment request. |
+| `Get-OSDAppCacheHealth` with a configured repository catalog | Also compares repository packages with the selected catalog's versions, architectures and hashes. This is repository desired state, not a freshness query for built-ins. Check `DesiredStateAvailable` and `CatalogError`. |
+| `Get-OSDAppCache` / `Test-OSDAppCache` | Inspect discovered entries using the app-specific rules below. They do not provide the same namespace/reconciliation report as cache health. `Test-OSDAppCache` summarizes these entries; a `-Name` filter limits that summary. |
+| `-ResolveVersions` on the inventory/test commands | Resolves eligible cached package versions locally on full Windows. It does not ask the vendor whether those versions are latest. |
+| `-VerifySignatures` on the inventory/test commands | Adds Windows Authenticode and expected-publisher inspection for supported files. Check each entry's `SignatureStatus` and `SignatureScope`; unsupported formats remain outside this check. Windows trust evaluation can use the network. |
+
+### Local integrity checks by package
+
+These are the checks used by cache inventory and inherited by cache health. They use existing local metadata; they do not fetch a new vendor manifest.
+
+| Package | Local checks |
+| --- | --- |
+| Repository applications and scripts | `Package.zip` is hashed against the recorded SHA-256. Online desired-state health uses the selected catalog hash when available. This does not validate script behavior or installer success. |
+| Microsoft 365 Apps | Required paths, exactly one version directory matching the recorded build, a nonempty payload directory, and equal SHA-256 hashes for the shared and version-specific CABs. This is generation consistency, not a hash check of every Office data file. |
+| Microsoft Teams | Bootstrapper and resolved MSIX file presence. Optional Authenticode inspection covers the bootstrapper only. |
+| Chrome, Firefox, Webex and Zoom | Resolved MSI file presence. Optional Authenticode inspection covers the MSI and expected publisher. |
+| Adobe Acrobat Unified | Resolved ZIP file presence. The outer ZIP is not Authenticode-assessed by cache inspection. |
+| 7Zip | Recorded release identity/source, file size, SHA-256 and executable architecture. Its digest comes from release metadata; Authenticode is not assessed. |
+| Visual Studio Code | Recorded release identity/platform/source, file size and SHA-256. Optional Authenticode inspection adds the Microsoft publisher check. |
+| VisualCRedist | Recorded variant/version/source, file size and SHA-256. Optional Authenticode inspection adds the Microsoft publisher check. |
+| .NET runtimes | Recorded variant/channel/version/source, supported-channel policy, file size, SHA-256 and recorded release SHA-512. Optional Authenticode inspection adds the Microsoft publisher check. |
+
+`SizeMB` and `TotalSizeMB` report observed disk usage. They are not universal completeness checks. The explicit recorded-size comparisons for 7Zip, VS Code and runtimes are separate checks. A hash match proves equality with the referenced metadata, not that the local metadata itself was independently revalidated online.
+
+### Reading the summary safely
+
+- `Healthy=True` means no failing health condition was found under those rules. It is not proof of vendor freshness, all publisher signatures or compatibility with a future app selection. Check `CacheAvailable`, `EntryCount` and the individual entries; an existing empty cache can be healthy without containing deployable apps.
+- An entry's `Valid=True` means its app-specific local checks passed. `Get-OSDAppCache -VerifySignatures` reports the signature separately; it does not turn the entry's `Valid` field into a publisher result. `Test-OSDAppCache -VerifySignatures` also requires supported signature checks to complete for its overall `Valid` result.
+- `SignatureChecksComplete=True` covers the supported signature candidates, not every cached file. Repository ZIPs, Adobe's outer ZIP and 7Zip are outside that Authenticode scope. WinPE cannot complete supported Authenticode inspection.
+- `Version=Current` is a policy/metadata value, not confirmation that the vendor still advertises that release.
+
+For a local inspection on full Windows:
+
+```powershell
+$health = Get-OSDAppCacheHealth -Offline
+$health | Select-Object CacheAvailable, EntryCount, Healthy
+$health.Entries | Format-Table Id, State, Integrity, Reason -Wrap
+
+Get-OSDAppCache -VerifySignatures |
+    Select-Object Id, Version, Valid, SignatureStatus, SignatureScope
+```
+
+Office configuration matching happens separately during staging and PreInstall: the requested acquisition settings are compared with the recorded payload profile. Online acquisition then makes the vendor-freshness decision. A cache can pass local health checks yet need new content for another language/product selection or a newer advertised build. See [Office compatibility and file-check limits](built-in-apps.md#office-cache-compatibility-with-deployment-configuration) and [built-in update detection](built-in-apps.md#how-update-freshness-is-determined).
+
 ## Check a published release
 
 ```powershell

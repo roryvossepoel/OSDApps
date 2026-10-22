@@ -122,7 +122,7 @@ WinPE relies on saved metadata rather than the full-Windows MSI inspection path.
 | Signature: `Unavailable in WinPE` | OSDApps did not invoke Windows signature verification in WinPE. |
 | Signature: `Not checked` | Signature inspection was deliberately skipped or no check result was requested. |
 
-Invalid, untrusted or unexpected-publisher results must not be interpreted as valid content. The CLI's `Valid` property continues to describe required file presence or repository SHA-256 integrity; inspect `SignatureStatus` separately.
+Invalid, untrusted or unexpected-publisher results must not be interpreted as valid content. The CLI's entry-level `Valid` property describes app-specific local checks: file presence for some built-ins, generation consistency for Office, and hash/metadata checks for repository packages and several newer built-ins. The Viewer's compact integrity label does not enumerate every underlying check. Inspect `SignatureStatus` separately and see [what a cache check proves](maintenance.md#what-a-cache-check-proves) for the per-app scope. None of these local results establishes vendor freshness.
 
 ### Default signature inspection and network behavior
 
