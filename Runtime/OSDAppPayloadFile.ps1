@@ -28,7 +28,10 @@ function Get-OSDAppDownloadFileName {
         elseif ($disposition.FileName) { $name = ([string]$disposition.FileName).Trim('"') }
     }
     if (-not $name) {
-        $name = [uri]::UnescapeDataString(($Response.RequestMessage.RequestUri.AbsolutePath -split '/')[-1])
+        # .NET Framework can normalize trailing dots in AbsolutePath. Read the
+        # original final URI so validation rejects them instead of changing a name.
+        $rawPath = [regex]::Match([string]$Response.RequestMessage.RequestUri.OriginalString, '^[a-zA-Z][a-zA-Z0-9+.-]*://[^/?#]*(?<path>/[^?#]*)?').Groups['path'].Value
+        $name = [uri]::UnescapeDataString(($rawPath -split '/')[-1])
     }
     # A server-provided name must be a Windows leaf filename, never a path.
     if ([string]::IsNullOrWhiteSpace($name) -or $name.Length -gt 240 -or
