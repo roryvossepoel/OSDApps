@@ -326,11 +326,13 @@
                 All = 'Clear repository and built-in caches. Also the default with no scope argument.'
                 Repository = 'Clear repository archives and CacheCatalog.json only.'
                 BuiltIn = 'Clear built-in cache only.'
+                Prune = 'With BuiltIn, remove only unmanaged top-level app folders and loose files. Preserve managed app trees, registered aliases, links and transaction recovery content. Preview with WhatIf; inspect Review in the result.'
                 Name = 'Exact safe cache Ids. Matching built-in and repository paths are both removed, including retired identities; inspect operations with WhatIf.'
                 IncludeLogs = 'Also remove existing cache logs; new audit entries are written afterward.'
             }
             Examples = @(
                 @{ Code = 'Clear-OSDAppCache -All -WhatIf'; Remarks = 'Preview the destructive all-cache scope.' },
+                @{ Code = 'Clear-OSDAppCache -BuiltIn -Prune -WhatIf'; Remarks = 'Preview unmanaged built-in namespace cleanup while retaining current app variants and legacy payload filenames.' },
                 @{ Code = 'Clear-OSDAppCache -Name MicrosoftTeams -WhatIf'; Remarks = 'Preview a named entry; target staging remains separate.' }
             )
             Link = 'docs/faq.md'

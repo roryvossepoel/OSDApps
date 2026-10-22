@@ -10,6 +10,9 @@ function Clear-OSDAppCache {
         [Parameter(Mandatory, ParameterSetName = 'BuiltIn')]
         [switch]$BuiltIn,
 
+        [Parameter(ParameterSetName = 'BuiltIn')]
+        [switch]$Prune,
+
         [Parameter(Mandatory, ParameterSetName = 'Name')]
         [string[]]$Name,
 
@@ -49,6 +52,12 @@ function Clear-OSDAppCache {
     }
 
     $removed = [System.Collections.Generic.List[string]]::new()
+    $prunePlan = @()
+    if ($Prune) {
+        # Build the complete plan under the existing cache writer lock before
+        # deleting anything. WhatIf is read-only and does not acquire the lock.
+        $prunePlan = @(Get-OSDAppBuiltInPrunePlan -CachePath $cachePath)
+    }
 
     function Remove-CacheItem {
         param(
@@ -89,8 +98,18 @@ function Clear-OSDAppCache {
         Remove-CacheItem -Path $manifestPath -Label 'CacheCatalog.json'
     }
 
-    if ($All -or $BuiltIn) {
+    if (($All -or $BuiltIn) -and -not $Prune) {
         Remove-CacheItem -Path $builtInPath -Label 'Built-in cache'
+    }
+
+    if ($Prune) {
+        foreach ($item in $prunePlan) {
+            if ($item.Action -eq 'Review') {
+                Write-Warning "Preserved '$($item.Path)': $($item.Reason)"
+                continue
+            }
+            Remove-CacheItem -Path $item.Path -Label "unmanaged built-in cache item '$($item.Name)'"
+        }
     }
 
     if ($PSCmdlet.ParameterSetName -eq 'Name') {
@@ -160,6 +179,8 @@ function Clear-OSDAppCache {
         PSTypeName  = 'OSDApps.CacheClearResult'
         CachePath   = $cachePath
         Scope       = $scope
+        Prune       = [bool]$Prune
+        Review      = @($prunePlan | Where-Object Action -eq 'Review')
         Names       = @($Name)
         IncludeLogs = [bool]$IncludeLogs
         Removed     = @($removed)

@@ -469,6 +469,18 @@ function Get-OSDAppCacheHealthState {
     }
 
     $stagingRoot = Join-Path $CachePath '.staging'
+    if (Test-Path -LiteralPath $builtInRoot -PathType Container) {
+        foreach ($file in @(Get-ChildItem -LiteralPath $builtInRoot -File -Force -ErrorAction Stop)) {
+            $requiresReview = ($file.Name -match '\.osdapps-') -or
+                (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
+            $entries.Add((New-CacheHealthEntry `
+                -Id $file.Name -CanonicalId $file.Name -DisplayName $file.Name -Source 'BuiltIn' `
+                -State 'Orphaned' -Integrity 'Unknown' -Action $(if ($requiresReview) { 'Review' } else { 'Remove' }) `
+                -Reason 'Loose files do not belong in the managed BuiltIn root; preserve links and recovery content for review.' `
+                -Path $file.FullName -Desired:$false -Pinned:$false))
+        }
+    }
+
     if (Test-Path -LiteralPath $stagingRoot -PathType Container) {
         foreach ($directory in @(Get-ChildItem -LiteralPath $stagingRoot -Directory -Force -ErrorAction SilentlyContinue)) {
             $entries.Add((New-CacheHealthEntry `
