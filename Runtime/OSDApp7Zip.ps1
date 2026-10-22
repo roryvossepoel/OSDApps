@@ -100,5 +100,9 @@ function Sync-OSDApp7ZipGeneration {
             Assert-OSDApp7ZipGeneration -Root $candidate -Architecture $Architecture -Release $release
         } | Out-Null
     }
+    Remove-OSDAppRetiredCacheVariant -Root $Root -Id 7Zip -Architecture $Architecture -Validate {
+        param($candidate)
+        Assert-OSDApp7ZipGeneration -Root $candidate -Architecture $Architecture -Release $release
+    }
     [pscustomobject]@{ Id='7Zip'; Version=$release.Version; Architecture=$Architecture; Root=$Root; Updated=(-not $current); CacheDecisionReason=$cacheDecisionReason }
 }

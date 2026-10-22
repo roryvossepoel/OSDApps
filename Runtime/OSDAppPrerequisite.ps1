@@ -168,6 +168,12 @@ function Sync-OSDAppPrerequisiteGeneration {
         } -Validate { param($candidate) Assert-OSDAppPrerequisiteGeneration -Root $candidate -Spec $Spec -Release $release -VerifyPublisher } | Out-Null
         $info = Assert-OSDAppPrerequisiteGeneration -Root $Root -Spec $Spec -VerifyPublisher
     }
+    if ($Spec.Family -eq 'VisualCRedist') {
+        Remove-OSDAppRetiredCacheVariant -Root $Root -Id VisualCRedist -Architecture $Spec.Architecture -Validate {
+            param($candidate)
+            Assert-OSDAppPrerequisiteGeneration -Root $candidate -Spec $Spec -Release $release -VerifyPublisher
+        }
+    }
     [pscustomobject]@{ Id=$Spec.Id; Version=$info.Version; Architecture=$Spec.Architecture; Root=$Root; Updated=(-not $current); CacheDecisionReason=$cacheDecisionReason }
 }
 

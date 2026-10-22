@@ -111,6 +111,8 @@ For repository packages, configure your real `CatalogUri` and call `Sync-OSDAppR
 
 ## How do I inspect and safely clean stale repository cache content?
 
+For built-in namespace cleanup instead, see [Keep the built-in cache managed](#how-do-i-keep-the-built-in-cache-managed).
+
 Start with the read-only health plan:
 
 ```powershell
@@ -136,6 +138,26 @@ command with `-Confirm`. `-Prune` is deliberately incompatible with selective
 `-Name` synchronization. Valid exceptional packages can be retained with
 `-PinnedId`; aliases, missing packages and corrupt packages cannot be pinned.
 See [Cache health and reconciliation](repository.md#cache-health-and-reconciliation).
+
+## How do I keep the built-in cache managed?
+
+`OSDApps\BuiltIn` is reserved for OSDApps built-in app caches. Store custom packages in your repository, and keep unrelated files outside this directory. Use a current module version so its built-in catalog knows the apps present on your USB flash drive.
+
+Preview unmanaged top-level folders and loose files, then apply the reviewed plan:
+
+```powershell
+Clear-OSDAppCache -BuiltIn -Prune -WhatIf
+Clear-OSDAppCache -BuiltIn -Prune -Confirm
+Get-OSDAppCacheHealth -Offline
+```
+
+Unlike `Clear-OSDAppCache -BuiltIn` alone, adding `-Prune` **retains every current built-in application directory**, including all architecture, language and channel variants. Legacy `Package.*` and `teams.msix` filenames inside those app directories are still supported and are not a reason to delete or download anything. Retired unregistered directories such as `VisualCppRedist` or `SevenZip`, and unrelated top-level files, are candidates for removal; their contents are not migrated.
+
+Registered aliases, filesystem links and transaction/recovery content are preserved for review and reported in the result's `Review` property. Registered aliases use their canonical app's replacement-validation flow. Pruning does not clean arbitrary nested files inside a current app directory; each app's generation handling owns that layout. Missing or invalid current app content remains visible to cache health and requires synchronization or investigation, not namespace pruning.
+
+Known retired variants are cleaned automatically after successful synchronization, both through Sync cmdlets and Windows PreInstall: `VisualCppRedist` becomes `VisualCRedist`, and `SevenZip` becomes `7Zip`. Only the matching architecture is removed, after revalidating its current replacement and confirming the old metadata identity. Other variants, unknown folders, links and recovery content remain untouched. Cleanup failure warns without failing the successfully synchronized app. The empty retired parent is removed after its last variant.
+
+The broader namespace prune above remains explicit USB maintenance. The apply operation uses the cache writer lock and honors confirmation. `-WhatIf` does not create a lock or log. Repository cache and target staging remain separate; app synchronization continues to replace superseded managed generations transactionally.
 
 ## What happens if the USB is removed too early?
 

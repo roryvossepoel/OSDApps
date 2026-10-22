@@ -64,3 +64,53 @@ function Copy-OSDAppBuiltInPayload {
         if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
     }
 }
+
+function Remove-OSDAppRetiredCacheVariant {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Root,
+        [Parameter(Mandatory)][ValidateSet('VisualCRedist','7Zip')][string]$Id,
+        [Parameter(Mandatory)][ValidateSet('x86','x64','arm64')][string]$Architecture,
+        [Parameter(Mandatory)][scriptblock]$Validate
+    )
+    # Called under the cache writer lock, only after successful synchronization.
+    # Never infer ownership from an unknown directory name alone.
+    try {
+        $active = Get-Item -LiteralPath $Root -Force -ErrorAction Stop
+        $app = $active.Parent
+        $builtIn = $app.Parent
+        if ($active.Name -ne $Architecture -or $app.Name -ne $Id -or $builtIn.Name -ne 'BuiltIn') { return }
+        $ancestor = $active
+        while ($null -ne $ancestor) {
+            if (($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { return }
+            $ancestor = $ancestor.Parent
+        }
+        $retiredId = if ($Id -eq 'VisualCRedist') { 'VisualCppRedist' } else { 'SevenZip' }
+        $retiredRoot = Join-Path $builtIn.FullName $retiredId
+        if (-not (Test-Path -LiteralPath $retiredRoot -PathType Container)) { return }
+        $retired = Get-Item -LiteralPath $retiredRoot -Force -ErrorAction Stop
+        if (($retired.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { return }
+        $path = Join-Path $retiredRoot $Architecture
+        if (-not (Test-Path -LiteralPath $path -PathType Container)) { return }
+        $pending = [System.Collections.Generic.Stack[System.IO.FileSystemInfo]]::new()
+        $pending.Push((Get-Item -LiteralPath $path -Force -ErrorAction Stop))
+        while ($pending.Count -gt 0) {
+            $item = $pending.Pop()
+            if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+                $item.Name -match '\.osdapps-' -or $item.Name -eq '.staging') { return }
+            if ($item -is [IO.DirectoryInfo]) {
+                foreach ($child in @(Get-ChildItem -LiteralPath $item.FullName -Force -ErrorAction Stop)) { $pending.Push($child) }
+            }
+        }
+        $info = Get-Content -LiteralPath (Join-Path $path 'CacheInfo.json') -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+        if ([string]$info.Id -ne $retiredId -or [string]$info.Architecture -ne $Architecture) { return }
+        & $Validate $Root | Out-Null
+        Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction Stop
+        Write-Information "Retired cache variant removed after replacement validation: $path" -Tags 'OSDApps','CacheAliasPruned'
+        # Only remove the parent when no other variants or recovery files remain.
+        if (@(Get-ChildItem -LiteralPath $retiredRoot -Force -ErrorAction Stop).Count -eq 0) {
+            Remove-Item -LiteralPath $retiredRoot -Force -ErrorAction Stop
+        }
+    }
+    catch { Write-Warning "Retired cache cleanup was not completed: $($_.Exception.Message)" }
+}
