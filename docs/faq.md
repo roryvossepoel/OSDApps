@@ -186,10 +186,10 @@ They describe different evidence:
 | Result | Meaning |
 | --- | --- |
 | Files present | The required built-in files/directories exist. |
-| SHA-256 verified | A repository archive matches its manifest hash. |
+| SHA-256 verified | The checked file matches its referenced hash. Repository ZIPs use the catalog hash; some built-ins also check recorded release hashes. |
 | Signature valid | A supported cached MSI/EXE passed Windows Authenticode and the expected built-in publisher check. |
 
-A built-in `Valid=True` cache entry is not a claim that its whole package chain was signature-verified. Office data, Teams MSIX and Adobe's outer ZIP are outside the specific MSI/EXE signature scope. Read the [Viewer status guide](viewer.md#integrity-and-signature-are-different-checks) and [publisher policy](built-in-apps.md#authenticode-and-publisher-policy-0340).
+A built-in `Valid=True` cache entry is not a claim that its whole package chain was signature-verified. Office data, Teams MSIX and Adobe's outer ZIP are outside the specific MSI/EXE signature scope. The exact local checks differ by app; `Healthy=True` does not establish vendor freshness or compatibility with every Office configuration. See [what a cache check proves](maintenance.md#what-a-cache-check-proves). Read the [Viewer status guide](viewer.md#integrity-and-signature-are-different-checks) and [publisher policy](built-in-apps.md#authenticode-and-publisher-policy-0340).
 
 ## Why did a signature or publisher check fail?
 
