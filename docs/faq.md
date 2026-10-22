@@ -16,6 +16,25 @@ Not in the deployed Windows installation for SetupComplete to work. The CLI stag
 
 The module is needed wherever you run its public CLI commands or open the Viewer.
 
+## What if an app installed by OSDApps is also a blocking app during Autopilot ESP?
+
+Normal Intune detection rules still apply. For a required Win32 app tracked as blocking by the Enrollment Status Page (ESP), Intune evaluates whether the app is already installed. If detection succeeds, Intune does not download or run that app's installer again, even when OSDApps installed it before OOBE. ESP still needs to process app policy and detection; this does not bypass enrollment or other ESP requirements.
+
+OSDApps built-ins can install a newer vendor release than the version packaged in Intune. Design detection to accept **the required version or a newer compatible version**, where your application policy allows this, rather than requiring an exact older version.
+
+For example, if Intune requires version `1.2.0` and OSDApps installed `1.3.0`, a suitable minimum-version rule recognizes the installed app. An exact `1.2.0` rule can report it as missing and cause Intune to attempt installation unnecessarily.
+
+Check the following when preparing the Intune app:
+
+- Match the product, architecture and installation context. A machine-wide installation is not the same as a per-user installation.
+- Use a supported version comparison or a detection script that parses version values correctly. Do not use plain string ordering or accept every newer major version without checking compatibility.
+- Ensure detection matches the installer actually used. An MSI product-code rule might not recognize an EXE-based installation, and product codes can change between releases.
+- Do not rely on a marker written only by your Intune installation wrapper: an OSDApps installation will not create that marker.
+
+OSDApps does not change Intune assignments or detection rules. Missing dependencies or additional organization-specific configuration can still require processing through Intune. Validate detection against an OSDApps-installed device before making the app blocking in ESP.
+
+See Microsoft's [Win32 app processing flow](https://learn.microsoft.com/troubleshoot/mem/intune/app-management/develop-deliver-working-win32-app-via-intune) and [Win32 app detection rules](https://learn.microsoft.com/intune/intune-service/apps/apps-win32-add#step-4-detection-rules).
+
 ## Why does Microsoft 365 Apps not refresh in WinPE?
 
 OSDApps does not use the Office Deployment Tool as a WinPE acquisition mechanism. Built-in acquisition/refresh runs in full Windows, where the deployment runtime used by the module is available. WinPE stages Office deployment intent and can copy an existing Office cache.
