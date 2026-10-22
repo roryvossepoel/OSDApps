@@ -418,6 +418,9 @@ function Get-OSDAppCacheHealthState {
         elseif ($officeGenerationCorrupt) {
             $state = 'Corrupt'; $action = 'Refresh'; $reason = "The Microsoft 365 Apps cache generation is inconsistent. $officeGenerationReason"
         }
+        elseif ($item.PSObject.Properties['PayloadError'] -and $item.PayloadError) {
+            $state = 'Corrupt'; $action = 'Refresh'; $reason = [string]$item.PayloadError
+        }
         elseif ($canonicalId -in @('VisualCRedist','DotNetRuntime') -and -not $item.Valid) {
             $state = 'Corrupt'; $action = 'Refresh'; $reason = 'Runtime generation identity, size or hash validation failed.'
         }
@@ -437,7 +440,7 @@ function Get-OSDAppCacheHealthState {
         $entries.Add((New-CacheHealthEntry `
             -Id $topLevelId -CanonicalId $canonicalId -DisplayName $item.DisplayName `
             -Source 'BuiltIn' -Version $item.Version -Architecture $item.Architecture `
-            -State $state -Integrity $(if ($officeGenerationCorrupt) { 'Corrupt' } elseif ($item.Valid) { 'Valid' } else { 'Missing' }) `
+            -State $state -Integrity $(if ($officeGenerationCorrupt -or ($item.PSObject.Properties['PayloadError'] -and $item.PayloadError)) { 'Corrupt' } elseif ($item.Valid) { 'Valid' } else { 'Missing' }) `
             -Action $action -Reason $reason -Path $item.CachePath `
             -Desired:$folderIsCanonical -Pinned:$isPinned))
     }

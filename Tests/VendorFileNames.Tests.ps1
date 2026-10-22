@@ -110,4 +110,24 @@ Describe 'Built-in vendor filenames' {
             Test-Path (Join-Path $root 'Package.msi') | Should -BeFalse
         }
     }
+    It 'keeps an ambiguous variant visible and unhealthy alongside a healthy variant' {
+        InModuleScope OSDApps {
+            $cache = Join-Path $TestDrive 'Inventory'
+            foreach ($arch in @('x86','x64')) {
+                $variant = Join-Path $cache (Join-Path 'BuiltIn/GoogleChromeEnterprise' $arch)
+                New-Item -ItemType Directory $variant -Force | Out-Null
+                @{Id='GoogleChromeEnterprise';Architecture=$arch;Version='1.0';Cached=$true} | ConvertTo-Json | Set-Content (Join-Path $variant 'CacheInfo.json')
+                Set-Content (Join-Path $variant 'chrome.msi') 'fixture'
+            }
+            Set-Content (Join-Path $cache 'BuiltIn/GoogleChromeEnterprise/x64/Package.msi') 'ambiguous'
+            $entries = @(Get-OSDAppCache -CachePath $cache)
+            $entries.Count | Should -Be 2
+            ($entries | Where-Object Architecture -eq x86).Valid | Should -BeTrue
+            ($entries | Where-Object Architecture -eq x64).Valid | Should -BeFalse
+            ($entries | Where-Object Architecture -eq x64).PayloadError | Should -Match 'Ambiguous'
+            $health = Get-OSDAppCacheHealthState -CachePath $cache
+            @($health.Entries | Where-Object State -eq Corrupt).Count | Should -Be 1
+        }
+    }
+
 }
