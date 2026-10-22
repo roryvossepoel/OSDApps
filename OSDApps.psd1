@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.48.1'
+    ModuleVersion     = '0.49.0'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -57,7 +57,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.48.1: Explain built-in cache reuse, downloads, offline fallback and acquisition failures through CacheDecisionReason in deployment results and logs. Distinguish changed HTTP metadata from a confirmed new application version. Existing cache, download and fallback policies remain unchanged.'
+            ReleaseNotes = '0.49.0: Preserve original vendor installer filenames while retaining support for legacy cache names. Automatically clean known retired cache variants after replacement validation. Add explicit BuiltIn cache pruning with WhatIf support. Custom repository archives remain Package.zip.'
             RequireLicenseAcceptance = $false
         }
     }
