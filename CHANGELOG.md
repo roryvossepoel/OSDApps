@@ -2,11 +2,16 @@
 
 ## Unreleased
 
+## 0.49.0
+
 - Automatically remove known retired VisualCppRedist and SevenZip cache variants after validating their canonical replacements. Preserve other architectures, links and recovery content.
 
 - Add explicit `Clear-OSDAppCache -BuiltIn -Prune` maintenance for unmanaged built-in root folders and loose files. Preserve managed variants, legacy payload filenames, registered aliases, filesystem links and recovery content. Support read-only preview, per-item confirmation and the existing exclusive cache writer lock.
 
 - Preserve vendor installer filenames for built-in downloads, USB caches and Windows staging, including the Teams MSIX. Continue reading legacy generic-name caches without forced downloads. Keep the `Package.zip` contract for custom repository apps and scripts. Reject unsafe download filenames and ambiguous built-in payloads.
+
+- Document Intune ESP detection for applications preinstalled by OSDApps, including compatible newer versions.
+- Validate vendor filenames and legacy cache reuse on two physical deployments and USB caches, plus isolated automatic cleanup on Windows.
 
 ## 0.48.1
 
