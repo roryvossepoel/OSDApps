@@ -15,7 +15,7 @@ function Add-OSDAppGoogleChromeEnterpriseInternal {
     $clientLogPath = if ($CachePath) { Join-Path $CachePath 'Logs\Client.log' } else { Join-Path $WindowsPath 'ProgramData\OSDApps\Logs\Client.log' }
 
     $cacheRoot = if ($CachePath) { Join-Path $CachePath (Join-Path 'BuiltIn\GoogleChromeEnterprise' $Architecture) } else { $null }
-    $cacheHasPayload = $cacheRoot -and (Test-Path -LiteralPath (Join-Path $cacheRoot 'Package.msi') -PathType Leaf)
+    $cacheHasPayload = $cacheRoot -and (Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'Package.msi'))) -PathType Leaf)
 
     if (-not $PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage Google Chrome Enterprise deployment intent and available cache')) { return }
 

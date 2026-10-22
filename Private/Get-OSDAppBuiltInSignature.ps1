@@ -108,7 +108,7 @@ function Get-OSDAppBuiltInSignature {
     if (-not $FilePath -and -not $CacheEntryPath) {
         throw 'Specify -CacheEntryPath or -FilePath.'
     }
-    $path = if ($FilePath) { $FilePath } else { Join-Path $CacheEntryPath $relativeFile }
+    $path = if ($FilePath) { $FilePath } else { Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $CacheEntryPath $relativeFile) }
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         return [pscustomobject]@{
             Status='File missing';Scope=$scope;File=$path;Signer=$null

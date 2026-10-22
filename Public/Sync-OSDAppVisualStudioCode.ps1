@@ -12,7 +12,7 @@ function Sync-OSDAppVisualStudioCode {
     try {
         $sync = Sync-OSDAppVisualStudioCodeGeneration -Root $root -Architecture $Architecture -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Download {
             param($uri, $destination)
-            Save-OSDAppDownload -Uri $uri -DestinationPath $destination -Activity 'Downloading VisualStudioCode'
+            Save-OSDAppDownload -PreserveFileName -Uri $uri -DestinationPath $destination -Activity 'Downloading VisualStudioCode'
         }
         Write-OSDAppLog -LogPath (Join-Path $cachePath 'Logs\Client.log') -Component VisualStudioCode -Event BuiltInSyncComplete -Message 'VisualStudioCode release SHA-256 validated and cache synchronized.' -Data @{Version=$sync.Version;Architecture=$Architecture;Updated=$sync.Updated}
         [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='VisualStudioCode';Version=$sync.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=$sync.Updated}

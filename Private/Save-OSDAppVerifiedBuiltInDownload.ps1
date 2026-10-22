@@ -14,7 +14,8 @@ function Save-OSDAppVerifiedBuiltInDownload {
         [Parameter(Mandatory)][string]$DestinationPath,
         [Parameter(Mandatory)][string]$Activity,
         [int]$ProgressId = 20,
-        [int]$ParentProgressId = -1
+        [int]$ParentProgressId = -1,
+        [switch]$PreserveFileName
     )
 
     if (Test-OSDAppWinPE) {
@@ -26,11 +27,21 @@ function Save-OSDAppVerifiedBuiltInDownload {
     $token = [guid]::NewGuid().ToString('N')
     $candidate = Join-Path $directory ("$basename.$token.candidate$extension")
     $backup = Join-Path $directory ("$basename.$token.previous$extension")
+    $candidateDirectory = $null
+    if ($PreserveFileName) {
+        $candidateDirectory = Join-Path $directory ('.osdapps-download-' + $token)
+        New-Item -ItemType Directory -Path $candidateDirectory -Force | Out-Null
+        $candidate = Join-Path $candidateDirectory ([IO.Path]::GetFileName($DestinationPath))
+    }
     $hadPrevious = $false
     $promoted = $false
 
     try {
-        Save-OSDAppDownload -Uri $Uri -DestinationPath $candidate -Activity $Activity -ProgressId $ProgressId -ParentProgressId $ParentProgressId | Out-Null
+        Save-OSDAppDownload -Uri $Uri -DestinationPath $candidate -Activity $Activity -ProgressId $ProgressId -ParentProgressId $ParentProgressId -PreserveFileName:$PreserveFileName | Out-Null
+        if ($PreserveFileName) {
+            $candidate = Resolve-OSDAppBuiltInPayloadPath -Path $candidate
+            $DestinationPath = Join-Path $directory ([IO.Path]::GetFileName($candidate))
+        }
         Assert-OSDAppBuiltInSignature -Id $Id -FilePath $candidate | Out-Null
 
         $hadPrevious = Test-Path -LiteralPath $DestinationPath -PathType Leaf
@@ -57,6 +68,9 @@ function Save-OSDAppVerifiedBuiltInDownload {
     finally {
         if (Test-Path -LiteralPath $candidate -PathType Leaf) {
             Remove-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue
+        }
+        if ($candidateDirectory -and (Test-Path -LiteralPath $candidateDirectory)) {
+            Remove-Item -LiteralPath $candidateDirectory -Recurse -Force -ErrorAction SilentlyContinue
         }
         # Retain the backup after an incomplete promotion/rollback for recovery.
         if ($promoted -and (Test-Path -LiteralPath $backup -PathType Leaf)) {

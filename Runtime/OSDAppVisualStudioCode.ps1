@@ -1,3 +1,4 @@
+. (Join-Path $PSScriptRoot 'OSDAppPayloadFile.ps1')
 # Shared by the module, PreInstall and Runner. Loading this file performs no I/O.
 function Get-OSDAppVisualStudioCodePackageUri {
     param(
@@ -41,7 +42,7 @@ function Assert-OSDAppVisualStudioCodeGeneration {
     if ($Release -and ([string]$info.Version -ne [string]$Release.Version -or
         [string]$info.Commit -ne [string]$Release.Commit -or [string]$info.Sha256 -ne [string]$Release.Sha256 -or
         [string]$info.PackageUri -cne [string]$Release.PackageUri)) { throw 'Visual Studio Code cache does not match the current official release.' }
-    $package = Join-Path $Root 'Package.exe'
+    $package = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'Package.exe'))
     if ((Get-Item -LiteralPath $package -ErrorAction Stop).Length -ne [long]$info.Size -or
         (Get-FileHash -LiteralPath $package -Algorithm SHA256 -ErrorAction Stop).Hash -ne [string]$info.Sha256) {
         throw 'Visual Studio Code package size or SHA-256 does not match the recorded release.'
@@ -84,8 +85,9 @@ function Sync-OSDAppVisualStudioCodeGeneration {
         # free-space reserve; record actual length and validate the digest after download.
         Invoke-OSDAppBuiltInCacheTransaction -Root $Root -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Build {
             param($candidate)
-            $package = Join-Path $candidate 'Package.exe'
+            $package = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $candidate 'Package.exe'))
             & $downloadAction $release.PackageUri $package | Out-Null
+            $package = Resolve-OSDAppBuiltInPayloadPath -Path $package
             [ordered]@{
                 Id='VisualStudioCode'; Cached=$true; Version=$release.Version; Commit=$release.Commit;
                 VersionSource='MicrosoftUpdateService'; Architecture=$Architecture;

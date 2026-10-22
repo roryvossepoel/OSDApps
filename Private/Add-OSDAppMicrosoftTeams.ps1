@@ -26,7 +26,7 @@ function Add-OSDAppMicrosoftTeamsInternal {
     $cacheHasPayload = $false
     if ($cacheRoot) {
         $cacheHasPayload = (
-            (Test-Path -LiteralPath (Join-Path $cacheRoot 'teams.msix') -PathType Leaf) -and
+            (Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'teams.msix'))) -PathType Leaf) -and
             (Test-Path -LiteralPath (Join-Path $cacheRoot 'teamsbootstrapper.exe') -PathType Leaf)
         )
     }

@@ -1,5 +1,6 @@
 Describe 'Per-deployment acquisition reporting' {
     BeforeAll {
+        . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime/OSDAppPayloadFile.ps1')
         $moduleRoot = Split-Path $PSScriptRoot -Parent
         $runtimePath = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1'
         $tokens = $null; $errors = $null
@@ -111,6 +112,37 @@ Describe 'Per-deployment acquisition reporting' {
             }
             $cacheInfo | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Encoding UTF8
         }
+    }
+
+    It 'keeps vendor filenames through USB acquisition, staging and warm reuse for all six HTTP payloads' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -ne Microsoft365Apps)
+        $script:usbRoot = Join-Path $TestDrive 'NativeUsb'
+        Mock Restore-PreInstallBuiltInCache { }
+        Mock Save-PreInstallDownload {
+            if ((Split-Path $DestinationPath -Leaf) -ne 'teamsbootstrapper.exe') {
+                $DestinationPath = Join-Path (Split-Path $DestinationPath -Parent) ('vendor-' + $Id + [IO.Path]::GetExtension($DestinationPath))
+            }
+            if ($DestinationPath -match '\.zip$') { New-TestArchive -Path $DestinationPath }
+            elseif ($DestinationPath -match '\.msix$') { New-TestArchive -Path $DestinationPath -Teams }
+            else { Set-Content -LiteralPath $DestinationPath -Value 'native fixture payload' }
+        }
+        . $script:preparationLoop
+        @($applicationResults | Where-Object AcquisitionOutcome -ne Downloaded).Count | Should -Be 0
+        foreach ($app in $builtInApps) {
+            $name = 'vendor-' + $app.Id + [IO.Path]::GetExtension($app.File)
+            $cached = Join-Path (Join-Path $usbRoot $app.Relative) $name
+            $staged = Join-Path (Join-Path $StagedPath $app.Relative) $name
+            (Get-FileHash $staged).Hash | Should -Be (Get-FileHash $cached).Hash
+            Test-Path (Join-Path (Join-Path $StagedPath $app.Relative) $app.File) | Should -BeFalse
+        }
+        # The recorded new ETag still matches the same remote ETag.
+        $applicationResults.Clear()
+        Mock Save-PreInstallDownload {
+            if ((Split-Path $DestinationPath -Leaf) -ne 'teamsbootstrapper.exe') { throw 'Primary payload must be reused.' }
+            Set-Content -LiteralPath $DestinationPath -Value 'bootstrapper fixture'
+        }
+        . $script:preparationLoop
+        @($applicationResults | Where-Object AcquisitionOutcome -ne CacheReused).Count | Should -Be 0
     }
 
     It 'reports a fresh acquisition for all seven built-ins even when the Office version did not change' {

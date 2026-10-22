@@ -12,7 +12,7 @@ function Sync-OSDApp7Zip {
     try {
         $sync = Sync-OSDApp7ZipGeneration -Root $root -Architecture $Architecture -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Download {
             param($uri, $destination)
-            Save-OSDAppDownload -Uri $uri -DestinationPath $destination -Activity 'Downloading 7Zip'
+            Save-OSDAppDownload -PreserveFileName -Uri $uri -DestinationPath $destination -Activity 'Downloading 7Zip'
         }
         Write-OSDAppLog -LogPath (Join-Path $cachePath 'Logs\Client.log') -Component 7Zip -Event BuiltInSyncComplete -Message '7Zip release SHA-256 validated and cache synchronized.' -Data @{Version=$sync.Version;Architecture=$Architecture;Updated=$sync.Updated}
         [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='7Zip';Version=$sync.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=$sync.Updated}

@@ -95,13 +95,13 @@ function Get-OSDAppCache {
                     }
                     'MicrosoftTeams' {
                         (Test-Path -LiteralPath (Join-Path $entryRoot 'teamsbootstrapper.exe') -PathType Leaf) -and
-                        (Test-Path -LiteralPath (Join-Path $entryRoot 'teams.msix') -PathType Leaf)
+                        (Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'teams.msix'))) -PathType Leaf)
                     }
                     'AdobeAcrobatUnified' {
-                        Test-Path -LiteralPath (Join-Path $entryRoot 'Package.zip') -PathType Leaf
+                        Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.zip'))) -PathType Leaf
                     }
                     'GoogleChromeEnterprise' {
-                        Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
+                        Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
                     }
                     { $_ -in @('VisualCRedist','DotNetRuntime') } {
                         try {
@@ -117,13 +117,13 @@ function Get-OSDAppCache {
                         try { Assert-OSDApp7ZipGeneration -Root $entryRoot -Architecture ([string]$info.Architecture) | Out-Null; $true } catch { $false }
                     }
                     'ZoomWorkplace' {
-                        Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
+                        Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
                     }
                     'CiscoWebex' {
-                        Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
+                        Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
                     }
                     'MozillaFirefoxEnterprise' {
-                        Test-Path -LiteralPath (Join-Path $entryRoot 'Package.msi') -PathType Leaf
+                        Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
                     }
                     default {
                         $files.Count -gt 0

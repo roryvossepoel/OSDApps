@@ -38,7 +38,7 @@ function Add-OSDAppCiscoWebexInternal {
     $cacheRoot = if ($CachePath) { Join-Path $CachePath $relativeRoot } else { $null }
     $cacheHasPayload = $false
     if ($cacheRoot) {
-        $cacheHasPayload = Test-Path -LiteralPath (Join-Path $cacheRoot 'Package.msi') -PathType Leaf
+        $cacheHasPayload = Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'Package.msi'))) -PathType Leaf
     }
 
     if (-not $PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage Cisco Webex deployment intent and available cache')) { return }
@@ -50,11 +50,11 @@ function Add-OSDAppCiscoWebexInternal {
 
     if ($cacheHasPayload) {
         Copy-Item -Path (Join-Path $cacheRoot '*') -Destination $destinationBuiltIn -Recurse -Force -ErrorAction Stop
-        $stagedMsi = Join-Path $destinationBuiltIn 'Package.msi'
+        $stagedMsi = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $destinationBuiltIn 'Package.msi'))
         if (-not (Test-Path -LiteralPath $stagedMsi -PathType Leaf)) {
             throw "Cisco Webex cache staging failed; expected MSI: $stagedMsi"
         }
-        if ((Get-Item -LiteralPath $stagedMsi).Length -ne (Get-Item -LiteralPath (Join-Path $cacheRoot 'Package.msi')).Length) {
+        if ((Get-Item -LiteralPath $stagedMsi).Length -ne (Get-Item -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'Package.msi')))).Length) {
             throw "Cisco Webex cache staging failed; MSI size differs: $stagedMsi"
         }
     }

@@ -1,5 +1,6 @@
 Describe 'Cache transaction space budgets' {
     BeforeAll {
+        . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime/OSDAppPayloadFile.ps1')
         Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) 'OSDApps.psd1') -Force
     }
 

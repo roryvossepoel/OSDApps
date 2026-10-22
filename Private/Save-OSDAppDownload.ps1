@@ -12,7 +12,8 @@ function Save-OSDAppDownload {
 
         [int]$ProgressId = 20,
 
-        [int]$ParentProgressId = -1
+        [int]$ParentProgressId = -1,
+        [switch]$PreserveFileName
     )
 
     Add-Type -AssemblyName System.Net.Http -ErrorAction SilentlyContinue
@@ -36,7 +37,11 @@ function Save-OSDAppDownload {
 
     try {
         $response = $client.GetAsync($Uri, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
-        $response.EnsureSuccessStatusCode()
+        $response.EnsureSuccessStatusCode() | Out-Null
+        if ($PreserveFileName) {
+            $name = Get-OSDAppDownloadFileName -Response $response -ExpectedExtension ([IO.Path]::GetExtension($DestinationPath))
+            $DestinationPath = Join-Path $directory $name
+        }
 
         $totalBytes = $response.Content.Headers.ContentLength
         $source = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()

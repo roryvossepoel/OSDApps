@@ -15,7 +15,7 @@ function Sync-OSDAppVendorBuiltInCache {
     )
 
     Restore-OSDAppBuiltInCache -Root $Root -Id $Id -LogPath $LogPath
-    $activePackage = Join-Path $Root $PackageFileName
+    $activePackage = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root $PackageFileName))
     $activeCacheInfo = Join-Path $Root 'CacheInfo.json'
     $previousCacheInfo = $null
     if (Test-Path -LiteralPath $activeCacheInfo -PathType Leaf) {
@@ -49,12 +49,12 @@ function Sync-OSDAppVendorBuiltInCache {
 
     Invoke-OSDAppBuiltInCacheTransaction -Root $Root -ExpectedBytes ([double]$remoteMetadata.ContentLength) -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Build {
         param($candidateRoot)
-        $candidatePackage = Join-Path $candidateRoot $PackageFileName
+        $candidatePackage = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $candidateRoot $PackageFileName))
         if ($SignedPackage) {
-            Save-OSDAppVerifiedBuiltInDownload -Id $Id -Uri $PackageUri -DestinationPath $candidatePackage -Activity $Activity | Out-Null
+            Save-OSDAppVerifiedBuiltInDownload -PreserveFileName -Id $Id -Uri $PackageUri -DestinationPath $candidatePackage -Activity $Activity | Out-Null
         }
         else {
-            Save-OSDAppDownload -Uri $PackageUri -DestinationPath $candidatePackage -Activity $Activity | Out-Null
+            Save-OSDAppDownload -PreserveFileName -Uri $PackageUri -DestinationPath $candidatePackage -Activity $Activity | Out-Null
         }
 
         $inspectedVersion = Get-OSDAppCachedPackageVersion -Id $Id -CacheEntryPath $candidateRoot
@@ -71,7 +71,7 @@ function Sync-OSDAppVendorBuiltInCache {
         $cacheRecord | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $candidateRoot 'CacheInfo.json') -Encoding UTF8
     } -Validate {
         param($candidateRoot)
-        $candidatePackage = Join-Path $candidateRoot $PackageFileName
+        $candidatePackage = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $candidateRoot $PackageFileName))
         if ($SignedPackage) { Assert-OSDAppBuiltInSignature -Id $Id -FilePath $candidatePackage | Out-Null }
         Test-OSDAppBuiltInCacheGeneration -Id $Id -Root $candidateRoot -RequiredFile $PackageFileName -ValidateZip:$ZipPackage
     } | Out-Null

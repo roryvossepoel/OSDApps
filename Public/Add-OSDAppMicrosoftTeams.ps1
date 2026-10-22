@@ -26,7 +26,7 @@ function Add-OSDAppMicrosoftTeams {
 
     if ($cachePath) {
         $existingMicrosoftTeamsCache = (
-            (Test-Path -LiteralPath (Join-Path $cachePath 'BuiltIn\MicrosoftTeams\teams.msix') -PathType Leaf) -and
+            (Test-Path -LiteralPath (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cachePath 'BuiltIn\MicrosoftTeams\teams.msix')) -PathType Leaf) -and
             (Test-Path -LiteralPath (Join-Path $cachePath 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe') -PathType Leaf)
         )
 

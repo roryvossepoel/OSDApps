@@ -20,7 +20,7 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
     $cacheRoot = if ($CachePath) { Join-Path $CachePath $relativeRoot } else { $null }
     $cacheHasPayload = $false
     if ($cacheRoot) {
-        $cacheHasPayload = Test-Path -LiteralPath (Join-Path $cacheRoot 'Package.zip') -PathType Leaf
+        $cacheHasPayload = Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'Package.zip'))) -PathType Leaf
     }
 
     if (-not $PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage Adobe Acrobat Unified deployment intent and available cache')) { return }
@@ -32,11 +32,11 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
 
     if ($cacheHasPayload) {
         Copy-Item -Path (Join-Path $cacheRoot '*') -Destination $destinationBuiltIn -Recurse -Force -ErrorAction Stop
-        $stagedArchive = Join-Path $destinationBuiltIn 'Package.zip'
+        $stagedArchive = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $destinationBuiltIn 'Package.zip'))
         if (-not (Test-Path -LiteralPath $stagedArchive -PathType Leaf)) {
             throw "Adobe Acrobat Unified cache staging failed; expected archive: $stagedArchive"
         }
-        if ((Get-Item -LiteralPath $stagedArchive).Length -ne (Get-Item -LiteralPath (Join-Path $cacheRoot 'Package.zip')).Length) {
+        if ((Get-Item -LiteralPath $stagedArchive).Length -ne (Get-Item -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'Package.zip')))).Length) {
             throw "Adobe Acrobat Unified cache staging failed; archive size differs: $stagedArchive"
         }
     }

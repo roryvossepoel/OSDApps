@@ -37,7 +37,7 @@ function Add-OSDAppAdobeAcrobatUnified {
     $stagedRelativePath = 'Windows\Temp\OSDApps'
 
     if ($cachePath) {
-        $existingCache = Test-Path -LiteralPath (Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $Architecture 'Package.zip'))) -PathType Leaf
+        $existingCache = Test-Path -LiteralPath (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $Architecture 'Package.zip')))) -PathType Leaf
         if ($existingCache) {
             if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'AdobeAcrobatUnified' -Message 'Existing cache found; cached package will be staged as fallback and refreshed during SetupComplete' }
         }

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Preserve vendor installer filenames for built-in downloads, USB caches and Windows staging, including the Teams MSIX. Continue reading legacy generic-name caches without forced downloads. Keep the `Package.zip` contract for custom repository apps and scripts. Reject unsafe download filenames and ambiguous built-in payloads.
+
 ## 0.48.1
 
 - Explain built-in cache reuse, acquisition, offline fallback and failures with a per-deployment `CacheDecisionReason` in PreInstall results, Runner results and acquisition logs. Preserve the existing cache policies and distinguish changed HTTP metadata from a confirmed new application version.

@@ -14,7 +14,7 @@ function Add-OSDAppPrerequisiteInternal {
     $clientLogPath = if ($CachePath) { Join-Path $CachePath 'Logs\Client.log' } else { Join-Path $WindowsPath 'ProgramData\OSDApps\Logs\Client.log' }
 
     $cacheRoot = if ($CachePath) { Join-Path $CachePath $Spec.RelativeRoot } else { $null }
-    $cacheHasPayload = $cacheRoot -and (Test-Path -LiteralPath (Join-Path $cacheRoot 'Package.exe') -PathType Leaf)
+    $cacheHasPayload = $cacheRoot -and (Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'Package.exe'))) -PathType Leaf)
 
     if (-not $PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage Prerequisite deployment intent and available cache')) { return }
 

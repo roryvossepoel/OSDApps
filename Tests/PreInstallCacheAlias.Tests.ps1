@@ -1,5 +1,6 @@
 Describe 'Standalone PreInstall retired Teams cache cleanup' {
     BeforeAll {
+        . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime/OSDAppPayloadFile.ps1')
         $root = Split-Path -Parent $PSScriptRoot
         $runtimePath = Join-Path $root 'Runtime\Invoke-OSDAppPreInstall.ps1'
         $tokens = $null
