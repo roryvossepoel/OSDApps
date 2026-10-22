@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Persist automatic VisualCppRedist/SevenZip predecessor cleanup outcomes in the existing client and PreInstall logs, including preservation reasons and failures. Keep cleanup guards, cache reuse and synchronization result objects unchanged; logging failures do not change cleanup decisions.
+
 - Add Diagnostics mode to the standalone maintenance tool: export deployment results, runtime log rotations and bounded installer-log candidates to a local ZIP with a source inventory, hashes and collection warnings. No new module cmdlet or runtime behavior change.
 
 ## 0.49.0

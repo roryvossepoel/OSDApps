@@ -72,6 +72,35 @@ Get-OSDAppCache -VerifySignatures |
 
 Office configuration matching happens separately during staging and PreInstall: the requested acquisition settings are compared with the recorded payload profile. Online acquisition then makes the vendor-freshness decision. A cache can pass local health checks yet need new content for another language/product selection or a newer advertised build. See [Office compatibility and file-check limits](built-in-apps.md#office-cache-compatibility-with-deployment-configuration) and [built-in update detection](built-in-apps.md#how-update-freshness-is-determined).
 
+## Automatic retired-cache cleanup logs
+
+After successful VisualCRedist or 7Zip synchronization, cleanup of the known `VisualCppRedist` or `SevenZip` predecessor records its decisions in the existing log:
+
+- Public Sync commands: `<cache>\Logs\Client.log`, component `CacheCleanup`.
+- Windows PreInstall: the deployment's `Runtime.log`, component `PreInstall`.
+
+| Event | Meaning |
+| --- | --- |
+| `CacheRetiredVariantRemoved` | The matching old architecture directory was removed after validating the active replacement. |
+| `CacheRetiredVariantRetained` | A guard prevented removal, such as mismatched metadata, a linked path or recovery content. |
+| `CacheRetiredParentRemoved` | The retired app directory was empty after variant cleanup and was removed. |
+| `CacheRetiredParentRetained` | Other content remains, or the requested architecture has no old variant. Other architectures are not removed by this operation. |
+| `CacheRetiredCleanupFailed` | Inspection, replacement validation or removal raised an error. `Stage` and `Error` identify the failed operation. A removal error can leave partially removed content; this event does not promise rollback. |
+
+Records include `Id`, `RetiredId`, `Architecture`, `ActivePath`, the affected `Path`, `Reason` and `Stage`. A parent-retained record does not validate the remaining files. A missing retired app directory produces no cleanup event. These messages describe this specific automatic cleanup, not all unmanaged content or explicit namespace pruning; Teams retains its existing alias-cleanup events.
+
+Cleanup still runs under the writer lock and uses the same replacement, identity and recovery guards. Logging adds no cleanup pass, vendor query or download. A logger failure warns without changing the cleanup decision. Existing synchronization result objects remain unchanged.
+
+Diagnostics mode includes available runtime records through its normal runtime-log collection. To also include USB maintenance history, explicitly add the client log (which may contain multiple deployments):
+
+```powershell
+$report = & .\tools\Test-OSDAppsMaintenance.ps1 -Mode Diagnostics `
+    -AdditionalLogPath D:\OSDApps\Logs\Client.log `
+    -OutputPath C:\Temp\OSDApps-Diagnostics.zip
+```
+
+Use the actual USB drive letter and a new ZIP path in an existing directory. The normal diagnostic size limits and sharing precautions apply.
+
 ## Check a published release
 
 ```powershell

@@ -995,7 +995,10 @@ try {
                 $acquireRoot = if ($usbRoot) { Join-Path $usbRoot $relativeRoot } else { $localRoot }
                 try {
                     if (-not $networkAvailable) { throw 'No network connection is available.' }
-                    $sync = Sync-OSDAppPrerequisiteGeneration -Root $acquireRoot -Spec $spec -Download {
+                    $sync = Sync-OSDAppPrerequisiteGeneration -Root $acquireRoot -Spec $spec -Log {
+                        param($record)
+                        Write-PreInstallLog -Event $record.Event -Level $record.Level -Message $record.Message -Data $record.Data
+                    } -Download {
                         param($uri, $destination)
                         Save-PreInstallDownload -Uri $uri -DestinationPath $destination -Id $spec.Id -Description 'Runtime EXE' -TimeoutMinutes 10
                     }
@@ -1050,7 +1053,10 @@ try {
                 $acquireRoot = if ($usbRoot) { Join-Path $usbRoot $relativeRoot } else { $localRoot }
                 try {
                     if (-not $networkAvailable) { throw 'No network connection is available.' }
-                    $sync = Sync-OSDApp7ZipGeneration -Root $acquireRoot -Architecture $architecture -Download {
+                    $sync = Sync-OSDApp7ZipGeneration -Root $acquireRoot -Architecture $architecture -Log {
+                        param($record)
+                        Write-PreInstallLog -Event $record.Event -Level $record.Level -Message $record.Message -Data $record.Data
+                    } -Download {
                         param($uri, $destination)
                         Save-PreInstallDownload -Uri $uri -DestinationPath $destination -Id '7Zip' -Description '7Zip EXE' -TimeoutMinutes 10
                     }
