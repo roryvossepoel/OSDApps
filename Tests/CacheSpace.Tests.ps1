@@ -1,6 +1,5 @@
 Describe 'Cache transaction space budgets' {
     BeforeAll {
-        . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime/OSDAppPayloadFile.ps1')
         Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) 'OSDApps.psd1') -Force
     }
 
@@ -105,6 +104,7 @@ Describe 'Cache transaction space budgets' {
 
 Describe 'Standalone PreInstall low-space fallback' {
     BeforeAll {
+        . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime/OSDAppPayloadFile.ps1')
         $root = Split-Path -Parent $PSScriptRoot
         . (Join-Path $root 'Runtime\Assert-OSDAppTransactionSpace.ps1')
         $tokens = $null; $errors = $null
