@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add Diagnostics mode to the standalone maintenance tool: export deployment results, runtime log rotations and bounded installer-log candidates to a local ZIP with a source inventory, hashes and collection warnings. No new module cmdlet or runtime behavior change.
+
 ## 0.49.0
 
 - Automatically remove known retired VisualCppRedist and SevenZip cache variants after validating their canonical replacements. Preserve other architectures, links and recovery content.
