@@ -4,6 +4,51 @@ Use [`tools/Test-OSDAppsMaintenance.ps1`](../tools/Test-OSDAppsMaintenance.ps1) 
 
 Download the script from the repository, or run it from a checkout. Windows PowerShell 5.1 and PowerShell 7 are supported. The examples below assume the repository root is the current directory.
 
+## Choose the right check
+
+Run the check that answers your question; a routine module update does not require every check below. Each pass applies only to the selected scope.
+
+| Question | Check | Where / what it changes |
+| --- | --- | --- |
+| Can the built-in download sources still be resolved? | [Vendor source metadata](#check-vendor-source-metadata) | Preparation PC with internet; saves a temporary module, a small Office descriptor and reports. No USB flash drive required; no app-cache access. |
+| Is the existing USB cache healthy? | [USB inspection](#check-a-usb-flash-drive), or `Get-OSDAppCacheHealth -Offline` | Preparation PC with the intended USB flash drive; reads local cache content. Does not establish vendor freshness. |
+| Did the module release and publication finish? | [Release inspection](#check-a-published-release) | Preparation PC with internet; reads GitHub and Gallery status. |
+| Is this target ready for its first Windows boot? | `Test-OSDAppDeployment -ThrowOnFailure` | WinPE after staging; validates the prepared deployment. See [preflight](getting-started.md#3-inspect-before-reboot). It does not install apps. |
+| What did a completed deployment report? | [Saved-result inspection](#inspect-a-saved-deployment-result) | Reads the deployment's result file on the target or a preparation PC. Does not inspect installed apps or rerun SetupComplete. |
+| What should I collect for troubleshooting? | [Diagnostic bundle](#export-a-diagnostic-bundle) | Usually the affected Windows PC; reads results/logs and writes a new ZIP. Review it before sharing. |
+| Does installation actually work on this hardware? | A scoped [deployment test](testing.md) | Fresh Windows target after OSDCloud; stages and installs apps and may update the connected cache. This is separate from the read-only inspections above. |
+
+If multiple USB flash drives are connected, explicitly select the intended drive for USB inspection. Vendor-source checks do not select or inspect either drive. Reaching OOBE, a healthy cache, and reachable vendor links are three different observations; none substitutes for checking the deployment results.
+
+## Check vendor source metadata
+
+Download [`Test-OSDApps-VendorSources.ps1`](../tools/Test-OSDApps-VendorSources.ps1), or run it from a checkout in a separate Windows PowerShell process:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-OSDApps-VendorSources.ps1
+```
+
+Use full Windows on the preparation PC with internet access and PowerShellGet's `Save-Module` available. The script refuses WinPE. No USB flash drive or test deployment is required; connected USB flash drives are neither inspected nor changed. No GitHub Action or scheduled task is needed.
+
+This is a **version-pinned diagnostic for OSDApps 0.49.1**, not a latest-module or all-variants check. It saves that exact Gallery module in a new temporary directory and imports it only in the child PowerShell process. It does not install or replace the preparation PC's module. Fixed source URLs match 0.49.1; 7Zip, VS Code and prerequisite releases use that module's resolvers, and the Office descriptor uses its parser. Review the pin and source list before using this tool to validate a future implementation.
+
+The 15 checks cover these selections:
+
+| Source | Selection |
+| --- | --- |
+| Microsoft 365 Apps | ODT download endpoint and MonthlyEnterprise x64 version descriptor; no Office payload download |
+| Microsoft Teams | x64 MSIX and bootstrapper endpoints |
+| Adobe Acrobat Unified, Chrome, Webex, Zoom, 7Zip, Visual Studio Code | x64 default sources; VS Code uses the system installer |
+| Firefox | Rapid, en-US, x64 |
+| VisualCRedist | v14 x86 and x64 |
+| .NET | 10.0 Runtime x86 and 10.0 Desktop Runtime x64 |
+
+Installer requests stop after HTTP response headers; installer bodies are not saved or validated. The small Office descriptor is downloaded and parsed in the temporary directory. Successful checks establish the expected metadata/response shape, HTTPS final URLs and usable vendor filenames; release sizes are compared with HTTP sizes when both are provided. `AdvertisedHash` is a value from release metadata, **not a verified payload hash**. `Not exposed by metadata` is normal when a source does not supply an explicit version.
+
+The console prints each outcome and the report directory. `VendorSources.csv` and `VendorSources.json` retain resolved URLs, sizes, metadata and per-source errors. A failed source does not prevent the remaining sources from being checked. Setup or source-check failures exit with code 1; temporary files remain available for diagnosis. A connection failure, throttling response or vendor outage can also cause a failure, so inspect the error before changing anything. **Do not clear the cache to fix a source-check failure.**
+
+A pass does not verify installer contents, signatures, app-cache health, every architecture/channel, installation, activation or user experience. The [23 October result](testing.md#vendor-source-metadata--23-october-2026) records the actual tested scope.
+
 ## Check a USB flash drive
 
 ```powershell

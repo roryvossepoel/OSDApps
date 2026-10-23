@@ -1,10 +1,41 @@
 # Validation matrix
 
-This page tracks real OSDApps deployment scenarios after OSDCloud applies Windows. **Staging success alone is not an installation success**: the Windows `SetupComplete.cmd` phases must finish and the individual app results must be checked.
+This page records version-specific maintenance checks and real OSDApps deployment scenarios after OSDCloud applies Windows. **Staging success alone is not an installation success**: the Windows `SetupComplete.cmd` phases must finish and the individual app results must be checked.
 
-For the next nine-application regression using Gallery 0.45.0, follow the
-[all-app cold deployment procedure](all-apps-cold-validation.md). This is a test
-plan; it is not recorded as passed until its results have been reviewed.
+For current operating instructions, use [Choose the right check](maintenance.md#choose-the-right-check) and the [online WinPE example](../Examples/WinPE-Online.md). The [0.45.0 all-app cold procedure](all-apps-cold-validation.md) is retained as a historical, version-pinned test; it is not the next required test or a current-release quick start.
+
+## Reading this evidence
+
+- Each dated record applies to its stated version, commit, configuration and hardware. Older results and limitations are retained as history, not silently upgraded to the latest release.
+- Source metadata, local cache inspection, release CI and physical installation test different things. A green result in one category does not establish the others.
+- Candidate manifest versions can differ from the release that eventually shipped the feature. Keep that distinction when comparing reports.
+- There is no new full deployment result claimed here for 0.49.1. Its vendor-source check below is a separate preparation-PC observation.
+
+## Vendor source metadata — 23 October 2026
+
+[`Test-OSDApps-VendorSources.ps1`](../tools/Test-OSDApps-VendorSources.ps1) completed on the Windows preparation PC using a temporary Gallery **0.49.1** module: **15 checks passed, 0 failed, 0 cache write operations**. No installer was downloaded or run, and no USB cache was inspected or changed. The [maintenance guide](maintenance.md#check-vendor-source-metadata) describes the selected variants and report fields.
+
+| Metadata source | Advertised version |
+| --- | --- |
+| Office MonthlyEnterprise x64 descriptor | `16.0.20430.20180` |
+| 7Zip x64 stable release | `26.05` |
+| Visual Studio Code x64 stable system installer | `1.143.1` |
+| .NET 10.0 Runtime x86 / Desktop Runtime x64 | `10.0.13` |
+
+ODT, Teams MSIX/bootstrapper, Adobe, Chrome, Firefox Rapid en-US, Webex, Zoom and VC++ x86/x64 also passed their response/filename checks. Those checks reported `Not exposed by metadata` for the version; no version was inferred from a filename. These values are an observation at test time, not a list of permanently current builds.
+
+This verifies selected source resolution and response metadata, including Office descriptor parsing. It does not validate installer bytes, publisher signatures, local cache integrity, installation or all supported variants. The two test PCs were not redeployed for this check.
+
+## Nine-application cold deployment — 19 October 2026
+
+Gallery **0.45.0**, deployment `7fbcefad-d354-4876-ac7f-64fe85d1c8c5`, passed the correlated all-app OOBE validator on an x64 target. A USB flash drive was attached with a newly empty active cache; the previous cache was retained in a backup directory. Here, **cold means no reusable app content in the active cache, not absence of a USB flash drive**.
+
+- All seven built-ins reported `AcquisitionOutcome=Downloaded`: Office, Teams, Chrome, Firefox, Webex, Adobe and Zoom.
+- The runner reported nine successful applications, zero failed and zero skipped. The two repository packages were NotepadPlusPlus and OmnissaHorizonClient; all nine installer results had exit code 0.
+- PreInstall took 294.9 seconds and Runner 379.1 seconds, for 674.0 seconds across those two Windows phases.
+- Runtime staging and the cleanup helper were removed; the previous-cache backup was retained.
+
+An earlier attempt failed Office acquisition at its 20-minute timeout and skipped Office installation. The successful run above is a separate deployment; it does not turn that failed attempt into a pass or establish its root cause. These result checks do not establish interactive app behavior or complete post-installation cache health.
 
 ## Office online warm cache reuse — 19 October 2026
 
