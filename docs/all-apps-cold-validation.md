@@ -1,7 +1,9 @@
 # All-app cold deployment validation
 
+**Historical procedure for OSDApps 0.45.0.** This is not a current-release regression test or a required step after every update. Its [recorded successful cold run](testing.md#nine-application-cold-deployment--19-october-2026) is separate from the procedure. For current deployment instructions, use the [online WinPE example](../Examples/WinPE-Online.md); for inspections, use [Choose the right check](maintenance.md#choose-the-right-check).
+
 This operator test uses the published OSDApps **0.45.0** module from PowerShell
-Gallery. Do not run Stage until that version is published. Download
+Gallery. Download
 [`Test-OSDAppsAllApps.ps1`](../tools/Test-OSDAppsAllApps.ps1) to the USB flash drive.
 It does not use the source module alongside the test script.
 

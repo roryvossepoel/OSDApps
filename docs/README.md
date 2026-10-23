@@ -12,6 +12,7 @@ OSDApps is CLI-first. Use PowerShell to configure, cache and stage applications 
 | Integrate staging with OSDT or another launcher | [Launcher integration](../Examples/Launcher-Integration.md) | WinPE; exit-code gate before the launcher reboots |
 | Deploy without network from prepared content | [Offline WinPE deployment](../Examples/WinPE-Offline.md) | WinPE and SetupComplete, with a complete matching cache |
 | Preflight staging and inspect cache, signatures and logs | [Getting started](getting-started.md#3-inspect-before-reboot) and [OSDApps Viewer](viewer.md) | WinPE or full Windows |
+| Choose a source, cache, release or deployment-result check | [Choose the right check](maintenance.md#choose-the-right-check) | Environment and effects listed per check |
 | Audit or reconcile long-lived repository cache content | [Cache health and reconciliation](repository.md#cache-health-and-reconciliation) | Full Windows preparation or WinPE cache session |
 | Package your own application or machine-context script | [Package authoring walkthrough](../Examples/Build-Repository-Package.md) | Full Windows authoring machine |
 
@@ -34,7 +35,7 @@ OSDApps is CLI-first. Use PowerShell to configure, cache and stage applications 
 | [Architecture](architecture.md) | Acquisition, cache, local staging and the ordered device manifest |
 | [Public metadata](public-metadata.md) | `metadata/builtins.json`, icons and external Viewer consumers |
 | [Contributing](../CONTRIBUTING.md) | Contribution and built-in app request policy |
-| [Maintenance](maintenance.md) | Optional read-only USB, release and saved-result checks on the preparation PC |
+| [Maintenance](maintenance.md) | Source metadata, USB, release and saved-result checks; diagnostic bundle collection and their limits |
 | [Releasing](releasing.md) | CI, module build, release tags and verified PowerShell Gallery publication |
 
 ## Evidence and history
