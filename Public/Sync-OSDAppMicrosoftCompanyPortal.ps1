@@ -117,6 +117,28 @@ function Sync-OSDAppMicrosoftCompanyPortal {
             Cached=$true; Updated=$true; CacheReused=$false; CachePath=$target; Files=$files.Count
         }
     }
+    catch {
+        $originalError = $_
+        if ($automatic -and (Test-Path -LiteralPath (Join-Path $target 'CacheInfo.json') -PathType Leaf)) {
+            try {
+                $previous = Get-Content (Join-Path $target 'CacheInfo.json') -Raw | ConvertFrom-Json
+                $healthy = ($previous.Id -eq 'MicrosoftCompanyPortal' -and $previous.Architecture -eq $Architecture -and @($previous.Files).Count -eq 7)
+                foreach ($item in @($previous.Files)) {
+                    $relative = [string]$item.Path
+                    if ($relative -notmatch '^(Bundle\.appxbundle|License\.xml|Dependencies\\[A-Za-z0-9._-]+\.appx)$' -or
+                        [string]$item.Sha256 -notmatch '^[0-9A-Fa-f]{64}$') { $healthy = $false; break }
+                    $file = Join-Path $target $relative
+                    if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or
+                        (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $item.Sha256) { $healthy = $false; break }
+                }
+                if ($healthy) {
+                    Write-Warning ('Company Portal download failed; verified cache reused: {0}' -f $originalError.Exception.Message)
+                    return [pscustomobject]@{Id='MicrosoftCompanyPortal';Version=$previous.Version;Architecture=$Architecture;Cached=$true;Updated=$false;CacheReused=$true;CachePath=$target;Files=7}
+                }
+            } catch { }
+        }
+        throw $originalError
+    }
     finally {
         if ($automatic -and $kit -and (Test-Path -LiteralPath $kit -PathType Leaf)) {
             Remove-Item -LiteralPath $kit -Force -ErrorAction SilentlyContinue
