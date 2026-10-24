@@ -37,11 +37,22 @@ Describe 'Built-in metadata' {
             $app.Source | Should -Be 'BuiltIn'
             $app.Vendor | Should -Not -BeNullOrEmpty
             $app.Acquisition | Should -Not -BeNullOrEmpty
-            $app.SyncPhase | Should -Be 'FullWindowsPreInstall'
+            if ($app.PackageType -eq 'Script') {
+                $app.SyncPhase | Should -Be 'None'
+            }
+            else {
+                $app.SyncPhase | Should -Be 'FullWindowsPreInstall'
+            }
             $app.AddCommand | Should -Not -BeNullOrEmpty
-            $app.SyncCommand | Should -Not -BeNullOrEmpty
+            if ($app.PackageType -eq 'Script') {
+                $app.SyncCommand | Should -BeNullOrEmpty
+                $app.CachePath | Should -BeNullOrEmpty
+            }
+            else {
+                $app.SyncCommand | Should -Not -BeNullOrEmpty
+                $app.CachePath | Should -Not -BeNullOrEmpty
+            }
             @($app.Architectures).Count | Should -BeGreaterThan 0
-            $app.CachePath | Should -Not -BeNullOrEmpty
             $app.IconUrl | Should -Match '^https://'
         }
     }
@@ -69,7 +80,7 @@ Describe 'Built-in metadata' {
         $exported = @(Get-Command -Module OSDApps -CommandType Function | Select-Object -ExpandProperty Name)
         foreach ($app in @($script:metadata.Applications)) {
             $app.AddCommand | Should -BeIn $exported
-            $app.SyncCommand | Should -BeIn $exported
+            if ($app.SyncCommand) { $app.SyncCommand | Should -BeIn $exported }
         }
     }
     It 'contains every exported built-in Add command' {
