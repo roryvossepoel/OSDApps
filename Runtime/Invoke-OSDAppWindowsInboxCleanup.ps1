@@ -2,7 +2,7 @@
 # Deliberately self-contained; the normal OSDApps runtime only supplies this file and config.json.
 [CmdletBinding()]
 param(
-    [string]$ConfigurationPath = (Join-Path $PSScriptRoot 'config.json'),
+    [string]$ConfigurationPath,
     [switch]$DiagnoseOnly
 )
 
@@ -79,6 +79,12 @@ try {
             throw ('Required Appx command unavailable: {0}' -f $command)
         }
     }
+    # Resolve the default inside the script body, not during parameter binding.
+    # powershell.exe -File may see an empty $PSScriptRoot in parameter defaults.
+    if ([string]::IsNullOrWhiteSpace($ConfigurationPath)) {
+        $ConfigurationPath = Join-Path $PSScriptRoot 'config.json'
+    }
+    Write-InboxLog ('CONFIG path={0}' -f $ConfigurationPath)
     if (-not (Test-Path -LiteralPath $ConfigurationPath -PathType Leaf)) { throw ('Configuration not found: {0}' -f $ConfigurationPath) }
     $config = Get-Content -LiteralPath $ConfigurationPath -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
     if ($null -eq $config -or $null -eq $config.PSObject.Properties['Remove'] -or $config.Remove -isnot [array]) {
