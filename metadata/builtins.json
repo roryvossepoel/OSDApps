@@ -237,6 +237,24 @@
         "9.0": "2026-11-10",
         "10.0": "2028-11-14"
       }
+    },
+    {
+      "Id": "WindowsInboxCleanup",
+      "DisplayName": "Windows Inbox App Cleanup",
+      "Source": "BuiltIn",
+      "PackageType": "Script",
+      "Vendor": "OSDApps",
+      "Acquisition": "BundledScript",
+      "SyncPhase": "None",
+      "AddCommand": "Add-OSDAppWindowsInboxCleanup",
+      "SyncCommand": null,
+      "Architectures": [
+        "any"
+      ],
+      "DefaultArchitecture": "any",
+      "CachePath": null,
+      "RepositoryAlternative": true,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/inboxcleanup.svg"
     }
   ]
 }
