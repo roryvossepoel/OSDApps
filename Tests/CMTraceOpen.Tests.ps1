@@ -60,4 +60,24 @@ Describe 'CMTrace Open built-in staging' {
             Should -Invoke Get-AuthenticodeSignature -Times 0 -Exactly
         }
     }
+
+    It 'rejects a different cached asset name before staging' {
+        InModuleScope OSDApps {
+            $cache = Join-Path $TestDrive 'WrongAssetCache'
+            $source = Join-Path $cache 'BuiltIn\CMTraceOpen\x64'
+            New-Item -ItemType Directory -Path $source -Force | Out-Null
+            $file = Join-Path $source 'CMTrace-Open_1.6.3_x64.msi'
+            'known MSI bytes' | Set-Content -LiteralPath $file
+            $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash
+            @{
+                Id='CMTraceOpen'; Version='1.6.3'; Architecture='x64'
+                AssetName='Package.msi'; Sha256=$hash
+            } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $source 'CacheInfo.json') -Encoding UTF8
+            Mock Get-OSDAppCachePath { $cache }
+            Mock Resolve-OSDAppWindowsPath { $TestDrive }
+
+            { Add-OSDAppCMTraceOpen -WindowsPath $TestDrive -Confirm:$false } |
+                Should -Throw '*official release*'
+        }
+    }
 }
