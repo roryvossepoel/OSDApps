@@ -114,8 +114,82 @@ function Sync-OSDAppMicrosoftCompanyPortal {
 
         [pscustomobject]@{
             Id='MicrosoftCompanyPortal'; Version=$version; Architecture=$Architecture
-            Cached=$true; CachePath=$target; Files=$files.Count
+            Cached=$true; Updated=$true; CacheReused=$false; CachePath=$target; Files=$files.Count
         }
+    }
+    catch {
+        $refreshError = $_
+        if ($automatic) {
+            # Preserve and reuse only a previously verified cache; never accept stale
+            # files based merely on their presence or an untrusted metadata version.
+            $metadataPath = Join-Path $target 'CacheInfo.json'
+            if (Test-Path -LiteralPath $metadataPath -PathType Leaf) {
+                try {
+                    $old = Get-Content -LiteralPath $metadataPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                    $valid = ([string]$old.Id -eq 'MicrosoftCompanyPortal' -and
+                        [string]$old.Architecture -eq $Architecture -and
+                        [string]$old.Version -match '^\d+\.\d+\.\d+\.\d+ -and (Test-Path -LiteralPath $kit -PathType Leaf)) {
+            Remove-Item -LiteralPath $kit -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path -LiteralPath $candidate) { Remove-Item -LiteralPath $candidate -Recurse -Force -ErrorAction SilentlyContinue }
+        if ($lock) { $lock.Dispose() }
+    }
+}
+ -and
+                        @($old.Files).Count -eq 7 -and
+                        [string]$old.SourceKitSha256 -match '^[A-Fa-f0-9]{64} -and (Test-Path -LiteralPath $kit -PathType Leaf)) {
+            Remove-Item -LiteralPath $kit -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path -LiteralPath $candidate) { Remove-Item -LiteralPath $candidate -Recurse -Force -ErrorAction SilentlyContinue }
+        if ($lock) { $lock.Dispose() }
+    }
+}
+)
+                    $seen = @{}
+                    if ($valid) {
+                        foreach ($entry in @($old.Files)) {
+                            $rel = [string]$entry.Path
+                            if (($rel -notin @('Bundle.appxbundle','License.xml') -and
+                                $rel -notmatch '^Dependencies\\[A-Za-z0-9._-]+\.appx -and (Test-Path -LiteralPath $kit -PathType Leaf)) {
+            Remove-Item -LiteralPath $kit -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path -LiteralPath $candidate) { Remove-Item -LiteralPath $candidate -Recurse -Force -ErrorAction SilentlyContinue }
+        if ($lock) { $lock.Dispose() }
+    }
+}
+) -or
+                                $seen.ContainsKey($rel) -or
+                                [string]$entry.Sha256 -notmatch '^[A-Fa-f0-9]{64} -and (Test-Path -LiteralPath $kit -PathType Leaf)) {
+            Remove-Item -LiteralPath $kit -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path -LiteralPath $candidate) { Remove-Item -LiteralPath $candidate -Recurse -Force -ErrorAction SilentlyContinue }
+        if ($lock) { $lock.Dispose() }
+    }
+}
+) {
+                                $valid = $false; break
+                            }
+                            $seen[$rel] = $true
+                            $file = Join-Path $target $rel
+                            if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or
+                                (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne [string]$entry.Sha256) {
+                                $valid = $false; break
+                            }
+                        }
+                    }
+                    if ($valid -and $seen.ContainsKey('Bundle.appxbundle') -and $seen.ContainsKey('License.xml')) {
+                        Write-Warning ('Company Portal refresh failed; verified cache reused: {0}' -f $refreshError.Exception.Message)
+                        return [pscustomobject]@{
+                            Id='MicrosoftCompanyPortal'; Version=[string]$old.Version; Architecture=$Architecture
+                            Cached=$true; Updated=$false; CacheReused=$true
+                            CachePath=$target; Files=@($old.Files).Count
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+        throw $refreshError
     }
     finally {
         if ($automatic -and $kit -and (Test-Path -LiteralPath $kit -PathType Leaf)) {
