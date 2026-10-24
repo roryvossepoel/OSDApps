@@ -36,6 +36,7 @@ function Add-OSDAppMicrosoftCompanyPortal {
     if (-not $PSCmdlet.ShouldProcess($destination, 'Stage Company Portal for SetupComplete')) { return }
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
     if (Test-Path -LiteralPath $destination) { Remove-Item -LiteralPath $destination -Recurse -Force }
+    New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
     Copy-Item -LiteralPath $source -Destination $destination -Recurse -Force -ErrorAction Stop
 
     $manifestPath = Join-Path $stage 'DeviceManifest.json'
