@@ -1,25 +1,33 @@
 function Sync-OSDAppMicrosoftCompanyPortal {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [Parameter(Mandatory)][string]$KitPath,
+        [string]$KitPath,
         [ValidateSet('x64','arm64')][string]$Architecture = 'x64'
     )
 
     if (Test-OSDAppWinPE) {
         throw 'Prepare the Company Portal cache on full Windows, not in WinPE.'
     }
-    $kit = (Resolve-Path -LiteralPath $KitPath -ErrorAction Stop).Path
-    if ([IO.Path]::GetExtension($kit) -ne '.zip') { throw 'Expected the official Microsoft Preinstall Kit ZIP.' }
     $cachePath = Get-OSDAppCachePath
     $target = Join-Path $cachePath ('BuiltIn\MicrosoftCompanyPortal\' + $Architecture)
     if (-not $PSCmdlet.ShouldProcess($target, 'Prepare Microsoft Company Portal from the supplied Preinstall Kit')) { return }
 
+    $automatic = [string]::IsNullOrWhiteSpace($KitPath)
+    $downloadUri = 'https://download.microsoft.com/download/ac93b367-7b17-4838-a079-c6f3377bf582/CompanyPortal-Universal-Production_x64_x86_ARM_ARM64.appxupload_Windows10_PreinstallKit.zip'
+    $kit = $null
     Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
     Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
     $lock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'Microsoft Company Portal cache synchronization'
     $candidate = $target + '.osdapps-new-' + [guid]::NewGuid().ToString('N')
     $backup = $target + '.osdapps-old-' + [guid]::NewGuid().ToString('N')
     try {
+        if ($automatic) {
+            $kit = Join-Path $cachePath ('CompanyPortal-PreinstallKit-' + [guid]::NewGuid().ToString('N') + '.zip')
+            Invoke-WebRequest -Uri $downloadUri -OutFile $kit -UseBasicParsing -TimeoutSec 900 -ErrorAction Stop
+        } else {
+            $kit = (Resolve-Path -LiteralPath $KitPath -ErrorAction Stop).Path
+        }
+        if ([IO.Path]::GetExtension($kit) -ne '.zip') { throw 'Expected the official Microsoft Preinstall Kit ZIP.' }
         $zip = [IO.Compression.ZipFile]::OpenRead($kit)
         try {
             # Only select vendor files at the ZIP root. Reject ambiguous versions.
@@ -86,7 +94,8 @@ function Sync-OSDAppMicrosoftCompanyPortal {
 
         [ordered]@{
             Id='MicrosoftCompanyPortal'; Version=$version; Architecture=$Architecture
-            Source='Microsoft Preinstall Kit (operator supplied)'
+            Source=$(if($automatic){'Microsoft Download Center'}else{'Microsoft Preinstall Kit (operator supplied)'})
+            SourceUri=$(if($automatic){$downloadUri}else{$null})
             SourceKitSha256=(Get-FileHash -LiteralPath $kit -Algorithm SHA256).Hash
             Files=@($files); DependencyCount=$dependencies.Count
             SyncedAt=(Get-Date).ToUniversalTime().ToString('o')
@@ -105,10 +114,13 @@ function Sync-OSDAppMicrosoftCompanyPortal {
 
         [pscustomobject]@{
             Id='MicrosoftCompanyPortal'; Version=$version; Architecture=$Architecture
-            Cached=$true; CachePath=$target; Files=$files.Count
+            Cached=$true; Updated=$true; CacheReused=$false; CachePath=$target; Files=$files.Count
         }
     }
     finally {
+        if ($automatic -and $kit -and (Test-Path -LiteralPath $kit -PathType Leaf)) {
+            Remove-Item -LiteralPath $kit -Force -ErrorAction SilentlyContinue
+        }
         if (Test-Path -LiteralPath $candidate) { Remove-Item -LiteralPath $candidate -Recurse -Force -ErrorAction SilentlyContinue }
         if ($lock) { $lock.Dispose() }
     }
