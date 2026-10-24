@@ -38,6 +38,24 @@
         SuccessCodes = 'Repository installer exit codes treated as success. Default accepts 0 and 3010.'
     }
     Commands = @{
+        'Add-OSDAppCMTraceOpen' = @{
+            Synopsis = 'Stage a signed CMTrace Open MSI for setup before Windows OOBE.'
+            Description = 'Copies a previously synchronized, SHA-256-verified CMTrace Open MSI from the USB cache to the offline Windows installation and schedules the vendor MSI through the existing SetupComplete runner. Optionally enforces managed update-check settings.'
+            Environment = 'WinPE after OSDCloud has applied Windows, with a populated OSDCloud USB cache.'
+            Output = 'OSDApps.StagedApp containing the selected version and target Windows root. Staging does not establish installation success.'
+            Parameters = @{ DisableUpdateChecks = 'When true, install with DISABLEUPDATECHECKS=1 so managed devices do not automatically check for in-app updates.' }
+            Examples = @(@{ Code = 'Add-OSDAppCMTraceOpen -Architecture x64 -DisableUpdateChecks $true'; Remarks = 'Stage the cached signed x64 MSI and disable vendor update checks for managed deployment.' })
+            Link = 'docs/cmtrace-open.md'
+        }
+        'Sync-OSDAppCMTraceOpen' = @{
+            Synopsis = 'Synchronize the latest stable signed CMTrace Open MSI to the OSDCloud USB cache.'
+            Description = 'Queries the official GitHub stable release, selects the architecture-specific MSI, checks the GitHub-published SHA-256 and Windows Authenticode signature, and transactionally replaces a compatible USB cache variant.'
+            Environment = 'Full Windows preparation machine with internet access and a writable OSDCloud USB cache.'
+            Output = 'Built-in cache record including architecture, version and the updated cache location.'
+            Parameters = @{}
+            Examples = @(@{ Code = 'Sync-OSDAppCMTraceOpen -Architecture x64'; Remarks = 'Download and integrity-verify the current stable x64 MSI from the official project release.' })
+            Link = 'docs/cmtrace-open.md'
+        }
         'Add-OSDAppWindowsInboxCleanup' = @{
             Parameters = @{
                 Remove = 'Exact Windows Appx DisplayName identifiers to remove; patterns and empty selections are rejected. Required unless using -Preset Tested13.'
