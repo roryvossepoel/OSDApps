@@ -13,6 +13,7 @@ Stage apps and PowerShell scripts in WinPE **after OSDCloud has applied Windows*
 - **Start with a few commands.** Built-in apps need no repository or custom installer wrapper.
 - **Reuse your downloads.** An optional USB cache serves multiple devices; validated replacements keep it current.
 - **Bring your own apps and scripts.** Both share one ordered queue and the same package integrity checks.
+- **Opt in to Windows inbox cleanup.** A bundled script can remove explicitly selected provisioned apps before OOBE, without an app repository.
 - **Leave a clean deployment.** Successful runs remove temporary staging while keeping logs and results. No module installation is required in the deployed Windows system.
 
 [Get started](#quick-start) · [Built-in apps](docs/built-in-apps.md) · [USB preparation](Examples/Prepare-UsbCache.md) · [Apps and scripts](docs/repository.md) · [Documentation](docs/README.md)
@@ -63,6 +64,8 @@ Show-OSDAppUI -Offline
 The Viewer is read-only. Here, `-Offline` skips online repository discovery; it does not change the deployment's network behavior. Close the Viewer before rebooting.
 
 ## Built-in apps
+
+The optional Windows Inbox Cleanup script is staged with `Add-OSDAppWindowsInboxCleanup -Preset Tested13` or `-Remove @('Microsoft.BingWeather')`. It is never run implicitly. [Options and validation](docs/built-in-apps.md#windows-inbox-cleanup).
 
 | Application | Stage in WinPE |
 | --- | --- |

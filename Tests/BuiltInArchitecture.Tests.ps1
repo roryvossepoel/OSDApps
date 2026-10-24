@@ -7,6 +7,12 @@ Describe 'Built-in application architecture contracts' {
 
     It 'requires one explicit runtime architecture and keeps other application defaults' {
         foreach ($app in $metadata.Applications) {
+            if ($app.PackageType -eq 'Script') {
+                $app.Architectures | Should -Be @('any')
+                $app.DefaultArchitecture | Should -Be 'any'
+                (Get-Command $app.AddCommand).Parameters.ContainsKey('Architecture') | Should -BeFalse
+                continue
+            }
             foreach ($name in @($app.AddCommand,$app.SyncCommand)) {
                 $command = Get-Command $name
                 if ($app.Id -in @('VisualCRedist','DotNetRuntime')) {
@@ -26,6 +32,10 @@ Describe 'Built-in application architecture contracts' {
 
     It 'exposes only the advertised architectures' {
         foreach ($app in $metadata.Applications) {
+            if ($app.PackageType -eq 'Script') {
+                (Get-Command $app.AddCommand).Parameters.ContainsKey('Architecture') | Should -BeFalse
+                continue
+            }
             foreach ($name in @($app.AddCommand,$app.SyncCommand)) {
                 $command = Get-Command $name
                 $validation = @($command.Parameters['Architecture'].Attributes |

@@ -273,6 +273,37 @@ function Test-OSDAppDeployment {
             $payloadReady = ($payloadReady -and $integrityValid)
             $detail = if ($payloadReady) { 'Repository archive is present and SHA-256 validated.' } else { 'Repository archive is missing, malformed, or failed SHA-256 validation.' }
         }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WindowsInboxCleanupScript') {
+            $definitionValid = (
+                $id -eq 'WindowsInboxCleanup' -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\WindowsInboxCleanup\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\WindowsInboxCleanup\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\WindowsInboxCleanup\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\WindowsInboxCleanup\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $cleanupConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            $integrityValid = ($cleanupConfig.Remove -is [array] -and @($cleanupConfig.Remove).Count -gt 0)
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'Bundled script and configuration are SHA-256 validated.' } else { 'Bundled script definition, content or hash validation failed.' }
+        }
         elseif ($source -eq 'BuiltIn') {
             $state = Get-BuiltInPayloadState -App $app
             $definitionValid = $state.DefinitionValid
@@ -285,7 +316,7 @@ function Test-OSDAppDeployment {
         }
 
         if (-not $payloadReady) { $allPayloadsReady = $false }
-        $applicationRequiredStateValid = ($definitionValid -and ($source -ne 'Repository' -or $payloadReady))
+        $applicationRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -ne 'WindowsInboxCleanupScript') -or $payloadReady))
         Add-DeploymentCheck -Name 'ApplicationDefinition' -ApplicationId $id -Passed $applicationRequiredStateValid -Required $true -Message "${id}: $detail"
         Add-DeploymentCheck -Name 'OfflinePayload' -ApplicationId $id -Passed $payloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
 

@@ -164,6 +164,7 @@ function Get-OSDApp {
     }
 
     foreach ($builtIn in @(
+        @{ Id='WindowsInboxCleanup'; DisplayName='Windows Inbox App Cleanup'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='Microsoft365Apps'; DisplayName='Microsoft 365 Apps'; Info=$officeCacheInfo },
         @{ Id='MicrosoftTeams'; DisplayName='Microsoft Teams'; Info=$microsoftTeamsCacheInfo },
         @{ Id='AdobeAcrobatUnified'; DisplayName='Adobe Acrobat Unified'; Info=$adobeCacheInfo },
@@ -182,11 +183,11 @@ function Get-OSDApp {
             Name          = $builtIn.Id
             DisplayName   = $builtIn.DisplayName
             Source        = 'BuiltIn'
-            PackageType   = 'Application'
-            OnlineVersion = 'Current'
+            PackageType   = if ($builtIn.PackageType) { $builtIn.PackageType } else { 'Application' }
+            OnlineVersion = if ($builtIn.Version) { $builtIn.Version } else { 'Current' }
             CachedVersion = if ($builtIn.Info) { $builtIn.Info.Version } else { $null }
-            Version       = if ($builtIn.Info) { $builtIn.Info.Version } else { 'Current' }
-            Architecture  = if ($builtIn.Info -and $builtIn.Info.Architecture) { $builtIn.Info.Architecture } else { 'Auto' }
+            Version       = if ($builtIn.Info) { $builtIn.Info.Version } elseif ($builtIn.Version) { $builtIn.Version } else { 'Current' }
+            Architecture  = if ($builtIn.Info -and $builtIn.Info.Architecture) { $builtIn.Info.Architecture } elseif ($builtIn.Architecture) { $builtIn.Architecture } else { 'Auto' }
             Availability  = if ($builtIn.Info) { 'Cached' } else { 'Available' }
             Valid         = $true
         })

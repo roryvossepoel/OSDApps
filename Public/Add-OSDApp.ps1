@@ -18,6 +18,7 @@ function Add-OSDApp {
             if($app -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $app -match '\.\.'){
                 throw "Invalid repository application Id '$app'."
             }
+            if($app -ieq 'WindowsInboxCleanup'){throw "'WindowsInboxCleanup' is a built-in script. Use Add-OSDAppWindowsInboxCleanup instead."}
             if($app -ieq 'Microsoft365Apps'){throw "'Microsoft365Apps' is a built-in application. Use Add-OSDAppMicrosoft365Apps instead."}
             if($app -ieq 'MicrosoftTeams' -or $app -ieq 'Teams'){throw "'MicrosoftTeams' is a built-in application. Use Add-OSDAppMicrosoftTeams instead."}
             if($app -ieq 'AdobeAcrobatUnified'){throw "'AdobeAcrobatUnified' is a built-in application. Use Add-OSDAppAdobeAcrobatUnified instead."}

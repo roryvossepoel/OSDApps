@@ -44,6 +44,7 @@ Export-ModuleMember -Function @(
     'Sync-OSDAppMozillaFirefoxEnterprise',
     'Clear-OSDAppCache',
     'Add-OSDApp',
+    'Add-OSDAppWindowsInboxCleanup',
     'Add-OSDAppMicrosoft365Apps',
     'Add-OSDAppMicrosoftTeams',
     'Add-OSDAppAdobeAcrobatUnified',

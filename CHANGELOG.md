@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add opt-in `Add-OSDAppWindowsInboxCleanup` built-in Script with custom selection or an explicit `Tested13` preset, integrity-checked offline staging, SYSTEM execution during SetupComplete, independent diagnostics and per-app results. No repository or vendor download is required; the old repository package keeps its distinct Id.
+- Exclude bundled scripts from PreInstall acquisition while preserving the ordered runner queue and fail-on-tamper preflight. Include script metadata, Viewer classification and regression tests. A full physical built-in deployment remains to be validated.
+
 ## 0.49.1
 
 - Persist automatic VisualCppRedist/SevenZip predecessor cleanup outcomes in the existing client and PreInstall logs, including preservation reasons and failures. Keep cleanup guards, cache reuse and synchronization result objects unchanged; logging failures do not change cleanup decisions.

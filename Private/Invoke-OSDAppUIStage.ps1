@@ -53,7 +53,7 @@ function Format-OSDAppUIStagedDetails {
         'DisplayName','Id','Source','PackageType','Type','Version','Architecture','Channel',
         'Language','ProductId','SharedComputerLicensing','DeviceBasedLicensing',
         'UpdatesEnabled','InstallMeetingAddin','IncludeVisio','IncludeProject',
-        'ExcludeApp','AutoStartWithWindows','PreventPreLoginUpdates',
+        'ExcludeApp','SelectedPackages','DiagnoseOnly','AutoStartWithWindows','PreventPreLoginUpdates',
         'EnableOutlookIntegration','DefaultTheme','InstallTimeoutMinutes'
     )) {
         $property = $Application.PSObject.Properties[$key]

@@ -38,6 +38,22 @@
         SuccessCodes = 'Repository installer exit codes treated as success. Default accepts 0 and 3010.'
     }
     Commands = @{
+        'Add-OSDAppWindowsInboxCleanup' = @{
+            Parameters = @{
+                Remove = 'Exact Windows Appx DisplayName identifiers to remove; patterns and empty selections are rejected. Required unless using -Preset Tested13.'
+                Preset = 'Explicit opt-in Tested13 selection validated on a Windows 11 25H2 test image. This is not a guarantee for all Windows builds.'
+                DiagnoseOnly = 'Record selected and present packages under SYSTEM without removing anything during SetupComplete.'
+            }
+            Synopsis = 'Stage optional built-in Windows inbox package cleanup.'
+            Description = 'Copies the signed-module bundled cleanup PowerShell script and selected config to the offline Windows installation. Both files receive SHA-256 integrity metadata in DeviceManifest.json and are validated before SetupComplete. During first boot, SYSTEM removes provisioned packages and user registrations, verifies they are absent, and writes dedicated logs and per-package results. No cloud repository or USB cache is required. Protected packages are skipped; failures return non-zero. No removal is performed merely by importing OSDApps.'
+            Environment = 'WinPE after OSDCloud has applied Windows; operation runs later in SetupComplete under SYSTEM.'
+            Output = 'OSDApps.StagedApp with selected package count. Staging is not proof of removal.'
+            Examples = @(
+                @{ Code = 'Add-OSDAppWindowsInboxCleanup -Preset Tested13'; Remarks = 'Stage the explicit previously tested set.' },
+                @{ Code = 'Add-OSDAppWindowsInboxCleanup -Remove @(''Microsoft.BingWeather'',''Microsoft.MicrosoftSolitaireCollection'') -DiagnoseOnly'; Remarks = 'Stage a non-destructive diagnostic run.' }
+            )
+            Link = 'docs/built-in-apps.md'
+        }
         'Add-OSDAppVisualCRedist' = @{
             Parameters = @{ Architecture = 'Required single package architecture: x86 or x64. No default and no combined selection.' }
             Synopsis = 'Add Microsoft runtime prerequisites.'
