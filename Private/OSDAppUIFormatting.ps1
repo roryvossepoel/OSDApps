@@ -92,8 +92,9 @@ function Get-OSDAppUIDisplayVersion {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Application)
 
-    # "Current" is a vendor acquisition policy, not a concrete version.
-    if ([string]$Application.Source -eq 'BuiltIn') { return 'Current' }
+    # "Current" applies to evergreen vendor installers; a bundled script
+    # has a concrete, module-owned revision instead of an acquisition policy.
+    if ([string]$Application.Source -eq 'BuiltIn' -and [string]$Application.PackageType -ne 'Script') { return 'Current' }
     $version = [string]$Application.Version
     if (-not [string]::IsNullOrWhiteSpace($version)) { return $version }
     return '-'
