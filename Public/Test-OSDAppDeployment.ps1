@@ -276,10 +276,13 @@ function Test-OSDAppDeployment {
         elseif ($source -eq 'BuiltIn' -and $id -eq 'CMTraceOpen') {
             $expectedName = 'CMTrace-Open_{0}_{1}.msi' -f [string]$app.Version,[string]$app.Architecture
             $expectedRelative = 'BuiltIn\CMTraceOpen\' + [string]$app.Architecture + '\' + $expectedName
-            $definitionValid = ([string]$app.Version -match '^\d+\.\d+\.\d+
+            $definitionValid = (
+                [string]$app.Version -match '^\d+\.\d+\.\d+$' -and
+                [string]$app.Type -eq 'VendorMsi' -and
                 [string]$app.Package -eq $expectedRelative -and
                 [string]$app.Architecture -in @('x64','arm64') -and
-                [string]$app.ExpectedSha256 -match '^[A-Fa-f0-9]{64}$')
+                [string]$app.ExpectedSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
             $file = Join-Path $stageRoot $expectedRelative
             $payloadReady = $definitionValid -and (Test-Path -LiteralPath $file -PathType Leaf)
             $integrityValid = $payloadReady -and
