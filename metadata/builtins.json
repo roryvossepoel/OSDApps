@@ -262,7 +262,7 @@
       "Source": "BuiltIn",
       "Vendor": "Microsoft",
       "Acquisition": "OperatorSuppliedMicrosoftPreinstallKit",
-      "SyncPhase": "FullWindowsPreparation",
+      "SyncPhase": "FullWindowsPreInstall",
       "AddCommand": "Add-OSDAppMicrosoftCompanyPortal",
       "SyncCommand": "Sync-OSDAppMicrosoftCompanyPortal",
       "Architectures": [
@@ -271,7 +271,8 @@
       ],
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/MicrosoftCompanyPortal/<architecture>",
-      "RepositoryAlternative": true
+      "RepositoryAlternative": true,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/companyportal.svg"
     },
     {
       "Id": "CMTraceOpen",
@@ -279,7 +280,7 @@
       "Source": "BuiltIn",
       "Vendor": "CMTrace Open",
       "Acquisition": "GitHubReleaseMsi",
-      "SyncPhase": "FullWindowsPreparation",
+      "SyncPhase": "FullWindowsPreInstall",
       "AddCommand": "Add-OSDAppCMTraceOpen",
       "SyncCommand": "Sync-OSDAppCMTraceOpen",
       "Architectures": [
@@ -288,7 +289,8 @@
       ],
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/CMTraceOpen/<architecture>",
-      "RepositoryAlternative": true
+      "RepositoryAlternative": true,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/cmtraceopen.svg"
     }
   ]
 }
