@@ -159,6 +159,8 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
             (Get-OSDAppUIDisplayVersion -Application $builtin) | Should -Be 'Current'
             $staged = [pscustomobject]@{ Id='MicrosoftTeams'; Source='BuiltIn'; Version=$null }
             (Get-OSDAppUIDisplayVersion -Application $staged) | Should -Be 'Current'
+            $scriptApp = [pscustomobject]@{ Id='WindowsInboxCleanup'; Source='BuiltIn'; PackageType='Script'; Version='1.0.0' }
+            (Get-OSDAppUIDisplayVersion -Application $scriptApp) | Should -Be '1.0.0'
             $repo = [pscustomobject]@{ Id='NotepadPlusPlus'; Source='Repository'; Version='8.9.8.1' }
             (Get-OSDAppUIDisplayVersion -Application $repo) | Should -Be '8.9.8.1'
         }
