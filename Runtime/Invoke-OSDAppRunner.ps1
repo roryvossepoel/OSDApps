@@ -483,6 +483,26 @@ try {
         Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Bundled script and config SHA-256 validated.' -Data @{ Id=$app.Id }
     }
 
+    # CMTrace Open MSI has already been synchronized and is not refreshed during PreInstall.
+    foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Id -eq 'CMTraceOpen' })) {
+        $relative = 'BuiltIn\CMTraceOpen\' + [string]$app.Architecture + '\Package.msi'
+        if ([string]$app.Type -ne 'VendorMsi' -or [string]$app.Package -ne $relative -or
+            [string]$app.Architecture -notin @('x64','arm64') -or
+            [string]$app.ExpectedSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+            throw (New-RunnerFailureException -Message 'Invalid CMTrace Open built-in manifest.' -FailureType 'ManifestInvalid' -ApplicationId 'CMTraceOpen' -Fatal)
+        }
+        $path = Join-Path $StagedPath $relative
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
+            (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne [string]$app.ExpectedSha256) {
+            throw (New-RunnerFailureException -Message 'CMTrace Open staged MSI hash mismatch.' -FailureType 'HashMismatch' -ApplicationId 'CMTraceOpen' -Fatal)
+        }
+        $signature = Get-AuthenticodeSignature -FilePath $path
+        if ($signature.Status -ne 'Valid') {
+            throw (New-RunnerFailureException -Message 'CMTrace Open MSI signature invalid.' -FailureType 'SignatureInvalid' -ApplicationId 'CMTraceOpen' -Fatal)
+        }
+        Write-RunnerLog -LogPath $logPath -Event 'BuiltInMsiIntegrityValidated' -Message 'CMTrace Open SHA-256 and Authenticode validation succeeded.' -Data @{ Id=$app.Id }
+    }
+
     New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
 
     function Invoke-RepositoryPackage {
