@@ -89,6 +89,20 @@ Describe 'Built-in Windows Inbox Cleanup staging' {
         }
     }
 
+    It 'resolves the default config path after script parameter binding' {
+        # A parameter default can see an empty $PSScriptRoot under powershell.exe -File.
+        $source = Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime\Invoke-OSDAppWindowsInboxCleanup.ps1'
+        $tokens = $null
+        $errors = $null
+        $ast = [Management.Automation.Language.Parser]::ParseFile($source,[ref]$tokens,[ref]$errors)
+        @($errors).Count | Should -Be 0
+        $configParam = @($ast.ParamBlock.Parameters | Where-Object { $_.Name.VariablePath.UserPath -eq 'ConfigurationPath' })
+        $configParam.Count | Should -Be 1
+        $configParam[0].DefaultValue | Should -BeNullOrEmpty
+        $body = Get-Content -LiteralPath $source -Raw -Encoding UTF8
+        $body.Contains("`$ConfigurationPath = Join-Path `$PSScriptRoot 'config.json'") | Should -BeTrue
+    }
+
     It 'declares the cleanup source with valid Windows PowerShell syntax' {
         $source = Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime\Invoke-OSDAppWindowsInboxCleanup.ps1'
         $tokens = $null
