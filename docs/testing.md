@@ -11,6 +11,18 @@ For current operating instructions, use [Choose the right check](maintenance.md#
 - Candidate manifest versions can differ from the release that eventually shipped the feature. Keep that distinction when comparing reports.
 - There is no new full deployment result claimed here for 0.49.1. Its vendor-source check below is a separate preparation-PC observation.
 
+## Windows Inbox Cleanup built-in — 24 October 2026
+
+The opt-in `WindowsInboxCleanup` built-in was exercised on a physical deployment using the PR #65 test module before release version 0.50.0. The operator reported that OSDCloud staging and `Test-OSDAppDeployment -RequireOfflineReady` both succeeded, with `Valid=True` and `OfflineReady=True`.
+
+- During the first Windows boot, SetupComplete ran the built-in as `NT AUTHORITY\SYSTEM` and returned exit code `0`.
+- The structured cleanup report recorded `Removed=13`, `Absent=0`, `Skipped=0` and `Failed=0`; checks immediately after execution showed no provisioned or registered instances for the selected packages.
+- After completing Autopilot, the operator confirmed the 13 packages remained absent.
+- The first candidate failed at startup because `$PSScriptRoot` was evaluated inside a parameter default under `powershell.exe -File`. The corrected candidate deferred the path resolution to the script body and was staged and retested before recording the successful result.
+- PR #65 CI run #440 succeeded after the configuration-path fix on Windows PowerShell 5.1 and PowerShell 7.
+
+These observations validate the tested x64 deployment path and chosen 13-package selection; they do not establish all Windows builds, other architectures, alternate selections or deployment combinations. The physical result was reported by the operator; the full device logs are not stored in this repository.
+
 ## Vendor source metadata — 23 October 2026
 
 [`Test-OSDApps-VendorSources.ps1`](../tools/Test-OSDApps-VendorSources.ps1) completed on the Windows preparation PC using a temporary Gallery **0.49.1** module: **15 checks passed, 0 failed, 0 cache write operations**. No installer was downloaded or run, and no USB cache was inspected or changed. The [maintenance guide](maintenance.md#check-vendor-source-metadata) describes the selected variants and report fields.
