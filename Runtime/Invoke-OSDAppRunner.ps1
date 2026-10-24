@@ -409,12 +409,24 @@ try {
         throw (New-RunnerFailureException -Message 'Device manifest contains an invalid or duplicate application Id.' -FailureType 'ManifestInvalid' -Fatal)
     }
 
-    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe')
+    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript')
     foreach ($app in $apps) {
         $id = [string]$app.Id
         $source = [string]$app.Source
         if ($source -notin @('Repository','BuiltIn')) {
             throw (New-RunnerFailureException -Message "Unsupported application source '$source' for '$id'." -FailureType 'ManifestInvalid' -ApplicationId $id -Fatal)
+        }
+        # A built-in cleanup may only run its fixed packaged script and config paths.
+        if ($source -eq 'BuiltIn' -and
+            ([string]$app.Type -eq 'WindowsInboxCleanupScript' -or $id -eq 'WindowsInboxCleanup')) {
+            if ($id -ne 'WindowsInboxCleanup' -or [string]$app.Type -ne 'WindowsInboxCleanupScript' -or
+                [string]$app.PackageType -ne 'Script' -or
+                [string]$app.Script -ne 'BuiltIn\WindowsInboxCleanup\Install.ps1' -or
+                [string]$app.Configuration -ne 'BuiltIn\WindowsInboxCleanup\config.json' -or
+                [string]$app.ScriptSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
+                [string]$app.ConfigurationSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+                throw (New-RunnerFailureException -Message 'Invalid Windows Inbox Cleanup built-in manifest.' -FailureType 'ManifestInvalid' -ApplicationId $id -Fatal)
+            }
         }
         if ($source -eq 'BuiltIn' -and [string]$app.Type -notin $supportedBuiltInTypes) {
             throw (New-RunnerFailureException -Message "Unsupported built-in application type '$($app.Type)' for '$id'." -FailureType 'ManifestInvalid' -ApplicationId $id -Fatal)
@@ -454,6 +466,21 @@ try {
 
         $validatedRepositoryHashes[[string]$app.Id] = $actualHash
         Write-RunnerLog -LogPath $logPath -Event 'PackageIntegrityValidated' -Message 'Staged package SHA-256 validation succeeded before application execution.' -Data @{ Id=$app.Id; Sha256=$actualHash; Archive=$archivePath }
+    }
+
+    # Verify the bundled script and config before processing the queue.
+    foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'WindowsInboxCleanupScript' })) {
+        foreach ($entry in @(
+            @{ Relative='BuiltIn\WindowsInboxCleanup\Install.ps1'; Hash=[string]$app.ScriptSha256 },
+            @{ Relative='BuiltIn\WindowsInboxCleanup\config.json'; Hash=[string]$app.ConfigurationSha256 }
+        )) {
+            $file = Join-Path $StagedPath $entry.Relative
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $entry.Hash) {
+                throw (New-RunnerFailureException -Message ('Bundled cleanup integrity failed for {0}.' -f $entry.Relative) -FailureType 'HashMismatch' -ApplicationId ([string]$app.Id) -Fatal)
+            }
+        }
+        Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Bundled script and config SHA-256 validated.' -Data @{ Id=$app.Id }
     }
 
     New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
@@ -516,6 +543,19 @@ try {
     function Invoke-BuiltInApp {
         param([Parameter(Mandatory)]$app)
         switch ($app.Type) {
+            'WindowsInboxCleanupScript' {
+                $root = Join-Path $StagedPath 'BuiltIn\WindowsInboxCleanup'
+                $scriptFile = Join-Path $root 'Install.ps1'
+                $arguments = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$scriptFile)
+                if ($app.DiagnoseOnly -eq $true) { $arguments += '-DiagnoseOnly' }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptStart' -Message 'Running Windows Inbox Cleanup under SetupComplete.' -Data @{ Id=$app.Id; DiagnoseOnly=[bool]$app.DiagnoseOnly }
+                $process = Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -WorkingDirectory $root -Wait -PassThru
+                if ($process.ExitCode -ne 0) {
+                    throw ('Windows Inbox Cleanup failed with exit code {0}.' -f $process.ExitCode)
+                }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptComplete' -Message 'Windows Inbox Cleanup completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
+                [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='Sha256Validated' }
+            }
             'OfficeDeploymentTool' {
                 $setupPath = Join-Path $StagedPath $app.Setup
                 $configurationPath = Join-Path $StagedPath $app.Configuration
