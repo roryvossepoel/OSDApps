@@ -409,7 +409,7 @@ try {
         throw (New-RunnerFailureException -Message 'Device manifest contains an invalid or duplicate application Id.' -FailureType 'ManifestInvalid' -Fatal)
     }
 
-    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript')
+    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','CompanyPortalAppxBundle')
     foreach ($app in $apps) {
         $id = [string]$app.Id
         $source = [string]$app.Source
@@ -426,6 +426,25 @@ try {
                 [string]$app.ScriptSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
                 [string]$app.ConfigurationSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
                 throw (New-RunnerFailureException -Message 'Invalid Windows Inbox Cleanup built-in manifest.' -FailureType 'ManifestInvalid' -ApplicationId $id -Fatal)
+            }
+        }
+        if ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'CompanyPortalAppxBundle') {
+            $prefix = 'BuiltIn\MicrosoftCompanyPortal\' + [string]$app.Architecture + '\'
+            if ($id -ne 'MicrosoftCompanyPortal' -or
+                [string]$app.Architecture -notin @('x64','arm64') -or
+                [string]$app.Package -ne ($prefix + 'Bundle.appxbundle') -or
+                [string]$app.License -ne ($prefix + 'License.xml') -or
+                @($app.Dependencies).Count -ne 5 -or
+                @($app.FileHashes).Count -ne 7) {
+                throw (New-RunnerFailureException -Message 'Invalid Company Portal built-in manifest.' -FailureType 'ManifestInvalid' -ApplicationId $id -Fatal)
+            }
+            foreach ($file in @($app.FileHashes)) {
+                $relative = [string]$file.Path
+                if (-not $relative.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase) -or
+                    $relative -match '\.\.|[:*?"<>|]' -or
+                    [string]$file.Sha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+                    throw (New-RunnerFailureException -Message 'Unsafe Company Portal file reference.' -FailureType 'ManifestInvalid' -ApplicationId $id -Fatal)
+                }
             }
         }
         if ($source -eq 'BuiltIn' -and [string]$app.Type -notin $supportedBuiltInTypes) {
@@ -481,6 +500,17 @@ try {
             }
         }
         Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Bundled script and config SHA-256 validated.' -Data @{ Id=$app.Id }
+    }
+
+    foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'CompanyPortalAppxBundle' })) {
+        foreach ($file in @($app.FileHashes)) {
+            $path = Join-Path $StagedPath ([string]$file.Path)
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne [string]$file.Sha256) {
+                throw (New-RunnerFailureException -Message ('Company Portal integrity validation failed: {0}' -f $file.Path) -FailureType 'HashMismatch' -ApplicationId ([string]$app.Id) -Fatal)
+            }
+        }
+        Write-RunnerLog -LogPath $logPath -Event 'BuiltInAppxIntegrityValidated' -Message 'Company Portal bundle, license and dependencies validated.' -Data @{ Id=$app.Id }
     }
 
     # CMTrace Open is pre-cached on full Windows; validate again before invoking MSI.
@@ -565,6 +595,26 @@ try {
     function Invoke-BuiltInApp {
         param([Parameter(Mandatory)]$app)
         switch ($app.Type) {
+            'CompanyPortalAppxBundle' {
+                $bundle = Join-Path $StagedPath ([string]$app.Package)
+                $license = Join-Path $StagedPath ([string]$app.License)
+                $dependencies = @($app.Dependencies | ForEach-Object { Join-Path $StagedPath ([string]$_) })
+                $existing = @(Get-AppxProvisionedPackage -Online -ErrorAction Stop |
+                    Where-Object { $_.DisplayName -eq 'Microsoft.CompanyPortal' })
+                if (@($existing | Where-Object { [version]$_.Version -ge [version]$app.Version }).Count -gt 0) {
+                    Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallSkipped' -Message 'Company Portal is already provisioned at the requested or a newer version.' -Data @{ Id=$app.Id }
+                    [pscustomobject]@{ExitCode=0;Integrity='Sha256Validated'}
+                    break
+                }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInAppxProvisionStart' -Message 'Provisioning Microsoft Company Portal for future users.' -Data @{ Id=$app.Id;Version=$app.Version;Architecture=$app.Architecture }
+                Add-AppxProvisionedPackage -Online -PackagePath $bundle -LicensePath $license -DependencyPackagePath $dependencies -Regions all -ErrorAction Stop | Out-Null
+                $installed = @(Get-AppxProvisionedPackage -Online -ErrorAction Stop |
+                    Where-Object { $_.DisplayName -eq 'Microsoft.CompanyPortal' })
+                if ($installed.Count -eq 0) { throw 'Company Portal provisioning returned without a provisioned package.' }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInAppxProvisionComplete' -Message 'Company Portal provisioning complete.' -Data @{ Id=$app.Id;Version=$app.Version }
+                [pscustomobject]@{ExitCode=0;Integrity='Sha256Validated'}
+                break
+            }
             'WindowsInboxCleanupScript' {
                 $root = Join-Path $StagedPath 'BuiltIn\WindowsInboxCleanup'
                 $scriptFile = Join-Path $root 'Install.ps1'

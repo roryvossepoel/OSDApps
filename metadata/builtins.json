@@ -257,6 +257,24 @@
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/inboxcleanup.svg"
     },
     {
+      "Id": "MicrosoftCompanyPortal",
+      "DisplayName": "Microsoft Company Portal",
+      "Source": "BuiltIn",
+      "Vendor": "Microsoft",
+      "Acquisition": "OperatorSuppliedMicrosoftPreinstallKit",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppMicrosoftCompanyPortal",
+      "SyncCommand": "Sync-OSDAppMicrosoftCompanyPortal",
+      "Architectures": [
+        "x64",
+        "arm64"
+      ],
+      "DefaultArchitecture": "x64",
+      "CachePath": "BuiltIn/MicrosoftCompanyPortal/<architecture>",
+      "RepositoryAlternative": true,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/companyportal.svg"
+    },
+    {
       "Id": "CMTraceOpen",
       "DisplayName": "CMTrace Open",
       "Source": "BuiltIn",

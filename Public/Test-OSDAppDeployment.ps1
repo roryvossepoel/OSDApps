@@ -290,6 +290,35 @@ function Test-OSDAppDeployment {
             $payloadReady = $payloadReady -and $integrityValid
             $detail = if ($payloadReady) { 'CMTrace Open MSI SHA-256 validated.' } else { 'CMTrace Open MSI missing or hash mismatch.' }
         }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'CompanyPortalAppxBundle') {
+            $prefix = 'BuiltIn\MicrosoftCompanyPortal\' + [string]$app.Architecture + '\'
+            $definitionValid = ($id -eq 'MicrosoftCompanyPortal' -and
+                [string]$app.PackageType -eq 'Application' -and
+                [string]$app.Architecture -in @('x64','arm64') -and
+                [string]$app.Package -eq ($prefix + 'Bundle.appxbundle') -and
+                [string]$app.License -eq ($prefix + 'License.xml') -and
+                @($app.Dependencies).Count -eq 5 -and @($app.FileHashes).Count -eq 7)
+            $integrityValid = $definitionValid
+            if ($definitionValid) {
+                foreach ($item in @($app.FileHashes)) {
+                    $relative = [string]$item.Path
+                    if (-not $relative.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase) -or
+                        $relative -match '\.\.|[:*?"<>|]' -or
+                        [string]$item.Sha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+                        $integrityValid = $false
+                        break
+                    }
+                    $file = Join-Path $stageRoot $relative
+                    if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or
+                        (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne [string]$item.Sha256) {
+                        $integrityValid = $false
+                        break
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'Company Portal bundle, license and dependencies are SHA-256 validated.' } else { 'Company Portal package contents are missing or corrupt.' }
+        }
         elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WindowsInboxCleanupScript') {
             $definitionValid = (
                 $id -eq 'WindowsInboxCleanup' -and
@@ -333,7 +362,7 @@ function Test-OSDAppDeployment {
         }
 
         if (-not $payloadReady) { $allPayloadsReady = $false }
-        $applicationRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -ne 'WindowsInboxCleanupScript' -and $id -ne 'CMTraceOpen') -or $payloadReady))
+        $applicationRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
         Add-DeploymentCheck -Name 'ApplicationDefinition' -ApplicationId $id -Passed $applicationRequiredStateValid -Required $true -Message "${id}: $detail"
         Add-DeploymentCheck -Name 'OfflinePayload' -ApplicationId $id -Passed $payloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
 

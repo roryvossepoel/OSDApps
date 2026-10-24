@@ -38,6 +38,24 @@
         SuccessCodes = 'Repository installer exit codes treated as success. Default accepts 0 and 3010.'
     }
     Commands = @{
+        'Add-OSDAppMicrosoftCompanyPortal' = @{
+            Synopsis = 'Stage the Microsoft Company Portal offline Preinstall Kit for Windows provisioning.'
+            Description = 'Stages the Microsoft-supplied appbundle, offline license and five matching dependencies from a locally prepared OSDCloud cache. SetupComplete provisions the package for newly created users; it does not directly deploy into an existing signed-in user session.'
+            Environment = 'WinPE after OSDCloud has applied Windows, with the pre-prepared OSDCloud USB cache.'
+            Output = 'OSDApps.StagedApp with target, selected architecture and preinstall kit version. Staging does not prove provisioning succeeded.'
+            Parameters = @{}
+            Examples = @(@{ Code = 'Add-OSDAppMicrosoftCompanyPortal -Architecture x64'; Remarks = 'Stage the x64 package from the prepared offline USB cache.' })
+            Link = 'docs/microsoft-company-portal.md'
+        }
+        'Sync-OSDAppMicrosoftCompanyPortal' = @{
+            Synopsis = 'Prepare Microsoft Company Portal from the official offline Preinstall Kit.'
+            Description = 'Consumes an operator-supplied official Microsoft ZIP, selects one appbundle, offline license and five architecture-specific dependencies, records SHA-256 hashes, and atomically updates the corresponding local USB cache variant. Does not download or redistribute Microsoft binaries.'
+            Environment = 'Full Windows preparation machine with the OSDCloud USB connected and access to the original Microsoft Preinstall Kit ZIP.'
+            Output = 'Cache preparation record including selected architecture, bundle version and target cache path.'
+            Parameters = @{ KitPath = 'Full path to the original Microsoft Company Portal Preinstall Kit ZIP downloaded by the operator.' }
+            Examples = @(@{ Code = 'Sync-OSDAppMicrosoftCompanyPortal -KitPath ''C:\Downloads\CompanyPortal-PreinstallKit.zip'' -Architecture x64'; Remarks = 'Prepare the x64 bundle, license and dependency cache for offline WinPE deployment.' })
+            Link = 'docs/microsoft-company-portal.md'
+        }
         'Add-OSDAppCMTraceOpen' = @{
             Synopsis = 'Stage a signed CMTrace Open MSI for setup before Windows OOBE.'
             Description = 'Copies a previously synchronized, SHA-256-verified CMTrace Open MSI from the USB cache to the offline Windows installation and schedules the vendor MSI through the existing SetupComplete runner. Optionally enforces managed update-check settings.'
