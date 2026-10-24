@@ -2,7 +2,7 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Repository apps and scripts](repository.md)
 
-Built-in applications use vendor-native acquisition and installation instead of the repository package contract.
+Built-in **software installers** use vendor-native acquisition and installation instead of the repository package contract. Built-in scripts, such as Windows Inbox Cleanup, ship with OSDApps itself and are staged directly without network access or an app repository.
 
 Application built-ins default to x64. Runtime prerequisite cmdlets require one explicit architecture (x86 or x64). Supported choices differ by product; support in the interface is separate from [field validation](testing.md#validated-built-ins-and-remaining-variants).
 
@@ -15,7 +15,34 @@ Application built-ins default to x64. Runtime prerequisite cmdlets require one e
 | [Mozilla Firefox Enterprise](#mozilla-firefox-enterprise) | x64, x86 | Rapid/ESR channel and language |
 | [Zoom Workplace](#zoom-workplace) | x64, arm64 | Architecture, desktop shortcut, SSO host and Zoom settings |
 | [Cisco Webex](#cisco-webex) | x64, arm64 | Architecture and supported MSI options |
+| [Windows Inbox Cleanup](#windows-inbox-cleanup) | any | Explicit app selection, tested preset, or diagnostic-only |
 
+
+## Windows Inbox Cleanup
+
+The optional **built-in script** is staged in WinPE and runs once in SetupComplete under SYSTEM, before OOBE. It removes **only the package names you select**, from provisioning and existing user registrations. Protected and Windows NonRemovable components are skipped. The script logs a per-app result and returns nonzero if a requested removal failed. Because Appx behavior can change between Windows builds, test your selection on your own image before broad deployment.
+
+```powershell
+# WinPE after OSDCloud. No CatalogUri or USB cache is needed.
+Import-Module OSDApps
+Add-OSDAppWindowsInboxCleanup -Preset Tested13
+Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
+```
+
+The `Tested13` preset matches the 13 package names tested on Windows 11 25H2 during the repository proof of concept. The preset is opt-in: simply importing OSDApps never removes anything. For a custom list:
+
+```powershell
+Add-OSDAppWindowsInboxCleanup -Remove @(
+    'Microsoft.BingWeather',
+    'Microsoft.MicrosoftSolitaireCollection'
+)
+```
+
+Use `-DiagnoseOnly` to inspect and log selected packages during SetupComplete without removing them. OSDApps copies the script plus `config.json` from the module to `BuiltIn\WindowsInboxCleanup` in the offline Windows staging folder, pins their SHA-256 hashes in `DeviceManifest.json`, and validates both before execution. The built-in script does not use Azure Blob Storage, package archives, publisher URLs or pre-install downloads. `Remove-OSDAppStaging -Name WindowsInboxCleanup` can remove it from the pending queue in WinPE.
+
+The earlier standalone repository package is named `WindowsInboxAppCleanup`; the new built-in ID is `WindowsInboxCleanup`, so both identities remain distinct. Avoid selecting both on the same device.
+
+After the first boot, check `%ProgramData%\OSDApps\Results\Latest.json`, `%ProgramData%\OSDApps\Results\InboxCleanup-Result.json`, and `%ProgramData%\OSDApps\Logs\InboxCleanup.log`. Additional early diagnostics are written to `%SystemRoot%\Temp\OSDApps-InboxCleanup-Diagnostics.log`. A successful OSDApps result is not a replacement for post-Autopilot verification.
 
 ## Installer filenames
 
@@ -45,13 +72,13 @@ The current built-in application catalog is also published as:
 
 [`metadata/builtins.json`](../metadata/builtins.json)
 
-This JSON is intended for external tooling and includes the application Id, display name, vendor, supported architectures/channels, Add/Sync commands, acquisition model, cache path and synchronization phase.
+This JSON is intended for external tooling and includes the application Id, display name, vendor, supported architectures/channels, Add command, acquisition model, cache path and phase. Installer built-ins have a Sync command and USB cache path; module-bundled scripts have neither.
 
 CI validates the file against the module's exported built-in Add commands so a new built-in cannot be added without updating the metadata.
 
 ## Vendor-only source policy
 
-Built-in applications are always sourced directly from their software vendor.
+Built-in third-party software installers are always sourced directly from their software vendor. OSDApps-owned built-in scripts are bundled as text in the module and do not download installers.
 
 OSDApps does not contain, embed, mirror, redistribute, or publish built-in application installers or payloads. The module only contains acquisition and installation logic plus vendor-owned URLs or supported endpoints.
 
@@ -65,7 +92,7 @@ Vendor
 
 The OSDCloud USB cache is only a local deployment cache of vendor content. It is never a distribution source maintained by OSDApps.
 
-This rule is absolute for built-ins: if a product cannot be obtained directly and maintainably from the vendor, it is not eligible for built-in support.
+This rule is absolute for built-in **software products**: if an installer cannot be obtained directly and maintainably from the vendor, it is not eligible for built-in installer support. The Windows Inbox Cleanup script is a separate OSDApps-maintained configuration action, not a third-party redistributable.
 
 Repository applications are different. Repository content is controlled by the repository owner, and OSDApps does not prescribe where that organization obtains or hosts those packages.
 
