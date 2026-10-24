@@ -21,8 +21,16 @@ function Add-OSDAppCMTraceOpen {
         (Get-FileHash -LiteralPath $msi -Algorithm SHA256).Hash -ne $info.Sha256) {
         throw 'CMTrace Open cache SHA-256 validation failed.'
     }
-    $signature = Get-AuthenticodeSignature -FilePath $msi
-    if ($signature.Status -ne 'Valid') { throw 'Invalid CMTrace Open MSI signature.' }
+    # WinPE does not guarantee a complete WinTrust/Authenticode trust environment.
+    # The full-Windows Sync command verifies the publisher signature and official
+    # GitHub release SHA-256 before recording cache metadata. In WinPE, require
+    # that same cached hash; SetupComplete independently rechecks Authenticode.
+    if (-not (Test-OSDAppWinPE)) {
+        $signature = Get-AuthenticodeSignature -FilePath $msi
+        if ($signature.Status -ne 'Valid') {
+            throw ('Invalid CMTrace Open MSI signature: {0}.' -f $signature.Status)
+        }
+    }
 
     $stage = Join-Path $target 'Windows\Temp\OSDApps'
     $rel = 'BuiltIn\CMTraceOpen\' + $Architecture
