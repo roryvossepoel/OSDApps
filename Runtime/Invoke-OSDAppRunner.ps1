@@ -513,11 +513,12 @@ try {
         Write-RunnerLog -LogPath $logPath -Event 'BuiltInAppxIntegrityValidated' -Message 'Company Portal bundle, license and dependencies validated.' -Data @{ Id=$app.Id }
     }
 
-    # CMTrace Open MSI has already been synchronized and is not refreshed during PreInstall.
+    # CMTrace Open is pre-cached on full Windows; validate again before invoking MSI.
     foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Id -eq 'CMTraceOpen' })) {
         $expectedFile = 'CMTrace-Open_{0}_{1}.msi' -f [string]$app.Version,[string]$app.Architecture
         $relative = 'BuiltIn\CMTraceOpen\' + [string]$app.Architecture + '\' + $expectedFile
-        if ([string]$app.Version -notmatch '^\d+\.\d+\.\d+
+        if ([string]$app.Version -notmatch '^\d+\.\d+\.\d+$' -or
+            [string]$app.Type -ne 'VendorMsi' -or [string]$app.Package -ne $relative -or
             [string]$app.Architecture -notin @('x64','arm64') -or
             [string]$app.ExpectedSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
             throw (New-RunnerFailureException -Message 'Invalid CMTrace Open built-in manifest.' -FailureType 'ManifestInvalid' -ApplicationId 'CMTraceOpen' -Fatal)
