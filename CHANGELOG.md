@@ -2,8 +2,12 @@
 
 ## Unreleased
 
-- Add opt-in `Add-OSDAppWindowsInboxCleanup` built-in Script with custom selection or an explicit `Tested13` preset, integrity-checked offline staging, SYSTEM execution during SetupComplete, independent diagnostics and per-app results. No repository or vendor download is required; the old repository package keeps its distinct Id.
-- Exclude bundled scripts from PreInstall acquisition while preserving the ordered runner queue and fail-on-tamper preflight. Include script metadata, Viewer classification and regression tests. A full physical built-in deployment remains to be validated.
+## 0.50.0
+
+- Add opt-in `Add-OSDAppWindowsInboxCleanup` built-in Script with explicit package selection or the `Tested13` preset, integrity-checked offline staging, SYSTEM execution during SetupComplete, early diagnostics and per-package result reporting. No Azure catalog or vendor download is needed.
+- Skip bundled scripts in the PreInstall acquisition phase without changing the ordered SetupComplete queue. Include preflight hash verification, read-only Viewer metadata and regression tests. Keep the separate `WindowsInboxAppCleanup` repository package compatible and unchanged.
+- Fix the startup failure when `powershell.exe -File` evaluated a `$PSScriptRoot`-dependent parameter default before entering the script body. Resolve `config.json` only after parameter binding; add regression coverage.
+- Validate on a physical Windows deployment: the built-in ran as `NT AUTHORITY\SYSTEM`, removed all 13 selected packages with zero failures and exit code 0. The operator confirmed they remained absent after completing Autopilot. See [validation evidence](docs/testing.md#windows-inbox-cleanup-built-in--24-october-2026).
 
 ## 0.49.1
 
