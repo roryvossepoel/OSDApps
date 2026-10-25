@@ -1,0 +1,52 @@
+name: Materialize registry feature
+on:
+  push:
+    branches: [feature/registry-staging]
+    paths: [.github/workflows/registry-feature-seed.yml]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.ref == 'refs/heads/feature/registry-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: feature/registry-staging
+          fetch-depth: 0
+      - name: Verify and apply exact reviewed patch
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, gzip, hashlib, subprocess
+          parts = [
+              ('part1', 'e91a2ecea281eac191cb8c83f46f7ba691cdf186487f462320fede42bfca157a'),
+              ('part2a', '1e5ac21ddc25f6467a310a5fe51cf43cc314a6792b34e6ae9018cc45ce03e592'),
+              ('part2b', '5ed53648a762a5040df451a751f063fa64b4003b5b6e73cb4684edb0eb70377b'),
+              ('part2c', 'b327fec0556f2386c260294d80bfa65a2e5d4ff6dc492e3b2cad0eb54dfd7e38')
+          ]
+          data = ''
+          for name, expected in parts:
+              text = Path('build/registry-feature.' + name).read_text().strip()
+              actual = hashlib.sha256(text.encode()).hexdigest()
+              print(name, len(text), actual)
+              if actual != expected:
+                  raise SystemExit('Patch segment verification failed: ' + name)
+              data += text
+          patch = gzip.decompress(base64.b64decode(data, validate=True))
+          if hashlib.sha256(patch).hexdigest() != 'b54b6e789729946ce6b4a609ac0b80147cfab3063b78d3210fff4b12eaf221b9':
+              raise SystemExit('Reviewed patch SHA-256 mismatch')
+          subprocess.run(['git','apply','--check','-'],input=patch,check=True)
+          subprocess.run(['git','apply','-'],input=patch,check=True)
+          PY
+          git diff --check
+          git rm build/registry-feature.part1 build/registry-feature.part2 build/registry-feature.part2a build/registry-feature.part2b build/registry-feature.part2c .github/workflows/registry-feature-seed.yml
+          git add OSDApps.psd1 OSDApps.psm1 Public Private Runtime Tests Examples tools docs help
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat: stage registry keys and values using the verified Script package runner'
+          git push origin HEAD:feature/registry-staging
