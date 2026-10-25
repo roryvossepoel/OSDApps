@@ -76,7 +76,7 @@ Describe 'One-shot fault-tolerant runtime' {
         }
     }
 
-    It 'continues with independent applications after an installer exit-code failure' -Skip:(-not (Get-Command powershell.exe -ErrorAction SilentlyContinue)) {
+    It 'continues with independent apps after an installer exit-code failure' -Skip:(-not (Get-Command powershell.exe -ErrorAction SilentlyContinue)) {
         $root = Join-Path $TestDrive 'ContinueAfterInstallerFailure'
         $stage = Join-Path $root 'Stage'
         New-Item -ItemType Directory -Path $stage -Force | Out-Null
@@ -98,15 +98,15 @@ Describe 'One-shot fault-tolerant runtime' {
         (Test-Path -LiteralPath $fixture.Stage -PathType Container) | Should -BeTrue
         $result = Get-Content -LiteralPath $fixture.ResultPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $result.Status | Should -Be 'Failed'
-        $result.FailureType | Should -Be 'ApplicationFailures'
-        $result.SuccessfulApplicationCount | Should -Be 1
-        $result.FailedApplicationCount | Should -Be 1
-        $result.SkippedApplicationCount | Should -Be 0
-        @($result.Applications.Status) | Should -Be @('Failed','Succeeded')
-        $result.Applications[0].ExitCode | Should -Be 42
-        $result.Applications[0].FailureType | Should -Be 'InstallerFailed'
-        $result.Applications[0].PackageType | Should -Be 'Script'
-        $result.Applications[1].PackageType | Should -Be 'App'
+        $result.FailureType | Should -Be 'AppFailures'
+        $result.SuccessfulAppCount | Should -Be 1
+        $result.FailedAppCount | Should -Be 1
+        $result.SkippedAppCount | Should -Be 0
+        @($result.Apps.Status) | Should -Be @('Failed','Succeeded')
+        $result.Apps[0].ExitCode | Should -Be 42
+        $result.Apps[0].FailureType | Should -Be 'InstallerFailed'
+        $result.Apps[0].PackageType | Should -Be 'Script'
+        $result.Apps[1].PackageType | Should -Be 'App'
         (Get-Content -LiteralPath $fixture.LogPath -Raw) | Should -Match '\[InstallCompletedWithErrors\]'
     }
 
@@ -133,7 +133,7 @@ Describe 'One-shot fault-tolerant runtime' {
             DeploymentId = $fixture.DeploymentId
             Phase = 'PreInstall'
             Status = 'CompletedWithErrors'
-            Applications = @(
+            Apps = @(
                 [ordered]@{
                     Id = 'AdobeAcrobatUnified'
                     Status = 'Failed'
@@ -148,10 +148,10 @@ Describe 'One-shot fault-tolerant runtime' {
 
         (Test-Path -LiteralPath $successMarker -PathType Leaf) | Should -BeTrue
         $result = Get-Content -LiteralPath $fixture.ResultPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        @($result.Applications.Status) | Should -Be @('Skipped','Succeeded')
-        $result.SuccessfulApplicationCount | Should -Be 1
-        $result.SkippedApplicationCount | Should -Be 1
-        $result.Applications[0].FailureType | Should -Be 'RemoteAcquisition'
+        @($result.Apps.Status) | Should -Be @('Skipped','Succeeded')
+        $result.SuccessfulAppCount | Should -Be 1
+        $result.SkippedAppCount | Should -Be 1
+        $result.Apps[0].FailureType | Should -Be 'RemoteAcquisition'
     }
 
     It 'aborts before every installer when repository integrity fails' -Skip:(-not (Get-Command powershell.exe -ErrorAction SilentlyContinue)) {
@@ -175,13 +175,13 @@ Describe 'One-shot fault-tolerant runtime' {
         $result = Get-Content -LiteralPath $fixture.ResultPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $result.Status | Should -Be 'Failed'
         $result.FailureType | Should -Be 'HashMismatch'
-        @($result.Applications.Status) | Should -Be @('Failed','Skipped')
-        $result.FailedApplicationCount | Should -Be 1
-        $result.SkippedApplicationCount | Should -Be 1
+        @($result.Apps.Status) | Should -Be @('Failed','Skipped')
+        $result.FailedAppCount | Should -Be 1
+        $result.SkippedAppCount | Should -Be 1
     }
 
     It 'records an ordinary built-in acquisition failure without requesting a retry' -Skip:(-not (Get-Command powershell.exe -ErrorAction SilentlyContinue)) {
-        $root = Join-Path $TestDrive 'PreInstallApplicationFailure'
+        $root = Join-Path $TestDrive 'PreInstallAppFailure'
         $stage = Join-Path $root 'Stage'
         $resultPath = Join-Path $root 'Results\Latest.json'
         $logPath = Join-Path $root 'Logs\Runtime.log'
@@ -214,9 +214,9 @@ Describe 'One-shot fault-tolerant runtime' {
         $preInstallResultPath = Join-Path (Split-Path $resultPath -Parent) 'PreInstall.json'
         $result = Get-Content -LiteralPath $preInstallResultPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $result.Status | Should -Be 'CompletedWithErrors'
-        $result.FailedBuiltInApplicationCount | Should -Be 1
-        @($result.Applications).Count | Should -Be 1
-        $result.Applications[0].Status | Should -Be 'Failed'
+        $result.FailedBuiltInAppCount | Should -Be 1
+        @($result.Apps).Count | Should -Be 1
+        $result.Apps[0].Status | Should -Be 'Failed'
         $result.Error | Should -Match 'no automatic retry'
     }
 

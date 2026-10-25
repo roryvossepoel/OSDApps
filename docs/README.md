@@ -1,6 +1,6 @@
 # OSDApps documentation
 
-OSDApps is CLI-first. Use PowerShell to configure, cache and stage applications and machine-context scripts; use OSDApps Viewer to inspect what was prepared. Start with the workflow for the environment you are actually using.
+OSDApps is CLI-first. Use PowerShell to configure, cache and stage apps and machine-context scripts; use OSDApps Viewer to inspect what was prepared. Start with the workflow for the environment you are actually using.
 
 ## Start here
 
@@ -14,7 +14,7 @@ OSDApps is CLI-first. Use PowerShell to configure, cache and stage applications 
 | Preflight staging and inspect cache, signatures and logs | [Getting started](getting-started.md#3-inspect-before-reboot) and [OSDApps Viewer](viewer.md) | WinPE or full Windows |
 | Choose a source, cache, release or deployment-result check | [Choose the right check](maintenance.md#choose-the-right-check) | Environment and effects listed per check |
 | Audit or reconcile long-lived repository cache content | [Cache health and reconciliation](repository.md#cache-health-and-reconciliation) | Full Windows preparation or WinPE cache session |
-| Package your own application or machine-context script | [Package authoring walkthrough](../Examples/Build-Repository-Package.md) | Full Windows authoring machine |
+| Package your own app or machine-context script | [Package authoring walkthrough](../Examples/Build-Repository-Package.md) | Full Windows authoring machine |
 
 **Do not run deployment staging examples against your preparation machine's Windows drive.** Each example identifies its environment and what it changes. The Viewer is read-only; the Add and Sync commands are not.
 
@@ -22,7 +22,7 @@ OSDApps is CLI-first. Use PowerShell to configure, cache and stage applications 
 
 | Topic | Contents |
 | --- | --- |
-| [Built-in applications](built-in-apps.md) | Per-app configuration, architectures, vendor sources and signature/publisher policy |
+| [Built-in apps](built-in-apps.md) | Per-app configuration, architectures, vendor sources and signature/publisher policy |
 | [Repository apps and scripts](repository.md) | Catalog/alias structure, package authoring, cache health, transactional reconciliation and SHA-256 integrity |
 | [Viewer](viewer.md) | Launch options, tab contents, cache/version/signature meanings and read-only boundaries |
 | [Runtime and cleanup](runtime.md) | SetupComplete, PreInstall, Runner, machine-readable results, configuration, logs and failure handling |
@@ -53,7 +53,7 @@ Historical test results are not claims about every currently supported architect
 | USB cache | Content under `\OSDApps` on the volume identified by `CacheVolumeLabel` (default `OSDCloud`) |
 | Local staging | `Windows\Temp\OSDApps` under the Windows target, containing its manifest, runtime and app content |
 | Built-in | Vendor-native integration maintained by OSDApps; payloads are not distributed by the module |
-| Repository package | Your own `Package.zip` plus published metadata, classified as `Application` or `Script` |
+| Repository package | Your own `Package.zip` plus published metadata, classified as `App` or `Script` |
 | Staged | Queued for SetupComplete; not evidence of successful installation |
 
 [Back to the project](../README.md)

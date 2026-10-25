@@ -1,19 +1,19 @@
-name: Built-in application request
-description: Request a new built-in application for OSDApps.
+name: Built-in app request
+description: Request a new built-in app for OSDApps.
 title: "[Built-in request] "
 body:
   - type: markdown
     attributes:
       value: |
-        Use this form to request a new built-in application.
+        Use this form to request a new built-in app.
 
-        Built-ins are intended for broadly used applications that can be acquired directly and reproducibly from the software vendor and installed unattended. Customer-specific or niche applications should normally be packaged as repository applications instead.
+        Built-ins are intended for broadly used apps that can be acquired directly and reproducibly from the software vendor and installed unattended. Customer-specific or niche apps should normally be packaged as repository apps instead.
 
   - type: input
-    id: application
+    id: app
     attributes:
-      label: Application
-      description: Product or application name.
+      label: App
+      description: Product or app name.
       placeholder: e.g. Google Chrome Enterprise
     validations:
       required: true
@@ -94,7 +94,7 @@ body:
     id: why_builtin
     attributes:
       label: Why should this be a built-in?
-      description: Explain why this application is broadly used and why a generic built-in is useful across multiple organizations.
+      description: Explain why this app is broadly used and why a generic built-in is useful across multiple organizations.
     validations:
       required: true
 
@@ -114,15 +114,15 @@ body:
     id: requirements
     attributes:
       label: Built-in requirements
-      description: Confirm that the requested application fits the OSDApps built-in model.
+      description: Confirm that the requested app fits the OSDApps built-in model.
       options:
         - label: The installer is acquired directly from the software vendor.
           required: true
         - label: The acquisition method does not require website scraping, browser-session data, or reverse-engineered temporary URLs.
           required: true
-        - label: The application supports unattended enterprise installation.
+        - label: The app supports unattended enterprise installation.
           required: true
-        - label: The application is broadly useful across multiple organizations rather than being customer-specific.
+        - label: The app is broadly useful across multiple organizations rather than being customer-specific.
           required: true
 
   - type: textarea

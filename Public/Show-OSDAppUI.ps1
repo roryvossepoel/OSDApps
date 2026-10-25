@@ -2,24 +2,24 @@ function Set-OSDAppUIColumnWidths {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][hashtable]$State,
-        [Parameter(Mandatory)][ValidateSet('Staged','Applications','Cache','Logs')][string]$Key
+        [Parameter(Mandatory)][ValidateSet('Staged','Apps','Cache','Logs')][string]$Key
     )
 
     $list = $State.Lists[$Key]
     if (-not $list -or $list.Columns.Count -eq 0) { return }
 
     # Reserve enough room for Teams' four-part package version, and let
-    # Application / Message absorb remaining space on window resize.
+    # App / Message absorb remaining space on window resize.
     $fixed = switch ($Key) {
         'Staged'       { @(65,0,90,95,100,125,185,105) }
-        'Applications' { @(0,75,95,90,110,175,100,100,90) }
+        'Apps' { @(0,75,95,90,110,175,100,100,90) }
         'Cache'        { @(0,75,95,88,175,95,115,74,122) }
         'Logs'         { @(185,78,135,125,0) }
     }
-    $flexIndex = if ($Key -in @('Staged','Applications','Cache')) {
+    $flexIndex = if ($Key -in @('Staged','Apps','Cache')) {
         if ($Key -eq 'Staged') { 1 } else { 0 }
     } else { 4 }
-    $minimumFlex = if ($Key -eq 'Logs') { 270 } elseif ($Key -in @('Applications','Cache')) { 180 } else { 200 }
+    $minimumFlex = if ($Key -eq 'Logs') { 270 } elseif ($Key -in @('Apps','Cache')) { 180 } else { 200 }
     $reserved = 0
     foreach ($width in $fixed) { $reserved += [int]$width }
     $available = [math]::Max(0,$list.ClientSize.Width - 22)
@@ -37,7 +37,7 @@ function Show-OSDAppUIRows {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][hashtable]$State,
-        [Parameter(Mandatory)][ValidateSet('Staged','Applications','Cache','Logs')][string]$Key
+        [Parameter(Mandatory)][ValidateSet('Staged','Apps','Cache','Logs')][string]$Key
     )
 
     $view = $State.Lists[$Key]
@@ -84,7 +84,7 @@ function Set-OSDAppUIListSort {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][hashtable]$State,
-        [Parameter(Mandatory)][ValidateSet('Staged','Applications','Cache','Logs')][string]$Key,
+        [Parameter(Mandatory)][ValidateSet('Staged','Apps','Cache','Logs')][string]$Key,
         [Parameter(Mandatory)][int]$Column
     )
 
@@ -167,15 +167,15 @@ function Update-OSDAppUIReadOnlyView {
         foreach ($app in @($data.StagedApps)) {
             $number++
             $item = [System.Windows.Forms.ListViewItem]::new([string]$number)
-            $displayInfo = Get-OSDAppUIDisplayInfo -Application $app -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
+            $displayInfo = Get-OSDAppUIDisplayInfo -App $app -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
             [void]$item.SubItems.Add([string]$displayInfo.DisplayName)
             [void]$item.SubItems.Add($(if ($app.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
-            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -Application $app))
+            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -App $app))
             [void]$item.SubItems.Add([string]$displayInfo.Vendor)
-            [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -Application $app))
-            [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
+            [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -App $app))
+            [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -App $app -CacheEntries $data.CacheEntries))
             [void]$item.SubItems.Add([string]$app.Architecture)
-            $item.Tag = [pscustomobject]@{ Application=$app; Vendor=$displayInfo.Vendor }
+            $item.Tag = [pscustomobject]@{ App=$app; Vendor=$displayInfo.Vendor }
             $item
         }
     )
@@ -183,13 +183,13 @@ function Update-OSDAppUIReadOnlyView {
 
     $appItems = @(
         foreach ($app in @($data.CatalogApps | Sort-Object Source,DisplayName)) {
-            $displayInfo = Get-OSDAppUIDisplayInfo -Application $app -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
+            $displayInfo = Get-OSDAppUIDisplayInfo -App $app -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
             $item = [System.Windows.Forms.ListViewItem]::new([string]$displayInfo.DisplayName)
             [void]$item.SubItems.Add($(if ($app.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
-            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -Application $app))
+            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -App $app))
             [void]$item.SubItems.Add([string]$displayInfo.Vendor)
-            [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -Application $app))
-            [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
+            [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -App $app))
+            [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -App $app -CacheEntries $data.CacheEntries))
             [void]$item.SubItems.Add([string]$app.Architecture)
             [void]$item.SubItems.Add((Get-OSDAppUIAvailabilityLabel -Availability $app.Availability -Offline:$State.Offline))
             [void]$item.SubItems.Add($(if ([string]$app.Id -in @($data.StagedApps.Id)) { 'Staged' } else { '-' }))
@@ -198,27 +198,27 @@ function Update-OSDAppUIReadOnlyView {
         # Staged apps absent from the current catalog/cache remain visible.
         foreach ($app in @($data.StagedApps)) {
             if ([string]$app.Id -in @($data.CatalogApps.Id)) { continue }
-            $displayInfo = Get-OSDAppUIDisplayInfo -Application $app -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
+            $displayInfo = Get-OSDAppUIDisplayInfo -App $app -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
             $item = [System.Windows.Forms.ListViewItem]::new([string]$displayInfo.DisplayName)
             [void]$item.SubItems.Add($(if ($app.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
-            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -Application $app))
+            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -App $app))
             [void]$item.SubItems.Add([string]$displayInfo.Vendor)
-            [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -Application $app))
-            [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -Application $app -CacheEntries $data.CacheEntries))
+            [void]$item.SubItems.Add((Get-OSDAppUIDisplayVersion -App $app))
+            [void]$item.SubItems.Add((Get-OSDAppUICachedVersion -App $app -CacheEntries $data.CacheEntries))
             [void]$item.SubItems.Add([string]$app.Architecture)
             [void]$item.SubItems.Add('Not in current catalog/cache')
             [void]$item.SubItems.Add('Staged')
             $item
         }
     )
-    $State.Rows['Applications'] = $appItems
+    $State.Rows['Apps'] = $appItems
 
     $cacheItems = @(
         foreach ($entry in @($data.CacheEntries)) {
-            $displayInfo = Get-OSDAppUIDisplayInfo -Application $entry -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
+            $displayInfo = Get-OSDAppUIDisplayInfo -App $entry -CatalogApps $data.CatalogApps -BuiltInMetadata $builtInMetadata
             $item = [System.Windows.Forms.ListViewItem]::new([string]$displayInfo.DisplayName)
             [void]$item.SubItems.Add($(if ($entry.Source -eq 'BuiltIn') { 'Built-in' } else { 'Repository' }))
-            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -Application $entry))
+            [void]$item.SubItems.Add((Get-OSDAppUIPackageType -App $entry))
             [void]$item.SubItems.Add([string]$displayInfo.Vendor)
             $cacheVersion = [string]$entry.Version
             if ([string]::IsNullOrWhiteSpace($cacheVersion) -or $cacheVersion -eq 'Current') { $cacheVersion = 'Not recorded' }
@@ -253,7 +253,7 @@ function Update-OSDAppUIReadOnlyView {
     )
     $State.Rows['Cache'] = $cacheItems
 
-    foreach ($key in @('Staged','Applications','Cache')) {
+    foreach ($key in @('Staged','Apps','Cache')) {
         Show-OSDAppUIRows -State $State -Key $key
         Set-OSDAppUIColumnWidths -State $State -Key $key
     }
@@ -294,13 +294,13 @@ function Update-OSDAppUIReadOnlyView {
         $first = $State.StagedList.Items[0]
         $first.Selected = $true
         $selected = $first.Tag
-        $State.Details.Text = Format-OSDAppUIStagedDetails -Application $selected.Application -Vendor $selected.Vendor
+        $State.Details.Text = Format-OSDAppUIStagedDetails -App $selected.App -Vendor $selected.Vendor
     }
     else {
         $State.Details.Text = if ($stagedCount) {
-            'No staged applications match the current search.'
+            'No staged apps match the current search.'
         } else {
-            'No staged applications found. Stage apps using the PowerShell CLI first.'
+            'No staged apps found. Stage apps using the PowerShell CLI first.'
         }
     }
     $State.Status.Text = "$stagedCount staged | $(@($data.CacheEntries).Count) USB cache entries | $(@($data.Logs).Count) logs"
@@ -632,11 +632,11 @@ function Show-OSDAppUI {
         StagedInfo=$stagedInfo; CacheInfo=$cacheInfo; Details=$details
         LogFiles=$logFiles; LogList=$logList; LogDetails=$logDetails; LogInfo=$logInfo
         LogEntries=@(); Status=$status; Snapshot=$null
-        Lists=@{ Staged=$stagedList; Applications=$catalogList; Cache=$cacheList; Logs=$logList }
-        Rows=@{ Staged=@(); Applications=@(); Cache=@(); Logs=@() }
+        Lists=@{ Staged=$stagedList; Apps=$catalogList; Cache=$cacheList; Logs=$logList }
+        Rows=@{ Staged=@(); Apps=@(); Cache=@(); Logs=@() }
         Sorts=@{
             Staged=@{Column=-1;Descending=$false}
-            Applications=@{Column=-1;Descending=$false}
+            Apps=@{Column=-1;Descending=$false}
             Cache=@{Column=-1;Descending=$false}
             Logs=@{Column=-1;Descending=$false}
         }
@@ -646,7 +646,7 @@ function Show-OSDAppUI {
         $state=$script:OSDAppUIState
         if (-not $state -or $state.StagedList.SelectedItems.Count -eq 0) { return }
         $selected = $state.StagedList.SelectedItems[0].Tag
-        $state.Details.Text = Format-OSDAppUIStagedDetails -Application $selected.Application -Vendor $selected.Vendor
+        $state.Details.Text = Format-OSDAppUIStagedDetails -App $selected.App -Vendor $selected.Vendor
     })
     $logFiles.Add_SelectedIndexChanged({
         $state=$script:OSDAppUIState
@@ -662,7 +662,7 @@ function Show-OSDAppUI {
     $searchBox.Add_TextChanged({
         $state=$script:OSDAppUIState
         if (-not $state) { return }
-        foreach ($key in @('Staged','Applications','Cache','Logs')) {
+        foreach ($key in @('Staged','Apps','Cache','Logs')) {
             Show-OSDAppUIRows -State $state -Key $key
         }
     })
@@ -672,7 +672,7 @@ function Show-OSDAppUI {
     })
     $catalogList.Add_ColumnClick({
         $state=$script:OSDAppUIState
-        if ($state) { Set-OSDAppUIListSort -State $state -Key Applications -Column $_.Column }
+        if ($state) { Set-OSDAppUIListSort -State $state -Key Apps -Column $_.Column }
     })
     $cacheList.Add_ColumnClick({
         $state=$script:OSDAppUIState
@@ -688,7 +688,7 @@ function Show-OSDAppUI {
     })
     $catalogList.Add_ClientSizeChanged({
         $state = $script:OSDAppUIState
-        if ($state) { Set-OSDAppUIColumnWidths -State $state -Key Applications }
+        if ($state) { Set-OSDAppUIColumnWidths -State $state -Key Apps }
     })
     $cacheList.Add_ClientSizeChanged({
         $state = $script:OSDAppUIState

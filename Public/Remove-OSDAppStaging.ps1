@@ -1,7 +1,7 @@
 function Remove-OSDAppStaging {
     <#
     .SYNOPSIS
-    Removes selected applications from the pending OSDApps SetupComplete queue.
+    Removes selected apps from the pending OSDApps SetupComplete queue.
     .DESCRIPTION
     Unstages app-specific files on the offline Windows volume, without touching
     the USB cache or uninstalling software. The last app also removes only the
@@ -55,7 +55,7 @@ function Remove-OSDAppStaging {
     $requested = @($Name | Select-Object -Unique)
     foreach ($id in $requested) {
         if ([string]$id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or [string]$id -match '\.\.') {
-            throw "Invalid application ID '$id'."
+            throw "Invalid app ID '$id'."
         }
     }
 
@@ -74,7 +74,7 @@ function Remove-OSDAppStaging {
     foreach ($app in $toRemove) {
         $id = [string]$app.Id
         if ($id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $id -match '\.\.') {
-            throw "Invalid staged application ID '$id'."
+            throw "Invalid staged app ID '$id'."
         }
         if ([string]$app.Source -notin @('BuiltIn','Repository')) {
             throw "Unexpected staged source '$($app.Source)' for '$id'."
@@ -88,7 +88,7 @@ function Remove-OSDAppStaging {
         Remove-OSDAppSetupComplete -WindowsPath $target -WhatIf -ErrorAction Stop | Out-Null
     }
 
-    $action = "Unstage $($toRemove.Count) application(s) from DeviceManifest and the offline Windows staging folder"
+    $action = "Unstage $($toRemove.Count) app(s) from DeviceManifest and the offline Windows staging folder"
     if (-not $PSCmdlet.ShouldProcess($target, $action)) {
         return
     }

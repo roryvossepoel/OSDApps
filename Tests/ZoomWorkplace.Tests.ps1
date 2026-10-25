@@ -16,7 +16,7 @@ Describe 'Zoom Workplace built-in MSI integration' {
     }
 
     It 'publishes metadata for the right commands, cache and brand icon' {
-        $app = @($script:metadata.Applications | Where-Object Id -eq 'ZoomWorkplace')[0]
+        $app = @($script:metadata.Apps | Where-Object Id -eq 'ZoomWorkplace')[0]
         $app.DisplayName | Should -Be 'Zoom Workplace'
         $app.Vendor | Should -Be 'Zoom'
         $app.Acquisition | Should -Be 'VendorMsi'

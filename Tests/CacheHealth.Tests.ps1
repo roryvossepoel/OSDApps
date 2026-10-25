@@ -7,11 +7,11 @@ Describe 'Desired-state cache health' {
         function global:New-CacheHealthRepository {
             param(
                 [Parameter(Mandatory)][string]$Root,
-                [Parameter(Mandatory)][object[]]$Application
+                [Parameter(Mandatory)][object[]]$App
             )
 
-            $catalogApplications = @()
-            foreach ($definition in $Application) {
+            $catalogApps = @()
+            foreach ($definition in $App) {
                 $id = [string]$definition.Id
                 $version = [string]$definition.Version
                 $packageRoot = Join-Path $Root "Apps\$id\$version\x64"
@@ -26,21 +26,21 @@ Describe 'Desired-state cache health' {
                 } | ConvertTo-Json -Depth 10 |
                     Set-Content -LiteralPath (Join-Path $packageRoot 'manifest.json') -Encoding UTF8
 
-                $catalogApplication = [ordered]@{
+                $catalogApp = [ordered]@{
                     Id=$id
                     Packages=@(@{Architecture='x64';Manifest="Apps/$id/$version/x64/manifest.json"})
                 }
                 if ($definition.PSObject.Properties.Name -contains 'Aliases') {
-                    $catalogApplication['Aliases'] = @($definition.Aliases)
+                    $catalogApp['Aliases'] = @($definition.Aliases)
                 }
-                $catalogApplications += [pscustomobject]$catalogApplication
+                $catalogApps += [pscustomobject]$catalogApp
             }
 
             $catalogPath = Join-Path $Root 'catalog.json'
             @{
                 SchemaVersion=1
                 GeneratedAt='2026-10-13T00:00:00Z'
-                Applications=$catalogApplications
+                Apps=$catalogApps
             } | ConvertTo-Json -Depth 20 |
                 Set-Content -LiteralPath $catalogPath -Encoding UTF8
             $catalogPath
@@ -93,7 +93,7 @@ Describe 'Desired-state cache health' {
 
     It 'classifies desired, renamed, obsolete, orphaned and incomplete repository content' {
         $repository = Join-Path $TestDrive 'DesiredRepository'
-        $catalogPath = New-CacheHealthRepository -Root $repository -Application @(
+        $catalogPath = New-CacheHealthRepository -Root $repository -App @(
             [pscustomobject]@{Id='CurrentApp';Version='2.0.0'},
             [pscustomobject]@{Id='NewApp';Version='2.0.0';Aliases=@('OldApp')}
         )

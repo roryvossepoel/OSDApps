@@ -1,6 +1,6 @@
 # Microsoft Company Portal (built-in)
 
-This optional integration provisions the official Microsoft Company Portal Preinstall Kit for **future Windows user profiles** during SetupComplete. OSDApps includes no Microsoft application binaries or licenses. Preparation happens on full Windows; WinPE and SetupComplete consume an already synchronized local cache.
+This optional integration provisions the official Microsoft Company Portal Preinstall Kit for **future Windows user profiles** during SetupComplete. OSDApps includes no Microsoft app binaries or licenses. Preparation happens on full Windows; WinPE and SetupComplete consume an already synchronized local cache.
 
 ## Preparation PC (full Windows)
 

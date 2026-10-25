@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
   <title id="title">Your repository. Your packages.</title>
-  <desc id="desc">A static OSDApps repository contains a root catalog.json pointing to package manifests. Each manifest describes an application or script and records the SHA-256 of its adjacent Package.zip. The archive contains Package/Install.ps1 and any supporting files. Publish the repository over HTTP or HTTPS while preserving its paths.</desc>
+  <desc id="desc">A static OSDApps repository contains a root catalog.json pointing to package manifests. Each manifest describes an app or script and records the SHA-256 of its adjacent Package.zip. The archive contains Package/Install.ps1 and any supporting files. Publish the repository over HTTP or HTTPS while preserving its paths.</desc>
   <defs>
     <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#425c75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
   </defs>

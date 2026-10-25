@@ -16,7 +16,7 @@ Describe 'Cisco Webex built-in MSI integration' {
     }
 
     It 'publishes metadata for the right commands, cache and brand icon' {
-        $app = @($script:metadata.Applications | Where-Object Id -eq 'CiscoWebex')[0]
+        $app = @($script:metadata.Apps | Where-Object Id -eq 'CiscoWebex')[0]
         $app.DisplayName | Should -Be 'Cisco Webex'
         $app.Vendor | Should -Be 'Cisco'
         $app.Acquisition | Should -Be 'VendorMsi'

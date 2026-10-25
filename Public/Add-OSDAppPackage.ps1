@@ -32,7 +32,7 @@ function Add-OSDAppPackage {
     $targetManifest = Join-Path $targetFolder 'manifest.json'
 
     $catalog = Get-OSDAppRepositoryManifest -RepositoryPath $RepositoryPath
-    $existingApplication = @($catalog.Applications | Where-Object { $_.Id -eq $Id } | Select-Object -First 1)
+    $existingApp = @($catalog.Apps | Where-Object { $_.Id -eq $Id } | Select-Object -First 1)
     if ($PSBoundParameters.ContainsKey('PackageType')) {
         $PackageType = if ($PackageType -ieq 'Script') { 'Script' } else { 'App' }
     }
@@ -56,9 +56,9 @@ function Add-OSDAppPackage {
     $effectiveAliases = if ($PSBoundParameters.ContainsKey('Alias')) {
         @($Alias | ForEach-Object { ([string]$_).Trim() } | Select-Object -Unique)
     }
-    elseif ($existingApplication.Count -gt 0 -and
-        $existingApplication[0].PSObject.Properties.Name -contains 'Aliases') {
-        @($existingApplication[0].Aliases)
+    elseif ($existingApp.Count -gt 0 -and
+        $existingApp[0].PSObject.Properties.Name -contains 'Aliases') {
+        @($existingApp[0].Aliases)
     }
     else {
         @()
@@ -76,22 +76,22 @@ function Add-OSDAppPackage {
         }
     }
 
-    foreach ($application in @($catalog.Applications | Where-Object { $_.Id -ne $Id })) {
-        if ([string]$application.Id -ieq $Id) { continue }
-        if ([string]$application.Id -in $effectiveAliases) {
-            throw "Alias '$($application.Id)' for '$Id' conflicts with an existing canonical application Id."
+    foreach ($app in @($catalog.Apps | Where-Object { $_.Id -ne $Id })) {
+        if ([string]$app.Id -ieq $Id) { continue }
+        if ([string]$app.Id -in $effectiveAliases) {
+            throw "Alias '$($app.Id)' for '$Id' conflicts with an existing canonical app Id."
         }
         $otherAliases = @(
-            if ($application.PSObject.Properties.Name -contains 'Aliases') {
-                @($application.Aliases)
+            if ($app.PSObject.Properties.Name -contains 'Aliases') {
+                @($app.Aliases)
             }
         )
         if ($Id -in $otherAliases) {
-            throw "Canonical Id '$Id' is already an alias of '$($application.Id)'."
+            throw "Canonical Id '$Id' is already an alias of '$($app.Id)'."
         }
         $conflicts = @($effectiveAliases | Where-Object { $_ -in $otherAliases })
         if ($conflicts.Count -gt 0) {
-            throw "Alias '$($conflicts[0])' is already assigned to '$($application.Id)'."
+            throw "Alias '$($conflicts[0])' is already assigned to '$($app.Id)'."
         }
     }
 
@@ -132,16 +132,16 @@ function Add-OSDAppPackage {
         ConvertTo-Json -Depth 20 |
         Set-Content -LiteralPath $targetManifest -Encoding UTF8
 
-    if ($existingApplication.Count -gt 0) {
-        $applicationPackages = @(
-            $existingApplication[0].Packages |
+    if ($existingApp.Count -gt 0) {
+        $appPackages = @(
+            $existingApp[0].Packages |
                 Where-Object {
                     ([string]$_.Architecture).ToLowerInvariant() -ne $Architecture.ToLowerInvariant()
                 }
         )
     }
     else {
-        $applicationPackages = @()
+        $appPackages = @()
     }
 
     $manifestRelativePath = "Apps/$Id/$Version/$Architecture/manifest.json"
@@ -150,18 +150,18 @@ function Add-OSDAppPackage {
         Manifest     = $manifestRelativePath
     }
 
-    $applicationEntryData = [ordered]@{
+    $appEntryData = [ordered]@{
         Id       = $Id
-        Packages = @($applicationPackages) + $packageReference
+        Packages = @($appPackages) + $packageReference
     }
     if ($effectiveAliases.Count -gt 0) {
-        $applicationEntryData['Aliases'] = @($effectiveAliases)
+        $appEntryData['Aliases'] = @($effectiveAliases)
     }
-    $applicationEntry = [pscustomobject]$applicationEntryData
+    $appEntry = [pscustomobject]$appEntryData
 
-    $catalog.Applications = @(
-        @($catalog.Applications | Where-Object { $_.Id -ne $Id }) +
-        $applicationEntry
+    $catalog.Apps = @(
+        @($catalog.Apps | Where-Object { $_.Id -ne $Id }) +
+        $appEntry
     )
 
     Save-OSDAppRepositoryManifest -Manifest $catalog -RepositoryPath $RepositoryPath | Out-Null

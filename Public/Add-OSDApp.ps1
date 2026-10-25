@@ -12,26 +12,26 @@ function Add-OSDApp {
     process { foreach($item in $Name){ if(-not [string]::IsNullOrWhiteSpace($item)){ $requested.Add($item) } } }
     end {
         $apps=@($requested | Select-Object -Unique)
-        if($apps.Count -eq 0){throw 'No applications were supplied.'}
+        if($apps.Count -eq 0){throw 'No apps were supplied.'}
 
         foreach($app in $apps){
             if($app -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $app -match '\.\.'){
-                throw "Invalid repository application Id '$app'."
+                throw "Invalid repository app Id '$app'."
             }
             if($app -ieq 'WindowsInboxCleanup'){throw "'WindowsInboxCleanup' is a built-in script. Use Add-OSDAppWindowsInboxCleanup instead."}
-            if($app -ieq 'Microsoft365Apps'){throw "'Microsoft365Apps' is a built-in application. Use Add-OSDAppMicrosoft365Apps instead."}
-            if($app -ieq 'MicrosoftTeams' -or $app -ieq 'Teams'){throw "'MicrosoftTeams' is a built-in application. Use Add-OSDAppMicrosoftTeams instead."}
-            if($app -ieq 'AdobeAcrobatUnified'){throw "'AdobeAcrobatUnified' is a built-in application. Use Add-OSDAppAdobeAcrobatUnified instead."}
-            if($app -ieq 'GoogleChromeEnterprise'){throw "'GoogleChromeEnterprise' is a built-in application. Use Add-OSDAppGoogleChromeEnterprise instead."}
-            if($app -ieq 'MozillaFirefoxEnterprise'){throw "'MozillaFirefoxEnterprise' is a built-in application. Use Add-OSDAppMozillaFirefoxEnterprise instead."}
-            if($app -ieq 'CiscoWebex'){throw "'CiscoWebex' is a built-in application. Use Add-OSDAppCiscoWebex instead."}
+            if($app -ieq 'Microsoft365Apps'){throw "'Microsoft365Apps' is a built-in app. Use Add-OSDAppMicrosoft365Apps instead."}
+            if($app -ieq 'MicrosoftTeams' -or $app -ieq 'Teams'){throw "'MicrosoftTeams' is a built-in app. Use Add-OSDAppMicrosoftTeams instead."}
+            if($app -ieq 'AdobeAcrobatUnified'){throw "'AdobeAcrobatUnified' is a built-in app. Use Add-OSDAppAdobeAcrobatUnified instead."}
+            if($app -ieq 'GoogleChromeEnterprise'){throw "'GoogleChromeEnterprise' is a built-in app. Use Add-OSDAppGoogleChromeEnterprise instead."}
+            if($app -ieq 'MozillaFirefoxEnterprise'){throw "'MozillaFirefoxEnterprise' is a built-in app. Use Add-OSDAppMozillaFirefoxEnterprise instead."}
+            if($app -ieq 'CiscoWebex'){throw "'CiscoWebex' is a built-in app. Use Add-OSDAppCiscoWebex instead."}
             if($app -in @('VisualCRedist','DotNetRuntime')){
                 $command = if ($app -eq 'VisualCRedist') { 'Add-OSDAppVisualCRedist' } else { 'Add-OSDAppDotNetRuntime' }
                 throw "'$app' is a built-in runtime. Use $command instead."
             }
-            if($app -ieq 'VisualStudioCode'){throw "'VisualStudioCode' is a built-in application. Use Add-OSDAppVisualStudioCode instead."}
-            if($app -ieq '7Zip'){throw "'7Zip' is a built-in application. Use Add-OSDApp7Zip instead."}
-            if($app -ieq 'ZoomWorkplace'){throw "'ZoomWorkplace' is a built-in application. Use Add-OSDAppZoomWorkplace instead."}
+            if($app -ieq 'VisualStudioCode'){throw "'VisualStudioCode' is a built-in app. Use Add-OSDAppVisualStudioCode instead."}
+            if($app -ieq '7Zip'){throw "'7Zip' is a built-in app. Use Add-OSDApp7Zip instead."}
+            if($app -ieq 'ZoomWorkplace'){throw "'ZoomWorkplace' is a built-in app. Use Add-OSDAppZoomWorkplace instead."}
         }
 
 # USB cache is optional. When absent, stage repository archives in
@@ -52,7 +52,7 @@ function Add-OSDApp {
 
         # WhatIf must not download, create a local cache, modify the manifest,
         # or update SetupComplete.cmd.
-        if (-not $PSCmdlet.ShouldProcess(($apps -join ', '), "Stage repository applications for SetupComplete on $resolvedWindowsPath")) {
+        if (-not $PSCmdlet.ShouldProcess(($apps -join ', '), "Stage repository apps for SetupComplete on $resolvedWindowsPath")) {
             return
         }
 
@@ -61,7 +61,7 @@ function Add-OSDApp {
 
         if ($sourceUri -and -not $SkipCacheRefresh) {
             if ($VerbosePreference -ne 'SilentlyContinue') {
-                Write-OSDAppConsole -Level Info -Component 'Repository' -Message ("Synchronizing requested repository application(s): {0}" -f ($apps -join ', '))
+                Write-OSDAppConsole -Level Info -Component 'Repository' -Message ("Synchronizing requested repository app(s): {0}" -f ($apps -join ', '))
             }
 
             try {
@@ -107,7 +107,7 @@ function Add-OSDApp {
             }
 
             if ($VerbosePreference -ne 'SilentlyContinue') {
-                Write-OSDAppConsole -Level Success -Component 'Repository' -Message 'Requested repository application cache is available'
+                Write-OSDAppConsole -Level Success -Component 'Repository' -Message 'Requested repository app cache is available'
             }
         }
         else {

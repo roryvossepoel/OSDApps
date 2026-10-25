@@ -85,7 +85,7 @@ These are the checks used by cache inventory and inherited by cache health. They
 
 | Package | Local checks |
 | --- | --- |
-| Repository applications and scripts | `Package.zip` is hashed against the recorded SHA-256. Online desired-state health uses the selected catalog hash when available. This does not validate script behavior or installer success. |
+| Repository apps and scripts | `Package.zip` is hashed against the recorded SHA-256. Online desired-state health uses the selected catalog hash when available. This does not validate script behavior or installer success. |
 | Microsoft 365 Apps | Required paths, exactly one version directory matching the recorded build, a nonempty payload directory, and equal SHA-256 hashes for the shared and version-specific CABs. This is generation consistency, not a hash check of every Office data file. |
 | Microsoft Teams | Bootstrapper and resolved MSIX file presence. Optional Authenticode inspection covers the bootstrapper only. |
 | Chrome, Firefox, Webex and Zoom | Resolved MSI file presence. Optional Authenticode inspection covers the MSI and expected publisher. |
@@ -166,10 +166,10 @@ Copy the deployment's `Latest.json` to the preparation PC, then run:
 ```powershell
 $report = & .\tools\Test-OSDAppsMaintenance.ps1 -Mode Result -ResultPath C:\Temp\Latest.json
 $report.Checks | Format-Table -Wrap
-$report.Details.Result.Applications | Format-Table Id, Status, AcquisitionOutcome
+$report.Details.Result.Apps | Format-Table Id, Status, AcquisitionOutcome
 ```
 
-Optionally supply `-DeploymentId` to ensure you are inspecting the intended deployment. The tool validates the supported result schema, identity, application counts and final status. It surfaces recorded offline/fallback acquisition warnings separately from installation success. Older results without acquisition fields remain readable; missing historical fields do not establish whether an online refresh succeeded.
+Optionally supply `-DeploymentId` to ensure you are inspecting the intended deployment. The tool validates the supported result schema, identity, app counts and final status. It surfaces recorded offline/fallback acquisition warnings separately from installation success. Older results without acquisition fields remain readable; missing historical fields do not establish whether an online refresh succeeded.
 
 This examines recorded installer outcomes. It does not inspect the deployed machine, verify cleanup or activation, or rerun SetupComplete. A `Running` result or an empty successful queue requires review.
 
@@ -213,4 +213,4 @@ A successful collection is not a successful deployment: a failed deployment can 
 
 The script returns one report object with `Mode`, `Status`, `Passed`, `CheckedAtUtc`, `Checks` and `Details`. It prints readable check messages as well. By default a report is returned without terminating the caller; `-ThrowOnFailure` throws after reporting whenever the status is not `Passed`, including `ReviewRequired`. Use that switch with `powershell.exe -File` when the process exit status is your automation gate.
 
-The tool does not update modules, modify or prune cache content, install applications, remove backups or publish releases. Any corrective action is a separate decision.
+The tool does not update modules, modify or prune cache content, install apps, remove backups or publish releases. Any corrective action is a separate decision.

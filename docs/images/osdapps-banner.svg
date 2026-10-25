@@ -21,7 +21,7 @@
   <text x="58" y="286" class="body">Stage in WinPE.</text>
   <text x="58" y="320" class="body">Install apps and run scripts before OOBE starts.</text>
 
-  <!-- Simple capability icons, not a deployment flow or application screenshot. -->
+  <!-- Simple capability icons, not a deployment flow or app screenshot. -->
   <g transform="translate(760 66)">
     <rect width="384" height="268" rx="18" fill="#e5edf7"/>
 

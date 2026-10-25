@@ -1,5 +1,5 @@
 # Run in an elevated Windows PowerShell session on a development PC.
-# Exercises the real runtime helper without staging or installing applications.
+# Exercises the real runtime helper without staging or installing apps.
 [CmdletBinding()]
 param(
     [string]$HelperPath = (Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime\OSDAppSleepPrevention.ps1'),

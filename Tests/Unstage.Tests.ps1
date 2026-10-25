@@ -121,7 +121,7 @@ Describe 'Remove-OSDAppStaging CLI safety' {
             $fixture=New-OSDAppsStagingFixture -Root $root
             Mock Get-OSDAppUITestWindowsPath {$root}
             {Remove-OSDAppStaging -Name '../Windows' -TestMode -Confirm:$false} |
-                Should -Throw '*Invalid application ID*'
+                Should -Throw '*Invalid app ID*'
             (Test-Path $fixture.Manifest) | Should -BeTrue
         }
     }

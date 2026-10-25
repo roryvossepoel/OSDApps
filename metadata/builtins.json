@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 1,
   "Project": "OSDApps",
-  "Applications": [
+  "Apps": [
     {
       "Id": "Microsoft365Apps",
       "DisplayName": "Microsoft 365 Apps",

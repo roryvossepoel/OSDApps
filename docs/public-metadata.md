@@ -8,18 +8,18 @@ OSDApps publishes a stable, machine-readable **built-in catalog** at [`metadata/
 https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/builtins.json
 ```
 
-This file is a **catalog of OSDApps' vendor-native built-in integrations**, **not** a listing of an organization's self-maintained application repository. For organization-managed applications, point a private or authorized viewer to that organization's own `catalog.json` and then resolve the linked package `manifest.json` files. The sample repository under `Examples/Repository` deliberately does not publish any private applications.
+This file is a **catalog of OSDApps' vendor-native built-in integrations**, **not** a listing of an organization's self-maintained app repository. For organization-managed apps, point a private or authorized viewer to that organization's own `catalog.json` and then resolve the linked package `manifest.json` files. The sample repository under `Examples/Repository` deliberately does not publish any private apps.
 
 ## Stable schema and fields
 
-`SchemaVersion: 1` and `Applications[]` remain backward-compatible. OSDApps
+`SchemaVersion: 1` and `Apps[]` remain backward-compatible. OSDApps
 0.36.0 adds the optional `Aliases` field; consumers that already ignore unknown
 optional fields require no schema change.
 
 | Field | Viewer use |
 | --- | --- |
 | `Id`, `DisplayName`, `Vendor` | Stable key and human-readable label |
-| `Aliases` | Optional retired built-in cache identities that resolve to `Id`; never render them as additional applications or command names |
+| `Aliases` | Optional retired built-in cache identities that resolve to `Id`; never render them as additional apps or command names |
 | `Source`, `Acquisition`, `SyncPhase` | Distinguish built-in ownership and acquisition phase |
 | `AddCommand`, `SyncCommand` | Show ready-to-copy PowerShell examples |
 | `Architectures`, `DefaultArchitecture` | Selectable architectures, not necessarily field-validated ones. DefaultArchitecture is null when an explicit selection is required. |
@@ -41,7 +41,7 @@ manifest identity and public command suffix.
 
 ## Example: Cisco Webex
 
-The public catalog includes seven built-in applications. This `CiscoWebex` entry illustrates the schema:
+The public catalog includes seven built-in apps. This `CiscoWebex` entry illustrates the schema:
 
 ```json
 {
@@ -81,9 +81,9 @@ The two data sources must not be conflated: public built-ins do **not** expose o
 
 ## Viewer publication checklist
 
-1. Merge and release the application with its icon under `metadata/icons/` and entry under `metadata/builtins.json`.
+1. Merge and release the app with its icon under `metadata/icons/` and entry under `metadata/builtins.json`.
 2. Verify JSON validity, required metadata keys, unique IDs, exported Add/Sync command names and icon files (covered by Pester).
 3. Confirm the raw `main` JSON and corresponding icon URLs are available after merge.
 4. Refresh the website/CDN cache. A viewer reading the raw `main` JSON dynamically needs no separate list update; a viewer using a compiled snapshot needs to refresh that snapshot.
 
-See [Built-in applications](built-in-apps.md), [Repository apps and scripts](repository.md) and [Release process](releasing.md).
+See [Built-in apps](built-in-apps.md), [Repository apps and scripts](repository.md) and [Release process](releasing.md).

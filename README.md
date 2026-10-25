@@ -67,7 +67,7 @@ The Viewer is read-only. Here, `-Offline` skips online repository discovery; it 
 
 The optional Windows Inbox Cleanup script is staged with `Add-OSDAppWindowsInboxCleanup -Preset Tested13` or `-Remove @('Microsoft.BingWeather')`. It is never run implicitly. [Options and validation](docs/built-in-apps.md#windows-inbox-cleanup).
 
-| Application | Stage in WinPE |
+| App | Stage in WinPE |
 | --- | --- |
 | Microsoft 365 Apps | `Add-OSDAppMicrosoft365Apps` |
 | Microsoft Teams | `Add-OSDAppMicrosoftTeams` |
@@ -81,11 +81,11 @@ The optional Windows Inbox Cleanup script is staged with `Add-OSDAppWindowsInbox
 | Visual C++ v14 (x86 or x64) | `Add-OSDAppVisualCRedist -Architecture x64` |
 | .NET Runtime / Desktop Runtime | `Add-OSDAppDotNetRuntime -Architecture x64` |
 
-Installers come directly from their vendors. Supported architectures and options differ by application; see the [built-in guide](docs/built-in-apps.md) for Office configuration, Firefox channels and other settings. OSDApps does not bundle vendor installers or provide product licenses.
+Installers come directly from their vendors. Supported architectures and options differ by app; see the [built-in guide](docs/built-in-apps.md) for Office configuration, Firefox channels and other settings. OSDApps does not bundle vendor installers or provide product licenses.
 
 ## Your apps. Your scripts. One queue.
 
-Use a repository for applications you package yourself and PowerShell scripts that configure the machine. Classify a package as `Application` or `Script`; both use the same `Package.zip` layout, SHA-256 validation and `Add-OSDApp` command. Add them alongside built-ins in the order you want them to run.
+Use a repository for apps you package yourself and PowerShell scripts that configure the machine. Classify a package as `App` or `Script`; both use the same `Package.zip` layout, SHA-256 validation and `Add-OSDApp` command. Add them alongside built-ins in the order you want them to run.
 
 Configure your own catalog URL, then stage a package using its actual repository ID:
 
@@ -123,7 +123,7 @@ Use the [USB preparation guide](Examples/Prepare-UsbCache.md) to get started, [c
 
 ## Inspect before deployment. Keep the results afterward.
 
-**OSDApps Viewer** shows the staged queue, available packages, cache and logs. The **Package Type** column distinguishes `Application` from `Script` in the Staged for device, Apps and Cache tabs. Use it in WinPE to review staging or on a preparation machine to inspect the cache. See the [Viewer guide](docs/viewer.md).
+**OSDApps Viewer** shows the staged queue, available packages, cache and logs. The **Package Type** column distinguishes `App` from `Script` in the Staged for device, Apps and Cache tabs. Use it in WinPE to review staging or on a preparation machine to inspect the cache. See the [Viewer guide](docs/viewer.md).
 
 ![OSDApps Viewer in WinPE showing Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise staged in order, with Office configuration details](docs/images/viewer-staged-winpe.png)
 

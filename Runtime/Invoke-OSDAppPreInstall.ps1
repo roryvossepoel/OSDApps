@@ -29,7 +29,7 @@ $manifest = $null
 $builtInApps = @()
 $usbRoot = $null
 $networkAvailable = $null
-$applicationResults = [System.Collections.Generic.List[object]]::new()
+$appResults = [System.Collections.Generic.List[object]]::new()
 
 function Write-PreInstallLog {
     param([string]$Event,[ValidateSet('Info','Warning','Error')][string]$Level='Info',[string]$Message,[hashtable]$Data)
@@ -107,8 +107,8 @@ function Write-PreInstallResult {
     $directory = Split-Path -Path $preInstallResultPath -Parent
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     $temporaryPath = "$preInstallResultPath.$([guid]::NewGuid().ToString('N')).tmp"
-    $successful = @($applicationResults | Where-Object { $_.Status -eq 'Succeeded' }).Count
-    $failed = @($applicationResults | Where-Object { $_.Status -eq 'Failed' }).Count
+    $successful = @($appResults | Where-Object { $_.Status -eq 'Succeeded' }).Count
+    $failed = @($appResults | Where-Object { $_.Status -eq 'Failed' }).Count
     $record = [ordered]@{
         SchemaVersion           = '1.0'
         DeploymentId           = if ($manifest -and $manifest.DeploymentId) { [string]$manifest.DeploymentId } else { $null }
@@ -117,16 +117,16 @@ function Write-PreInstallResult {
         StartedAtUtc            = $preInstallStartedAtUtc
         CompletedAtUtc          = (Get-Date).ToUniversalTime().ToString('o')
         DurationSeconds         = [math]::Round($preInstallStopwatch.Elapsed.TotalSeconds, 1)
-        BuiltInApplicationCount = @($builtInApps).Count
-        SuccessfulBuiltInApplicationCount = $successful
-        FailedBuiltInApplicationCount = $failed
+        BuiltInAppCount = @($builtInApps).Count
+        SuccessfulBuiltInAppCount = $successful
+        FailedBuiltInAppCount = $failed
         CacheUsed               = [bool]$usbRoot
         CachePath               = $usbRoot
-        FallbackApplicationCount = @($applicationResults | Where-Object { $_.AcquisitionOutcome -eq 'FallbackCacheUsed' }).Count
-        OfflineCacheApplicationCount = @($applicationResults | Where-Object { $_.AcquisitionOutcome -eq 'OfflineCacheUsed' }).Count
-        HasAcquisitionWarnings  = @($applicationResults | Where-Object { $_.AcquisitionOutcome -in @('FallbackCacheUsed','OfflineCacheUsed') }).Count -gt 0
+        FallbackAppCount = @($appResults | Where-Object { $_.AcquisitionOutcome -eq 'FallbackCacheUsed' }).Count
+        OfflineCacheAppCount = @($appResults | Where-Object { $_.AcquisitionOutcome -eq 'OfflineCacheUsed' }).Count
+        HasAcquisitionWarnings  = @($appResults | Where-Object { $_.AcquisitionOutcome -in @('FallbackCacheUsed','OfflineCacheUsed') }).Count -gt 0
         NetworkAvailable        = $networkAvailable
-        Applications            = @($applicationResults | ForEach-Object { $_ })
+        Apps            = @($appResults | ForEach-Object { $_ })
         FailureType             = $FailureType
         Error                   = $ErrorMessage
     }
@@ -195,7 +195,7 @@ function Get-PreInstallHttpCacheReason {
     if (-not $CacheInfo) { return 'CacheInfo.json is missing or unreadable; cache currency cannot be established.' }
     if (($Remote.ETag -and $CacheInfo.RemoteETag) -or
         ($Remote.LastModified -and $CacheInfo.RemoteLastModified -and $Remote.ContentLength -and $CacheInfo.RemoteContentLength)) {
-        return 'Vendor HTTP metadata differs from the recorded cache metadata; this does not necessarily mean a newer application version.'
+        return 'Vendor HTTP metadata differs from the recorded cache metadata; this does not necessarily mean a newer app version.'
     }
     return 'Comparable vendor/cache HTTP metadata is unavailable; cache currency cannot be established.'
 }
@@ -704,13 +704,13 @@ try {
         param($EventName, $Level, $Message)
         Write-PreInstallLog -Event $EventName -Level $Level -Message $Message
     }
-    $sleepRequest = Start-OSDAppSleepPrevention -Enabled $preventSleep -Reason 'OSDApps PreInstall is acquiring application content.' -Log $sleepLog
+    $sleepRequest = Start-OSDAppSleepPrevention -Enabled $preventSleep -Reason 'OSDApps PreInstall is acquiring app content.' -Log $sleepLog
 
     $apps=if($manifest.PSObject.Properties.Name -contains 'Apps'){@($manifest.Apps)}else{@()}
     $builtInApps=@($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -notin @('WindowsInboxCleanupScript','CompanyPortalAppxBundle') -and [string]$_.Id -ne 'CMTraceOpen' })
     if($builtInApps.Count -eq 0){
         $preInstallStopwatch.Stop()
-        Write-PreInstallLog -Event 'RefreshSkipped' -Message 'No built-in applications require acquisition. Nothing to refresh.'
+        Write-PreInstallLog -Event 'RefreshSkipped' -Message 'No built-in apps require acquisition. Nothing to refresh.'
         try { Write-PreInstallResult -Status Succeeded } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
         exit 0
     }
@@ -727,8 +727,8 @@ try {
 
     foreach($app in $builtInApps){
         $builtInStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-        $applicationError = $null
-        $applicationFailureType = $null
+        $appError = $null
+        $appFailureType = $null
         $acquisition = @{ Outcome = 'Failed'; CacheDecisionReason = $null; RefreshFailureType = $null; RefreshError = $null }
         try {
             switch($app.Id){
@@ -1124,21 +1124,21 @@ try {
                 Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Mozilla Firefox Enterprise' -Acquisition $acquisition
             }
             default {
-                throw [System.IO.InvalidDataException]::new("Unsupported built-in application Id '$($app.Id)' in the device manifest.")
+                throw [System.IO.InvalidDataException]::new("Unsupported built-in app Id '$($app.Id)' in the device manifest.")
             }
             }
         }
         catch {
-            $applicationErrorRecord = $_
-            $applicationError = $applicationErrorRecord.Exception.Message
-            $applicationFailureType = Get-PreInstallFailureType -ErrorRecord $applicationErrorRecord
+            $appErrorRecord = $_
+            $appError = $appErrorRecord.Exception.Message
+            $appFailureType = Get-PreInstallFailureType -ErrorRecord $appErrorRecord
             $fatal = (
-                $applicationErrorRecord.Exception -is [System.Security.SecurityException] -or
-                $applicationErrorRecord.Exception -is [System.IO.InvalidDataException]
+                $appErrorRecord.Exception -is [System.Security.SecurityException] -or
+                $appErrorRecord.Exception -is [System.IO.InvalidDataException]
             )
-            Write-PreInstallLog -Event 'ApplicationRefreshFailed' -Level 'Error' -Message $applicationError -Data @{
+            Write-PreInstallLog -Event 'AppRefreshFailed' -Level 'Error' -Message $appError -Data @{
                 Id = $app.Id
-                FailureType = $applicationFailureType
+                FailureType = $appFailureType
                 ContinueQueue = (-not $fatal)
                 DurationSeconds = [math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)
             }
@@ -1146,47 +1146,47 @@ try {
         }
         finally {
             if ($builtInStopwatch.IsRunning) { $builtInStopwatch.Stop() }
-            $applicationResults.Add([pscustomobject]@{
+            $appResults.Add([pscustomobject]@{
                 Id              = [string]$app.Id
                 DisplayName     = if ($app.DisplayName) { [string]$app.DisplayName } else { [string]$app.Id }
-                Status          = if ($applicationError) { 'Failed' } else { 'Succeeded' }
+                Status          = if ($appError) { 'Failed' } else { 'Succeeded' }
                 DurationSeconds = [math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)
                 CacheUsed       = [bool]$usbRoot
-                AcquisitionOutcome = if ($applicationError) { 'Failed' } else { $acquisition.Outcome }
-                CacheDecisionReason = if ($applicationError) { 'Acquisition failed. ' + $applicationError } else { $acquisition.CacheDecisionReason }
+                AcquisitionOutcome = if ($appError) { 'Failed' } else { $acquisition.Outcome }
+                CacheDecisionReason = if ($appError) { 'Acquisition failed. ' + $appError } else { $acquisition.CacheDecisionReason }
                 RefreshFailureType = $acquisition.RefreshFailureType
                 RefreshError    = $acquisition.RefreshError
-                FailureType     = $applicationFailureType
-                Error           = $applicationError
+                FailureType     = $appFailureType
+                Error           = $appError
             })
-            $applicationResult = $applicationResults[$applicationResults.Count - 1]
-            $level = if ($applicationError) { 'Error' } elseif ($acquisition.Outcome -in @('FallbackCacheUsed','OfflineCacheUsed')) { 'Warning' } else { 'Info' }
-            Write-PreInstallLog -Event 'ApplicationAcquisitionComplete' -Level $level -Message 'Built-in preparation outcome recorded; installation is a separate step.' -Data @{
+            $appResult = $appResults[$appResults.Count - 1]
+            $level = if ($appError) { 'Error' } elseif ($acquisition.Outcome -in @('FallbackCacheUsed','OfflineCacheUsed')) { 'Warning' } else { 'Info' }
+            Write-PreInstallLog -Event 'AppAcquisitionComplete' -Level $level -Message 'Built-in preparation outcome recorded; installation is a separate step.' -Data @{
                 Id = $app.Id
-                Status = $applicationResult.Status
-                AcquisitionOutcome = $applicationResult.AcquisitionOutcome
-                CacheDecisionReason = $applicationResult.CacheDecisionReason
-                RefreshFailureType = $applicationResult.RefreshFailureType
-                RefreshError = $applicationResult.RefreshError
+                Status = $appResult.Status
+                AcquisitionOutcome = $appResult.AcquisitionOutcome
+                CacheDecisionReason = $appResult.CacheDecisionReason
+                RefreshFailureType = $appResult.RefreshFailureType
+                RefreshError = $appResult.RefreshError
             }
         }
     }
 
     $preInstallStopwatch.Stop()
-    $failedApplicationCount = @($applicationResults | Where-Object { $_.Status -eq 'Failed' }).Count
-    if ($failedApplicationCount -gt 0) {
-        $summary = "$failedApplicationCount built-in application(s) could not be prepared; independent applications will continue and no automatic retry is scheduled."
-        Write-PreInstallLog -Event 'RefreshCompletedWithErrors' -Level 'Error' -Message $summary -Data @{CacheUsed=[bool]$usbRoot;BuiltInAppCount=@($builtInApps).Count;FailedBuiltInApplicationCount=$failedApplicationCount;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
-        Write-PreInstallLog -Event 'PreInstallComplete' -Level 'Warning' -Message 'PreInstall completed with application errors. Runner execution may continue for unaffected applications.' -Data @{BuiltInAppCount=@($builtInApps).Count;FailedBuiltInApplicationCount=$failedApplicationCount;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
-        try { Write-PreInstallResult -Status CompletedWithErrors -FailureType 'ApplicationFailures' -ErrorMessage $summary } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
+    $failedAppCount = @($appResults | Where-Object { $_.Status -eq 'Failed' }).Count
+    if ($failedAppCount -gt 0) {
+        $summary = "$failedAppCount built-in app(s) could not be prepared; independent apps will continue and no automatic retry is scheduled."
+        Write-PreInstallLog -Event 'RefreshCompletedWithErrors' -Level 'Error' -Message $summary -Data @{CacheUsed=[bool]$usbRoot;BuiltInAppCount=@($builtInApps).Count;FailedBuiltInAppCount=$failedAppCount;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
+        Write-PreInstallLog -Event 'PreInstallComplete' -Level 'Warning' -Message 'PreInstall completed with app errors. Runner execution may continue for unaffected apps.' -Data @{BuiltInAppCount=@($builtInApps).Count;FailedBuiltInAppCount=$failedAppCount;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
+        try { Write-PreInstallResult -Status CompletedWithErrors -FailureType 'AppFailures' -ErrorMessage $summary } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
         exit 0
     }
 
     Write-PreInstallLog -Event 'RefreshComplete' -Message 'Built-in acquisition and refresh completed. Installation will continue.' -Data @{CacheUsed=[bool]$usbRoot;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
-    $fallbackCount = @($applicationResults | Where-Object { $_.AcquisitionOutcome -eq 'FallbackCacheUsed' }).Count
-    $offlineCount = @($applicationResults | Where-Object { $_.AcquisitionOutcome -eq 'OfflineCacheUsed' }).Count
+    $fallbackCount = @($appResults | Where-Object { $_.AcquisitionOutcome -eq 'FallbackCacheUsed' }).Count
+    $offlineCount = @($appResults | Where-Object { $_.AcquisitionOutcome -eq 'OfflineCacheUsed' }).Count
     $completionLevel = if (($fallbackCount + $offlineCount) -gt 0) { 'Warning' } else { 'Info' }
-    Write-PreInstallLog -Event 'PreInstallComplete' -Level $completionLevel -Message 'PreInstall completed successfully; inspect acquisition outcomes for cache fallback or offline use.' -Data @{BuiltInAppCount=@($builtInApps).Count;FallbackApplicationCount=$fallbackCount;OfflineCacheApplicationCount=$offlineCount;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
+    Write-PreInstallLog -Event 'PreInstallComplete' -Level $completionLevel -Message 'PreInstall completed successfully; inspect acquisition outcomes for cache fallback or offline use.' -Data @{BuiltInAppCount=@($builtInApps).Count;FallbackAppCount=$fallbackCount;OfflineCacheAppCount=$offlineCount;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
     try { Write-PreInstallResult -Status Succeeded } catch { Write-PreInstallLog -Event 'ResultWriteFailed' -Level Warning -Message $_.Exception.Message }
     exit 0
 } catch {

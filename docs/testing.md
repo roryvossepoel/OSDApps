@@ -13,7 +13,7 @@ For current operating instructions, use [Choose the right check](maintenance.md#
 
 ## Company Portal and CMTrace Open combined x64 candidate — 24–25 October 2026
 
-The operator validated the combined feature-candidate module on **PC1, x64**, after OSDCloud applied Windows. WinPE staged four entries. During the first Windows boot, SetupComplete reported `Status=Succeeded`, `SuccessfulApplicationCount=4`, `FailedApplicationCount=0` and `SkippedApplicationCount=0`, with exit code 0 for each:
+The operator validated the combined feature-candidate module on **PC1, x64**, after OSDCloud applied Windows. WinPE staged four entries. During the first Windows boot, SetupComplete reported `Status=Succeeded`, `SuccessfulAppCount=4`, `FailedAppCount=0` and `SkippedAppCount=0`, with exit code 0 for each:
 
 | Queue entry | Physical result |
 | --- | --- |
@@ -55,12 +55,12 @@ ODT, Teams MSIX/bootstrapper, Adobe, Chrome, Firefox Rapid en-US, Webex, Zoom an
 
 This verifies selected source resolution and response metadata, including Office descriptor parsing. It does not validate installer bytes, publisher signatures, local cache integrity, installation or all supported variants. The two test PCs were not redeployed for this check.
 
-## Nine-application cold deployment — 19 October 2026
+## Nine-app cold deployment — 19 October 2026
 
 Gallery **0.45.0**, deployment `7fbcefad-d354-4876-ac7f-64fe85d1c8c5`, passed the correlated all-app OOBE validator on an x64 target. A USB flash drive was attached with a newly empty active cache; the previous cache was retained in a backup directory. Here, **cold means no reusable app content in the active cache, not absence of a USB flash drive**.
 
 - All seven built-ins reported `AcquisitionOutcome=Downloaded`: Office, Teams, Chrome, Firefox, Webex, Adobe and Zoom.
-- The runner reported nine successful applications, zero failed and zero skipped. The two repository packages were NotepadPlusPlus and OmnissaHorizonClient; all nine installer results had exit code 0.
+- The runner reported nine successful apps, zero failed and zero skipped. The two repository packages were NotepadPlusPlus and OmnissaHorizonClient; all nine installer results had exit code 0.
 - PreInstall took 294.9 seconds and Runner 379.1 seconds, for 674.0 seconds across those two Windows phases.
 - Runtime staging and the cleanup helper were removed; the previous-cache backup was retained.
 
@@ -77,7 +77,7 @@ The implementation candidate for 0.45.1 (manifest version 0.45.0, commit `0ed52e
 - Final status was Succeeded. Runtime staging and the cleanup helper were removed.
 - Implementation CI passed 416 tests on each of Windows PowerShell 5.1 and PowerShell 7, with no failures or skips and all 33 packaged help checks passing ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/39289473974)).
 
-This validates online build checking, same-build cache reuse, installation and cleanup for the stated configuration. It does not independently validate every Office payload file, Office activation, interactive application behavior, other architectures or every configuration. Release-package validation is separate from this candidate deployment.
+This validates online build checking, same-build cache reuse, installation and cleanup for the stated configuration. It does not independently validate every Office payload file, Office activation, interactive app behavior, other architectures or every configuration. Release-package validation is separate from this candidate deployment.
 
 ## Scenario coverage
 
@@ -87,7 +87,7 @@ are listed separately because their evidence is less detailed.
 
 | Scenario | Status | Evidence / expected behavior |
 | --- | --- | --- |
-| Empty OSDCloud USB application cache, online | **Validated — 0.36.0 cold run (13 Oct 2026)** | The recoverably cleared active cache was repopulated; correlated results reported 8/8 successful, cleanup completed and the final eight-entry cache was healthy. |
+| Empty OSDCloud USB app cache, online | **Validated — 0.36.0 cold run (13 Oct 2026)** | The recoverably cleared active cache was repopulated; correlated results reported 8/8 successful, cleanup completed and the final eight-entry cache was healthy. |
 | Existing OSDCloud USB cache, online | **Validated — 0.36.0 warm run (13 Oct 2026)** | Hard offline-readiness preflight passed; all six built-ins used cached content, correlated results reported 8/8 successful, cleanup completed and the cache remained healthy. |
 | No USB cache, online | **Validated — 0.30.0 test 1** | Built-ins acquired on Windows volume; repository apps staged in WinPE |
 | Existing OSDCloud USB cache, offline | **Validated — 0.34.0 PC 2 (11 Oct 2026)** | LAN disconnected; six BuiltInRefreshSkipped events, five built-in signer/publisher checks and 8/8 successful installations. Earlier 0.30.0 six-app test also passed. |
@@ -127,7 +127,7 @@ revalidated with the corrected single-app validator at
 | Preparation-PC configuration checks | Matching configuration accepted; changed language and added product rejected; licensing-only change accepted. Generation consistency passed. All 33 live cache files were unchanged by the read-only test. |
 | WinPE preflight | One Microsoft365Apps entry, x64, MonthlyEnterprise, nl-nl. All required checks passed, including offline readiness, compatible staged profile and matching runtime files. |
 | Windows acquisition | `AcquisitionOutcome=Downloaded`, no refresh error. PreInstall succeeded in 172.5 seconds. |
-| Installation | Office `16.0.20430.20180`, exit code 0. Registry version and Word, Excel, PowerPoint and Outlook file versions matched. One application succeeded; none failed or were skipped. |
+| Installation | Office `16.0.20430.20180`, exit code 0. Registry version and Word, Excel, PowerPoint and Outlook file versions matched. One app succeeded; none failed or were skipped. |
 | Completion | Runner succeeded in 144 seconds; total Windows phases 316.5 seconds. Staging and the cleanup helper were removed. |
 
 The correlated deployment ID was `4c2be036-fc59-43af-b2f1-a376d5efa34b`.
@@ -167,12 +167,12 @@ The candidate from [PR #27](https://github.com/roryvossepoel/OSDApps/pull/27), c
 | --- | --- |
 | Isolated transaction and recovery fixtures on USB | Interrupted-swap recovery, preservation of uncommitted candidates, old-generation preservation after build/validation failures, valid promotion and transaction cleanup all passed. |
 | Real synchronization of Teams, Chrome, Firefox, Webex and Adobe | All five generations remained valid. All reported `Updated=False`; this run did not exercise a newer vendor download. Office and repository content were unchanged. |
-| Freshly applied x64 PC, online with populated USB cache | All eight applications succeeded, with zero failures or skipped entries. All six built-ins used cached content. PreInstall took 89.8 seconds; Runner took 367.6 seconds. Temporary staging and its cleanup helper were removed. |
+| Freshly applied x64 PC, online with populated USB cache | All eight apps succeeded, with zero failures or skipped entries. All six built-ins used cached content. PreInstall took 89.8 seconds; Runner took 367.6 seconds. Temporary staging and its cleanup helper were removed. |
 | Isolated Chrome acquisition, forced replacement and reuse | Two real downloads passed the signature/generation checks. The second replaced the complete test generation and removed its marker and transaction directories. A third sync reused the generation without changing its files. Full before/after fingerprints confirmed the live app cache was unchanged. |
 
-The two Chrome downloads had the same SHA-256 (`2734DC5577DCBAB49BE037E5A074AEF9948FACA14453B52DEFB01224C196A3F5`). Replacement was forced by changing only HTTP freshness metadata in the isolated test cache. This validates actual download and generation replacement, not an upgrade between two different Chrome versions. No application was installed on the preparation machine by that test.
+The two Chrome downloads had the same SHA-256 (`2734DC5577DCBAB49BE037E5A074AEF9948FACA14453B52DEFB01224C196A3F5`). Replacement was forced by changing only HTTP freshness metadata in the isolated test cache. This validates actual download and generation replacement, not an upgrade between two different Chrome versions. No app was installed on the preparation machine by that test.
 
-The deployment was a warm-cache integration run, not a cold download run. These checks do not simulate a physical power interruption or prove licensing and every application's later interactive behavior.
+The deployment was a warm-cache integration run, not a cold download run. These checks do not simulate a physical power interruption or prove licensing and every app's later interactive behavior.
 
 ## OSDApps 0.37.0 release-candidate validation — 13 October 2026
 
@@ -182,8 +182,8 @@ The 0.37.0 candidate from [PR #25](https://github.com/roryvossepoel/OSDApps/pull
 
 Five new file-backed scenarios validate the one-shot partial-failure contract:
 
-- an installer exit-code failure is recorded while the next independent repository application still runs once;
-- a built-in acquisition failure recorded by PreInstall causes only that built-in to be skipped by Runner while an independent repository application proceeds;
+- an installer exit-code failure is recorded while the next independent repository app still runs once;
+- a built-in acquisition failure recorded by PreInstall causes only that built-in to be skipped by Runner while an independent repository app proceeds;
 - a selected repository SHA-256 mismatch aborts before any installer executes and marks remaining work skipped;
 - a normal PreInstall acquisition failure produces `CompletedWithErrors` without blocking Runner or creating retry state;
 - generated SetupComplete integration calls each phase once and contains no RunOnce, scheduled-task or service persistence.
@@ -194,11 +194,11 @@ These automated tests also confirm that partial or fatal failure retains staging
 
 Two freshly applied x64 PCs used the same online OSDCloud USB flash drive and the same ordered eight-app queue as the 0.36.0 pair. Both machines loaded the exact 0.37.0 release-candidate module in WinPE, passed pre-reboot validation and retained the USB and network connection through SetupComplete.
 
-On PC 1, only the staged `NotepadPlusPlus` queue slot was replaced with a controlled repository-style failure probe whose installer wrote a marker and exited with code `42`. SetupComplete recorded that entry once as `Failed` with `FailureType=InstallerFailed`, then continued to the following `OmnissaHorizonClient` entry, which succeeded. The final record contained eight results: seven succeeded, one failed and none were skipped. It reported final status `Failed` with `FailureType=ApplicationFailures`; staging and the probe archive were retained, and no scheduled task, service or RunOnce retry was created. Runtime evidence included `ApplicationInstallFailed`, the later Omnissa completion, `InstallCompletedWithErrors` and `CleanupSkipped`.
+On PC 1, only the staged `NotepadPlusPlus` queue slot was replaced with a controlled repository-style failure probe whose installer wrote a marker and exited with code `42`. SetupComplete recorded that entry once as `Failed` with `FailureType=InstallerFailed`, then continued to the following `OmnissaHorizonClient` entry, which succeeded. The final record contained eight results: seven succeeded, one failed and none were skipped. It reported final status `Failed` with `FailureType=AppFailures`; staging and the probe archive were retained, and no scheduled task, service or RunOnce retry was created. Runtime evidence included `AppInstallFailed`, the later Omnissa completion, `InstallCompletedWithErrors` and `CleanupSkipped`.
 
-PC 2 ran the unchanged eight-app queue as a normal control. Correlated PreInstall and Runner records shared deployment ID `4474a976-162c-49b3-8ab3-945b24316ebe` and both reported `Succeeded`. PreInstall completed in **217.1 seconds** and Runner in **359.1 seconds**. All eight applications succeeded, with zero failed and zero skipped. `OnSuccess` removed `C:\Windows\Temp\OSDApps`, the temporary cleanup helper removed itself, and the post-OOBE check found no OSDApps scheduled task, service or RunOnce entry.
+PC 2 ran the unchanged eight-app queue as a normal control. Correlated PreInstall and Runner records shared deployment ID `4474a976-162c-49b3-8ab3-945b24316ebe` and both reported `Succeeded`. PreInstall completed in **217.1 seconds** and Runner in **359.1 seconds**. All eight apps succeeded, with zero failed and zero skipped. `OnSuccess` removed `C:\Windows\Temp\OSDApps`, the temporary cleanup helper removed itself, and the post-OOBE check found no OSDApps scheduled task, service or RunOnce entry.
 
-Together, these physical runs validate the intended one-shot boundary: an ordinary installer failure is isolated, later independent work still executes during the same SetupComplete pass, the unsuccessful deployment preserves evidence without arranging a retry, and the normal path retains its successful cleanup behavior. This pair does not simulate a power interruption and does not prove licensing, user sign-in or every application's later interactive behavior. Raw device logs and the controlled test package are not committed to the public repository.
+Together, these physical runs validate the intended one-shot boundary: an ordinary installer failure is isolated, later independent work still executes during the same SetupComplete pass, the unsuccessful deployment preserves evidence without arranging a retry, and the normal path retains its successful cleanup behavior. This pair does not simulate a power interruption and does not prove licensing, user sign-in or every app's later interactive behavior. Raw device logs and the controlled test package are not committed to the public repository.
 
 ## OSDApps 0.36.0 release-candidate validation — 13 October 2026
 
@@ -230,9 +230,9 @@ PC 2 reused the cache populated by PC 1. Its strict `Test-OSDAppDeployment -Requ
 
 The cold and warm result records used deployment IDs `1efce244-3e62-4bd0-a294-f428ce1e3b8f` and `53c706f5-fa02-48a0-ae6f-13a4d5a26914`, respectively. In this pair, warm-cache reuse reduced PreInstall by **170.0 seconds** while Runner differed by only **0.7 seconds**; the measured total improved by **170.7 seconds**. These are observations from one run per cache state, not a performance benchmark.
 
-On both PCs, the correlated PreInstall and final result records reported `Succeeded`, with eight expected, eight successful and zero failed applications. The final checks also confirmed six built-ins, at least five expected-publisher validations, no warning or error log entries, successful `OnSuccess` cleanup, removal of the cleanup helper, preservation of the persistent result and log, and a healthy desired-state cache with eight active entries and zero problem classifications. The pre-cold backup was intentionally retained after validation.
+On both PCs, the correlated PreInstall and final result records reported `Succeeded`, with eight expected, eight successful and zero failed apps. The final checks also confirmed six built-ins, at least five expected-publisher validations, no warning or error log entries, successful `OnSuccess` cleanup, removal of the cleanup helper, preservation of the persistent result and log, and a healthy desired-state cache with eight active entries and zero problem classifications. The pre-cold backup was intentionally retained after validation.
 
-These two runs validate the online cold and warm SetupComplete paths for this release candidate. They do not add a new offline deployment result and do not prove licensing, user sign-in or later interactive application health. Raw device logs and organization-managed repository packages are not committed to the public repository.
+These two runs validate the online cold and warm SetupComplete paths for this release candidate. They do not add a new offline deployment result and do not prove licensing, user sign-in or later interactive app health. Raw device logs and organization-managed repository packages are not committed to the public repository.
 
 ## OSDApps 0.35.0 release-candidate physical validation — 12 October 2026
 
@@ -240,7 +240,7 @@ PC 1 was freshly reinstalled and staged in WinPE with the 0.35.0 release-candida
 
 The first Windows boot then exercised the standalone PreInstall and Runner scripts plus the new result contract. The standalone and nested PreInstall records shared deployment ID `8d5a26e6-0ddd-46f4-8666-b4234097d20b`; both phases and the final result reported `Succeeded`.
 
-| Order | Application | Source | Integrity result | Install duration | Outcome |
+| Order | App | Source | Integrity result | Install duration | Outcome |
 | ---: | --- | --- | --- | ---: | --- |
 | 1 | Microsoft 365 Apps | Built-in | Expected publisher | 147.6 s | Exit code 0 |
 | 2 | Microsoft Teams | Built-in | Expected publisher | 1.1 s | Exit code 0 |
@@ -251,11 +251,11 @@ The first Windows boot then exercised the standalone PreInstall and Runner scrip
 | 7 | Notepad++ | Repository | SHA-256 | 9.2 s | Exit code 0 |
 | 8 | Omnissa Horizon Client | Repository | SHA-256 | 54.2 s | Exit code 0 |
 
-PreInstall completed in **53.9 s** and recorded `CacheUsed=True` for all six built-ins. Cisco Webex was the only built-in with `PackageUpdated=True`; the other five retained their cached packages. Runner completed in **369.0 s**, giving a measured Windows phase total of **422.9 s (7:03)**. The final result recorded eight expected, eight successful and zero failed applications.
+PreInstall completed in **53.9 s** and recorded `CacheUsed=True` for all six built-ins. Cisco Webex was the only built-in with `PackageUpdated=True`; the other five retained their cached packages. Runner completed in **369.0 s**, giving a measured Windows phase total of **422.9 s (7:03)**. The final result recorded eight expected, eight successful and zero failed apps.
 
 After SetupComplete and OOBE, the `OnSuccess` cleanup contract was checked separately: `C:\Windows\Temp\OSDApps` no longer existed, no `OSDApps-Cleanup-*.cmd` helper remained, and `%ProgramData%\OSDApps\Results\Latest.json` plus `%ProgramData%\OSDApps\Logs\Runtime.log` were preserved. The runtime log contained no warning or error entries.
 
-This is one physical release-candidate execution, not a performance benchmark. It validates preflight, staging, cache use, installer exit codes, correlated result reporting and cleanup. It does not prove licensing, user sign-in or every application's later interactive behavior. Raw device logs were reviewed but are not committed to the public repository.
+This is one physical release-candidate execution, not a performance benchmark. It validates preflight, staging, cache use, installer exit codes, correlated result reporting and cleanup. It does not prove licensing, user sign-in or every app's later interactive behavior. Raw device logs were reviewed but are not committed to the public repository.
 
 ## OSDApps 0.34.1 cold/warm physical validation — 12 October 2026
 
@@ -272,7 +272,7 @@ The phase total excludes image deployment, WinPE staging, reboot and OOBE. The w
 
 These were **Windows SetupComplete executions on two freshly reinstalled x64 PCs**, not just WinPE staging or module unit tests. They exercised development commit `201595501b75875cfa316a989385cedb23ec28e9` from PR #14. The module's version label was still 0.33.0 in this prerelease commit; the tested feature code became the 0.34.0 release candidate after documentation and version preparation.
 
-### Application queue (same on both PCs)
+### App queue (same on both PCs)
 
 | Order | Id | Source | Variant |
 | ---: | --- | --- | --- |
@@ -294,15 +294,15 @@ The two repository apps are private-repository **test content**, not bundled bui
 | PC 1 — online, initially empty OSDCloud USB cache | 551.9 s | 366.7 s | **918.6 s (15:19)** | **8/8**, successful |
 | PC 2 — fully offline, cache populated by PC 1 | 5.4 s | 394.2 s | **399.6 s (6:40)** | **8/8**, successful |
 
-The measured total is the sum of the two phases, **not** OSDCloud image application, WinPE download/staging, reboot or OOBE time. A single run on each machine is not a performance benchmark.
+The measured total is the sum of the two phases, **not** OSDCloud image app, WinPE download/staging, reboot or OOBE time. A single run on each machine is not a performance benchmark.
 
 **PC 1 — complete cold source acquisition.** ODT populated the Office cache (`Version=16.0.20326.20142`, `VersionChanged=True`). Teams, Chrome, Firefox, Cisco Webex and Adobe reported `PackageUpdated=True`. `BuiltInSignatureVerified` confirmed the expected publishers for Office ODT `setup.exe`, Teams `teamsbootstrapper.exe`, Google Chrome MSI, Firefox MSI and Cisco Webex MSI; the four downloaded MSI/bootstrapper candidates were also checked before the USB copy was accepted. `PreInstallComplete` recorded six built-ins and `InstallComplete` recorded eight successful installations with `CleanupMode=OnSuccess`.
 
-**PC 2 — no network.** LAN was physically disconnected before the first Windows boot and remained disconnected for SetupComplete. `CacheVolumeFound` confirmed `E:\OSDApps`, and `BuiltInRefreshSkipped` appeared **six times**, one for each built-in (Office, Teams, Chrome, Firefox, Cisco Webex and Adobe). The five signable staged MSI/EXE packages passed the expected-publisher gate while offline. All six built-in installs and both SHA-256-validated repository package installs returned code `0`, followed by `InstallComplete; ApplicationCount=8; CleanupMode=OnSuccess`.
+**PC 2 — no network.** LAN was physically disconnected before the first Windows boot and remained disconnected for SetupComplete. `CacheVolumeFound` confirmed `E:\OSDApps`, and `BuiltInRefreshSkipped` appeared **six times**, one for each built-in (Office, Teams, Chrome, Firefox, Cisco Webex and Adobe). The five signable staged MSI/EXE packages passed the expected-publisher gate while offline. All six built-in installs and both SHA-256-validated repository package installs returned code `0`, followed by `InstallComplete; AppCount=8; CleanupMode=OnSuccess`.
 
 ### Additional validation and boundaries
 
-- A separate warm-cache deployment completed four application installs successfully: Teams, Firefox, Notepad++ and Omnissa Horizon Client (`PreInstall 6.2 s`, `Runner 83.5 s`). A full-Windows Chrome cache sync retained an unchanged trusted MSI (`Updated=False`).
+- A separate warm-cache deployment completed four app installs successfully: Teams, Firefox, Notepad++ and Omnissa Horizon Client (`PreInstall 6.2 s`, `Runner 83.5 s`). A full-Windows Chrome cache sync retained an unchanged trusted MSI (`Updated=False`).
 - The Windows 11 OSDApps Viewer showed valid publisher signature states for the five signable built-in cache entries, separate from repository SHA-256 integrity; the two WinPE PCs exercised read-only inventory, app staging and cache inspection.
 - Authenticode coverage is intentionally **partial**: Teams MSIX and the Microsoft 365 Apps data tree are not cryptographically verified by the bootstrapper/ODT checks, and Adobe Acrobat's outer ZIP is `Not assessed`. No negative/tampered-package test was performed on hardware; such rejection behavior is covered by unit tests.
 - An `ExitCode=0` validates the installer/provisioning path, not product activation, all interactive features, or the effective installed Office update channel. Office's reported cold-cache build differs from the earlier cached build; neither result alone establishes channel correctness.
@@ -310,9 +310,9 @@ The measured total is the sum of the two phases, **not** OSDCloud image applicat
 
 ## Real-world end-to-end validation — OSDApps 0.30.0
 
-**Executed:** 9 October 2026, on freshly deployed Windows installations via OSDCloud v2. All four scenarios used OSDApps **0.30.0** from PowerShell Gallery, `CleanupMode=Never`, the same six application IDs, and the same installation order. These are four deployment executions, not repeated statistical benchmark samples.
+**Executed:** 9 October 2026, on freshly deployed Windows installations via OSDCloud v2. All four scenarios used OSDApps **0.30.0** from PowerShell Gallery, `CleanupMode=Never`, the same six app IDs, and the same installation order. These are four deployment executions, not repeated statistical benchmark samples.
 
-The application queue, in order:
+The app queue, in order:
 
 1. `Microsoft365Apps` (built-in; x64)
 2. `Teams` (built-in; x64)
@@ -334,7 +334,7 @@ Durations below are from the `PreInstallComplete` / `InstallComplete` events in 
 | **3** | Same USB, populated (warm) | 41.7 s | 330.4 s | **372.1 s (6:12)** | **6/6**, success |
 | **4** | Warm USB, changed Office configuration | 104.1 s | 346.0 s | **450.1 s (7:30)** | **6/6**, success |
 
-**24 of 24 queued application executions reported successful completion** across the four `Runtime.log` files (each application installer returned exit code `0`). This is an installer/runtime result, not proof of every app's later activation or interactive launch.
+**24 of 24 queued app executions reported successful completion** across the four `Runtime.log` files (each app installer returned exit code `0`). This is an installer/runtime result, not proof of every app's later activation or interactive launch.
 
 ### Per-test observations
 
@@ -382,7 +382,7 @@ Cisco Webex was added with x64 and ARM64 non-localized MSI sources, an architect
 | Online SetupComplete, USB **not detected** by runtime | `CacheAvailable=False`, `Target=Local`; PreInstall downloaded 272,531,456 bytes in 3.6 s (reported 73 MB/s); PreInstall 7.6 s; Runner 8.5 s; MSI returned 0; Webex 46.9.0.35800 registered | Pass — **local fallback**, not USB caching |
 | Cold USB cache from retained PreInstall runtime in Windows/OOBE | Cache created at `E:\OSDApps\BuiltIn\CiscoWebex\x64\Package.msi`; `CacheSynchronized=True`, `PackageUpdated=True`; 259.9 MiB present | Pass |
 | Warm USB cache from repeated PreInstall in Windows/OOBE | `PackageUpdated=False`, `CacheSynchronized=True`, no new download, SHA256 unchanged; observed duration 4.1 s | Pass |
-| Fully offline OSDCloud v2 / SetupComplete | In WinPE, USB and local staged MSI were present and **SHA256-identical** before reboot; physically disconnected network; Windows PreInstall logged `CacheAvailable=True`, `CacheVolumeFound` for `E:\OSDApps`, and `BuiltInRefreshSkipped` due to no network; PreInstall 3.5 s; installed from **local staged MSI**, `BuiltInInstallComplete ExitCode=0` in 8 s; Runner 8.5 s; `InstallComplete ApplicationCount=1`; `CleanupSkipped` as configured (`Never`) | Pass |
+| Fully offline OSDCloud v2 / SetupComplete | In WinPE, USB and local staged MSI were present and **SHA256-identical** before reboot; physically disconnected network; Windows PreInstall logged `CacheAvailable=True`, `CacheVolumeFound` for `E:\OSDApps`, and `BuiltInRefreshSkipped` due to no network; PreInstall 3.5 s; installed from **local staged MSI**, `BuiltInInstallComplete ExitCode=0` in 8 s; Runner 8.5 s; `InstallComplete AppCount=1`; `CleanupSkipped` as configured (`Never`) | Pass |
 
 The offline log demonstrates the USB cache was **detected** during SetupComplete, not that the installer ran directly from the USB volume; the payload had already been copied locally in WinPE. Both SetupComplete deployments used a one-app `CiscoWebex` queue. These measured durations cover only their named phases, not WinPE/OOBE or the entire deployment. The first online run did not populate the USB cache because the volume was not detected at runtime.
 
@@ -396,7 +396,7 @@ The offline log demonstrates the USB cache was **detected** during SetupComplete
 | --- | --- | --- |
 | USB preparation | Script metadata, archive hash and package layout valid; existing repository packages and hashes unchanged | Pass |
 | Script-only SetupComplete | One repository script staged in WinPE; runtime SHA-256 validation succeeded; script returned 0; marker confirmed SYSTEM execution; `Latest.json` succeeded; staging and cleanup helper removed; no retry task, service or RunOnce entry remained | Pass |
-| Mixed queue | Six built-ins, two repository applications and one repository script executed in the intended order; all nine completed successfully; application entries retained `PackageType=Application` and the script retained `PackageType=Script` | Pass |
+| Mixed queue | Six built-ins, two repository apps and one repository script executed in the intended order; all nine completed successfully; app entries retained `PackageType=App` and the script retained `PackageType=Script` | Pass |
 | One-shot cleanup | SetupComplete completed once, scheduled normal `OnSuccess` cleanup and left no automatic retry mechanism | Pass |
 | Office refresh fallback | ODT exceeded its configured 20-minute refresh timeout; the previously staged Office payload was used successfully and Microsoft 365 Apps installed offline with exit code 0 | Pass, with timeout hardening identified |
 | Bounded process-tree termination | Post-fix physical test terminated one parent and two child processes in **0.42 s**; helper reported success and no process remained | Pass |
@@ -428,8 +428,8 @@ Still requiring separate end-to-end checks:
 3. USB cache is detected only when connected, or a local no-USB path is selected.
 4. Repository `Package.zip` files validate against their SHA-256 metadata.
 5. `SetupComplete.cmd` starts `Invoke-OSDAppPreInstall.ps1`; `PreInstallComplete` reports success.
-6. `Invoke-OSDAppRunner.ps1` installs the queued applications; each expected `*InstallComplete` has an accepted exit code.
-7. `Latest.json` and the final `InstallComplete` agree on final status and application counts.
+6. `Invoke-OSDAppRunner.ps1` installs the queued apps; each expected `*InstallComplete` has an accepted exit code.
+7. `Latest.json` and the final `InstallComplete` agree on final status and app counts.
 8. The configured `CleanupMode` is honored; local cleanup does not delete persistent logs or results.
 
 Windows runtime log:
@@ -454,7 +454,7 @@ For a no-USB run, module-side logging may be on the Windows volume, while the st
 
 ## Historical cold/warm benchmark — OSDApps 0.29.1
 
-The earlier 0.29.1 benchmark is retained separately, using the same hardware, USB flash drive, application set and install order for its cold/warm pair.
+The earlier 0.29.1 benchmark is retained separately, using the same hardware, USB flash drive, app set and install order for its cold/warm pair.
 
 | Phase | Cold USB | Warm USB |
 | --- | ---: | ---: |
@@ -479,7 +479,7 @@ To exercise a helper from a downloaded or USB module, supply its actual path:
 .\tools\Test-OSDAppsSleepPrevention.ps1 -HelperPath 'D:\Modules\OSDApps\<version>\Runtime\OSDAppSleepPrevention.ps1'
 ```
 
-The test uses the real shared helper and unique power-request reasons. It checks normal completion, controlled failure, explicit disablement and forced termination of its own child process. It reads `powercfg /requests`, never clears another application's request, and changes no apps, cache files, deployment manifests or power settings. The successful output confirms registration and cleanup, not actual sleep behavior. `-HoldSeconds 120` extends only the normal-completion scenario.
+The test uses the real shared helper and unique power-request reasons. It checks normal completion, controlled failure, explicit disablement and forced termination of its own child process. It reads `powercfg /requests`, never clears another app's request, and changes no apps, cache files, deployment manifests or power settings. The successful output confirms registration and cleanup, not actual sleep behavior. `-HoldSeconds 120` extends only the normal-completion scenario.
 
 Physical API prototype evidence on 20 October 2026, before module integration:
 
@@ -496,7 +496,7 @@ Implementation commit: `53f229e7b235e289a703fe7211d8f78e84125958` ([PR #47](http
 - [CI](https://github.com/roryvossepoel/OSDApps/actions/runs/39407865264) passed 440 tests on each of Windows PowerShell 5.1 and PowerShell 7, with no failures or skipped tests. The real native helper test also passed on both engines.
 - On the development PC, the actual runtime helper passed normal completion, controlled failure, disabled mode and forced termination. Registered requests were released; disabled mode registered none. No power settings were changed.
 - Physical deployment `a02ec413-915e-4ad5-a2c6-b209a8f7c01e` completed from WinPE through OOBE. Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise each reported `CacheReused` and installer exit code 0.
-- PreInstall and Install each logged one successful `SleepPreventionStarted` and `SleepPreventionStopped` pair. No failed or skipped applications remained; staging and the cleanup helper were removed.
+- PreInstall and Install each logged one successful `SleepPreventionStarted` and `SleepPreventionStopped` pair. No failed or skipped apps remained; staging and the cleanup helper were removed.
 
 | Phase | Duration |
 | --- | ---: |

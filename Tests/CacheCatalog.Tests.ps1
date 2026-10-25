@@ -6,7 +6,7 @@ Describe 'Repository cache catalog merge' {
         Import-Module $script:manifestPath -Force
     }
 
-    It 'preserves existing cached applications during selective synchronization' {
+    It 'preserves existing cached apps during selective synchronization' {
         InModuleScope OSDApps {
             $sourceRoot = Join-Path $TestDrive 'SourceRepository'
             $cacheRoot = Join-Path $TestDrive 'Cache'
@@ -34,7 +34,7 @@ Describe 'Repository cache catalog merge' {
             @{
                 SchemaVersion=1
                 GeneratedAt=(Get-Date).ToUniversalTime().ToString('o')
-                Applications=@(
+                Apps=@(
                     @{Id='AppA';Packages=@(@{Architecture='x64';Manifest=$a})},
                     @{Id='AppB';Packages=@(@{Architecture='x64';Manifest=$b})}
                 )

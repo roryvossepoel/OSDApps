@@ -21,8 +21,8 @@ namespace OSDApps.Tests.Issue17
         public override CultureInfo CurrentUICulture { get { return CultureInfo.GetCultureInfo("en-US"); } }
         public override void EnterNestedPrompt() { throw new InvalidOperationException("Unexpected nested prompt."); }
         public override void ExitNestedPrompt() { throw new InvalidOperationException("Unexpected nested prompt exit."); }
-        public override void NotifyBeginApplication() { }
-        public override void NotifyEndApplication() { }
+        public override void NotifyBeginApp() { }
+        public override void NotifyEndApp() { }
         public override void SetShouldExit(int exitCode) { throw new InvalidOperationException("Unexpected host exit."); }
     }
 

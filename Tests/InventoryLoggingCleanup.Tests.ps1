@@ -62,7 +62,7 @@ Describe 'Inventory and client logging analyzer cleanup' {
                 [pscustomobject]@{Id=$app.Id; Architecture='x64'; Channel='Rapid'; Version='4.0'; Valid=$true}
             )
             $before = ConvertTo-Json -InputObject $entries -Depth 5 -Compress
-            Get-OSDAppUICachedVersion -Application $app -CacheEntries $entries | Should -Be '4.0'
+            Get-OSDAppUICachedVersion -App $app -CacheEntries $entries | Should -Be '4.0'
             (ConvertTo-Json -InputObject $entries -Depth 5 -Compress) | Should -Be $before
         }
     }
@@ -74,16 +74,16 @@ Describe 'Inventory and client logging analyzer cleanup' {
                 [pscustomobject]@{Id=$app.Id; Architecture='x86'; Version='1.0'; Valid=$true},
                 [pscustomobject]@{Id=$app.Id; Architecture='x64'; Version='2.0'; Valid=$true}
             )
-            Get-OSDAppUICachedVersion -Application $app -CacheEntries $entries | Should -Be '-'
+            Get-OSDAppUICachedVersion -App $app -CacheEntries $entries | Should -Be '-'
         }
     }
 
     It 'preserves missing and Current-only cached version labels' {
         InModuleScope OSDApps {
             $app = [pscustomobject]@{Id='GoogleChromeEnterprise'; Architecture='x64'}
-            Get-OSDAppUICachedVersion -Application $app -CacheEntries @() | Should -Be '-'
+            Get-OSDAppUICachedVersion -App $app -CacheEntries @() | Should -Be '-'
             $entry = [pscustomobject]@{Id=$app.Id; Architecture='x64'; Version='Current'; Valid=$true}
-            Get-OSDAppUICachedVersion -Application $app -CacheEntries @($entry) | Should -Be 'Not recorded'
+            Get-OSDAppUICachedVersion -App $app -CacheEntries @($entry) | Should -Be 'Not recorded'
         }
     }
 
@@ -91,7 +91,7 @@ Describe 'Inventory and client logging analyzer cleanup' {
         InModuleScope OSDApps {
             $app = [pscustomobject]@{Id='MicrosoftTeams'; Architecture='x64'}
             $entry = [pscustomobject]@{Id='Teams'; Architecture='x64'; Version='1.2.3.4'; Valid=$true}
-            Get-OSDAppUICachedVersion -Application $app -CacheEntries @($entry) | Should -Be '1.2.3.4'
+            Get-OSDAppUICachedVersion -App $app -CacheEntries @($entry) | Should -Be '1.2.3.4'
             $entry.Id | Should -Be 'Teams'
         }
     }

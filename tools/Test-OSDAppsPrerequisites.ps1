@@ -41,10 +41,10 @@ try {
     $run=Read-TestJson (Join-Path $root 'Results\Latest.json')
     foreach($result in @($pre,$run)) {
         if($result.DeploymentId -ne $expected.DeploymentId -or $result.Status -ne 'Succeeded') { throw 'A deployment phase failed or has a different identity.' }
-        if(@($result.Applications).Count -ne 4 -or @(Compare-Object @($expected.ExpectedIds) @($result.Applications.Id)).Count -ne 0 -or @($result.Applications | Where-Object Status -ne 'Succeeded').Count -ne 0) { throw 'Expected four successful prerequisite results.' }
+        if(@($result.Apps).Count -ne 4 -or @(Compare-Object @($expected.ExpectedIds) @($result.Apps.Id)).Count -ne 0 -or @($result.Apps | Where-Object Status -ne 'Succeeded').Count -ne 0) { throw 'Expected four successful prerequisite results.' }
     }
     Write-Host '2. Checking installed runtime registrations and files...' -ForegroundColor Cyan
-    $rows=@(foreach($entry in $run.Applications) {
+    $rows=@(foreach($entry in $run.Apps) {
         if($entry.ExitCode -notin @(0,3010) -or [string]$entry.Version -notmatch '^\d+\.\d+\.\d+') { throw "Missing installer success or version: $($entry.Id)" }
         $required=[version]$entry.Version
         if($entry.Id -like 'VisualCRedist-*') {
@@ -83,7 +83,7 @@ try {
         if($clean){break};Start-Sleep -Seconds 2
     } while((Get-Date) -lt $deadline)
     if(-not $clean){throw 'Staging or cleanup helper remains.'}
-    $pre.Applications | Select-Object Id,Status,AcquisitionOutcome,CacheUsed,DurationSeconds | Format-Table -AutoSize
+    $pre.Apps | Select-Object Id,Status,AcquisitionOutcome,CacheUsed,DurationSeconds | Format-Table -AutoSize
     [pscustomobject]@{DeploymentId=$expected.DeploymentId;ModuleVersion=$expected.ModuleVersion;SuccessfulRuntimes=$rows.Count;PreInstallSeconds=$pre.DurationSeconds;RunnerSeconds=$run.DurationSeconds;StagingRemoved=$clean} | Format-List
     Write-Host 'PREREQUISITES OOBE VALIDATION PASSED!' -ForegroundColor Green
     Write-Host 'Read-only checks. No installation, cache changes or SetupComplete rerun.'

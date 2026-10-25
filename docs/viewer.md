@@ -2,7 +2,7 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Troubleshooting](faq.md)
 
-OSDApps Viewer is the read-only interface opened by `Show-OSDAppUI`. It displays what the CLI has prepared: the device queue and configuration, built-in/repository apps, script packages, USB cache and existing logs. It does not add, remove, configure, download or install applications.
+OSDApps Viewer is the read-only interface opened by `Show-OSDAppUI`. It displays what the CLI has prepared: the device queue and configuration, built-in/repository apps, script packages, USB cache and existing logs. It does not add, remove, configure, download or install apps.
 
 ## Where to run it
 
@@ -58,9 +58,9 @@ Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise are queue
 
 ### Available apps and repository packages
 
-![Apps tab: six built-in applications and two user-maintained repository packages, with cache and staging status](images/viewer-apps-winpe.png)
+![Apps tab: six built-in apps and two user-maintained repository packages, with cache and staging status](images/viewer-apps-winpe.png)
 
-The Apps tab combines built-ins and repository metadata. Notepad++ and Omnissa Horizon Client are packages supplied by the repository used for this session; they are not bundled with OSDApps. All packages shown here are applications. Script packages appear in the same view with `Package Type: Script` when present.
+The Apps tab combines built-ins and repository metadata. Notepad++ and Omnissa Horizon Client are packages supplied by the repository used for this session; they are not bundled with OSDApps. All packages shown here are apps. Script packages appear in the same view with `Package Type: Script` when present.
 
 ### Cache availability and integrity
 
@@ -84,7 +84,7 @@ The Order column remains the manifest sequence even when the table is sorted dif
 
 ## Apps
 
-The **Package Type** column shows `Application` or `Script` in **Staged for device**, **Apps** and **Cache**. Search for `Script` to find script packages. The Apps tab contains both types; no separate script queue or script-specific command is needed. Legacy packages without a type are displayed as `Application`.
+The **Package Type** column shows `App` or `Script` in **Staged for device**, **Apps** and **Cache**. Search for `Script` to find script packages. The Apps tab contains both types; no separate script queue or script-specific command is needed. Legacy packages without a type are displayed as `App`.
 
 Apps combines built-in definitions and available repository/cache metadata. Staged apps remain visible even when absent from the current catalog/cache. Source distinguishes built-ins from repository packages; Vendor is displayed only when available from the relevant metadata.
 

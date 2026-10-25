@@ -8,7 +8,7 @@ function Sync-OSDAppCMTraceOpen {
     if (-not $PSCmdlet.ShouldProcess($target, 'Synchronize official CMTrace Open MSI')) { return }
 
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-    $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/adamgell/cmtraceopen/releases/latest' -Headers @{ 'User-Agent'='OSDApps'; Accept='application/vnd.github+json' } -ErrorAction Stop
+    $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/adamgell/cmtraceopen/releases/latest' -Headers @{ 'User-Agent'='OSDApps'; Accept='app/vnd.github+json' } -ErrorAction Stop
     if ($release.draft -or $release.prerelease -or [string]$release.tag_name -notmatch '^v(?<Version>\d+\.\d+\.\d+)$') {
         throw 'CMTrace Open latest release is not a supported stable release.'
     }

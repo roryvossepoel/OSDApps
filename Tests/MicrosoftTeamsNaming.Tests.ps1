@@ -15,10 +15,10 @@ Describe 'MicrosoftTeams canonical naming and cache alias contract' {
     }
 
     It 'publishes only the canonical MicrosoftTeams identity plus its retired cache alias' {
-        $ids = @($script:metadata.Applications.Id)
+        $ids = @($script:metadata.Apps.Id)
         $ids | Should -Contain 'MicrosoftTeams'
         $ids | Should -Not -Contain 'Teams'
-        $app = @($script:metadata.Applications | Where-Object Id -eq 'MicrosoftTeams')[0]
+        $app = @($script:metadata.Apps | Where-Object Id -eq 'MicrosoftTeams')[0]
         $app.DisplayName | Should -Be 'Microsoft Teams'
         $app.AddCommand | Should -Be 'Add-OSDAppMicrosoftTeams'
         $app.SyncCommand | Should -Be 'Sync-OSDAppMicrosoftTeams'

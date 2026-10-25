@@ -17,7 +17,7 @@ try {
 
     # Add any repository packages above this final check, in the required order.
     $validation = Test-OSDAppDeployment -ThrowOnFailure
-    $validation | Select-Object WindowsPath, DeploymentId, ApplicationCount,
+    $validation | Select-Object WindowsPath, DeploymentId, AppCount,
         Valid, OfflineReady, NetworkRequired | Format-List | Out-Host
 
     Write-Host 'OSDApps staging passed. The launcher may continue to its reboot step.'

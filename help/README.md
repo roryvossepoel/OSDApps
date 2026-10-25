@@ -12,7 +12,7 @@ The generator obtains parameter sets, names, types, declared defaults and Valida
 
 ## Build and inspect
 
-Run from a repository checkout on a Windows development machine. This builds a package under `dist/OSDApps`; it does not stage or install applications.
+Run from a repository checkout on a Windows development machine. This builds a package under `dist/OSDApps`; it does not stage or install apps.
 
 ```powershell
 ./build/Build-Module.ps1

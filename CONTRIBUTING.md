@@ -1,6 +1,6 @@
 # Contributing
 
-Contributions, issue reports, and built-in application requests are welcome.
+Contributions, issue reports, and built-in app requests are welcome.
 
 ## Development and validation
 
@@ -58,11 +58,11 @@ Describe behavior changes, execution environment, destructive effects and valida
 
 Normal CI never publishes to the Gallery. Version bumps and immutable release publication follow [Releasing](docs/releasing.md). Help and build improvements require a later approved module release before Gallery consumers receive them; merging the tooling PR alone does not replace a published package.
 
-## Built-in application requests
+## Built-in app requests
 
-Built-in applications are product-specific integrations maintained inside OSDApps. They are intentionally reserved for broadly used software with a stable, vendor-supported acquisition and unattended installation path. Built-in payloads must always be acquired directly from the software vendor; installers may never be bundled with, mirrored by, or redistributed through OSDApps.
+Built-in apps are product-specific integrations maintained inside OSDApps. They are intentionally reserved for broadly used software with a stable, vendor-supported acquisition and unattended installation path. Built-in payloads must always be acquired directly from the software vendor; installers may never be bundled with, mirrored by, or redistributed through OSDApps.
 
-Before requesting a built-in, review the [Built-in application request policy](docs/built-in-apps.md#requesting-a-new-built-in-application).
+Before requesting a built-in, review the [Built-in app request policy](docs/built-in-apps.md#requesting-a-new-built-in-app).
 
 The installer source must be the vendor itself. Third-party mirrors, community package feeds, repackaged binaries, and module-hosted installer payloads are not accepted for built-ins.
 

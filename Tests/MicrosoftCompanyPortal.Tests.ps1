@@ -4,7 +4,7 @@ Describe 'Microsoft Company Portal built-in staging' {
         Import-Module (Join-Path $root 'OSDApps.psd1') -Force
     }
 
-    It 'exposes Company Portal as a built-in application without an online catalog' {
+    It 'exposes Company Portal as a built-in app without an online catalog' {
         $app = Get-OSDApp -Name MicrosoftCompanyPortal -Offline
         $app.Id | Should -Be 'MicrosoftCompanyPortal'
         $app.PackageType | Should -Be 'App'
