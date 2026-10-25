@@ -15,66 +15,52 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Apply scoped checksum-verified patches
+      - name: Apply scoped checksum-verified documentation and report checks
         shell: python
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           import base64, hashlib, json, os, pathlib, re, subprocess, urllib.request, zlib
           def api(path):
-              req = urllib.request.Request('https://api.github.com/repos/roryvossepoel/OSDApps' + path, headers={'Authorization':'Bearer ' + os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'OSDApps-PR72-Validation'})
-              with urllib.request.urlopen(req, timeout=60) as response: return json.load(response)
-          def blob(sha): return base64.b64decode(api('/git/blobs/' + sha)['content'])
-          chunks = [blob(s) for s in ['a197c8c9260624ba4adfe4d93a3e538d869831c8','516ba4460abf7f8d26843e8c9e7d697a2f2c550e','09effb7af2140737a8bfb9964b98bee6a4f5584b']]
-          encoded = base64.b64encode(chunks[0]).decode('ascii')
-          assert encoded.count('7DSKp/eM') == 1
-          chunks[0] = base64.b64decode(encoded.replace('7DSKp/eM','7DSK/eM') + 'e')
-          assert hashlib.sha1(b'blob ' + str(len(chunks[0])).encode() + b'\0' + chunks[0]).hexdigest() == 'a79fc013dad09b8cb43860a562e6ae415fde00c4'
-          patches = [
-              (zlib.decompress(b''.join(chunks)), '3ed91c94f8669929e2660298a61f8b44385592e4596af56cecb0a7dd1819fd58',21),
-              (zlib.decompress(b''.join(blob(s) for s in ['5c714398744b8c0813c47629dd588ee069c350ec','a3f54f97b796a47545a55970c4546948116004ee','1a08d7b9d60a2821e1812de468b7e3bc8f4cdf1b'])), 'b17a1e9afb9939ab3e432f4afbd1d19ab5ec29184de3520c711d1d80203a2238',14),
-              (blob('1a7a1fd686f0b0802cebf91eb591a642ca5c9247'), 'd2e486f50357d74f49037c9da01b1a6860b48e1c440361fd31e15c3e02c82e01',3)
-          ]
-          subprocess.run(['git','config','core.autocrlf','false'],check=True)
-          subprocess.run(['git','checkout-index','--all','--force'],check=True)
-          all_targets = set()
-          for number,(patch,checksum,count) in enumerate(patches):
-              assert hashlib.sha256(patch).hexdigest() == checksum
-              targets = []; current = None
-              for line in patch.decode('utf-8').splitlines():
-                  if line.startswith('diff --git '):
-                      match = re.fullmatch(r'diff --git a/(.+) b/(.+)',line)
-                      assert match and match[1] == match[2]
-                      current = match[1]
-                      assert re.fullmatch(r'(?:Tests/(?:Helpers/)?[A-Za-z0-9.-]+[.]ps1|Runtime/Invoke-OSDAppPreInstall[.]ps1|docs/[A-Za-z0-9.-]+[.]md|help/CommandHelp[.]psd1|metadata/builtins[.]json|tools/Test-OSDAppsMega[.]ps1|README[.]md)',current), current
-                      targets.append(current)
-                  elif line.startswith('index '):
-                      old = line.split()[1].split('..')[0]
-                      if old == '0' * 40: assert not pathlib.Path(current).exists(), current
-                      else: assert subprocess.check_output(['git','hash-object','--no-filters',current],text=True).strip() == old, current
-              assert len(targets) == len(set(targets)) == count
-              path = pathlib.Path(os.environ['RUNNER_TEMP']) / ('native-' + str(number) + '.patch'); path.write_bytes(patch)
-              subprocess.run(['git','apply','--check','--unidiff-zero',str(path)],check=True)
-              subprocess.run(['git','apply','--unidiff-zero',str(path)],check=True)
-              all_targets.update(targets)
-          assert len(all_targets) == 35
+              req=urllib.request.Request('https://api.github.com/repos/roryvossepoel/OSDApps'+path,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'OSDApps-PR72-Validation'})
+              with urllib.request.urlopen(req,timeout=60) as response:return json.load(response)
+          chunks=[base64.b64decode(api('/git/blobs/'+s)['content']) for s in ['5c714398744b8c0813c47629dd588ee069c350ec','a3f54f97b796a47545a55970c4546948116004ee','1a08d7b9d60a2821e1812de468b7e3bc8f4cdf1b']]
+          patch=zlib.decompress(b''.join(chunks))
+          assert hashlib.sha256(patch).hexdigest()=='b17a1e9afb9939ab3e432f4afbd1d19ab5ec29184de3520c711d1d80203a2238'
+          targets=[];current=None
+          for line in patch.decode('utf-8').splitlines():
+              if line.startswith('diff --git '):
+                  match=re.fullmatch(r'diff --git a/(.+) b/(.+)',line)
+                  assert match and match[1]==match[2]
+                  current=match[1]
+                  assert re.fullmatch(r'(?:Tests/[A-Za-z0-9.-]+[.]ps1|docs/[A-Za-z0-9.-]+[.]md|help/CommandHelp[.]psd1|metadata/builtins[.]json|tools/Test-OSDAppsMega[.]ps1|README[.]md)',current),current
+                  targets.append(current)
+              elif line.startswith('index '):
+                  old=line.split()[1].split('..')[0]
+                  if old=='0'*40:assert not pathlib.Path(current).exists(),current
+                  else:
+                      assert subprocess.check_output(['git','rev-parse','HEAD:'+current],text=True).strip()==old,current
+                      pathlib.Path(current).write_bytes(subprocess.check_output(['git','show','HEAD:'+current]))
+          assert len(targets)==len(set(targets))==14
+          path=pathlib.Path(os.environ['RUNNER_TEMP'])/'native-docs.patch';path.write_bytes(patch)
+          subprocess.run(['git','apply','--check','--unidiff-zero',str(path)],check=True)
+          subprocess.run(['git','apply','--unidiff-zero',str(path)],check=True)
           subprocess.run(['git','diff','--check'],check=True)
-          pathlib.Path(os.environ['RUNNER_TEMP'],'pr72-targets.json').write_text(json.dumps(sorted(all_targets)),encoding='utf-8')
-          # Validate precisely the final tree. The temporary transport workflow is not part of it.
+          pathlib.Path(os.environ['RUNNER_TEMP'],'pr72-targets.json').write_text(json.dumps(targets),encoding='utf-8')
           pathlib.Path('.github/workflows/pr72-native-tests.yml').unlink()
       - name: Parse and import on Windows PowerShell 5.1
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
-          $problems = @()
+          $ErrorActionPreference='Stop'
+          $problems=@()
           foreach ($folder in @('Public','Private','Runtime','Tests','tools')) {
             foreach ($file in Get-ChildItem $folder -Filter '*.ps1' -Recurse -File) {
-              $tokens=$null; $parseErrors=$null
+              $tokens=$null;$parseErrors=$null
               [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName,[ref]$tokens,[ref]$parseErrors)
-              foreach ($problem in @($parseErrors)) { $problems += "$($file.Name):$($problem.Extent.StartLineNumber): $($problem.Message)" }
+              foreach ($problem in @($parseErrors)) {$problems+="$($file.Name):$($problem.Extent.StartLineNumber): $($problem.Message)"}
             }
           }
-          if ($problems.Count) { throw ($problems -join "`n") }
+          if ($problems.Count) {throw ($problems -join "`n")}
           Import-Module .\OSDApps.psd1 -Force -ErrorAction Stop
       - name: Install PowerShell 7 dependencies
         shell: pwsh
@@ -96,10 +82,8 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference='Stop'
-          [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-          if (-not (Get-PackageProvider NuGet -ListAvailable -ErrorAction SilentlyContinue)) {
-            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force | Out-Null
-          }
+          [Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+          if (-not (Get-PackageProvider NuGet -ListAvailable -ErrorAction SilentlyContinue)) {Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force | Out-Null}
           Set-PSRepository PSGallery -InstallationPolicy Trusted
           Install-Module Pester -RequiredVersion 6.2.0 -Scope CurrentUser -Force -SkipPublisherCheck
           Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
@@ -112,7 +96,7 @@ jobs:
           ./build/Test-Module.ps1 -ResultsPath TestResults/WindowsPowerShell51
           ./build/Test-PackagedHelp.ps1 -ModulePath ./dist/OSDApps
           ./tools/Test-OSDAppsSleepPrevention.ps1 -HoldSeconds 1
-      - name: Verify reports and prepare commit only when both suites succeed
+      - name: Verify actual reports and prepare commit only after both suites succeed
         if: always()
         shell: python
         env:
@@ -120,17 +104,16 @@ jobs:
           PS51_OUTCOME: ${{ steps.winps.outcome }}
           PS7_OUTCOME: ${{ steps.pwsh.outcome }}
         run: |
-          import json, os, pathlib, urllib.request, xml.etree.ElementTree as ET
+          import json,os,pathlib,urllib.request,xml.etree.ElementTree as ET
           output=pathlib.Path('NativeTestValidation');output.mkdir(exist_ok=True)
           outcomes={'WindowsPowerShell51':os.environ.get('PS51_OUTCOME'),'PowerShell7':os.environ.get('PS7_OUTCOME')}
           (output/'outcomes.json').write_text(json.dumps(outcomes,indent=2),encoding='utf-8')
-          assert all(v == 'success' for v in outcomes.values()), outcomes
+          assert all(v=='success' for v in outcomes.values()),outcomes
           counts={}
           for engine in outcomes:
               root=ET.parse(pathlib.Path('TestResults',engine,'pester.xml')).getroot()
-              for field in ['errors','failures','not-run','inconclusive','ignored','skipped','invalid']:
-                  assert int(root.attrib.get(field,0)) == 0, (engine,field,root.attrib)
-              assert int(root.attrib['total']) >= 552
+              for field in ['errors','failures','not-run','inconclusive','ignored','skipped','invalid']:assert int(root.attrib.get(field,0))==0,(engine,field,root.attrib)
+              assert int(root.attrib['total'])>=552
               counts[engine]=root.attrib
           def api(path,data=None):
               req=urllib.request.Request('https://api.github.com/repos/roryvossepoel/OSDApps'+path,data=None if data is None else json.dumps(data).encode('utf-8'),headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json','User-Agent':'OSDApps-PR72-Validation'},method='GET' if data is None else 'POST')
@@ -138,7 +121,7 @@ jobs:
           parent=os.environ['GITHUB_SHA']
           paths=json.loads(pathlib.Path(os.environ['RUNNER_TEMP'],'pr72-targets.json').read_text(encoding='utf-8'))
           tree=api('/git/trees',{'base_tree':api('/git/commits/'+parent)['tree']['sha'],'tree':[{'path':p,'mode':'100644','type':'blob','content':pathlib.Path(p).read_text(encoding='utf-8')} for p in paths]+[{'path':'.github/workflows/pr72-native-tests.yml','mode':'100644','type':'blob','sha':None}]})['sha']
-          commit=api('/git/commits',{'message':'test: complete native filename contract validation and fresh-cache acceptance guide','tree':tree,'parents':[parent]})['sha']
+          commit=api('/git/commits',{'message':'test: complete native filename validation and fresh-cache acceptance guide','tree':tree,'parents':[parent]})['sha']
           (output/'commit.json').write_text(json.dumps({'parent':parent,'commit':commit,'tree':tree,'files':paths,'tests':counts},indent=2),encoding='utf-8')
           print('VERIFIED_NATIVE_COMMIT='+commit)
       - uses: actions/upload-artifact@v4
