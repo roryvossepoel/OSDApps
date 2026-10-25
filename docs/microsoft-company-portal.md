@@ -1,35 +1,53 @@
-# Microsoft Company Portal (built-in test candidate)
+# Microsoft Company Portal (built-in)
 
-This integration provisions the official Microsoft Company Portal Preinstall Kit for **future Windows user profiles** during SetupComplete. The OSDApps module contains **no Microsoft application binaries or licenses**. The operator obtains the kit from Microsoft's official download center and places its contents into the OSDCloud USB cache with `Sync-OSDAppMicrosoftCompanyPortal`.
+This optional integration provisions the official Microsoft Company Portal Preinstall Kit for **future Windows user profiles** during SetupComplete. OSDApps includes no Microsoft application binaries or licenses. Preparation happens on full Windows; WinPE and SetupComplete consume an already synchronized local cache.
 
 ## Preparation PC (full Windows)
 
-```powershell
+Connect the OSDCloud USB device and run:
+
+
+~~~powershell
 Import-Module OSDApps
 Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud
-Sync-OSDAppMicrosoftCompanyPortal -KitPath 'C:\Temp\CompanyPortal-Universal-Production_x64_x86_ARM_ARM64.appxupload_Windows10_PreinstallKit.zip' -Architecture x64
-```
 
-This operation validates that the ZIP has exactly one Company Portal appbundle, an offline license, and one x64 dependency package for each of five known dependency families. It reads the Microsoft.CompanyPortal version from the bundle manifest. The supplied kit tested for this candidate contained bundle version **11.2.1495.0** (not the older 11.2.1393.0 listed in some descriptions).
+# Default: download the official kit directly from Microsoft's Download Center.
+Sync-OSDAppMicrosoftCompanyPortal -Architecture x64
+~~~
+
+The automatic source is an official `download.microsoft.com` Preinstall Kit ZIP. OSDApps records its source URI and SHA-256, extracts the appxbundle, offline license and five architecture-specific Appx dependencies, reads the Microsoft Company Portal package identity and version, and records individual file hashes. A download or validation failure does not replace the previous cache; an automatic refresh can reuse content only after checking cached file hashes. The actual Appx signature is validated by Windows when provisioning.
+
+An operator-supplied kit is also supported, with **no automatic download**:
+
+
+~~~powershell
+Sync-OSDAppMicrosoftCompanyPortal -KitPath 'C:TempCompanyPortal-Universal-Production_x64_x86_ARM_ARM64.appxupload_Windows10_PreinstallKit.zip' -Architecture x64
+~~~
+
+The tested Microsoft kit contained Company Portal **11.2.1495.0**. That is an observed bundle version, not a guarantee that the Microsoft download URL always serves the latest Microsoft Store version.
 
 ## WinPE after OSDCloud
 
-```powershell
+
+~~~powershell
 Import-Module OSDApps
 Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud -CleanupMode OnSuccess
 Add-OSDAppMicrosoftCompanyPortal -Architecture x64
 Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
-```
+~~~
 
-During first boot, SetupComplete runs `Add-AppxProvisionedPackage -Online` with the appbundle, offline license and five x64 Appx dependency packages, using `-Regions all`. Appx signature validation is handled by Windows provisioning. Windows 11 build and license compatibility must be verified on a disposable deployment target. After first user login, verify `Get-AppxPackage -Name Microsoft.CompanyPortal`, as provisioning alone is not proof of user registration.
+During first boot, SetupComplete uses `Add-AppxProvisionedPackage -Online` with the app bundle, offline license and five dependencies, using `-Regions all`. Company Portal is then available to provision for new user profiles. Check after Autopilot sign-in:
 
-The prepare/sync phase is intentionally **offline-source only**. The Microsoft download page provides a kit file, not a documented evergreen MSI endpoint. No external download is performed during WinPE or SetupComplete. For ARM64, synchronize and stage `-Architecture arm64` using the same vendor kit; test separately.
 
-## Test gates
+~~~powershell
+Get-AppxProvisionedPackage -Online | Where-Object DisplayName -eq 'Microsoft.CompanyPortal'
+Get-AppxPackage -Name Microsoft.CompanyPortal | Select-Object Name, Version, Status
+~~~
 
-- Windows PowerShell 5.1 parser and Pester tests
-- Cache structure and SHA-256 validation
-- Unmodified deployment manifest and preflight
-- New user profile registration after Autopilot
-- Microsoft Store update behavior / version compatibility
-- No installation if offline cache is incomplete
+## Validation and boundaries
+
+- Windows PowerShell 5.1 and 7 CI passed on PR #67.
+- Physical x64 staging, offline provisioning and post-Autopilot user registration succeeded on PC1.
+- A separate full-Windows x64 test downloaded the kit directly from Microsoft with **no** `-KitPath`: `Updated=True`, `CacheReused=False`, seven cached files, version 11.2.1495.0.
+- No network download takes place in WinPE or SetupComplete.
+- ARM64 uses `-Architecture arm64` with the same Microsoft kit, but has **not** been physically tested. Interactive Intune registration and Store-update behavior were not separately validated by the preparation test.

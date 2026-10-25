@@ -10,6 +10,8 @@ Application built-ins default to x64. Runtime prerequisite cmdlets require one e
 | --- | --- | --- |
 | [Microsoft 365 Apps](#microsoft-365-apps) | x64, x86 | Channel, languages, products, licensing flags or custom XML |
 | [Microsoft Teams](#microsoft-teams) | x64, x86, arm64 | Architecture |
+| [Microsoft Company Portal](microsoft-company-portal.md) | x64, arm64 | Automatic official Microsoft Preinstall Kit download or manual `-KitPath`; offline provisioning |
+| [CMTrace Open](cmtrace-open.md) | x64, arm64 | Verified upstream MSI cache, installation timeout and optional update-check control |
 | [Adobe Acrobat Unified](#adobe-acrobat-unified) | x64, x86 | Architecture and installation timeout |
 | [Google Chrome Enterprise](#google-chrome-enterprise) | x64, x86 | Architecture |
 | [Mozilla Firefox Enterprise](#mozilla-firefox-enterprise) | x64, x86 | Rapid/ESR channel and language |

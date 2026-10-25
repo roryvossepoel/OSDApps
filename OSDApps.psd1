@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.50.0'
+    ModuleVersion     = '0.51.0'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -21,7 +21,7 @@
         'Sync-OSDAppRepository',
         'Sync-OSDAppCMTraceOpen',
         'Sync-OSDAppMicrosoftCompanyPortal',
-    'Sync-OSDAppMicrosoft365Apps',
+        'Sync-OSDAppMicrosoft365Apps',
         'Sync-OSDAppMicrosoftTeams',
         'Sync-OSDAppAdobeAcrobatUnified',
         'Sync-OSDAppGoogleChromeEnterprise',
@@ -37,7 +37,7 @@
         'Add-OSDAppWindowsInboxCleanup',
         'Add-OSDAppCMTraceOpen',
         'Add-OSDAppMicrosoftCompanyPortal',
-    'Add-OSDAppMicrosoft365Apps',
+        'Add-OSDAppMicrosoft365Apps',
         'Add-OSDAppMicrosoftTeams',
         'Add-OSDAppAdobeAcrobatUnified',
         'Add-OSDAppGoogleChromeEnterprise',
@@ -62,7 +62,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.50.0: Add opt-in built-in Windows Inbox Cleanup with Tested13 preset or custom package selection, integrity-checked staging, diagnostics and SYSTEM execution during SetupComplete. Validated 13 of 13 removals and confirmed selected packages remain absent after Autopilot.'
+            ReleaseNotes = '0.51.0: Add Microsoft Company Portal offline provisioning with automatic download from the official Microsoft Download Center and optional manual Preinstall Kit; add CMTrace Open with upstream MSI SHA-256 and Authenticode verification and original vendor filenames. Validated x64 WinPE to SetupComplete deployment (4/4 succeeded) and direct Microsoft download on Windows.'
             RequireLicenseAcceptance = $false
         }
     }

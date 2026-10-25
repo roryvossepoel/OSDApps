@@ -11,6 +11,23 @@ For current operating instructions, use [Choose the right check](maintenance.md#
 - Candidate manifest versions can differ from the release that eventually shipped the feature. Keep that distinction when comparing reports.
 - There is no new full deployment result claimed here for 0.49.1. Its vendor-source check below is a separate preparation-PC observation.
 
+## Company Portal and CMTrace Open combined x64 candidate — 24–25 October 2026
+
+The operator validated the combined feature-candidate module on **PC1, x64**, after OSDCloud applied Windows. WinPE staged four entries. During the first Windows boot, SetupComplete reported `Status=Succeeded`, `SuccessfulApplicationCount=4`, `FailedApplicationCount=0` and `SkippedApplicationCount=0`, with exit code 0 for each:
+
+| Queue entry | Physical result |
+| --- | --- |
+| `WindowsInboxCleanup` | Ran as SYSTEM. Three selected packages (`Microsoft.BingWeather`, `Microsoft.MicrosoftSolitaireCollection`, `Microsoft.GamingApp`) removed; no failures or remaining provisioned/registered instances. |
+| `MicrosoftCompanyPortal` | Bundle 11.2.1495.0 provisioned with its offline license and five dependencies. `Get-AppxProvisionedPackage` verified provisioning; the operator subsequently confirmed availability for the signed-in Autopilot user. |
+| `CMTraceOpen` | MSI 1.6.3 passed SetupComplete SHA-256 and Authenticode validation; installed silently from vendor filename `CMTrace-Open_1.6.3_x64.msi`; exit code 0; Windows uninstall inventory confirmed 1.6.3. |
+| `DisplayLinkGraphicsHotDesking` | Separate **repository** package (not a new OSDApps built-in) completed with exit code 0. Repository version was 12.3.5143.0; Windows uninstall entry reported DisplayLink Graphics 12.3.5011.0. No device-attached driver functionality was established. |
+
+The OSDApps runtime log recorded `InstallComplete` and scheduled `CleanupMode=OnSuccess` cleanup; this excerpt did **not** independently confirm cleanup completion.
+
+On **25 October 2026**, a separate full-Windows USB-preparation test validated `Sync-OSDAppMicrosoftCompanyPortal -Architecture x64` **without** `-KitPath`. The synchronizer downloaded the official Microsoft Preinstall Kit directly from `download.microsoft.com`, selected seven cache files, returned `Updated=True` and `CacheReused=False`, and reported version **11.2.1495.0**. The downloaded ZIP's SHA-256 was `2CED91D35BF33CCD9E8E76377BF1F24E41B6238547AB43675955EED1757A8F9B`.
+
+The physical deployment and automatic Microsoft download are **two separate tests**. This evidence does not establish ARM64 behavior, Company Portal interaction with Intune or Store updates, or DisplayLink hardware operation. The eventual release version can differ from the test candidate's internal manifest.
+
 ## Windows Inbox Cleanup built-in — 24 October 2026
 
 The opt-in `WindowsInboxCleanup` built-in was exercised on a physical deployment using the PR #65 test module before release version 0.50.0. The operator reported that OSDCloud staging and `Test-OSDAppDeployment -RequireOfflineReady` both succeeded, with `Valid=True` and `OfflineReady=True`.

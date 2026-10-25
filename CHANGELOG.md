@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.51.0
+
+- Add the opt-in Microsoft Company Portal built-in. `Sync-OSDAppMicrosoftCompanyPortal` now downloads the official Microsoft Preinstall Kit automatically on full Windows, while `-KitPath` remains available for a manual/offline source. Stage the architecture-matched bundle, offline license and dependencies in WinPE; provision Company Portal for future user profiles during SetupComplete.
+- Add the opt-in CMTrace Open built-in. Synchronize the latest stable upstream x64 or ARM64 MSI, validate the official GitHub release SHA-256 and Authenticode signature on full Windows, preserve the vendor MSI filename, and verify integrity again before silent MSI installation during SetupComplete. Support previously synchronized legacy `Package.msi` caches without another download.
+- Keep both built-ins independent of custom Azure repository packages and compatible with the existing OSDApps application queue and Windows Inbox Cleanup script.
+- Physical x64 validation (PC1): Windows Inbox Cleanup removed the three selected packages under SYSTEM; Company Portal 11.2.1495.0 provisioned and was available to the signed-in Autopilot user; CMTrace Open 1.6.3 and the separate DisplayLink repository package installed. Result: four succeeded, zero failed or skipped.
+- Separate full-Windows preparation test confirmed the automatic Microsoft Company Portal download without `-KitPath`: `Updated=True`, `CacheReused=False`, seven selected cached files, official Microsoft Download Center source. ARM64 is supported in the interface but was not physically validated.
+
 ## 0.50.0
 
 - Add opt-in `Add-OSDAppWindowsInboxCleanup` built-in Script with explicit package selection or the `Tested13` preset, integrity-checked offline staging, SYSTEM execution during SetupComplete, early diagnostics and per-package result reporting. No Azure catalog or vendor download is needed.

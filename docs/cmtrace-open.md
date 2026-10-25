@@ -1,4 +1,4 @@
-# CMTrace Open (built-in test candidate)
+# CMTrace Open (built-in)
 
 This optional built-in installs the CMTrace Open MSI sourced directly from [adamgell/cmtraceopen GitHub releases](https://github.com/adamgell/cmtraceopen/releases). No binary is committed to OSDApps.
 
@@ -25,11 +25,11 @@ Add-OSDAppCMTraceOpen -Architecture x64 -DisableUpdateChecks $true
 Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
 ```
 
-The current candidate uses a **pre-synchronized MSI**, rather than downloading the MSI during SetupComplete. It reuses the existing built-in VendorMsi runner with `/qn /norestart` and optional `DISABLEUPDATECHECKS=1`. MSI hash and Authenticode checks run again before installation.
+The built-in uses a **pre-synchronized MSI**, rather than downloading the MSI during SetupComplete. OSDApps retains the upstream vendor filename (for x64 release 1.6.3, `CMTrace-Open_1.6.3_x64.msi`). A verified older USB cache containing `Package.msi` can be staged under the correct vendor filename without downloading the MSI again. It reuses the existing built-in VendorMsi runner with `/qn /norestart` and optional `DISABLEUPDATECHECKS=1`. MSI hash and Authenticode checks run again before installation.
 
-## Test gates
+## Validation and remaining tests
 
-- PowerShell 5.1 / 7 CI; staging tests and MSI integrity failures
-- Real full-Windows sync, official SHA-256 and Authenticode check
-- WinPE → SetupComplete → OOBE x64 deployment
-- ARM64 deployment separately; installed MSI version and update-check setting
+- Windows PowerShell 5.1 and 7 CI passed on PR #68 after incorporating the merged Company Portal changes.
+- Physical x64 validation on PC1 succeeded: SetupComplete checked SHA-256 and Authenticode, silently installed CMTrace Open 1.6.3 with exit code 0, and the Windows uninstall inventory confirmed 1.6.3.
+- The update-check setting was passed as `DISABLEUPDATECHECKS=1` during the successful install.
+- ARM64 deployment and end-user functional behavior were not independently validated.
