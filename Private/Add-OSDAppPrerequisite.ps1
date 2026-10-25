@@ -48,7 +48,7 @@ function Add-OSDAppPrerequisiteInternal {
     }
 
     $deviceManifest = Set-OSDAppManifestApp -Manifest $deviceManifest -App $manifestApp
-    # Prerequisites run before applications; preserve relative order in each group.
+    # Prerequisites run before apps; preserve relative order in each group.
     $deviceManifest.Apps = @(@($deviceManifest.Apps | Where-Object { $_.PSObject.Properties['Type'] -and $_.Type -eq 'PrerequisiteExe' }) + @($deviceManifest.Apps | Where-Object { -not $_.PSObject.Properties['Type'] -or $_.Type -ne 'PrerequisiteExe' }))
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
