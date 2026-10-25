@@ -141,7 +141,7 @@ Describe 'Trusted built-in publisher enforcement' {
         $runtime | Should -Match 'BuiltInSignatureVerified'
         $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id \$id -Path \$path'
         $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id ''Microsoft365Apps'' -Path \$setupPath'
-        $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id ''MicrosoftTeams'' -Path'
+        $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id (?:''MicrosoftTeams''|MicrosoftTeams) -Path'
         $runtime | Should -Match 'Expected \x27\$expected\x27'
     }
 }

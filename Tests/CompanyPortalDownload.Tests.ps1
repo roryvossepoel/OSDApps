@@ -80,7 +80,7 @@ Describe 'Microsoft Company Portal automatic Preinstall Kit download' {
                 Id='MicrosoftCompanyPortal';Version='11.2.1495.0';Architecture='x64'
                 PayloadFileName='CompanyPortal_11_2_1495_0_neutral.appxbundle'; LicenseFileName='CompanyPortal_License1.xml'
                 Sha256=$files[0].Sha256;Size=(Get-Item (Join-Path $target 'CompanyPortal_11_2_1495_0_neutral.appxbundle')).Length
-                SourceKitSha256=('A'*64);Files=$files
+                DependencyCount=5;SourceKitSha256=('A'*64);Files=$files
             } | ConvertTo-Json -Depth 6 |
                 Set-Content -LiteralPath (Join-Path $target 'CacheInfo.json') -Encoding UTF8
 
@@ -94,6 +94,11 @@ Describe 'Microsoft Company Portal automatic Preinstall Kit download' {
             $result.Updated | Should -BeFalse
             $result.Files | Should -Be 7
             Should -Invoke Save-OSDAppDownload -Times 1 -Exactly
+
+            Add-Content -LiteralPath (Join-Path $target 'Dependencies\one.appx') -Value 'tampered bytes'
+            { Sync-OSDAppMicrosoftCompanyPortal -Architecture x64 -Confirm:$false -WarningAction SilentlyContinue } |
+                Should -Throw '*Microsoft download unavailable*'
+            Should -Invoke Save-OSDAppDownload -Times 2 -Exactly
         }
     }
 }
