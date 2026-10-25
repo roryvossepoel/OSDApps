@@ -1,4 +1,4 @@
-Describe 'MicrosoftTeams canonical naming and cache alias contract' {
+Describe 'MicrosoftTeams canonical naming' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Parent $PSScriptRoot
         Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
@@ -14,7 +14,7 @@ Describe 'MicrosoftTeams canonical naming and cache alias contract' {
         $exports | Should -Not -Contain 'Sync-OSDAppTeams'
     }
 
-    It 'publishes only the canonical MicrosoftTeams identity plus its retired cache alias' {
+    It 'publishes only the canonical MicrosoftTeams identity' {
         $ids = @($script:metadata.Apps.Id)
         $ids | Should -Contain 'MicrosoftTeams'
         $ids | Should -Not -Contain 'Teams'
@@ -24,7 +24,7 @@ Describe 'MicrosoftTeams canonical naming and cache alias contract' {
         $app.SyncCommand | Should -Be 'Sync-OSDAppMicrosoftTeams'
         $app.Acquisition | Should -Be 'MicrosoftTeamsBootstrapper'
         $app.CachePath | Should -Be 'BuiltIn/MicrosoftTeams'
-        @($app.Aliases) | Should -Be @('Teams')
+        $app.PSObject.Properties.Name | Should -Not -Contain 'Aliases'
         $app.IconUrl | Should -Match '/metadata/icons/microsoftteams\.svg$'
         (Test-Path -LiteralPath (Join-Path $script:moduleRoot 'metadata\icons\microsoftteams.svg') -PathType Leaf) | Should -BeTrue
     }
@@ -85,8 +85,8 @@ Describe 'MicrosoftTeams canonical naming and cache alias contract' {
         $preinstall.Contains("'MicrosoftTeams' {") | Should -BeTrue
         $preinstall.Contains('BuiltIn\MicrosoftTeams') | Should -BeTrue
         $preinstall.Contains("'Teams' {") | Should -BeFalse
-        $preinstall.Contains('function Remove-LegacyMicrosoftTeamsCache') | Should -BeTrue
-        $preinstall.Contains('BuiltIn\Teams') | Should -BeTrue
+        $preinstall.Contains('function Remove-LegacyMicrosoftTeamsCache') | Should -BeFalse
+        $preinstall.Contains('BuiltIn\Teams') | Should -BeFalse
         $runner.Contains("'MicrosoftTeamsBootstrapper' {") | Should -BeTrue
         $runner.Contains("'TeamsBootstrapper' {") | Should -BeFalse
         $runner.Contains('BuiltIn\Teams') | Should -BeFalse

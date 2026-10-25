@@ -396,7 +396,7 @@ function Copy-OfficeConfigurationToCache {
 }
 
 function Test-LocalOfficeSource {
-    param([string]$Root, [Parameter(Mandatory)][string]$ConfigurationPath, [switch]$AllowLegacyConfiguration, [hashtable]$Decision)
+    param([string]$Root, [Parameter(Mandatory)][string]$ConfigurationPath, [hashtable]$Decision)
     try{
         $cacheInfoPath=Join-Path $Root 'CacheInfo.json'
         if(-not(Test-Path -LiteralPath $cacheInfoPath -PathType Leaf)){
@@ -405,7 +405,7 @@ function Test-LocalOfficeSource {
         }
         $cacheInfo=Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8|ConvertFrom-Json
         Test-OfficeCacheGeneration -OfficeRoot $Root -ExpectedVersion ([string]$cacheInfo.Version) -Architecture $(if([string]$cacheInfo.Architecture -eq 'x86'){'x86'}else{'x64'})|Out-Null
-        $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $Root -ConfigurationPath $ConfigurationPath -AllowLegacyConfiguration:$AllowLegacyConfiguration
+        $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $Root -ConfigurationPath $ConfigurationPath
         if ($null -ne $Decision) {
             $Decision.CacheDecisionReason = if ($compatibility.Compatible) {
                 'The Office generation and requested configuration passed validation.'
@@ -425,7 +425,7 @@ function Test-LocalOfficeSource {
 
 function Copy-OfficeCachePayload {
     param([string]$SourceRoot, [string]$DestinationRoot, [string]$ConfigurationPath)
-    $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $SourceRoot -ConfigurationPath $ConfigurationPath -AllowLegacyConfiguration
+    $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $SourceRoot -ConfigurationPath $ConfigurationPath
     if (-not $compatibility.Compatible) { throw ('Office cache cannot satisfy this deployment. ' + ($compatibility.Reasons -join ' ')) }
     # Never copy the cache XML over the selected deployment configuration.
     Copy-Item -LiteralPath (Join-Path $SourceRoot 'setup.exe') -Destination (Join-Path $DestinationRoot 'setup.exe') -Force
@@ -438,28 +438,6 @@ function Copy-OfficeCachePayload {
 function Test-LocalMicrosoftTeamsSource {
     param([string]$Root)
     return ((Test-Path -LiteralPath (Join-Path $Root 'teamsbootstrapper.exe') -PathType Leaf) -and (Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'teams.msix'))) -PathType Leaf))
-}
-
-function Remove-LegacyMicrosoftTeamsCache {
-    param(
-        [string]$UsbRoot,
-        [string]$CanonicalRoot
-    )
-
-    if (-not $UsbRoot -or -not (Test-LocalMicrosoftTeamsSource -Root $CanonicalRoot)) { return }
-    $legacyRoot = Join-Path $UsbRoot 'BuiltIn\Teams'
-    if (-not (Test-Path -LiteralPath $legacyRoot)) { return }
-
-    try {
-        # Validate the signable canonical component again at the deletion
-        # boundary. Teams MSIX remains outside the explicit signature scope.
-        Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $CanonicalRoot 'teamsbootstrapper.exe')
-        Remove-Item -LiteralPath $legacyRoot -Recurse -Force -ErrorAction Stop
-        Write-PreInstallLog -Event 'CacheAliasPruned' -Message 'Retired Microsoft Teams cache was removed after canonical replacement validation.' -Data @{Alias='Teams';CanonicalId='MicrosoftTeams';Path=$legacyRoot}
-    }
-    catch {
-        Write-PreInstallLog -Event 'CacheAliasPruneFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Alias='Teams';CanonicalId='MicrosoftTeams';Path=$legacyRoot}
-    }
 }
 
 function Test-LocalAdobeAcrobatUnifiedSource {
@@ -745,7 +723,7 @@ try {
                 $officeArchitecture = if ($payloadProfile.Architecture) { $payloadProfile.Architecture } else { [string]$app.Architecture }
 
                 $officeUsbDecision = @{ CacheDecisionReason = $null }
-                if($usbRoot -and -not (Test-LocalOfficeSource -Root $localRoot -ConfigurationPath $localConfig) -and (Test-LocalOfficeSource -Root $acquireRoot -ConfigurationPath $localConfig -AllowLegacyConfiguration -Decision $officeUsbDecision)){
+                if($usbRoot -and -not (Test-LocalOfficeSource -Root $localRoot -ConfigurationPath $localConfig) -and (Test-LocalOfficeSource -Root $acquireRoot -ConfigurationPath $localConfig -Decision $officeUsbDecision)){
                     Copy-OfficeCachePayload -SourceRoot $acquireRoot -DestinationRoot $localRoot -ConfigurationPath $localConfig
                     Write-PreInstallLog -Event 'BuiltInCacheRestaged' -Message 'Existing Microsoft 365 Apps USB cache was staged locally.' -Data @{Id='Microsoft365Apps'}
                 }
@@ -834,7 +812,7 @@ try {
                 }
 
                 if(-not $networkAvailable){
-                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Remove-LegacyMicrosoftTeamsCache -UsbRoot $usbRoot -CanonicalRoot $acquireRoot;Set-PreInstallAcquisitionResult -Result $acquisition -Outcome OfflineCacheUsed;Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='MicrosoftTeams'};continue}
+                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Assert-PreInstallSignedPayload -Id 'MicrosoftTeams' -Path (Join-Path $localRoot 'teamsbootstrapper.exe');Set-PreInstallAcquisitionResult -Result $acquisition -Outcome OfflineCacheUsed;Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='MicrosoftTeams'};continue}
                     throw 'Microsoft Teams has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
                 $transactionRoot=$null;$backupRoot=$null
@@ -862,7 +840,7 @@ try {
                     if(Test-Path -LiteralPath $backupRoot -PathType Container){Remove-Item -LiteralPath $backupRoot -Recurse -Force};$transactionRoot=$null;Remove-PreInstallTransactionResidue -Root $acquireRoot
                     $bootstrapperPath=Join-Path $acquireRoot 'teamsbootstrapper.exe';$msixPath=(Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $acquireRoot 'teams.msix'));$cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json'
                     if($usbRoot){Copy-Item -LiteralPath $bootstrapperPath -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force;Copy-OSDAppBuiltInPayload -Path $msixPath -DestinationDirectory $localRoot;Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
-                    Remove-LegacyMicrosoftTeamsCache -UsbRoot $usbRoot -CanonicalRoot $acquireRoot
+                    
                     Set-PreInstallAcquisitionResult -Result $acquisition -Outcome $(if ($updated) { 'Downloaded' } else { 'CacheReused' })
                     Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='MicrosoftTeams';Version=$version;PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {

@@ -34,7 +34,7 @@ __BODY__
         function Set-PreInstallAcquisitionResult { param($Result,$Outcome,$RefreshError) $Result.Outcome=$Outcome }
 
         function New-CompatibilityFixture {
-            param([string]$Path, [hashtable]$Options=@{}, [switch]$Legacy)
+            param([string]$Path, [hashtable]$Options=@{})
             $data = Join-Path $Path 'Office\Data'
             $version = '16.0.20430.20180'
             $payload = Join-Path $data $version
@@ -48,7 +48,7 @@ __BODY__
             Set-Content (Join-Path $data "$prefix.cab") 'cab'
             Set-Content (Join-Path $data ("{0}_{1}.cab" -f $prefix,$version)) 'cab'
             $info = [ordered]@{ Version=$version; Architecture=$profile.Architecture }
-            if (-not $Legacy) { $info.PayloadProfile = $profile }
+            $info.PayloadProfile = $profile
             $info | ConvertTo-Json -Depth 30 | Set-Content (Join-Path $Path 'CacheInfo.json')
         }
     }
@@ -99,13 +99,6 @@ __BODY__
         (Test-OSDAppOfficeCacheCompatibility -OfficeRoot $cache -ConfigurationPath $desired).Compatible | Should -BeFalse
     }
 
-    It 'does not infer legacy staged payload provenance from overwritten intent' {
-        New-CompatibilityFixture -Path $cache -Legacy
-        New-OSDAppOfficeConfiguration -Path $desired
-        (Test-OSDAppOfficeCacheCompatibility -OfficeRoot $cache -ConfigurationPath $desired).Compatible | Should -BeFalse
-        (Test-OSDAppOfficeCacheCompatibility -OfficeRoot $cache -ConfigurationPath $desired -AllowLegacyConfiguration).Compatible | Should -BeTrue
-    }
-
     It 'rejects dynamic and implicit configuration for fallback' -ForEach @(
         @{Xml='<Configuration><Add OfficeClientEdition="64" Channel="Current"><Product ID="O365ProPlusRetail"><Language ID="MatchOS" /></Product></Add></Configuration>'}
         @{Xml='<Configuration><Add><Product ID="O365ProPlusRetail"><Language ID="en-us" /></Product></Add></Configuration>'}
@@ -126,21 +119,6 @@ __BODY__
         (Test-OSDAppOfficeCacheCompatibility -OfficeRoot $cache -ConfigurationPath $desired).Compatible | Should -BeFalse
     }
 
-    It 'restages legacy payload without overwriting the selected XML and records provenance' {
-        New-CompatibilityFixture -Path $cache -Legacy
-        $local = Join-Path $TestDrive 'Local'
-        New-Item -ItemType Directory -Path $local -Force | Out-Null
-        $config = Join-Path $local 'configuration.xml'
-        New-OSDAppOfficeConfiguration -Path $config -DeviceBasedLicensing $true -UpdatesEnabled $false
-        $before = (Get-FileHash $config).Hash
-        Copy-OfficeCachePayload -SourceRoot $cache -DestinationRoot $local -ConfigurationPath $config
-        (Get-FileHash $config).Hash | Should -Be $before
-        Test-LocalOfficeSource -Root $local -ConfigurationPath $config | Should -BeTrue
-        # A subsequent intent change cannot relabel old content as compatible.
-        New-OSDAppOfficeConfiguration -Path $config -IncludeVisio
-        Test-LocalOfficeSource -Root $local -ConfigurationPath $config | Should -BeFalse
-    }
-
     It 'uses matching fallback but stops on mismatched languages when network availability is <Online>' -ForEach @(
         @{Online=$false; Outcome='OfflineCacheUsed'}
         @{Online=$true; Outcome='FallbackCacheUsed'}
@@ -159,19 +137,6 @@ __BODY__
         { Invoke-OfficePreInstallTest -StagedPath $stage -NetworkAvailable $Online } | Should -Throw '*compatible*'
         (Get-FileHash $config).Hash | Should -Be $before
         @(Get-ChildItem (Split-Path $local -Parent) -Directory | Where-Object Name -Match 'osdapps-(new|old)-').Count | Should -Be 0
-    }
-
-    It 'preserves deployment intent when the real runtime restages a matching legacy USB cache' {
-        $usb = Join-Path $TestDrive 'RuntimeUsb'
-        New-CompatibilityFixture -Path (Join-Path $usb 'BuiltIn\Microsoft365Apps') -Legacy
-        $stage = Join-Path $TestDrive 'RestageRuntime'
-        $local = Join-Path $stage 'BuiltIn\Microsoft365Apps'
-        New-Item -ItemType Directory -Path $local -Force | Out-Null
-        $config = Join-Path $local 'configuration.xml'
-        New-OSDAppOfficeConfiguration -Path $config -SharedComputerLicensing $true -UpdatesEnabled $false
-        $before = (Get-FileHash $config).Hash
-        (Invoke-OfficePreInstallTest -StagedPath $stage -UsbRoot $usb -NetworkAvailable $false).Outcome | Should -Be 'OfflineCacheUsed'
-        (Get-FileHash $config).Hash | Should -Be $before
     }
 
     It 'refuses USB restaging of incompatible content before copying any files' {

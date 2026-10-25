@@ -32,9 +32,8 @@ function Sync-OSDAppMicrosoftTeams {
         Get-OSDAppMicrosoftTeamsPackageVersion -Path ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $candidate 'teams.msix')))|Out-Null
     }|Out-Null
     $committed=Get-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Raw -Encoding UTF8|ConvertFrom-Json
-    $removedAliases=@(Remove-OSDAppBuiltInCacheAlias -CachePath $cachePath -CanonicalId MicrosoftTeams -Alias Teams -LogPath $log -Confirm:$false)
-    Write-OSDAppLog -LogPath $log -Component MicrosoftTeams -Event BuiltInSyncComplete -Message 'Microsoft Teams built-in cache synchronized.' -Data @{Version=$committed.Version;Architecture=$Architecture;Updated=$committed.Updated;Path=$root;Transactional=$true;RemovedAliases=$removedAliases}
-    [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='MicrosoftTeams';Version=[string]$committed.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=[bool]$committed.Updated;RemovedAliases=$removedAliases}
+    Write-OSDAppLog -LogPath $log -Component MicrosoftTeams -Event BuiltInSyncComplete -Message 'Microsoft Teams built-in cache synchronized.' -Data @{Version=$committed.Version;Architecture=$Architecture;Updated=$committed.Updated;Path=$root;Transactional=$true}
+    [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='MicrosoftTeams';Version=[string]$committed.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=[bool]$committed.Updated}
     }
     finally { $cacheLock.Dispose() }
 }

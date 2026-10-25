@@ -248,52 +248,6 @@ Describe 'Transactional desired-state cache reconciliation' {
     }
 }
 
-Describe 'Renamed built-in cache cleanup' {
-    BeforeAll {
-        $script:moduleRoot = Split-Path -Parent $PSScriptRoot
-        Import-Module (Join-Path $script:moduleRoot 'OSDApps.psd1') -Force
-    }
-
-    It 'removes Teams only after a complete MicrosoftTeams cache exists and honors WhatIf' {
-        InModuleScope OSDApps {
-            $cache = Join-Path $TestDrive 'TeamsAliasCache'
-            $canonical = Join-Path $cache 'BuiltIn\MicrosoftTeams'
-            $legacy = Join-Path $cache 'BuiltIn\Teams'
-            New-Item -ItemType Directory -Path $canonical,$legacy -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $canonical 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding ASCII
-            Set-Content -LiteralPath (Join-Path $canonical 'teams.msix') -Value 'msix' -Encoding ASCII
-            @{Id='MicrosoftTeams';Version='2.0.0';Architecture='x64';SyncedAt='2026-10-13T00:00:00Z'} |
-                ConvertTo-Json | Set-Content -LiteralPath (Join-Path $canonical 'CacheInfo.json') -Encoding UTF8
-            Set-Content -LiteralPath (Join-Path $legacy 'legacy.bin') -Value 'legacy' -Encoding ASCII
-
-            Remove-OSDAppBuiltInCacheAlias -CachePath $cache -CanonicalId MicrosoftTeams -Alias Teams -WhatIf | Out-Null
-            (Test-Path -LiteralPath $legacy -PathType Container) | Should -BeTrue
-
-            $removed = @(Remove-OSDAppBuiltInCacheAlias -CachePath $cache -CanonicalId MicrosoftTeams -Alias Teams -Confirm:$false)
-            $removed | Should -Be @('Teams')
-            (Test-Path -LiteralPath $legacy) | Should -BeFalse
-            (Test-Path -LiteralPath (Join-Path $canonical 'teams.msix') -PathType Leaf) | Should -BeTrue
-        }
-    }
-
-    It 'preserves the alias when the canonical replacement is incomplete' {
-        InModuleScope OSDApps {
-            $cache = Join-Path $TestDrive 'IncompleteCanonicalCache'
-            $canonical = Join-Path $cache 'BuiltIn\MicrosoftTeams'
-            $legacy = Join-Path $cache 'BuiltIn\Teams'
-            New-Item -ItemType Directory -Path $canonical,$legacy -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $canonical 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding ASCII
-            @{Id='MicrosoftTeams';Version='2.0.0';Architecture='x64'} |
-                ConvertTo-Json | Set-Content -LiteralPath (Join-Path $canonical 'CacheInfo.json') -Encoding UTF8
-            Set-Content -LiteralPath (Join-Path $legacy 'legacy.bin') -Value 'legacy' -Encoding ASCII
-
-            { Remove-OSDAppBuiltInCacheAlias -CachePath $cache -CanonicalId MicrosoftTeams -Alias Teams -Confirm:$false } |
-                Should -Throw '*not complete*'
-            (Test-Path -LiteralPath $legacy -PathType Container) | Should -BeTrue
-        }
-    }
-}
-
 Describe 'Named cache clearing' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Parent $PSScriptRoot

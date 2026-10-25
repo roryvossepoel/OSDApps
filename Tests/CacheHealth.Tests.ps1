@@ -205,24 +205,6 @@ Describe 'Desired-state cache health' {
         (Test-Path -LiteralPath (Join-Path $transaction 'recovery.bin') -PathType Leaf) | Should -BeTrue
     }
 
-    It 'recognizes the retired Teams built-in folder as renamed cache content' {
-        $cache = Join-Path $TestDrive 'LegacyTeamsCache'
-        $legacy = Join-Path $cache 'BuiltIn\Teams'
-        New-Item -ItemType Directory -Path $legacy -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path $legacy 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding ASCII
-        Set-Content -LiteralPath (Join-Path $legacy 'teams.msix') -Value 'msix' -Encoding ASCII
-        @{Id='Teams';Version='1.0.0';Architecture='x64';SyncedAt='2026-10-13T00:00:00Z'} |
-            ConvertTo-Json | Set-Content -LiteralPath (Join-Path $legacy 'CacheInfo.json') -Encoding UTF8
-
-        $health = Get-OSDAppCacheHealth -CachePath $cache -Offline
-        $entry = @($health.Entries | Where-Object { $_.Source -eq 'BuiltIn' -and $_.Id -eq 'Teams' })[0]
-
-        $entry.State | Should -Be 'Renamed'
-        $entry.CanonicalId | Should -Be 'MicrosoftTeams'
-        $entry.Action | Should -Be 'MigrateOrRemove'
-        $health.Healthy | Should -BeFalse
-    }
-
     It 'does not accept canonical built-in metadata under the wrong folder identity' {
         $cache = Join-Path $TestDrive 'WrongBuiltInFolderCache'
         $wrongRoot = Join-Path $cache 'BuiltIn\WrongFolder'

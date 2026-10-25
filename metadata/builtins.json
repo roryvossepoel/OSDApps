@@ -35,9 +35,6 @@
     },
     {
       "Id": "MicrosoftTeams",
-      "Aliases": [
-        "Teams"
-      ],
       "DisplayName": "Microsoft Teams",
       "Source": "BuiltIn",
       "Vendor": "Microsoft",
@@ -204,7 +201,6 @@
       "DefaultArchitecture": null,
       "CachePath": "BuiltIn/VisualCRedist/<architecture>",
       "RepositoryAlternative": true,
-      "Aliases": [],
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/visualc.svg",
       "ArchitectureRequired": true
     },
@@ -224,7 +220,6 @@
       "DefaultArchitecture": null,
       "CachePath": "BuiltIn/DotNetRuntime/<runtime-type>/<channel>/<architecture>",
       "RepositoryAlternative": true,
-      "Aliases": [],
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/dotnet.svg",
       "ArchitectureRequired": true,
       "Channels": [
