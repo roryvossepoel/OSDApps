@@ -15,7 +15,7 @@ function Add-OSDAppGoogleChromeEnterpriseInternal {
     $clientLogPath = if ($CachePath) { Join-Path $CachePath 'Logs\Client.log' } else { Join-Path $WindowsPath 'ProgramData\OSDApps\Logs\Client.log' }
 
     $cacheRoot = if ($CachePath) { Join-Path $CachePath (Join-Path 'BuiltIn\GoogleChromeEnterprise' $Architecture) } else { $null }
-    $cacheHasPayload = $cacheRoot -and (Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'Package.msi'))) -PathType Leaf)
+    $cacheHasPayload = $cacheRoot -and (Test-OSDAppBuiltInPayload -Root $cacheRoot -ExpectedExtension '.msi')
 
     if (-not $PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage Google Chrome Enterprise deployment intent and available cache')) { return }
 
@@ -39,13 +39,14 @@ function Add-OSDAppGoogleChromeEnterpriseInternal {
         Id = 'GoogleChromeEnterprise'
         DisplayName = 'Google Chrome Enterprise'
         Type = 'VendorMsi'
-        Package = (Join-Path 'BuiltIn\GoogleChromeEnterprise' (Join-Path $Architecture 'Package.msi'))
+        Package = $null
         Architecture = $Architecture
         PackageUri = $PackageUri
         InstallTimeoutMinutes = $InstallTimeoutMinutes
         CachePreferred = [bool]$CachePath
     }
 
+    Set-OSDAppManifestPayload -App $manifestApp -StagedPath $destinationRoot -AllowPending
     $deviceManifest = Set-OSDAppManifestApp -Manifest $deviceManifest -App $manifestApp
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8

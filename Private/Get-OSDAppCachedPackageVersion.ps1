@@ -88,19 +88,22 @@ function Get-OSDAppCachedPackageVersion {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$Id,
-        [Parameter(Mandatory)][string]$CacheEntryPath
+        [Parameter(Mandatory)][string]$CacheEntryPath,
+        [string]$PayloadPath
     )
 
     $version = $null
     $source = $null
     switch ($Id) {
         { $_ -in @('GoogleChromeEnterprise','CiscoWebex','ZoomWorkplace','MozillaFirefoxEnterprise') } {
-            $version = Get-OSDAppMsiProductVersion -Path ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $CacheEntryPath 'Package.msi')))
+            $path = if ($PayloadPath) { $PayloadPath } else { Resolve-OSDAppBuiltInPayloadPath -Root $CacheEntryPath -ExpectedExtension '.msi' }
+            $version = Get-OSDAppMsiProductVersion -Path $path
             if ($version) { $source = 'MsiProductVersion' }
             break
         }
         'AdobeAcrobatUnified' {
-            $version = Get-OSDAppAdobePatchVersion -Path ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $CacheEntryPath 'Package.zip')))
+            $path = if ($PayloadPath) { $PayloadPath } else { Resolve-OSDAppBuiltInPayloadPath -Root $CacheEntryPath -ExpectedExtension '.zip' }
+            $version = Get-OSDAppAdobePatchVersion -Path $path
             if ($version) { $source = 'AdobePatchFileName' }
             break
         }

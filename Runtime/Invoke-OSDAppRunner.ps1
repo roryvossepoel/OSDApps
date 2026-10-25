@@ -428,24 +428,9 @@ try {
                 throw (New-RunnerFailureException -Message 'Invalid Windows Inbox Cleanup built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
             }
         }
-        if ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'CompanyPortalAppxBundle') {
-            $prefix = 'BuiltIn\MicrosoftCompanyPortal\' + [string]$app.Architecture + '\'
-            if ($id -ne 'MicrosoftCompanyPortal' -or
-                [string]$app.Architecture -notin @('x64','arm64') -or
-                [string]$app.Package -ne ($prefix + 'Bundle.appxbundle') -or
-                [string]$app.License -ne ($prefix + 'License.xml') -or
-                @($app.Dependencies).Count -ne 5 -or
-                @($app.FileHashes).Count -ne 7) {
-                throw (New-RunnerFailureException -Message 'Invalid Company Portal built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
-            }
-            foreach ($file in @($app.FileHashes)) {
-                $relative = [string]$file.Path
-                if (-not $relative.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase) -or
-                    $relative -match '\.\.|[:*?"<>|]' -or
-                    [string]$file.Sha256 -notmatch '^[A-Fa-f0-9]{64}$') {
-                    throw (New-RunnerFailureException -Message 'Unsafe Company Portal file reference.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
-                }
-            }
+        if ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'CompanyPortalAppxBundle' -and
+            -not (Test-OSDAppCompanyPortalDefinition -App $app)) {
+            throw (New-RunnerFailureException -Message 'Invalid Company Portal built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
         }
         if ($source -eq 'BuiltIn' -and [string]$app.Type -notin $supportedBuiltInTypes) {
             throw (New-RunnerFailureException -Message "Unsupported built-in app type '$($app.Type)' for '$id'." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
@@ -503,14 +488,9 @@ try {
     }
 
     foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'CompanyPortalAppxBundle' })) {
-        foreach ($file in @($app.FileHashes)) {
-            $path = Join-Path $StagedPath ([string]$file.Path)
-            if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
-                (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne [string]$file.Sha256) {
-                throw (New-RunnerFailureException -Message ('Company Portal integrity validation failed: {0}' -f $file.Path) -FailureType 'HashMismatch' -AppId ([string]$app.Id) -Fatal)
-            }
-        }
-        Write-RunnerLog -LogPath $logPath -Event 'BuiltInAppxIntegrityValidated' -Message 'Company Portal bundle, license and dependencies validated.' -Data @{ Id=$app.Id }
+        try { Assert-OSDAppCompanyPortalFiles -App $app -StagedPath $StagedPath }
+        catch { throw (New-RunnerFailureException -Message $_.Exception.Message -FailureType 'HashMismatch' -AppId ([string]$app.Id) -Fatal) }
+        Write-RunnerLog -LogPath $logPath -Event 'BuiltInAppxIntegrityValidated' -Message 'Company Portal vendor bundle, license and dependencies validated.' -Data @{Id=$app.Id}
     }
 
     # CMTrace Open is pre-cached on full Windows; validate again before invoking MSI.
@@ -654,6 +634,7 @@ try {
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='PublisherValidatedByPreInstall' }
             }
             'MicrosoftTeamsBootstrapper' {
+                Assert-OSDAppManifestPayload -App $app -StagedPath $StagedPath | Out-Null
                 $setupPath = Join-Path $StagedPath $app.Setup
                 $workingDirectory = Split-Path $setupPath -Parent
 
@@ -664,7 +645,7 @@ try {
                 $arguments = @('-p')
 
                 if ($app.OfflinePackage) {
-                    $offlinePackagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.OfflinePackage)
+                    $offlinePackagePath = Assert-OSDAppManifestPayload -App $app -StagedPath $StagedPath
                     if (-not (Test-Path -LiteralPath $offlinePackagePath -PathType Leaf)) {
                         throw "Teams offline MSIX not found: $offlinePackagePath"
                     }
@@ -688,7 +669,7 @@ try {
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='PublisherValidatedByPreInstall' }
             }
             'AdobeAcrobatUnifiedZip' {
-                $packagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.Package)
+                $packagePath = Assert-OSDAppManifestPayload -App $app -StagedPath $StagedPath
                 if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
                     throw "Adobe Acrobat Unified package not found: $packagePath"
                 }
@@ -749,7 +730,7 @@ try {
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='NotAssessed' }
             }
             'PrerequisiteExe' {
-                $packagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.Package)
+                $packagePath = Assert-OSDAppManifestPayload -App $app -StagedPath $StagedPath
                 if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
                     throw "EXE package not found for '$($app.Id)': $packagePath"
                 }
@@ -758,7 +739,7 @@ try {
                 $timeoutMinutes = if ($app.InstallTimeoutMinutes) { [int]$app.InstallTimeoutMinutes } else { 10 }
                 . (Join-Path $PSScriptRoot 'OSDAppPrerequisite.ps1')
                 $spec = Get-OSDAppPrerequisiteSpec -Family $app.Family -Architecture $app.Architecture -RuntimeType $app.RuntimeType -Channel $app.Channel
-                if ($app.Id -ne $spec.Id -or $app.Package -ne (Join-Path $spec.RelativeRoot 'Package.exe')) { throw 'Invalid runtime deployment identity or path.' }
+                if ($app.Id -ne $spec.Id -or $app.PayloadRoot -ne $spec.RelativeRoot) { throw 'Invalid runtime deployment identity or path.' }
                 $info = Assert-OSDAppPrerequisiteGeneration -Root (Split-Path $packagePath -Parent) -Spec $spec -VerifyPublisher
                 $installed = Get-OSDAppInstalledPrerequisiteVersion -Spec $spec
                 if ($installed -and $installed -ge [version]$info.Version) {
@@ -806,7 +787,7 @@ try {
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='HashAndPublisherValidated' }
             }
             'VisualStudioCodeExe' {
-                $packagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.Package)
+                $packagePath = Assert-OSDAppManifestPayload -App $app -StagedPath $StagedPath
                 if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
                     throw "EXE package not found for '$($app.Id)': $packagePath"
                 }
@@ -855,7 +836,7 @@ try {
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='ReleaseSha256AndPublisherValidated' }
             }
             '7ZipExe' {
-                $packagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.Package)
+                $packagePath = Assert-OSDAppManifestPayload -App $app -StagedPath $StagedPath
                 if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
                     throw "EXE package not found for '$($app.Id)': $packagePath"
                 }
@@ -904,7 +885,8 @@ try {
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='ReleaseSha256Validated' }
             }
             'VendorMsi' {
-                $packagePath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $StagedPath $app.Package)
+                $packagePath = if ([string]$app.Id -eq 'CMTraceOpen') { Join-Path $StagedPath ([string]$app.Package) }
+                    else { Assert-OSDAppManifestPayload -App $app -StagedPath $StagedPath }
                 if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
                     throw "MSI package not found for '$($app.Id)': $packagePath"
                 }

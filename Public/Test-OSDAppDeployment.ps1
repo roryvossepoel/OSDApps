@@ -52,71 +52,39 @@ function Test-OSDAppDeployment {
 
     function Get-BuiltInPayloadState {
         param([Parameter(Mandatory)]$App)
-
-        $requiredPaths = @(switch ([string]$App.Type) {
-            'OfficeDeploymentTool' {
-                @(
-                    @{ Path = [string]$App.Setup; Type = 'Leaf' },
-                    @{ Path = [string]$App.Configuration; Type = 'Leaf' },
-                    @{ Path = 'BuiltIn\Microsoft365Apps\Office\Data'; Type = 'Container' }
-                )
-                break
-            }
-            'MicrosoftTeamsBootstrapper' {
-                @(
-                    @{ Path = [string]$App.Setup; Type = 'Leaf' },
-                    @{ Path = [string]$App.OfflinePackage; Type = 'Leaf' }
-                )
-                break
-            }
-            'AdobeAcrobatUnifiedZip' {
-                @(@{ Path = [string]$App.Package; Type = 'Leaf' })
-                break
-            }
-            'PrerequisiteExe' {
-                @(@{ Path = [string]$App.Package; Type = 'Leaf' })
-                break
-            }
-            'VisualStudioCodeExe' {
-                @(@{ Path = [string]$App.Package; Type = 'Leaf' })
-                break
-            }
-            '7ZipExe' {
-                @(@{ Path = [string]$App.Package; Type = 'Leaf' })
-                break
-            }
-            'VendorMsi' {
-                @(@{ Path = [string]$App.Package; Type = 'Leaf' })
-                break
-            }
-            default { @() }
-        })
-
-        if ([string]$App.Type -eq 'PrerequisiteExe') {
-            try {
-                $spec = Get-OSDAppPrerequisiteSpec -Family $App.Family -Architecture $App.Architecture -RuntimeType $App.RuntimeType -Channel $App.Channel
-                if ($App.Id -ne $spec.Id -or $App.Package -ne (Join-Path $spec.RelativeRoot 'Package.exe')) { $requiredPaths = @() }
-            } catch { $requiredPaths = @() }
+        if ([string]$App.Type -eq 'OfficeDeploymentTool') {
+            $paths = @([string]$App.Setup,[string]$App.Configuration,'BuiltIn\Microsoft365Apps\Office\Data')
+            $invalid = @($paths | Where-Object { -not (Test-SafeRelativePath -Path $_) })
+            $missing = @($paths | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stageRoot $_)) })
+            return [pscustomobject]@{DefinitionValid=($invalid.Count -eq 0);PayloadReady=($invalid.Count -eq 0 -and $missing.Count -eq 0);MissingPaths=$missing}
         }
-        $invalidPaths = @($requiredPaths | Where-Object { -not (Test-SafeRelativePath -Path $_.Path) })
-        $missingPaths = @($requiredPaths | ForEach-Object {
-            $requiredPath = [string]$_.Path
-            $requiredPathType = [string]$_.Type
-            if ((Test-SafeRelativePath -Path $requiredPath) -and
-                -not (Test-Path -LiteralPath (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $stageRoot $requiredPath)) -PathType $requiredPathType)) {
-                $requiredPath
+        try {
+            $spec = Get-OSDAppBuiltInPayloadSpec -App $App
+            if (-not $spec -or [string]$App.PayloadRoot -ne $spec.RelativeRoot -or [string]$App.PayloadExtension -ne $spec.Extension) {
+                throw 'Invalid built-in payload intent.'
             }
-        })
-
-        if ([string]$App.Type -eq 'PrerequisiteExe' -and $requiredPaths.Count -gt 0 -and $missingPaths.Count -eq 0) {
-            try { Assert-OSDAppPrerequisiteGeneration -Root (Join-Path $stageRoot $spec.RelativeRoot) -Spec $spec | Out-Null }
-            catch { $missingPaths += "Invalid runtime generation: $($_.Exception.Message)" }
+            $relative = [string]$App.($spec.Field)
+            if ([string]::IsNullOrWhiteSpace($relative)) {
+                if ($App.PayloadSha256) { throw 'Pending payload intent must not contain a payload hash.' }
+                return [pscustomobject]@{DefinitionValid=$true;PayloadReady=$false;MissingPaths=@("Pending vendor payload: $($spec.RelativeRoot)")}
+            }
+            if (-not (Test-SafeRelativePath -Path $relative)) { throw 'Unsafe staged payload path.' }
+            Assert-OSDAppManifestPayload -App $App -StagedPath $stageRoot | Out-Null
+            $root = Join-Path $stageRoot $spec.RelativeRoot
+            if ([string]$App.Type -eq 'PrerequisiteExe') {
+                $prerequisite = Get-OSDAppPrerequisiteSpec -Family $App.Family -Architecture $App.Architecture -RuntimeType $App.RuntimeType -Channel $App.Channel
+                Assert-OSDAppPrerequisiteGeneration -Root $root -Spec $prerequisite | Out-Null
+            }
+            elseif ([string]$App.Type -eq 'MicrosoftTeamsBootstrapper') {
+                if ([string]$App.Setup -ne 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe' -or
+                    -not (Test-Path -LiteralPath (Join-Path $stageRoot $App.Setup) -PathType Leaf)) { throw 'Teams bootstrapper is missing or invalid.' }
+            }
+            elseif ([string]$App.Type -eq '7ZipExe') { Assert-OSDApp7ZipGeneration -Root $root -Architecture $App.Architecture | Out-Null }
+            elseif ([string]$App.Type -eq 'VisualStudioCodeExe') { Assert-OSDAppVisualStudioCodeGeneration -Root $root -Architecture $App.Architecture | Out-Null }
+            [pscustomobject]@{DefinitionValid=$true;PayloadReady=$true;MissingPaths=@()}
         }
-
-        [pscustomobject]@{
-            DefinitionValid = ($requiredPaths.Count -gt 0 -and $invalidPaths.Count -eq 0)
-            PayloadReady    = ($requiredPaths.Count -gt 0 -and $invalidPaths.Count -eq 0 -and $missingPaths.Count -eq 0)
-            MissingPaths    = @($missingPaths)
+        catch {
+            [pscustomobject]@{DefinitionValid=$false;PayloadReady=$false;MissingPaths=@($_.Exception.Message)}
         }
     }
 
@@ -291,30 +259,11 @@ function Test-OSDAppDeployment {
             $detail = if ($payloadReady) { 'CMTrace Open MSI SHA-256 validated.' } else { 'CMTrace Open MSI missing or hash mismatch.' }
         }
         elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'CompanyPortalAppxBundle') {
-            $prefix = 'BuiltIn\MicrosoftCompanyPortal\' + [string]$app.Architecture + '\'
-            $definitionValid = ($id -eq 'MicrosoftCompanyPortal' -and
-                [string]$app.PackageType -eq 'App' -and
-                [string]$app.Architecture -in @('x64','arm64') -and
-                [string]$app.Package -eq ($prefix + 'Bundle.appxbundle') -and
-                [string]$app.License -eq ($prefix + 'License.xml') -and
-                @($app.Dependencies).Count -eq 5 -and @($app.FileHashes).Count -eq 7)
-            $integrityValid = $definitionValid
+            $definitionValid = Test-OSDAppCompanyPortalDefinition -App $app
+            $integrityValid = $false
             if ($definitionValid) {
-                foreach ($item in @($app.FileHashes)) {
-                    $relative = [string]$item.Path
-                    if (-not $relative.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase) -or
-                        $relative -match '\.\.|[:*?"<>|]' -or
-                        [string]$item.Sha256 -notmatch '^[A-Fa-f0-9]{64}$') {
-                        $integrityValid = $false
-                        break
-                    }
-                    $file = Join-Path $stageRoot $relative
-                    if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or
-                        (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne [string]$item.Sha256) {
-                        $integrityValid = $false
-                        break
-                    }
-                }
+                try { Assert-OSDAppCompanyPortalFiles -App $app -StagedPath $stageRoot; $integrityValid = $true }
+                catch { $integrityValid = $false }
             }
             $payloadReady = $definitionValid -and $integrityValid
             $detail = if ($payloadReady) { 'Company Portal bundle, license and dependencies are SHA-256 validated.' } else { 'Company Portal package contents are missing or corrupt.' }

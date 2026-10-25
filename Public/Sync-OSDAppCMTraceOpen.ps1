@@ -31,7 +31,7 @@ function Sync-OSDAppCMTraceOpen {
     } else { $null }
     $existing = if (Test-Path -LiteralPath $active -PathType Leaf) { $active } else { $null }
     if ($info -and $info.Version -eq $version -and $info.Sha256 -eq $expected -and
-        [string]$info.AssetName -ceq $name -and $existing -and
+        [string]$info.PayloadFileName -ceq $name -and $existing -and
         (Get-FileHash -LiteralPath $existing -Algorithm SHA256).Hash -eq $expected) {
         $signature = Get-AuthenticodeSignature -FilePath $existing
         if ($signature.Status -ne 'Valid') { throw 'CMTrace Open cached MSI signature invalid.' }
@@ -53,7 +53,7 @@ function Sync-OSDAppCMTraceOpen {
         }
         [ordered]@{
             Id='CMTraceOpen'; Version=$version; Architecture=$Architecture
-            Sha256=$expected; AssetName=$name; SourceUri=$uri
+            Sha256=$expected; PayloadFileName=$name; Size=(Get-Item -LiteralPath $msi).Length; SourceUri=$uri
             Signer=[string]$signature.SignerCertificate.Subject
             SyncedAt=(Get-Date).ToUniversalTime().ToString('o')
         } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $candidate 'CacheInfo.json') -Encoding UTF8

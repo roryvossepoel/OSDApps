@@ -42,7 +42,7 @@ function Assert-OSDAppVisualStudioCodeGeneration {
     if ($Release -and ([string]$info.Version -ne [string]$Release.Version -or
         [string]$info.Commit -ne [string]$Release.Commit -or [string]$info.Sha256 -ne [string]$Release.Sha256 -or
         [string]$info.PackageUri -cne [string]$Release.PackageUri)) { throw 'Visual Studio Code cache does not match the current official release.' }
-    $package = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'Package.exe'))
+    $package = (Resolve-OSDAppBuiltInPayloadPath -Root $Root -ExpectedExtension '.exe')
     if ((Get-Item -LiteralPath $package -ErrorAction Stop).Length -ne [long]$info.Size -or
         (Get-FileHash -LiteralPath $package -Algorithm SHA256 -ErrorAction Stop).Hash -ne [string]$info.Sha256) {
         throw 'Visual Studio Code package size or SHA-256 does not match the recorded release.'
@@ -85,10 +85,11 @@ function Sync-OSDAppVisualStudioCodeGeneration {
         # free-space reserve; record actual length and validate the digest after download.
         Invoke-OSDAppBuiltInCacheTransaction -Root $Root -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Build {
             param($candidate)
-            $package = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $candidate 'Package.exe'))
-            & $downloadAction $release.PackageUri $package | Out-Null
-            $package = Resolve-OSDAppBuiltInPayloadPath -Path $package
+            $downloaded = & $downloadAction $release.PackageUri $candidate
+            if (-not $downloaded -or -not $downloaded.FullName) { throw 'Download must return its exact vendor filename.' }
+            $package = Resolve-OSDAppBuiltInPayloadPath -Path ([string]$downloaded.FullName)
             [ordered]@{
+                PayloadFileName=(Split-Path -Path $package -Leaf);
                 Id='VisualStudioCode'; Cached=$true; Version=$release.Version; Commit=$release.Commit;
                 VersionSource='MicrosoftUpdateService'; Architecture=$Architecture;
                 PackageUri=$release.PackageUri; Sha256=$release.Sha256; Size=(Get-Item -LiteralPath $package -ErrorAction Stop).Length;

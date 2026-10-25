@@ -1,53 +1,39 @@
 function Save-OSDAppVerifiedBuiltInDownload {
-    <#
-    .SYNOPSIS
-    Downloads a signed built-in MSI/EXE into a separate candidate, validates
-    signature and expected publisher before replacing a cached file.
-    .NOTES
-    The original file is preserved when download or validation fails.
-    This does not apply to outer ZIP containers or downloaded MSIX payloads.
-    #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='Exact')]
     param(
         [Parameter(Mandatory)][string]$Id,
         [Parameter(Mandatory)][uri]$Uri,
-        [Parameter(Mandatory)][string]$DestinationPath,
+        [Parameter(Mandatory,ParameterSetName='Exact')][string]$DestinationPath,
+        [Parameter(Mandatory,ParameterSetName='Vendor')][string]$DestinationDirectory,
+        [Parameter(Mandatory,ParameterSetName='Vendor')][string]$ExpectedExtension,
         [Parameter(Mandatory)][string]$Activity,
         [int]$ProgressId = 20,
-        [int]$ParentProgressId = -1,
-        [switch]$PreserveFileName
+        [int]$ParentProgressId = -1
     )
-
-    if (Test-OSDAppWinPE) {
-        throw 'Signed built-in cache synchronization requires full Windows.'
-    }
-    $directory = Split-Path -Path $DestinationPath -Parent
-    $basename = [IO.Path]::GetFileNameWithoutExtension($DestinationPath)
-    $extension = [IO.Path]::GetExtension($DestinationPath)
+    if (Test-OSDAppWinPE) { throw 'Signed built-in cache synchronization requires full Windows.' }
+    $directory = if ($PSCmdlet.ParameterSetName -eq 'Vendor') { $DestinationDirectory } else { Split-Path -Path $DestinationPath -Parent }
     $token = [guid]::NewGuid().ToString('N')
-    $candidate = Join-Path $directory ("$basename.$token.candidate$extension")
-    $backup = Join-Path $directory ("$basename.$token.previous$extension")
-    $candidateDirectory = $null
-    if ($PreserveFileName) {
-        $candidateDirectory = Join-Path $directory ('.osdapps-download-' + $token)
-        New-Item -ItemType Directory -Path $candidateDirectory -Force | Out-Null
-        $candidate = Join-Path $candidateDirectory ([IO.Path]::GetFileName($DestinationPath))
-    }
+    $candidateDirectory = Join-Path $directory ('.osdapps-download-' + $token)
+    $backup = Join-Path $directory ('.osdapps-previous-' + $token)
+    New-Item -ItemType Directory -Path $candidateDirectory -Force -ErrorAction Stop | Out-Null
     $hadPrevious = $false
     $promoted = $false
-
     try {
-        Save-OSDAppDownload -Uri $Uri -DestinationPath $candidate -Activity $Activity -ProgressId $ProgressId -ParentProgressId $ParentProgressId -PreserveFileName:$PreserveFileName | Out-Null
-        if ($PreserveFileName) {
-            $candidate = Resolve-OSDAppBuiltInPayloadPath -Path $candidate
-            $DestinationPath = Join-Path $directory ([IO.Path]::GetFileName($candidate))
+        $parameters = @{ Uri=$Uri; Activity=$Activity; ProgressId=$ProgressId; ParentProgressId=$ParentProgressId }
+        if ($PSCmdlet.ParameterSetName -eq 'Vendor') {
+            $parameters.DestinationDirectory = $candidateDirectory
+            $parameters.ExpectedExtension = $ExpectedExtension
         }
+        else {
+            $parameters.DestinationPath = Join-Path $candidateDirectory (Split-Path -Path $DestinationPath -Leaf)
+        }
+        $downloaded = Save-OSDAppDownload @parameters
+        if (-not $downloaded -or -not $downloaded.FullName) { throw 'Download did not return its exact vendor payload path.' }
+        $candidate = Resolve-OSDAppBuiltInPayloadPath -Path ([string]$downloaded.FullName)
+        $DestinationPath = Join-Path $directory (Split-Path -Path $candidate -Leaf)
         Assert-OSDAppBuiltInSignature -Id $Id -FilePath $candidate | Out-Null
-
         $hadPrevious = Test-Path -LiteralPath $DestinationPath -PathType Leaf
-        if ($hadPrevious) {
-            Move-Item -LiteralPath $DestinationPath -Destination $backup -ErrorAction Stop
-        }
+        if ($hadPrevious) { Move-Item -LiteralPath $DestinationPath -Destination $backup -ErrorAction Stop }
         try {
             Move-Item -LiteralPath $candidate -Destination $DestinationPath -ErrorAction Stop
             $promoted = $true
@@ -58,23 +44,13 @@ function Save-OSDAppVerifiedBuiltInDownload {
             }
             throw
         }
-
         [pscustomobject]@{
-            Id=$Id
-            DestinationPath=$DestinationPath
-            SignatureVerified=$true
+            Id=$Id; DestinationPath=$DestinationPath; FullName=$DestinationPath
+            Name=(Split-Path -Path $DestinationPath -Leaf); SignatureVerified=$true
         }
     }
     finally {
-        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-            Remove-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue
-        }
-        if ($candidateDirectory -and (Test-Path -LiteralPath $candidateDirectory)) {
-            Remove-Item -LiteralPath $candidateDirectory -Recurse -Force -ErrorAction SilentlyContinue
-        }
-        # Retain the backup after an incomplete promotion/rollback for recovery.
-        if ($promoted -and (Test-Path -LiteralPath $backup -PathType Leaf)) {
-            Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue
-        }
+        if (Test-Path -LiteralPath $candidateDirectory) { Remove-Item -LiteralPath $candidateDirectory -Recurse -Force -ErrorAction SilentlyContinue }
+        if ($promoted -and (Test-Path -LiteralPath $backup)) { Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue }
     }
 }

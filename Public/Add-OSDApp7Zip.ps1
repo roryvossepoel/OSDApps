@@ -27,7 +27,7 @@ function Add-OSDApp7Zip {
 
     $stagedRelativePath = 'Windows\Temp\OSDApps'
     if ($cachePath) {
-        $existingCache = Test-Path -LiteralPath (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cachePath (Join-Path 'BuiltIn\7Zip' (Join-Path $Architecture 'Package.exe')))) -PathType Leaf
+        $existingCache = Test-OSDAppBuiltInPayload -Root (Join-Path $cachePath (Join-Path 'BuiltIn\7Zip' $Architecture)) -ExpectedExtension '.exe'
         $message = if ($existingCache) { 'Existing cache found; cached EXE will be staged as fallback and refreshed during SetupComplete' } else { 'No existing cache found; cache will be created during SetupComplete' }
         if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level $(if ($existingCache) { 'Success' } else { 'Info' }) -Component '7Zip' -Message $message }
     }

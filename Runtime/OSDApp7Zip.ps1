@@ -42,7 +42,8 @@ function Assert-OSDApp7ZipGeneration {
     if ($Release -and ([string]$info.Version -ne [string]$Release.Version -or
         [string]$info.Sha256 -ne [string]$Release.Sha256 -or [long]$info.Size -ne [long]$Release.Size -or
         [string]$info.PackageUri -cne [string]$Release.PackageUri)) { throw '7Zip cache does not match the current official release.' }
-    $package = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'Package.exe'))
+    if ([string]$info.PayloadFileName -cne $name) { throw '7Zip vendor filename differs from the official release.' }
+    $package = (Resolve-OSDAppBuiltInPayloadPath -Root $Root -ExpectedExtension '.exe')
     if ((Get-Item -LiteralPath $package -ErrorAction Stop).Length -ne [long]$info.Size -or
         (Get-FileHash -LiteralPath $package -Algorithm SHA256 -ErrorAction Stop).Hash -ne [string]$info.Sha256) {
         throw '7Zip package size or SHA-256 does not match the recorded release.'
@@ -90,10 +91,12 @@ function Sync-OSDApp7ZipGeneration {
     if (-not $current) {
         Invoke-OSDAppBuiltInCacheTransaction -Root $Root -ExpectedBytes $release.Size -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Build {
             param($candidate)
-            & $downloadAction $release.PackageUri ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $candidate 'Package.exe'))) | Out-Null
+            $downloaded = & $downloadAction $release.PackageUri $candidate
+            if (-not $downloaded -or -not $downloaded.FullName) { throw 'Download must return its exact vendor filename.' }
+            $package = Resolve-OSDAppBuiltInPayloadPath -Path ([string]$downloaded.FullName)
             [ordered]@{
                 Id='7Zip'; Cached=$true; Version=$release.Version; VersionSource='GitHubRelease'; Architecture=$Architecture;
-                PackageUri=$release.PackageUri; Sha256=$release.Sha256; Size=$release.Size;
+                PayloadFileName=(Split-Path -Path $package -Leaf); PackageUri=$release.PackageUri; Sha256=$release.Sha256; Size=$release.Size;
                 SourcePolicy='Evergreen'; SyncMethod='ReleaseSha256'; SyncedAt=(Get-Date).ToUniversalTime().ToString('o')
             } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $candidate 'CacheInfo.json') -Encoding UTF8
         } -Validate {

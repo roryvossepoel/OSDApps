@@ -38,7 +38,7 @@ function Add-OSDAppCiscoWebex {
 
     $stagedRelativePath = 'Windows\Temp\OSDApps'
     if ($cachePath) {
-        $existingCache = Test-Path -LiteralPath (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cachePath (Join-Path 'BuiltIn\CiscoWebex' (Join-Path $Architecture 'Package.msi')))) -PathType Leaf
+        $existingCache = Test-OSDAppBuiltInPayload -Root (Join-Path $cachePath (Join-Path 'BuiltIn\CiscoWebex' $Architecture)) -ExpectedExtension '.msi'
         $message = if ($existingCache) { 'Existing cached MSI will be staged to the OS disk and refreshed during SetupComplete' } else { 'No cached MSI found; cache will be populated during SetupComplete' }
         if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level $(if ($existingCache) { 'Success' } else { 'Info' }) -Component 'CiscoWebex' -Message $message }
     }

@@ -16,7 +16,7 @@ function Sync-OSDAppDotNetRuntime {
         try {
             $sync = Sync-OSDAppPrerequisiteGeneration -Root $root -Spec $spec -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Download {
                 param($uri,$destination)
-                Save-OSDAppDownload -PreserveFileName -Uri $uri -DestinationPath $destination -Activity 'Downloading Microsoft runtime'
+                Save-OSDAppDownload -Uri $uri -DestinationDirectory $destination -ExpectedExtension '.exe' -Activity 'Downloading Microsoft runtime'
             }
             [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id=$spec.Id; Version=$sync.Version; Architecture=$arch; CachePath=$root; Cached=$true; Updated=$sync.Updated }
         } finally { $lock.Dispose() }

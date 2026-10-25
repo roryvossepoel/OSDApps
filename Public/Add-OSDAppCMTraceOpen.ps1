@@ -23,7 +23,7 @@ function Add-OSDAppCMTraceOpen {
     }
 
     $vendorFileName = 'CMTrace-Open_{0}_{1}.msi' -f $info.Version,$Architecture
-    if ([string]$info.AssetName -cne $vendorFileName) {
+    if ([string]$info.PayloadFileName -cne $vendorFileName) {
         throw 'CMTrace Open cached asset name differs from the official release.'
     }
 

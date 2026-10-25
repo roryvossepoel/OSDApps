@@ -14,7 +14,7 @@ function Add-OSDAppPrerequisiteInternal {
     $clientLogPath = if ($CachePath) { Join-Path $CachePath 'Logs\Client.log' } else { Join-Path $WindowsPath 'ProgramData\OSDApps\Logs\Client.log' }
 
     $cacheRoot = if ($CachePath) { Join-Path $CachePath $Spec.RelativeRoot } else { $null }
-    $cacheHasPayload = $cacheRoot -and (Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'Package.exe'))) -PathType Leaf)
+    $cacheHasPayload = $cacheRoot -and (Test-OSDAppBuiltInPayload -Root $cacheRoot -ExpectedExtension '.exe')
 
     if (-not $PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage Prerequisite deployment intent and available cache')) { return }
 
@@ -41,12 +41,13 @@ function Add-OSDAppPrerequisiteInternal {
         RuntimeType = $Spec.RuntimeType
         Channel = $Spec.Channel
         Type = 'PrerequisiteExe'
-        Package = (Join-Path $Spec.RelativeRoot 'Package.exe')
+        Package = $null
         Architecture = $Spec.Architecture
         InstallTimeoutMinutes = $InstallTimeoutMinutes
         CachePreferred = [bool]$CachePath
     }
 
+    Set-OSDAppManifestPayload -App $manifestApp -StagedPath $destinationRoot -AllowPending
     $deviceManifest = Set-OSDAppManifestApp -Manifest $deviceManifest -App $manifestApp
     # Prerequisites run before apps; preserve relative order in each group.
     $deviceManifest.Apps = @(@($deviceManifest.Apps | Where-Object { $_.PSObject.Properties['Type'] -and $_.Type -eq 'PrerequisiteExe' }) + @($deviceManifest.Apps | Where-Object { -not $_.PSObject.Properties['Type'] -or $_.Type -ne 'PrerequisiteExe' }))

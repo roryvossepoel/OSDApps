@@ -17,7 +17,7 @@ function Sync-OSDAppVisualCRedist {
                 Write-OSDAppLog -LogPath (Join-Path $cachePath 'Logs\Client.log') -Component CacheCleanup -Event $record.Event -Level $record.Level -Message $record.Message -Data $record.Data -ErrorAction Stop
             } -Download {
                 param($uri,$destination)
-                Save-OSDAppDownload -PreserveFileName -Uri $uri -DestinationPath $destination -Activity 'Downloading Microsoft runtime'
+                Save-OSDAppDownload -Uri $uri -DestinationDirectory $destination -ExpectedExtension '.exe' -Activity 'Downloading Microsoft runtime'
             }
             [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id=$spec.Id; Version=$sync.Version; Architecture=$arch; CachePath=$root; Cached=$true; Updated=$sync.Updated }
         } finally { $lock.Dispose() }

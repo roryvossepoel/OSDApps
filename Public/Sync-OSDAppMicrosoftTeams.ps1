@@ -2,38 +2,68 @@ function Sync-OSDAppMicrosoftTeams {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [ValidateSet('x86','x64','arm64')][string]$Architecture='x64',
-        [ValidateRange(0, [double]::MaxValue)][double]$MinimumFreeSpaceGB=2,
+        [ValidateRange(0,[double]::MaxValue)][double]$MinimumFreeSpaceGB=2,
         [string]$BootstrapperUri='https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
     )
-    if(Test-OSDAppWinPE){throw 'Sync-OSDAppMicrosoftTeams is intended for full Windows. Built-in cache refresh is deferred until the pre-install phase.'}
-    $cachePath=Get-OSDAppCachePath;$log=Join-Path $cachePath 'Logs\Client.log';$root=Join-Path $cachePath 'BuiltIn\MicrosoftTeams'
-    $msixUri=switch($Architecture){'x86'{'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196060'}'x64'{'https://go.microsoft.com/fwlink/?linkid=2196106'}'arm64'{'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196207'}}
-    if(-not $PSCmdlet.ShouldProcess($root,"Transactionally synchronize Microsoft Teams built-in cache ($Architecture)")){return}
-
+    if (Test-OSDAppWinPE) { throw 'Sync-OSDAppMicrosoftTeams requires full Windows; use Add in WinPE.' }
+    $cachePath = Get-OSDAppCachePath
+    $log = Join-Path $cachePath 'Logs\Client.log'
+    $root = Join-Path $cachePath 'BuiltIn\MicrosoftTeams'
+    $msixUri = switch ($Architecture) {
+        'x86' { 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196060' }
+        'x64' { 'https://go.microsoft.com/fwlink/?linkid=2196106' }
+        'arm64' { 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196207' }
+    }
+    if (-not $PSCmdlet.ShouldProcess($root,"Synchronize Microsoft Teams ($Architecture)")) { return }
     $cacheLock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'built-in cache synchronization'
     try {
-    Write-OSDAppLog -LogPath $log -Component MicrosoftTeams -Event BuiltInSyncStart -Message 'Synchronizing Microsoft Teams built-in cache.' -Data @{Architecture=$Architecture;Transactional=$true}
-    Restore-OSDAppBuiltInCache -Root $root -Id MicrosoftTeams -LogPath $log
-    $remote=Get-OSDAppRemoteFileMetadata -Uri $msixUri;$previous=$null;$activeInfo=Join-Path $root 'CacheInfo.json';$activeMsix=(Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $root 'teams.msix'))
-    if(Test-Path -LiteralPath $activeInfo -PathType Leaf){try{$previous=Get-Content -LiteralPath $activeInfo -Raw -Encoding UTF8|ConvertFrom-Json}catch{}}
-    $matches=$false
-    if((Test-Path -LiteralPath $activeMsix -PathType Leaf)-and $previous){if($remote.ETag -and $previous.RemoteETag){$matches=$remote.ETag -eq [string]$previous.RemoteETag}elseif($remote.LastModified -and $previous.RemoteLastModified -and $remote.ContentLength -and $previous.RemoteContentLength){$matches=($remote.LastModified -eq [string]$previous.RemoteLastModified -and [int64]$remote.ContentLength -eq [int64]$previous.RemoteContentLength)}}
-    Invoke-OSDAppBuiltInCacheTransaction -Root $root -ExpectedBytes ([double]$remote.ContentLength) -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Build {
-        param($candidate)
-        $bootstrapper=Join-Path $candidate 'teamsbootstrapper.exe';$msix=(Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $candidate 'teams.msix'))
-        Save-OSDAppVerifiedBuiltInDownload -Id MicrosoftTeams -Uri $BootstrapperUri -DestinationPath $bootstrapper -Activity 'Downloading Microsoft Teams bootstrapper'|Out-Null
-        if($matches){Copy-OSDAppBuiltInPayload -Path $activeMsix -DestinationDirectory $candidate;$msix=Resolve-OSDAppBuiltInPayloadPath -Path $msix;$updated=$false;$version=if($previous.Version){[string]$previous.Version}else{Get-OSDAppMicrosoftTeamsPackageVersion -Path $msix}}
-        else{Save-OSDAppDownload -PreserveFileName -Uri $msixUri -DestinationPath $msix -Activity "Downloading Microsoft Teams $Architecture MSIX"|Out-Null;$msix=Resolve-OSDAppBuiltInPayloadPath -Path $msix;$updated=$true;$version=Get-OSDAppMicrosoftTeamsPackageVersion -Path $msix}
-        [ordered]@{Id='MicrosoftTeams';Cached=$true;Version=$version;Architecture=$Architecture;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';Updated=$updated;BootstrapperUri=$BootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified;RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')}|ConvertTo-Json -Depth 10|Set-Content -LiteralPath (Join-Path $candidate 'CacheInfo.json') -Encoding UTF8
-    } -Validate {
-        param($candidate)
-        Test-OSDAppBuiltInCacheGeneration -Id MicrosoftTeams -Root $candidate -RequiredFile @('teamsbootstrapper.exe','teams.msix')|Out-Null
-        Assert-OSDAppBuiltInSignature -Id MicrosoftTeams -FilePath (Join-Path $candidate 'teamsbootstrapper.exe')|Out-Null
-        Get-OSDAppMicrosoftTeamsPackageVersion -Path ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $candidate 'teams.msix')))|Out-Null
-    }|Out-Null
-    $committed=Get-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Raw -Encoding UTF8|ConvertFrom-Json
-    Write-OSDAppLog -LogPath $log -Component MicrosoftTeams -Event BuiltInSyncComplete -Message 'Microsoft Teams built-in cache synchronized.' -Data @{Version=$committed.Version;Architecture=$Architecture;Updated=$committed.Updated;Path=$root;Transactional=$true}
-    [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='MicrosoftTeams';Version=[string]$committed.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=[bool]$committed.Updated}
+        Write-OSDAppLog -LogPath $log -Component MicrosoftTeams -Event BuiltInSyncStart -Message 'Synchronizing Microsoft Teams cache.' -Data @{Architecture=$Architecture;Transactional=$true}
+        Restore-OSDAppBuiltInCache -Root $root -Id MicrosoftTeams -LogPath $log
+        $remote = Get-OSDAppRemoteFileMetadata -Uri $msixUri
+        $previous = $null; $activeMsix = $null; $matches = $false
+        if (Test-OSDAppBuiltInPayload -Root $root -ExpectedExtension '.msix') {
+            $activeMsix = Resolve-OSDAppBuiltInPayloadPath -Root $root -ExpectedExtension '.msix'
+            $previous = Get-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($previous.Id -eq 'MicrosoftTeams' -and $previous.Architecture -eq $Architecture) {
+                if ($remote.ETag -and $previous.RemoteETag) { $matches = $remote.ETag -eq [string]$previous.RemoteETag }
+                elseif ($remote.LastModified -and $previous.RemoteLastModified -and $remote.ContentLength -and $previous.RemoteContentLength) {
+                    $matches = ($remote.LastModified -eq [string]$previous.RemoteLastModified -and [long]$remote.ContentLength -eq [long]$previous.RemoteContentLength)
+                }
+            }
+            if ($matches) { Test-OSDAppBuiltInCacheGeneration -Id MicrosoftTeams -Root $root -RequiredFile @('teamsbootstrapper.exe',[string]$previous.PayloadFileName) | Out-Null }
+        }
+        Invoke-OSDAppBuiltInCacheTransaction -Root $root -ExpectedBytes ([double]$remote.ContentLength) -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Build {
+            param($candidate)
+            Save-OSDAppVerifiedBuiltInDownload -Id MicrosoftTeams -Uri $BootstrapperUri -DestinationPath (Join-Path $candidate 'teamsbootstrapper.exe') -Activity 'Downloading Microsoft Teams bootstrapper' | Out-Null
+            if ($matches) {
+                Copy-OSDAppBuiltInPayload -Path $activeMsix -DestinationDirectory $candidate
+                $msix = Join-Path $candidate ([string]$previous.PayloadFileName)
+                $updated = $false
+            }
+            else {
+                $download = Save-OSDAppDownload -Uri $msixUri -DestinationDirectory $candidate -ExpectedExtension '.msix' -Activity "Downloading Microsoft Teams $Architecture MSIX"
+                $msix = [string]$download.FullName
+                $updated = $true
+            }
+            $version = Get-OSDAppMicrosoftTeamsPackageVersion -Path $msix
+            if (-not $version) { throw 'Downloaded Teams MSIX version could not be verified.' }
+            [ordered]@{
+                Id='MicrosoftTeams';Cached=$true;Version=$version;Architecture=$Architecture
+                PayloadFileName=(Split-Path -Path $msix -Leaf);Sha256=(Get-FileHash -LiteralPath $msix -Algorithm SHA256).Hash
+                Size=(Get-Item -LiteralPath $msix).Length;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';Updated=$updated
+                BootstrapperUri=$BootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified
+                RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')
+            } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $candidate 'CacheInfo.json') -Encoding UTF8
+        } -Validate {
+            param($candidate)
+            $msix = Resolve-OSDAppBuiltInPayloadPath -Root $candidate -ExpectedExtension '.msix'
+            Test-OSDAppBuiltInCacheGeneration -Id MicrosoftTeams -Root $candidate -RequiredFile @('teamsbootstrapper.exe',(Split-Path -Path $msix -Leaf)) | Out-Null
+            Assert-OSDAppBuiltInSignature -Id MicrosoftTeams -FilePath (Join-Path $candidate 'teamsbootstrapper.exe') | Out-Null
+            Get-OSDAppMicrosoftTeamsPackageVersion -Path $msix | Out-Null
+        } | Out-Null
+        $committed = Get-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        Write-OSDAppLog -LogPath $log -Component MicrosoftTeams -Event BuiltInSyncComplete -Message 'Microsoft Teams cache synchronized.' -Data @{Version=$committed.Version;Architecture=$Architecture;Updated=$committed.Updated;Path=$root;PayloadFileName=$committed.PayloadFileName}
+        [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='MicrosoftTeams';Version=[string]$committed.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=[bool]$committed.Updated}
     }
     finally { $cacheLock.Dispose() }
 }

@@ -10,13 +10,11 @@ function Add-OSDAppMicrosoftCompanyPortal {
     $source = Join-Path $cachePath ('BuiltIn\MicrosoftCompanyPortal\' + $Architecture)
     $cacheInfoPath = Join-Path $source 'CacheInfo.json'
     if (-not (Test-Path -LiteralPath $cacheInfoPath -PathType Leaf)) {
-        throw ('Company Portal {0} is not cached. Run Sync-OSDAppMicrosoftCompanyPortal -KitPath on full Windows first.' -f $Architecture)
+        throw ('Company Portal {0} is not cached. Run Sync-OSDAppMicrosoftCompanyPortal on full Windows first.' -f $Architecture)
     }
     $info = Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
-    if ($info.Id -ne 'MicrosoftCompanyPortal' -or $info.Architecture -ne $Architecture -or
-        @($info.Files).Count -ne 7 -or $info.DependencyCount -ne 5) {
-        throw 'Invalid Company Portal cache metadata.'
-    }
+    $app = New-OSDAppCompanyPortalManifestEntry -CacheInfo $info -Architecture $Architecture
+    Assert-OSDAppCompanyPortalFiles -App $app -StagedPath $cachePath
     $stage = Join-Path $target 'Windows\Temp\OSDApps'
     $relativeRoot = 'BuiltIn\MicrosoftCompanyPortal\' + $Architecture
     $destination = Join-Path $stage $relativeRoot
@@ -45,23 +43,7 @@ function Add-OSDAppMicrosoftCompanyPortal {
     } else {
         [pscustomobject]@{ SchemaVersion=1; StagedAt=(Get-Date).ToUniversalTime().ToString('o'); Apps=@() }
     }
-    $fileHashes = @(
-        foreach ($file in @($info.Files)) {
-            [pscustomobject]@{
-                Path = (Join-Path $relativeRoot ([string]$file.Path))
-                Sha256 = [string]$file.Sha256
-            }
-        }
-    )
-    $depPaths = @($fileHashes | Where-Object { $_.Path -match '\\Dependencies\\' } | ForEach-Object { [string]$_.Path })
-    $app = [pscustomobject]@{
-        Id='MicrosoftCompanyPortal'; DisplayName='Microsoft Company Portal'
-        Source='BuiltIn'; PackageType='App'; Type='CompanyPortalAppxBundle'
-        Version=[string]$info.Version; Architecture=$Architecture
-        Package=(Join-Path $relativeRoot 'Bundle.appxbundle')
-        License=(Join-Path $relativeRoot 'License.xml')
-        Dependencies=$depPaths; FileHashes=$fileHashes
-    }
+    Assert-OSDAppCompanyPortalFiles -App $app -StagedPath $stage
     $manifest = Set-OSDAppManifestApp -Manifest $manifest -App $app
     $manifest = Set-OSDAppManifestRuntimeConfiguration -Manifest $manifest
     $manifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')

@@ -97,13 +97,13 @@ function Get-OSDAppCache {
                         }
                         'MicrosoftTeams' {
                             (Test-Path -LiteralPath (Join-Path $entryRoot 'teamsbootstrapper.exe') -PathType Leaf) -and
-                            (Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'teams.msix'))) -PathType Leaf)
+                            ([bool](Assert-OSDAppCachedPayload -Root $entryRoot -ExpectedExtension '.msix' -Id ([string]$info.Id) -Architecture ([string]$info.Architecture)))
                         }
                         'AdobeAcrobatUnified' {
-                            Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.zip'))) -PathType Leaf
+                            [bool](Assert-OSDAppCachedPayload -Root $entryRoot -ExpectedExtension '.zip' -Id ([string]$info.Id) -Architecture ([string]$info.Architecture))
                         }
                         'GoogleChromeEnterprise' {
-                            Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
+                            [bool](Assert-OSDAppCachedPayload -Root $entryRoot -ExpectedExtension '.msi' -Id ([string]$info.Id) -Architecture ([string]$info.Architecture))
                         }
                         { $_ -in @('VisualCRedist','DotNetRuntime') } {
                             try {
@@ -119,13 +119,21 @@ function Get-OSDAppCache {
                             try { Assert-OSDApp7ZipGeneration -Root $entryRoot -Architecture ([string]$info.Architecture) | Out-Null; $true } catch { $false }
                         }
                         'ZoomWorkplace' {
-                            Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
+                            [bool](Assert-OSDAppCachedPayload -Root $entryRoot -ExpectedExtension '.msi' -Id ([string]$info.Id) -Architecture ([string]$info.Architecture))
                         }
                         'CiscoWebex' {
-                            Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
+                            [bool](Assert-OSDAppCachedPayload -Root $entryRoot -ExpectedExtension '.msi' -Id ([string]$info.Id) -Architecture ([string]$info.Architecture))
                         }
                         'MozillaFirefoxEnterprise' {
-                            Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $entryRoot 'Package.msi'))) -PathType Leaf
+                            [bool](Assert-OSDAppCachedPayload -Root $entryRoot -ExpectedExtension '.msi' -Id ([string]$info.Id) -Architecture ([string]$info.Architecture))
+                        }
+                        'CMTraceOpen' {
+                            [bool](Assert-OSDAppCachedPayload -Root $entryRoot -ExpectedExtension '.msi' -Id CMTraceOpen -Architecture ([string]$info.Architecture))
+                        }
+                        'MicrosoftCompanyPortal' {
+                            $entry = New-OSDAppCompanyPortalManifestEntry -CacheInfo $info -Architecture ([string]$info.Architecture)
+                            Assert-OSDAppCompanyPortalFiles -App $entry -StagedPath $cachePath
+                            $true
                         }
                         default {
                             $files.Count -gt 0
@@ -163,6 +171,7 @@ function Get-OSDAppCache {
                     RuntimeType  = if ($info.PSObject.Properties['RuntimeType']) { [string]$info.RuntimeType } else { $null }
                     DisplayName  = if ($info.PSObject.Properties['DisplayName']) { [string]$info.DisplayName } else { [string]$info.Id }
                     Source       = 'BuiltIn'
+                    PayloadFileName = if ($info.PayloadFileName) { [string]$info.PayloadFileName } else { $null }
                     PackageType  = 'App'
                     Version      = if ($resolvedVersion) { $resolvedVersion } else { $cachedVersion }
                     VersionSource = $versionSource
