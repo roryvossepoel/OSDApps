@@ -28,10 +28,6 @@ function Add-OSDAppCMTraceOpen {
     }
 
     $sourceMsi = Join-Path $source $vendorFileName
-    if (-not (Test-Path -LiteralPath $sourceMsi -PathType Leaf)) {
-        # Legacy cache support: OSDApps previously renamed the verified vendor MSI.
-        $sourceMsi = Join-Path $source 'Package.msi'
-    }
     if (-not (Test-Path -LiteralPath $sourceMsi -PathType Leaf) -or
         (Get-FileHash -LiteralPath $sourceMsi -Algorithm SHA256).Hash -ne [string]$info.Sha256) {
         throw 'CMTrace Open cached MSI is missing or failed SHA-256 verification.'

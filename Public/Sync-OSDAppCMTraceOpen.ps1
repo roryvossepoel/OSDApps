@@ -8,7 +8,7 @@ function Sync-OSDAppCMTraceOpen {
     if (-not $PSCmdlet.ShouldProcess($target, 'Synchronize official CMTrace Open MSI')) { return }
 
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-    $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/adamgell/cmtraceopen/releases/latest' -Headers @{ 'User-Agent'='OSDApps'; Accept='app/vnd.github+json' } -ErrorAction Stop
+    $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/adamgell/cmtraceopen/releases/latest' -Headers @{ 'User-Agent'='OSDApps'; Accept='application/vnd.github+json' } -ErrorAction Stop
     if ($release.draft -or $release.prerelease -or [string]$release.tag_name -notmatch '^v(?<Version>\d+\.\d+\.\d+)$') {
         throw 'CMTrace Open latest release is not a supported stable release.'
     }
@@ -25,31 +25,16 @@ function Sync-OSDAppCMTraceOpen {
     $expected = $Matches.Hash.ToUpperInvariant()
 
     $active = Join-Path $target $name
-    $legacy = Join-Path $target 'Package.msi'
     $infoPath = Join-Path $target 'CacheInfo.json'
     $info = if (Test-Path -LiteralPath $infoPath -PathType Leaf) {
         try { Get-Content -LiteralPath $infoPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $null }
     } else { $null }
-    # Migrate an earlier OSDApps cache that renamed the vendor MSI to Package.msi.
-    # Keep the verified bytes and metadata; only restore the publisher's filename.
-    $existing = if (Test-Path -LiteralPath $active -PathType Leaf) { $active }
-                elseif (Test-Path -LiteralPath $legacy -PathType Leaf) { $legacy }
-                else { $null }
+    $existing = if (Test-Path -LiteralPath $active -PathType Leaf) { $active } else { $null }
     if ($info -and $info.Version -eq $version -and $info.Sha256 -eq $expected -and
         [string]$info.AssetName -ceq $name -and $existing -and
         (Get-FileHash -LiteralPath $existing -Algorithm SHA256).Hash -eq $expected) {
         $signature = Get-AuthenticodeSignature -FilePath $existing
         if ($signature.Status -ne 'Valid') { throw 'CMTrace Open cached MSI signature invalid.' }
-        if ($existing -eq $legacy) {
-            $renameLock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'CMTrace Open vendor filename migration'
-            try {
-                if (Test-Path -LiteralPath $active -PathType Leaf) {
-                    throw 'Cannot migrate CMTrace Open: both legacy and vendor MSI files exist.'
-                }
-                Rename-Item -LiteralPath $legacy -NewName $name -ErrorAction Stop
-            }
-            finally { if ($renameLock) { $renameLock.Dispose() } }
-        }
         return [pscustomobject]@{Id='CMTraceOpen';Version=$version;Architecture=$Architecture;Updated=$false;CachePath=$target}
     }
     $lock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'CMTrace Open cache synchronization'

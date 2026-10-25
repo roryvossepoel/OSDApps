@@ -16,7 +16,7 @@ Describe 'CMTrace Open built-in staging' {
             $cache = Join-Path $TestDrive 'InvalidCache'
             $source = Join-Path $cache 'BuiltIn\CMTraceOpen\x64'
             New-Item -ItemType Directory -Path $source -Force | Out-Null
-            'modified MSI' | Set-Content -LiteralPath (Join-Path $source 'Package.msi')
+            'modified MSI' | Set-Content -LiteralPath (Join-Path $source 'CMTrace-Open_1.6.3_x64.msi')
             @{
                 Id='CMTraceOpen'; Version='1.6.3'; Architecture='x64'
                 AssetName='CMTrace-Open_1.6.3_x64.msi'; Sha256=('A' * 64)
@@ -29,14 +29,14 @@ Describe 'CMTrace Open built-in staging' {
         }
     }
 
-    It 'stages a verified legacy Package.msi under its original release name' {
+    It 'stages a verified vendor MSI under its unchanged release filename' {
         InModuleScope OSDApps {
-            $cache = Join-Path $TestDrive 'LegacyCache'
+            $cache = Join-Path $TestDrive 'NativeCache'
             $source = Join-Path $cache 'BuiltIn\CMTraceOpen\x64'
             New-Item -ItemType Directory -Path $source -Force | Out-Null
-            $legacy = Join-Path $source 'Package.msi'
-            'test MSI payload' | Set-Content -LiteralPath $legacy
-            $hash = (Get-FileHash -LiteralPath $legacy -Algorithm SHA256).Hash
+            $original = Join-Path $source 'CMTrace-Open_1.6.3_x64.msi'
+            'test MSI payload' | Set-Content -LiteralPath $original
+            $hash = (Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash
             @{
                 Id='CMTraceOpen'; Version='1.6.3'; Architecture='x64'
                 AssetName='CMTrace-Open_1.6.3_x64.msi'; Sha256=$hash
@@ -51,8 +51,6 @@ Describe 'CMTrace Open built-in staging' {
             $stagedFile = Join-Path $TestDrive 'Windows\Temp\OSDApps\BuiltIn\CMTraceOpen\x64\CMTrace-Open_1.6.3_x64.msi'
             Test-Path -LiteralPath $stagedFile -PathType Leaf | Should -BeTrue
             (Get-FileHash -LiteralPath $stagedFile -Algorithm SHA256).Hash | Should -Be $hash
-            Test-Path -LiteralPath (Join-Path $TestDrive 'Windows\Temp\OSDApps\BuiltIn\CMTraceOpen\x64\Package.msi') |
-                Should -BeFalse
             $manifest = Get-Content -LiteralPath (Join-Path $TestDrive 'Windows\Temp\OSDApps\DeviceManifest.json') -Raw |
                 ConvertFrom-Json
             @($manifest.Apps | Where-Object Id -eq 'CMTraceOpen')[0].Package |
@@ -71,7 +69,7 @@ Describe 'CMTrace Open built-in staging' {
             $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash
             @{
                 Id='CMTraceOpen'; Version='1.6.3'; Architecture='x64'
-                AssetName='Package.msi'; Sha256=$hash
+                AssetName='Unexpected_1.6.3_x64.msi'; Sha256=$hash
             } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $source 'CacheInfo.json') -Encoding UTF8
             Mock Get-OSDAppCachePath { $cache }
             Mock Resolve-OSDAppWindowsPath { $TestDrive }
