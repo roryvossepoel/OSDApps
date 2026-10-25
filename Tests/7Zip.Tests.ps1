@@ -59,7 +59,7 @@ Describe '7Zip release-validated built-in' {
                 Mock Assert-OSDAppTransactionSpace { }
                 $script:cache = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
                 $script:downloadCount = 0
-                $script:download = { param($uri,$destination); $script:downloadCount++; [IO.File]::WriteAllBytes($destination,$script:payload) }
+                $script:download = { param($uri,$destinationDirectory); $script:downloadCount++; $file=Join-Path $destinationDirectory ([IO.Path]::GetFileName(([uri]$uri).AbsolutePath)); [IO.File]::WriteAllBytes($file,$script:payload); Get-Item -LiteralPath $file }
             }
         }
         It 'acquires once, reuses without download and detects later corruption' {
@@ -71,7 +71,7 @@ Describe '7Zip release-validated built-in' {
                 $reused.Updated | Should -BeFalse
                 $reused.CacheDecisionReason | Should -Match 'passed integrity.*current official release'
                 $script:downloadCount | Should -Be 1
-                $path = Join-Path $script:cache 'Package.exe'
+                $path = Join-Path $script:cache '7z2604-x64.exe'
                 $data = [IO.File]::ReadAllBytes($path); $data[255]=1; [IO.File]::WriteAllBytes($path,$data)
                 { Assert-OSDApp7ZipGeneration -Root $script:cache -Architecture x64 } | Should -Throw '*SHA-256*'
                 $repaired = Sync-OSDApp7ZipGeneration -Root $script:cache -Architecture x64 -Download $script:download
@@ -83,11 +83,11 @@ Describe '7Zip release-validated built-in' {
         It 'preserves the active generation when replacement download fails' {
             InModuleScope OSDApps {
                 Sync-OSDApp7ZipGeneration -Root $script:cache -Architecture x64 -Download $script:download
-                $before = (Get-FileHash (Join-Path $script:cache 'Package.exe')).Hash
+                $before = (Get-FileHash (Join-Path $script:cache '7z2604-x64.exe')).Hash
                 $script:apiRelease.tag_name='26.05'; $script:apiRelease.assets[0].name='7z2605-x64.exe'
                 $script:apiRelease.assets[0].browser_download_url='https://github.com/ip7z/7zip/releases/download/26.05/7z2605-x64.exe'
                 { Sync-OSDApp7ZipGeneration -Root $script:cache -Architecture x64 -Download { throw 'Download failed' } } | Should -Throw '*Download failed*'
-                (Get-FileHash (Join-Path $script:cache 'Package.exe')).Hash | Should -Be $before
+                (Get-FileHash (Join-Path $script:cache '7z2604-x64.exe')).Hash | Should -Be $before
                 (Assert-OSDApp7ZipGeneration -Root $script:cache -Architecture x64).Version | Should -Be '26.04'
                 @(Get-ChildItem (Split-Path $script:cache -Parent) -Directory | Where-Object Name -like '*.osdapps-*').Count | Should -Be 0
             }
@@ -96,19 +96,20 @@ Describe '7Zip release-validated built-in' {
             InModuleScope OSDApps {
                 $download = {
                     param($uri, $destination)
-                    $native = Join-Path (Split-Path $destination -Parent) '7z2604-x64.exe'
+                    $native = Join-Path $destination '7z2604-x64.exe'
                     [IO.File]::WriteAllBytes($native, $script:payload)
+                    Get-Item -LiteralPath $native
                 }
                 (Sync-OSDApp7ZipGeneration -Root $script:cache -Architecture x64 -Download $download).Updated | Should -BeTrue
                 (Sync-OSDApp7ZipGeneration -Root $script:cache -Architecture x64 -Download { throw 'Unexpected download' }).Updated | Should -BeFalse
                 Test-Path (Join-Path $script:cache '7z2604-x64.exe') | Should -BeTrue
-                Test-Path (Join-Path $script:cache 'Package.exe') | Should -BeFalse
+                Test-Path (Join-Path $script:cache ('Package' + '.exe')) | Should -BeFalse
                 (Assert-OSDApp7ZipGeneration -Root $script:cache -Architecture x64).Version | Should -Be '26.04'
             }
         }
         It 'rejects a downloaded hash mismatch without promoting the candidate' {
             InModuleScope OSDApps {
-                { Sync-OSDApp7ZipGeneration -Root $script:cache -Architecture x64 -Download { param($u,$p); [IO.File]::WriteAllBytes($p,(New-Object byte[] 256)) } } | Should -Throw '*SHA-256*'
+                { Sync-OSDApp7ZipGeneration -Root $script:cache -Architecture x64 -Download { param($u,$p); $file=Join-Path $p ([IO.Path]::GetFileName(([uri]$u).AbsolutePath)); [IO.File]::WriteAllBytes($file,(New-Object byte[] 256)); Get-Item -LiteralPath $file } } | Should -Throw '*SHA-256*'
                 Test-Path $script:cache | Should -BeFalse
             }
         }
@@ -127,6 +128,8 @@ Describe '7Zip release-validated built-in' {
                 $path = Join-Path $script:cache 'CacheInfo.json'
                 $info = Get-Content $path -Raw | ConvertFrom-Json
                 $info.Architecture='arm64'; $info.PackageUri='https://github.com/ip7z/7zip/releases/download/26.04/7z2604-arm64.exe'
+                Rename-Item -LiteralPath (Join-Path $script:cache $info.PayloadFileName) -NewName '7z2604-arm64.exe'
+                $info.PayloadFileName='7z2604-arm64.exe'
                 $info | ConvertTo-Json | Set-Content $path
                 { Assert-OSDApp7ZipGeneration -Root $script:cache -Architecture arm64 } | Should -Throw '*architecture*'
             }
@@ -168,13 +171,13 @@ Describe '7Zip runtime dispatch' {
             New-Item -ItemType Directory -Path $Path -Force | Out-Null
             $bytes = New-Object byte[] 256
             $bytes[0]=0x4d; $bytes[1]=0x5a; $bytes[60]=128; $bytes[128]=0x50; $bytes[129]=0x45; $bytes[132]=0x64; $bytes[133]=0x86
-            [IO.File]::WriteAllBytes((Join-Path $Path 'Package.exe'),$bytes)
-            @{Id='7Zip';Version='26.04';Architecture='x64';Size=256;Sha256=(Get-FileHash (Join-Path $Path 'Package.exe')).Hash;PackageUri='https://github.com/ip7z/7zip/releases/download/26.04/7z2604-x64.exe'} | ConvertTo-Json | Set-Content (Join-Path $Path 'CacheInfo.json')
+            [IO.File]::WriteAllBytes((Join-Path $Path '7z2604-x64.exe'),$bytes)
+            @{PayloadFileName='7z2604-x64.exe';Id='7Zip';Version='26.04';Architecture='x64';Size=256;Sha256=(Get-FileHash (Join-Path $Path '7z2604-x64.exe')).Hash;PackageUri='https://github.com/ip7z/7zip/releases/download/26.04/7z2604-x64.exe'} | ConvertTo-Json | Set-Content (Join-Path $Path 'CacheInfo.json')
         }
     }
     BeforeEach {
         $script:StagedPath = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
-        $script:app = [pscustomobject]@{Id='7Zip';DisplayName='7Zip';Architecture='x64';Package='BuiltIn/7Zip/x64/Package.exe';InstallTimeoutMinutes=10}
+        $script:app = [pscustomobject]@{Id='7Zip';Type='7ZipExe';DisplayName='7Zip';Architecture='x64';Package='BuiltIn/7Zip/x64/7z2604-x64.exe';InstallTimeoutMinutes=10}
         $script:acquisition = @{}
         $script:usbRoot = $null
         $script:networkAvailable = $true
@@ -184,6 +187,7 @@ Describe '7Zip runtime dispatch' {
     }
     It 'records fallback reuse only for valid staged content after an API failure' {
         New-RuntimeFixture (Join-Path $StagedPath 'BuiltIn/7Zip/x64')
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         & $script:preCase
         $acquisition.Outcome | Should -Be 'FallbackCacheUsed'
         $acquisition.RefreshError | Should -Match 'Release API unavailable'
@@ -193,6 +197,7 @@ Describe '7Zip runtime dispatch' {
     }
     It 'records offline reuse without calling the release API' {
         New-RuntimeFixture (Join-Path $StagedPath 'BuiltIn/7Zip/x64')
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         $script:networkAvailable = $false
         & $script:preCase
         $acquisition.Outcome | Should -Be 'OfflineCacheUsed'
@@ -200,6 +205,7 @@ Describe '7Zip runtime dispatch' {
     }
     It 'executes only the validated EXE with the fixed silent argument' {
         New-RuntimeFixture (Join-Path $StagedPath 'BuiltIn/7Zip/x64')
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         Mock Start-Process { [pscustomobject]@{HasExited=$true;ExitCode=0} }
         # Supply the production runtime root for the clause's dot-sourced helper.
         $PSScriptRoot = $script:runtimeRoot
@@ -209,6 +215,7 @@ Describe '7Zip runtime dispatch' {
     }
     It 'rejects corruption before starting any installer process' {
         New-RuntimeFixture (Join-Path $StagedPath 'BuiltIn/7Zip/x64')
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         Add-Content (Join-Path $StagedPath $app.Package) 'corruption'
         Mock Start-Process { throw 'Must not start' }
         $PSScriptRoot = $script:runtimeRoot

@@ -19,7 +19,7 @@ Describe 'CMTrace Open built-in staging' {
             'modified MSI' | Set-Content -LiteralPath (Join-Path $source 'CMTrace-Open_1.6.3_x64.msi')
             @{
                 Id='CMTraceOpen'; Version='1.6.3'; Architecture='x64'
-                AssetName='CMTrace-Open_1.6.3_x64.msi'; Sha256=('A' * 64)
+                PayloadFileName='CMTrace-Open_1.6.3_x64.msi'; Sha256=('A' * 64)
             } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $source 'CacheInfo.json') -Encoding UTF8
             Mock Get-OSDAppCachePath { $cache }
             Mock Resolve-OSDAppWindowsPath { $TestDrive }
@@ -39,7 +39,7 @@ Describe 'CMTrace Open built-in staging' {
             $hash = (Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash
             @{
                 Id='CMTraceOpen'; Version='1.6.3'; Architecture='x64'
-                AssetName='CMTrace-Open_1.6.3_x64.msi'; Sha256=$hash
+                PayloadFileName='CMTrace-Open_1.6.3_x64.msi'; Sha256=$hash; Size=(Get-Item -LiteralPath $original).Length
             } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $source 'CacheInfo.json') -Encoding UTF8
             Mock Get-OSDAppCachePath { $cache }
             Mock Resolve-OSDAppWindowsPath { $TestDrive }
@@ -69,7 +69,7 @@ Describe 'CMTrace Open built-in staging' {
             $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash
             @{
                 Id='CMTraceOpen'; Version='1.6.3'; Architecture='x64'
-                AssetName='Unexpected_1.6.3_x64.msi'; Sha256=$hash
+                PayloadFileName='Unexpected_1.6.3_x64.msi'; Sha256=$hash
             } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $source 'CacheInfo.json') -Encoding UTF8
             Mock Get-OSDAppCachePath { $cache }
             Mock Resolve-OSDAppWindowsPath { $TestDrive }

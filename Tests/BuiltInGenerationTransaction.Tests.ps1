@@ -1,3 +1,4 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Built-in cache generation transactions' {
     BeforeAll {
         $moduleRoot = Split-Path -Parent $PSScriptRoot
@@ -54,7 +55,9 @@ Describe 'Built-in cache generation transactions' {
 
     It 'uses sibling transactions in every SetupComplete non-Office refresh path' {
         $runtime = Get-Content -LiteralPath (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1') -Raw
-        @([regex]::Matches($runtime,'\.osdapps-new-')).Count | Should -BeGreaterOrEqual 4
+        @([regex]::Matches($runtime,'\.osdapps-new-')).Count | Should -BeGreaterOrEqual 2
+        $runtime | Should -Match 'Invoke-OSDAppBuiltInCacheTransaction'
+        $runtime | Should -Match "Sync-PreInstallVendorMsi -App.*-ExpectedExtension '.zip'"
         $runtime | Should -Match 'candidate generation is incomplete'
         $runtime | Should -Match 'Adobe candidate metadata is inconsistent'
         $runtime | Should -Match 'candidateBootstrapper=Join-Path \$transactionRoot ''teamsbootstrapper.exe'''

@@ -1,3 +1,4 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'MicrosoftTeams canonical naming' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Parent $PSScriptRoot
@@ -36,7 +37,8 @@ Describe 'MicrosoftTeams canonical naming' {
             $sourceRoot = Join-Path $usb 'BuiltIn\MicrosoftTeams'
             New-Item -ItemType Directory -Path $windows,$sourceRoot -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $sourceRoot 'teamsbootstrapper.exe') -Value 'bootstrapper fixture' -Encoding Ascii
-            Set-Content -LiteralPath (Join-Path $sourceRoot 'teams.msix') -Value 'msix fixture' -Encoding Ascii
+            Set-Content -LiteralPath (Join-Path $sourceRoot 'MSTeams-x64.msix') -Value 'msix fixture' -Encoding Ascii
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $sourceRoot 'MSTeams-x64.msix') -Id MicrosoftTeams
 
             $result = Add-OSDAppMicrosoftTeamsInternal -CachePath $usb -WindowsPath $windows -Architecture x64 -Confirm:$false
             $stage = Join-Path $windows 'Windows\Temp\OSDApps'
@@ -48,8 +50,8 @@ Describe 'MicrosoftTeams canonical naming' {
             $result.StagedPath | Should -Be (Join-Path $stage 'BuiltIn\MicrosoftTeams')
             $app.Type | Should -Be 'MicrosoftTeamsBootstrapper'
             $app.Setup | Should -Be 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe'
-            $app.OfflinePackage | Should -Be 'BuiltIn\MicrosoftTeams\teams.msix'
-            foreach ($filename in @('teamsbootstrapper.exe','teams.msix')) {
+            $app.OfflinePackage | Should -Be 'BuiltIn\MicrosoftTeams\MSTeams-x64.msix'
+            foreach ($filename in @('teamsbootstrapper.exe','MSTeams-x64.msix')) {
                 $source = Join-Path $sourceRoot $filename
                 $destination = Join-Path $result.StagedPath $filename
                 (Test-Path -LiteralPath $destination -PathType Leaf) | Should -BeTrue
@@ -65,10 +67,11 @@ Describe 'MicrosoftTeams canonical naming' {
             $folder = Join-Path $usb 'BuiltIn\MicrosoftTeams'
             New-Item -ItemType Directory -Path $folder -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $folder 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding Ascii
-            Set-Content -LiteralPath (Join-Path $folder 'teams.msix') -Value 'msix' -Encoding Ascii
+            Set-Content -LiteralPath (Join-Path $folder 'MSTeams-x64.msix') -Value 'msix' -Encoding Ascii
             @{Id='MicrosoftTeams';Version='1.2.3.4';Architecture='x64';SyncedAt='2026-10-09T00:00:00Z'} |
                 ConvertTo-Json | Set-Content -LiteralPath (Join-Path $folder 'CacheInfo.json') -Encoding UTF8
 
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $folder 'MSTeams-x64.msix') -Id MicrosoftTeams -Metadata @{Version='1.2.3.4';SyncedAt='2026-10-09T00:00:00Z'}
             Mock Get-OSDAppCachePath { Join-Path $TestDrive 'CacheUsb' }
             $entries = @(Get-OSDAppCache -Name 'MicrosoftTeams')
             $entries.Count | Should -Be 1

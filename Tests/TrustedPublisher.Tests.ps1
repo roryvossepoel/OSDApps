@@ -1,3 +1,4 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Trusted built-in publisher enforcement' {
     BeforeAll {
         $script:root = Split-Path $PSScriptRoot -Parent
@@ -28,7 +29,7 @@ Describe 'Trusted built-in publisher enforcement' {
         InModuleScope OSDApps {
             $dir = Join-Path $TestDrive 'Installer'
             New-Item -Path $dir -ItemType Directory -Force | Out-Null
-            $file = Join-Path $dir 'Package.msi'
+            $file = Join-Path $dir 'vendor-installer.msi'
             Set-Content -LiteralPath $file -Value 'fake bytes' -Encoding ASCII
             Mock Test-OSDAppWinPE { $false }
             Mock Get-AuthenticodeSignature {
@@ -50,7 +51,7 @@ Describe 'Trusted built-in publisher enforcement' {
         InModuleScope OSDApps {
             $dir = Join-Path $TestDrive 'Trusted'
             New-Item -Path $dir -ItemType Directory -Force | Out-Null
-            $file = Join-Path $dir 'Package.msi'
+            $file = Join-Path $dir 'vendor-installer.msi'
             Set-Content -LiteralPath $file -Value 'test bytes' -Encoding ASCII
             Mock Test-OSDAppWinPE { $false }
             Mock Get-AuthenticodeSignature {
@@ -75,16 +76,17 @@ Describe 'Trusted built-in publisher enforcement' {
         InModuleScope OSDApps {
             $dir = Join-Path $TestDrive 'Protected'
             New-Item -Path $dir -ItemType Directory -Force | Out-Null
-            $path = Join-Path $dir 'Package.msi'
+            $path = Join-Path $dir 'vendor-installer.msi'
             'original trusted installer' | Set-Content -LiteralPath $path -Encoding ASCII
             $originalHash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
             Mock Test-OSDAppWinPE { $false }
             Mock Save-OSDAppDownload {
                 Set-Content -LiteralPath $DestinationPath -Value 'suspicious download' -Encoding ASCII
+                Get-Item -LiteralPath $DestinationPath
             }
             Mock Assert-OSDAppBuiltInSignature { throw 'PublisherMismatch' }
 
-            { Save-OSDAppVerifiedBuiltInDownload -Id GoogleChromeEnterprise -Uri ([uri]'https://example.org/package.msi') -DestinationPath $path -Activity 'Test' } |
+            { Save-OSDAppVerifiedBuiltInDownload -Id GoogleChromeEnterprise -Uri ([uri]'https://example.org/vendor-installer.msi') -DestinationPath $path -Activity 'Test' } |
                 Should -Throw '*PublisherMismatch*'
             (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash | Should -Be $originalHash
             @((Get-ChildItem -LiteralPath $dir -File)).Count | Should -Be 1
@@ -95,16 +97,17 @@ Describe 'Trusted built-in publisher enforcement' {
         InModuleScope OSDApps {
             $dir = Join-Path $TestDrive 'Promotion'
             New-Item -Path $dir -ItemType Directory -Force | Out-Null
-            $path = Join-Path $dir 'Package.msi'
+            $path = Join-Path $dir 'vendor-installer.msi'
             'old installer' | Set-Content -LiteralPath $path -Encoding ASCII
             Mock Test-OSDAppWinPE { $false }
             Mock Save-OSDAppDownload {
                 Set-Content -LiteralPath $DestinationPath -Value 'trusted update' -Encoding ASCII
+                Get-Item -LiteralPath $DestinationPath
             }
             Mock Assert-OSDAppBuiltInSignature {
                 [pscustomobject]@{Status='Valid';PublisherMatches=$true}
             }
-            $result = Save-OSDAppVerifiedBuiltInDownload -Id GoogleChromeEnterprise -Uri ([uri]'https://example.org/package.msi') -DestinationPath $path -Activity 'Test'
+            $result = Save-OSDAppVerifiedBuiltInDownload -Id GoogleChromeEnterprise -Uri ([uri]'https://example.org/vendor-installer.msi') -DestinationPath $path -Activity 'Test'
             $result.SignatureVerified | Should -BeTrue
             (Get-Content -LiteralPath $path -Raw) | Should -Match 'trusted update'
             @((Get-ChildItem -LiteralPath $dir -File)).Count | Should -Be 1
@@ -136,9 +139,9 @@ Describe 'Trusted built-in publisher enforcement' {
         $runtime = Get-Content -LiteralPath (Join-Path $root 'Runtime\Invoke-OSDAppPreInstall.ps1') -Raw
         $runtime | Should -Match 'function Assert-PreInstallSignedPayload'
         $runtime | Should -Match 'BuiltInSignatureVerified'
-        $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id \$id -Path \$packagePath'
+        $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id \$id -Path \$path'
         $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id ''Microsoft365Apps'' -Path \$setupPath'
-        $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id ''MicrosoftTeams'' -Path \$candidateBootstrapper'
+        $runtime | Should -Match 'Assert-PreInstallSignedPayload -Id ''MicrosoftTeams'' -Path'
         $runtime | Should -Match 'Expected \x27\$expected\x27'
     }
 }

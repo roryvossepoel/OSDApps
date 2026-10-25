@@ -66,7 +66,7 @@ Describe 'VisualStudioCode release-validated built-in' {
                 Mock Assert-OSDAppTransactionSpace { }
                 $script:cache = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
                 $script:downloadCount = 0
-                $script:download = { param($uri,$destination); $script:downloadCount++; [IO.File]::WriteAllBytes($destination,$script:payload) }
+                $script:download = { param($uri,$destinationDirectory); $script:downloadCount++; $file=Join-Path $destinationDirectory ([IO.Path]::GetFileName(([uri]$uri).AbsolutePath)); [IO.File]::WriteAllBytes($file,$script:payload); Get-Item -LiteralPath $file }
             }
         }
         It 'acquires once, reuses without download and detects later corruption' {
@@ -78,7 +78,7 @@ Describe 'VisualStudioCode release-validated built-in' {
                 $reused.Updated | Should -BeFalse
                 $reused.CacheDecisionReason | Should -Match 'passed integrity.*current official release'
                 $script:downloadCount | Should -Be 1
-                $path = Join-Path $script:cache 'Package.exe'
+                $path = Join-Path $script:cache 'VSCodeSetup-x64-1.100.0.exe'
                 $data = [IO.File]::ReadAllBytes($path); $data[255]=1; [IO.File]::WriteAllBytes($path,$data)
                 { Assert-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 } | Should -Throw '*SHA-256*'
                 $repaired = Sync-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 -Download $script:download
@@ -90,18 +90,18 @@ Describe 'VisualStudioCode release-validated built-in' {
         It 'preserves the active generation when replacement download fails' {
             InModuleScope OSDApps {
                 Sync-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 -Download $script:download
-                $before = (Get-FileHash (Join-Path $script:cache 'Package.exe')).Hash
+                $before = (Get-FileHash (Join-Path $script:cache 'VSCodeSetup-x64-1.100.0.exe')).Hash
                 $script:apiRelease.productVersion='1.100.1'
                 $script:apiRelease.url=$script:apiRelease.url.Replace('1.100.0','1.100.1')
                 { Sync-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 -Download { throw 'Download failed' } } | Should -Throw '*Download failed*'
-                (Get-FileHash (Join-Path $script:cache 'Package.exe')).Hash | Should -Be $before
+                (Get-FileHash (Join-Path $script:cache 'VSCodeSetup-x64-1.100.0.exe')).Hash | Should -Be $before
                 (Assert-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64).Version | Should -Be '1.100.0'
                 @(Get-ChildItem (Split-Path $script:cache -Parent) -Directory | Where-Object Name -like '*.osdapps-*').Count | Should -Be 0
             }
         }
         It 'rejects a downloaded hash mismatch without promoting the candidate' {
             InModuleScope OSDApps {
-                { Sync-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 -Download { param($u,$p); [IO.File]::WriteAllBytes($p,(New-Object byte[] 256)) } } | Should -Throw '*SHA-256*'
+                { Sync-OSDAppVisualStudioCodeGeneration -Root $script:cache -Architecture x64 -Download { param($u,$p); $file=Join-Path $p ([IO.Path]::GetFileName(([uri]$u).AbsolutePath)); [IO.File]::WriteAllBytes($file,(New-Object byte[] 256)); Get-Item -LiteralPath $file } } | Should -Throw '*SHA-256*'
                 Test-Path $script:cache | Should -BeFalse
             }
         }
@@ -181,13 +181,13 @@ Describe 'VisualStudioCode runtime dispatch' {
             New-Item -ItemType Directory -Path $Path -Force | Out-Null
             $bytes = New-Object byte[] 256
             $bytes[0]=0x4d; $bytes[1]=0x5a; $bytes[60]=128; $bytes[128]=0x50; $bytes[129]=0x45; $bytes[132]=0x64; $bytes[133]=0x86
-            [IO.File]::WriteAllBytes((Join-Path $Path 'Package.exe'),$bytes)
-            @{Id='VisualStudioCode';Version='1.100.0';Commit=('a' * 40);Architecture='x64';Size=256;Sha256=(Get-FileHash (Join-Path $Path 'Package.exe')).Hash;PackageUri=('https://vscode.download.prss.microsoft.com/dbazure/download/stable/' + ('a' * 40) + '/VSCodeSetup-x64-1.100.0.exe')} | ConvertTo-Json | Set-Content (Join-Path $Path 'CacheInfo.json')
+            [IO.File]::WriteAllBytes((Join-Path $Path 'VSCodeSetup-x64-1.100.0.exe'),$bytes)
+            @{PayloadFileName='VSCodeSetup-x64-1.100.0.exe';Id='VisualStudioCode';Version='1.100.0';Commit=('a' * 40);Architecture='x64';Size=256;Sha256=(Get-FileHash (Join-Path $Path 'VSCodeSetup-x64-1.100.0.exe')).Hash;PackageUri=('https://vscode.download.prss.microsoft.com/dbazure/download/stable/' + ('a' * 40) + '/VSCodeSetup-x64-1.100.0.exe')} | ConvertTo-Json | Set-Content (Join-Path $Path 'CacheInfo.json')
         }
     }
     BeforeEach {
         $script:StagedPath = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
-        $script:app = [pscustomobject]@{Id='VisualStudioCode';DisplayName='VisualStudioCode';Architecture='x64';Package='BuiltIn/VisualStudioCode/x64/Package.exe';InstallTimeoutMinutes=10}
+        $script:app = [pscustomobject]@{Id='VisualStudioCode';Type='VisualStudioCodeExe';DisplayName='VisualStudioCode';Architecture='x64';Package='BuiltIn/VisualStudioCode/x64/VSCodeSetup-x64-1.100.0.exe';InstallTimeoutMinutes=10}
         $script:acquisition = @{}
         $script:usbRoot = $null
         $script:networkAvailable = $true
@@ -198,6 +198,7 @@ Describe 'VisualStudioCode runtime dispatch' {
     }
     It 'records fallback reuse only for valid staged content after an API failure' {
         New-RuntimeFixture (Join-Path $StagedPath 'BuiltIn/VisualStudioCode/x64')
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         & $script:preCase
         $acquisition.Outcome | Should -Be 'FallbackCacheUsed'
         $acquisition.RefreshError | Should -Match 'Release API unavailable'
@@ -207,6 +208,7 @@ Describe 'VisualStudioCode runtime dispatch' {
     }
     It 'records offline reuse without calling the release API' {
         New-RuntimeFixture (Join-Path $StagedPath 'BuiltIn/VisualStudioCode/x64')
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         $script:networkAvailable = $false
         & $script:preCase
         $acquisition.Outcome | Should -Be 'OfflineCacheUsed'
@@ -214,6 +216,7 @@ Describe 'VisualStudioCode runtime dispatch' {
     }
     It 'executes only the validated EXE with the fixed silent argument' {
         New-RuntimeFixture (Join-Path $StagedPath 'BuiltIn/VisualStudioCode/x64')
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         Mock Start-Process { [pscustomobject]@{HasExited=$true;ExitCode=0} }
         # Supply the production runtime root for the clause's dot-sourced helper.
         $PSScriptRoot = $script:runtimeRoot
@@ -223,6 +226,7 @@ Describe 'VisualStudioCode runtime dispatch' {
     }
     It 'rejects corruption before starting any installer process' {
         New-RuntimeFixture (Join-Path $StagedPath 'BuiltIn/VisualStudioCode/x64')
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         Add-Content (Join-Path $StagedPath $app.Package) 'corruption'
         Mock Start-Process { throw 'Must not start' }
         $PSScriptRoot = $script:runtimeRoot

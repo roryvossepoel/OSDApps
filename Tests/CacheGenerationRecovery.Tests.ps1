@@ -1,3 +1,4 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Interrupted built-in cache directory swap recovery' {
     BeforeAll {
         $moduleRoot = Split-Path -Parent $PSScriptRoot
@@ -114,7 +115,7 @@ Describe 'Built-in recovery validation' {
                 }
                 'MicrosoftTeams' {
                     Set-Content -LiteralPath (Join-Path $Root 'teamsbootstrapper.exe') -Value bootstrapper
-                    $zip = [IO.Compression.ZipFile]::Open((Join-Path $Root 'teams.msix'),[IO.Compression.ZipArchiveMode]::Create)
+                    $zip = [IO.Compression.ZipFile]::Open((Join-Path $Root 'MSTeams-x64.msix'),[IO.Compression.ZipArchiveMode]::Create)
                     try {
                         $writer = [IO.StreamWriter]::new($zip.CreateEntry('AppxManifest.xml').Open())
                         try { $writer.Write('<Package><Identity Version="1.2.3.4" /></Package>') } finally { $writer.Dispose() }
@@ -122,10 +123,18 @@ Describe 'Built-in recovery validation' {
                     finally { $zip.Dispose() }
                 }
                 'AdobeAcrobatUnified' {
-                    $zip = [IO.Compression.ZipFile]::Open((Join-Path $Root 'Package.zip'),[IO.Compression.ZipArchiveMode]::Create)
+                    $zip = [IO.Compression.ZipFile]::Open((Join-Path $Root 'Acrobat_DC_Web_x64_WWMUI.zip'),[IO.Compression.ZipArchiveMode]::Create)
                     try { [void]$zip.CreateEntry('Acrobat/setup.exe') } finally { $zip.Dispose() }
                 }
-                default { Set-Content -LiteralPath (Join-Path $Root 'Package.msi') -Value msi }
+                default { Set-Content -LiteralPath (Join-Path $Root 'googlechromestandaloneenterprise64.msi') -Value msi }
+            }
+            if ($Id -ne 'Microsoft365Apps') {
+                $filename = switch ($Id) {
+                    'MicrosoftTeams' { 'MSTeams-x64.msix' }
+                    'AdobeAcrobatUnified' { 'Acrobat_DC_Web_x64_WWMUI.zip' }
+                    default { 'googlechromestandaloneenterprise64.msi' }
+                }
+                Set-OSDAppsTestPayloadInfo -Path (Join-Path $Root $filename) -Id $Id -Metadata @{Version='1.2.3.4'}
             }
         }
     }
@@ -149,8 +158,9 @@ Describe 'Built-in recovery validation' {
     It 'rejects a Teams MSIX version that differs from cache metadata' {
         $root = Join-Path $TestDrive MismatchedTeams
         New-BuiltInRecoveryFixture -Root $root -Id MicrosoftTeams
-        @{Id='MicrosoftTeams';Cached=$true;Version='9.9.9.9'} | ConvertTo-Json |
-            Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json')
+        $info = Get-Content (Join-Path $root 'CacheInfo.json') -Raw | ConvertFrom-Json
+        $info.Version = '9.9.9.9'
+        $info | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json')
         { Assert-OSDAppRecoverableBuiltInGeneration -Root $root -Id MicrosoftTeams @validators } | Should -Throw '*does not match*'
     }
 
@@ -181,16 +191,18 @@ Describe 'Recovery integration before acquisition' {
             $root = Join-Path $TestDrive 'ModuleRecovery\x64'
             $old = "$root.osdapps-old-$([guid]::NewGuid().ToString('N'))"
             New-Item -ItemType Directory -Path $old -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $old 'Package.msi') -Value 'old-msi'
+            Set-Content -LiteralPath (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Value 'old-msi'
             @{Id='GoogleChromeEnterprise';Cached=$true;Version='1.0';Architecture='x64'} | ConvertTo-Json |
                 Set-Content -LiteralPath (Join-Path $old 'CacheInfo.json')
-            $hash = (Get-FileHash -LiteralPath (Join-Path $old 'Package.msi')).Hash
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Id GoogleChromeEnterprise
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Id GoogleChromeEnterprise
+        $hash = (Get-FileHash -LiteralPath (Join-Path $old 'googlechromestandaloneenterprise64.msi')).Hash
             Mock Assert-OSDAppBuiltInSignature { return }
             Mock Get-OSDAppRemoteFileMetadata { throw 'simulated unavailable network' }
             {
-                Sync-OSDAppVendorBuiltInCache -Id GoogleChromeEnterprise -Root $root -PackageUri 'https://example.invalid/package.msi' -Architecture x64 -PackageFileName Package.msi -Activity Test -SignedPackage
+                Sync-OSDAppVendorBuiltInCache -Id GoogleChromeEnterprise -Root $root -PackageUri 'https://example.invalid/googlechromestandaloneenterprise64.msi' -Architecture x64 -ExpectedExtension '.msi' -Activity Test -SignedPackage
             } | Should -Throw '*unavailable network*'
-            (Get-FileHash -LiteralPath (Join-Path $root 'Package.msi')).Hash | Should -Be $hash
+            (Get-FileHash -LiteralPath (Join-Path $root 'googlechromestandaloneenterprise64.msi')).Hash | Should -Be $hash
             Test-Path -LiteralPath $old | Should -BeFalse
             Should -Invoke Assert-OSDAppBuiltInSignature -Exactly 1
         }
@@ -246,17 +258,18 @@ Describe 'Standalone PreInstall recovery with no network' {
         $active = Join-Path $usbRoot $relative
         $old = "$active.osdapps-old-$([guid]::NewGuid().ToString('N'))"
         New-Item -ItemType Directory -Path $old -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path $old 'Package.msi') -Value 'offline-msi'
+        Set-Content -LiteralPath (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Value 'offline-msi'
         @{Id='GoogleChromeEnterprise';Cached=$true;Version='1.0';Architecture='x64'} | ConvertTo-Json |
             Set-Content -LiteralPath (Join-Path $old 'CacheInfo.json')
-        $hash = (Get-FileHash -LiteralPath (Join-Path $old 'Package.msi')).Hash
+        Set-OSDAppsTestPayloadInfo -Path (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Id GoogleChromeEnterprise
+        $hash = (Get-FileHash -LiteralPath (Join-Path $old 'googlechromestandaloneenterprise64.msi')).Hash
         Mock Assert-PreInstallSignedPayload { return }
         Mock Write-PreInstallLog { return }
         Mock Get-RemoteMetadata { throw 'offline recovery must not need network' }
         $acquisition = @{ Outcome='Failed'; RefreshFailureType=$null; RefreshError=$null }
-        Sync-PreInstallVendorMsi -App ([pscustomobject]@{Id='GoogleChromeEnterprise';Architecture='x64'}) -RelativeRoot $relative -PackageUri 'https://example.invalid/package.msi' -DisplayName Chrome -Acquisition $acquisition
-        (Get-FileHash -LiteralPath (Join-Path $active 'Package.msi')).Hash | Should -Be $hash
-        (Get-FileHash -LiteralPath (Join-Path (Join-Path $StagedPath $relative) 'Package.msi')).Hash | Should -Be $hash
+        Sync-PreInstallVendorMsi -App ([pscustomobject]@{Id='GoogleChromeEnterprise';Architecture='x64'}) -RelativeRoot $relative -PackageUri 'https://example.invalid/googlechromestandaloneenterprise64.msi' -DisplayName Chrome -Acquisition $acquisition
+        (Get-FileHash -LiteralPath (Join-Path $active 'googlechromestandaloneenterprise64.msi')).Hash | Should -Be $hash
+        (Get-FileHash -LiteralPath (Join-Path (Join-Path $StagedPath $relative) 'googlechromestandaloneenterprise64.msi')).Hash | Should -Be $hash
         Test-Path -LiteralPath $old | Should -BeFalse
         $acquisition.Outcome | Should -Be OfflineCacheUsed
         Should -Invoke Get-RemoteMetadata -Exactly 0

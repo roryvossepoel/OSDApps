@@ -1,9 +1,11 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Operational readiness and deployment results' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Path $PSScriptRoot -Parent
         $script:manifestPath = Join-Path $script:moduleRoot 'OSDApps.psd1'
         Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
         Import-Module $script:manifestPath -Force
+        . (Join-Path $script:moduleRoot 'Runtime/OSDAppPayloadFile.ps1')
 
         function New-OperationalDeploymentFixture {
             param(
@@ -50,7 +52,8 @@ Describe 'Operational readiness and deployment results' {
                         Id = 'MicrosoftTeams'; DisplayName = 'Microsoft Teams'; Source = 'BuiltIn'
                         Type = 'MicrosoftTeamsBootstrapper'; Architecture = 'x64'
                         Setup = 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe'
-                        OfflinePackage = 'BuiltIn\MicrosoftTeams\teams.msix'
+                        OfflinePackage = $null
+                        PayloadRoot = 'BuiltIn\MicrosoftTeams'; PayloadExtension = '.msix'; PayloadSha256 = $null
                     }
                 )
             } | ConvertTo-Json -Depth 20 |
@@ -73,8 +76,14 @@ Describe 'Operational readiness and deployment results' {
                 $teams = Join-Path $stage 'BuiltIn\MicrosoftTeams'
                 New-Item -ItemType Directory -Path $teams -Force | Out-Null
                 Set-Content -LiteralPath (Join-Path $teams 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding ASCII
-                Set-Content -LiteralPath (Join-Path $teams 'teams.msix') -Value 'msix' -Encoding ASCII
+                Set-Content -LiteralPath (Join-Path $teams 'MSTeams-x64.msix') -Value 'msix' -Encoding ASCII
+                Set-OSDAppsTestPayloadInfo -Path (Join-Path $teams 'MSTeams-x64.msix') -Id MicrosoftTeams
             }
+
+            $manifestPath = Join-Path $stage 'DeviceManifest.json'
+            $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+            Set-OSDAppManifestPayload -App $manifest.Apps[1] -StagedPath $stage -AllowPending
+            $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
             [pscustomobject]@{
                 Root = $Root

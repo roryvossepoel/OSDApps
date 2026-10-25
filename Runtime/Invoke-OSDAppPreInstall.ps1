@@ -184,14 +184,14 @@ function Set-PreInstallAcquisitionResult {
 
 function Get-PreInstallHttpCacheReason {
     param(
-        [Parameter(Mandatory)][string]$PackagePath,
+        [AllowNull()][AllowEmptyString()][string]$PackagePath,
         $CacheInfo,
         [Parameter(Mandatory)]$Remote,
         [Parameter(Mandatory)][bool]$MetadataMatches
     )
     # Explain the existing HTTP comparison; do not add a freshness or integrity check.
     if ($MetadataMatches) { return 'The existing primary payload matches the vendor HTTP metadata.' }
-    if (-not (Test-Path -LiteralPath $PackagePath -PathType Leaf)) { return 'The primary payload is missing from the selected cache location.' }
+    if (-not $PackagePath -or -not (Test-Path -LiteralPath $PackagePath -PathType Leaf)) { return 'The primary payload is missing from the selected cache location.' }
     if (-not $CacheInfo) { return 'CacheInfo.json is missing or unreadable; cache currency cannot be established.' }
     if (($Remote.ETag -and $CacheInfo.RemoteETag) -or
         ($Remote.LastModified -and $CacheInfo.RemoteLastModified -and $Remote.ContentLength -and $CacheInfo.RemoteContentLength)) {
@@ -540,7 +540,7 @@ function Sync-PreInstallVendorMsi {
                 $matches = ($remote.LastModified -eq [string]$previous.RemoteLastModified -and [long]$remote.ContentLength -eq [long]$previous.RemoteContentLength)
             }
         }
-        $Acquisition.CacheDecisionReason = if ($matches) { 'Recorded vendor payload matches HTTP freshness metadata.' } else { 'A fresh vendor payload is required.' }
+        $Acquisition.CacheDecisionReason = Get-PreInstallHttpCacheReason -PackagePath $path -CacheInfo $previous -Remote $remote -MetadataMatches $matches
         if (-not $matches) {
             Invoke-OSDAppBuiltInCacheTransaction -Root $acquireRoot -ExpectedBytes ([double]$remote.ContentLength) -MinimumFreeSpaceGB $(if($ExpectedExtension -eq '.zip'){3}else{1}) -Build {
                 param($candidate)
@@ -756,7 +756,7 @@ try {
                             $matches = ($remote.LastModified -eq [string]$previous.RemoteLastModified -and [long]$remote.ContentLength -eq [long]$previous.RemoteContentLength)
                         }
                     }
-                    $acquisition.CacheDecisionReason = if ($matches) { 'Recorded MSIX matches HTTP freshness metadata.' } else { 'A fresh MSIX is required.' }
+                    $acquisition.CacheDecisionReason = (Get-PreInstallHttpCacheReason -PackagePath $activeMsix -CacheInfo $previous -Remote $remote -MetadataMatches $matches) + ' The Teams bootstrapper is downloaded separately.'
                     Invoke-OSDAppBuiltInCacheTransaction -Root $acquireRoot -ExpectedBytes ([double]$remote.ContentLength) -MinimumFreeSpaceGB 2 -Build {
                         param($candidate)
                         $bootstrapper = Join-Path $candidate 'teamsbootstrapper.exe'

@@ -1,3 +1,4 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Cisco Webex built-in MSI integration' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Parent $PSScriptRoot
@@ -110,9 +111,10 @@ Describe 'Cisco Webex built-in MSI integration' {
             foreach ($arch in @('x64','arm64')) {
                 $usb = Join-Path $TestDrive "$arch-Usb"
                 $windows = Join-Path $TestDrive "$arch-Windows"
-                $source = Join-Path $usb "BuiltIn\CiscoWebex\$arch\Package.msi"
+                $source = Join-Path $usb "BuiltIn\CiscoWebex\$arch\Webex_en.msi"
                 New-Item -ItemType Directory -Path (Split-Path -Parent $source),$windows -Force | Out-Null
                 Set-Content -LiteralPath $source -Value "Cisco Webex $arch MSI fixture" -Encoding Ascii
+                Set-OSDAppsTestPayloadInfo -Path $source -Id CiscoWebex -Architecture $arch
 
                 $staged = Add-OSDAppCiscoWebexInternal -CachePath $usb -WindowsPath $windows -Architecture $arch -PackageUri 'https://example.invalid/Webex_en.msi' -PreventPreLoginUpdates $true -AdditionalMsiProperties 'INSTALLWV2=1' -Confirm:$false
                 $stageRoot = Join-Path $windows 'Windows\Temp\OSDApps'
@@ -123,7 +125,7 @@ Describe 'Cisco Webex built-in MSI integration' {
                 $staged.Name | Should -Be 'CiscoWebex'
                 $staged.CacheAvailable | Should -BeTrue
                 $app.Type | Should -Be 'VendorMsi'
-                $app.Package | Should -Be "BuiltIn\CiscoWebex\$arch\Package.msi"
+                $app.Package | Should -Be "BuiltIn\CiscoWebex\$arch\Webex_en.msi"
                 $app.Architecture | Should -Be $arch
                 $app.MsiProperties | Should -Contain 'ALLUSERS=1'
                 $app.MsiProperties | Should -Contain 'INSTALLWV2=1'
@@ -144,8 +146,9 @@ Describe 'Cisco Webex built-in MSI integration' {
             $app = @($manifest.Apps | Where-Object Id -eq 'CiscoWebex')[0]
             $staged.CacheAvailable | Should -BeFalse
             $app.CachePreferred | Should -BeFalse
-            $app.Package | Should -Be 'BuiltIn\CiscoWebex\x64\Package.msi'
-            (Test-Path -LiteralPath (Join-Path $stageRoot $app.Package) -PathType Leaf) | Should -BeFalse
+            $app.Package | Should -BeNullOrEmpty
+            $app.PayloadRoot.Replace('\','/') | Should -Be 'BuiltIn/CiscoWebex/x64'
+            $app.PayloadExtension | Should -Be '.msi'
         }
     }
 
@@ -175,7 +178,9 @@ Describe 'Cisco Webex built-in MSI integration' {
                 }
             }
             Mock Save-OSDAppDownload {
-                Set-Content -LiteralPath $DestinationPath -Value 'Cisco Webex MSI fixture' -Encoding Ascii
+                $path = Join-Path $DestinationDirectory 'Webex_en.msi'
+                Set-Content -LiteralPath $path -Value 'Cisco Webex MSI fixture' -Encoding Ascii
+                Get-Item -LiteralPath $path
             }
             # Synthetic MSI fixtures are not authenticode-signed. Trust policy
             # is exercised in TrustedPublisher.Tests.ps1 instead.

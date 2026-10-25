@@ -1,3 +1,4 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
     BeforeAll {
         $moduleRoot = Split-Path -Parent $PSScriptRoot
@@ -8,9 +9,10 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
         InModuleScope OSDApps {
             $usb = Join-Path $TestDrive 'AdobeUsb'
             $windows = Join-Path $TestDrive 'AdobeWindows'
-            $source = Join-Path $usb 'BuiltIn\AdobeAcrobatUnified\x64\Package.zip'
+            $source = Join-Path $usb 'BuiltIn\AdobeAcrobatUnified\x64\Acrobat_DC_Web_x64_WWMUI.zip'
             New-Item -ItemType Directory -Path (Split-Path $source -Parent),$windows -Force | Out-Null
             Set-Content -LiteralPath $source -Value 'Adobe-x64-test-package' -Encoding Ascii
+            Set-OSDAppsTestPayloadInfo -Path $source -Id AdobeAcrobatUnified
 
             $result = Add-OSDAppAdobeAcrobatUnifiedInternal -CachePath $usb -WindowsPath $windows -Architecture x64 -PackageUri 'https://example.invalid/Adobe.zip' -Confirm:$false
 
@@ -19,13 +21,13 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
             $app = @($manifest.Apps | Where-Object Id -eq 'AdobeAcrobatUnified')[0]
             $destination = Join-Path $stage $app.Package
 
-            $app.Package | Should -Be 'BuiltIn\AdobeAcrobatUnified\x64\Package.zip'
+            $app.Package | Should -Be 'BuiltIn\AdobeAcrobatUnified\x64\Acrobat_DC_Web_x64_WWMUI.zip'
             $app.CachePreferred | Should -BeTrue
             $result.CacheAvailable | Should -BeTrue
             $result.StagedPath | Should -Be (Split-Path $destination -Parent)
             (Test-Path -LiteralPath $destination -PathType Leaf) | Should -BeTrue
             (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash | Should -Be (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
-            (Test-Path -LiteralPath (Join-Path $stage 'BuiltIn\AdobeAcrobatUnified\Package.zip')) | Should -BeFalse
+            (Test-Path -LiteralPath (Join-Path $stage 'BuiltIn\AdobeAcrobatUnified\Acrobat_DC_Web_x64_WWMUI.zip')) | Should -BeFalse
         }
     }
 
@@ -35,19 +37,20 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
             $windows = Join-Path $TestDrive 'AdobeDualWindows'
             New-Item -ItemType Directory -Path $windows -Force | Out-Null
             foreach ($arch in @('x86','x64')) {
-                $source = Join-Path $usb "BuiltIn\AdobeAcrobatUnified\$arch\Package.zip"
+                $source = Join-Path $usb "BuiltIn\AdobeAcrobatUnified\$arch\Acrobat_DC_Web_x64_WWMUI.zip"
                 New-Item -ItemType Directory -Path (Split-Path $source -Parent) -Force | Out-Null
                 Set-Content -LiteralPath $source -Value "Adobe-$arch-test-package" -Encoding Ascii
+                Set-OSDAppsTestPayloadInfo -Path $source -Id AdobeAcrobatUnified -Architecture $arch
                 Add-OSDAppAdobeAcrobatUnifiedInternal -CachePath $usb -WindowsPath $windows -Architecture $arch -PackageUri 'https://example.invalid/Adobe.zip' -Confirm:$false | Out-Null
 
                 $stage = Join-Path $windows 'Windows\Temp\OSDApps'
                 $manifest = Get-Content -LiteralPath (Join-Path $stage 'DeviceManifest.json') -Raw | ConvertFrom-Json
                 $app = @($manifest.Apps | Where-Object Id -eq 'AdobeAcrobatUnified')[0]
-                $app.Package | Should -Be "BuiltIn\AdobeAcrobatUnified\$arch\Package.zip"
+                $app.Package | Should -Be "BuiltIn\AdobeAcrobatUnified\$arch\Acrobat_DC_Web_x64_WWMUI.zip"
                 (Test-Path -LiteralPath (Join-Path $stage $app.Package) -PathType Leaf) | Should -BeTrue
             }
             foreach ($arch in @('x86','x64')) {
-                $file = Join-Path $windows "Windows\Temp\OSDApps\BuiltIn\AdobeAcrobatUnified\$arch\Package.zip"
+                $file = Join-Path $windows "Windows\Temp\OSDApps\BuiltIn\AdobeAcrobatUnified\$arch\Acrobat_DC_Web_x64_WWMUI.zip"
                 (Test-Path -LiteralPath $file -PathType Leaf) | Should -BeTrue
                 (Get-Content -LiteralPath $file -Raw) | Should -Match "Adobe-$arch-test-package"
             }
@@ -65,8 +68,9 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
             $app = @($manifest.Apps | Where-Object Id -eq 'AdobeAcrobatUnified')[0]
 
             $result.CacheAvailable | Should -BeFalse
-            $app.Package | Should -Be 'BuiltIn\AdobeAcrobatUnified\x64\Package.zip'
-            (Test-Path -LiteralPath (Join-Path $stage $app.Package) -PathType Leaf) | Should -BeFalse
+            $app.Package | Should -BeNullOrEmpty
+            $app.PayloadRoot | Should -Be 'BuiltIn\AdobeAcrobatUnified\x64'
+            $app.PayloadExtension | Should -Be '.zip'
             (Test-Path -LiteralPath (Join-Path $stage 'BuiltIn\AdobeAcrobatUnified\x64') -PathType Container) | Should -BeTrue
         }
     }
@@ -79,13 +83,14 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
             )) {
                 $usb = Join-Path $TestDrive "$($case.Id)Usb"
                 $windows = Join-Path $TestDrive "$($case.Id)Windows"
-                $source = Join-Path $usb (Join-Path $case.Relative 'Package.msi')
+                $source = Join-Path $usb (Join-Path $case.Relative 'vendor-installer.msi')
                 New-Item -ItemType Directory -Path (Split-Path $source -Parent),$windows -Force | Out-Null
                 Set-Content -LiteralPath $source -Value $case.Id -Encoding Ascii
+                Set-OSDAppsTestPayloadInfo -Path $source -Id $case.Id
                 $params = @{
                     CachePath = $usb
                     WindowsPath = $windows
-                    PackageUri = 'https://example.invalid/Package.msi'
+                    PackageUri = 'https://example.invalid/vendor-installer.msi'
                     Architecture = 'x64'
                     Confirm = $false
                 }
@@ -94,7 +99,7 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
                 $stage = Join-Path $windows 'Windows\Temp\OSDApps'
                 $manifest = Get-Content -LiteralPath (Join-Path $stage 'DeviceManifest.json') -Raw | ConvertFrom-Json
                 $app = @($manifest.Apps | Where-Object Id -eq $case.Id)[0]
-                $app.Package | Should -Be (Join-Path $case.Relative 'Package.msi')
+                $app.Package | Should -Be (Join-Path $case.Relative 'vendor-installer.msi')
                 $destination = Join-Path $stage $app.Package
                 (Test-Path -LiteralPath $destination -PathType Leaf) | Should -BeTrue
                 (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash | Should -Be (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
@@ -124,7 +129,8 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
                 Architecture = 'x64'
                 PayloadProfile = $officeProfile
             } | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $office 'CacheInfo.json') -Encoding UTF8
-            Set-Content -LiteralPath (Join-Path $teams 'teams.msix') -Value 'msix' -Encoding Ascii
+            Set-Content -LiteralPath (Join-Path $teams 'MSTeams-x64.msix') -Value 'msix' -Encoding Ascii
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $teams 'MSTeams-x64.msix') -Id MicrosoftTeams
             Set-Content -LiteralPath (Join-Path $teams 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding Ascii
             Add-OSDAppMicrosoft365AppsInternal -CachePath $usb -WindowsPath $windows -Confirm:$false | Out-Null
             Add-OSDAppMicrosoftTeamsInternal -CachePath $usb -WindowsPath $windows -Confirm:$false | Out-Null
@@ -136,7 +142,7 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
             $microsoftTeamsApp = @($manifest.Apps | Where-Object Id -eq 'MicrosoftTeams')[0]
             $microsoftTeamsApp.Type | Should -Be 'MicrosoftTeamsBootstrapper'
             $microsoftTeamsApp.Setup | Should -Be 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe'
-            $microsoftTeamsApp.OfflinePackage | Should -Be 'BuiltIn\MicrosoftTeams\teams.msix'
+            $microsoftTeamsApp.OfflinePackage | Should -Be 'BuiltIn\MicrosoftTeams\MSTeams-x64.msix'
             foreach ($path in @($officeApp.Setup,$officeApp.Configuration,$microsoftTeamsApp.Setup,$microsoftTeamsApp.OfflinePackage)) {
                 (Test-Path -LiteralPath (Join-Path $stage $path) -PathType Leaf) | Should -BeTrue
             }

@@ -1,3 +1,4 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Per-deployment acquisition reporting' {
     BeforeAll {
         . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime/OSDAppPayloadFile.ps1')
@@ -15,6 +16,8 @@ Describe 'Per-deployment acquisition reporting' {
         if (-not $loop) { throw 'PreInstall app loop not found.' }
         $script:preparationLoop = [scriptblock]::Create($loop.Extent.Text)
         . (Join-Path $moduleRoot 'Runtime\Assert-OSDAppTransactionSpace.ps1')
+        . (Join-Path $moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1')
+        . (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppBuiltInCacheTransaction.ps1')
         . (Join-Path $moduleRoot 'Runtime\Test-OSDAppOfficeCacheCompatibility.ps1')
         $runnerAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'), [ref]$tokens, [ref]$errors)
         foreach ($name in @('Get-RunnerCacheInfo','New-RunnerAppResult','Write-RunnerResult')) {
@@ -73,27 +76,34 @@ Describe 'Per-deployment acquisition reporting' {
         }
         Mock Save-PreInstallDownload {
             if ($script:failDownload) { throw 'HTTP download timeout in fixture.' }
+            if ($DestinationDirectory) { $DestinationPath = Join-Path $DestinationDirectory ('vendor-' + $Id + $ExpectedExtension) }
             if ($DestinationPath -match '\.zip$') { New-TestArchive -Path $DestinationPath }
             elseif ($DestinationPath -match '\.msix$') { New-TestArchive -Path $DestinationPath -Teams }
             else { Set-Content -LiteralPath $DestinationPath -Value 'new fixture payload' }
+            Get-Item -LiteralPath $DestinationPath
         }
         Mock Start-Process {
             New-TestOfficePayload -Root $WorkingDirectory
             [pscustomobject]@{ HasExited=$true; ExitCode=0 }
         }
         $script:builtInApps = @(
-            [pscustomobject]@{ Id='Microsoft365Apps'; Relative='BuiltIn\Microsoft365Apps'; File='setup.exe' }
-            [pscustomobject]@{ Id='MicrosoftTeams'; Relative='BuiltIn\MicrosoftTeams'; File='teams.msix' }
-            [pscustomobject]@{ Id='AdobeAcrobatUnified'; Relative='BuiltIn\AdobeAcrobatUnified\x64'; File='Package.zip' }
-            [pscustomobject]@{ Id='GoogleChromeEnterprise'; Relative='BuiltIn\GoogleChromeEnterprise\x64'; File='Package.msi' }
-            [pscustomobject]@{ Id='MozillaFirefoxEnterprise'; Relative='BuiltIn\MozillaFirefoxEnterprise\Rapid\x64\en-US'; File='Package.msi' }
-            [pscustomobject]@{ Id='ZoomWorkplace'; Relative='BuiltIn\ZoomWorkplace\x64'; File='Package.msi' }
-            [pscustomobject]@{ Id='CiscoWebex'; Relative='BuiltIn\CiscoWebex\x64'; File='Package.msi' }
+            [pscustomobject]@{ Id='Microsoft365Apps'; Type='OfficeDeploymentTool'; Relative='BuiltIn\Microsoft365Apps'; File='setup.exe' }
+            [pscustomobject]@{ Id='MicrosoftTeams'; Type='MicrosoftTeamsBootstrapper'; Relative='BuiltIn\MicrosoftTeams'; File='MSTeams-x64.msix' }
+            [pscustomobject]@{ Id='AdobeAcrobatUnified'; Type='AdobeAcrobatUnifiedZip'; Relative='BuiltIn\AdobeAcrobatUnified\x64'; File='Acrobat_DC_Web_x64_WWMUI.zip' }
+            [pscustomobject]@{ Id='GoogleChromeEnterprise'; Type='VendorMsi'; Relative='BuiltIn\GoogleChromeEnterprise\x64'; File='googlechromestandaloneenterprise64.msi' }
+            [pscustomobject]@{ Id='MozillaFirefoxEnterprise'; Type='VendorMsi'; Relative='BuiltIn\MozillaFirefoxEnterprise\Rapid\x64\en-US'; File='Firefox Setup 145.0.msi'; Channel='Rapid'; Language='en-US' }
+            [pscustomobject]@{ Id='ZoomWorkplace'; Type='VendorMsi'; Relative='BuiltIn\ZoomWorkplace\x64'; File='ZoomInstallerFull.msi' }
+            [pscustomobject]@{ Id='CiscoWebex'; Type='VendorMsi'; Relative='BuiltIn\CiscoWebex\x64'; File='Webex_en.msi' }
         )
         foreach ($app in $builtInApps) {
             $app | Add-Member Architecture x64
             $app | Add-Member Source BuiltIn
             $app | Add-Member DisplayName $app.Id
+            $app | Add-Member PackageUri ('https://example.invalid/' + [uri]::EscapeDataString($app.File))
+            if ($app.Id -eq 'MicrosoftTeams') {
+                $app | Add-Member MsixUri $app.PackageUri
+                $app | Add-Member BootstrapperUri 'https://example.invalid/teamsbootstrapper.exe'
+            }
             $root = Join-Path $StagedPath $app.Relative
             New-Item -ItemType Directory -Path $root -Force | Out-Null
             $payload = Join-Path $root $app.File
@@ -106,11 +116,17 @@ Describe 'Per-deployment acquisition reporting' {
                 New-TestOfficePayload -Root $root
                 Set-Content -LiteralPath (Join-Path $root 'configuration.xml') -Value '<Configuration><Add OfficeClientEdition="64" Channel="Current"><Product ID="O365ProPlusRetail"><Language ID="en-us" /></Product></Add></Configuration>'
             }
-            $cacheInfo = @{ Id=$app.Id; Version='1.0.0.0'; Architecture='x64'; RemoteETag='old'; Updated=$true; Cached=$true }
+            $cacheInfo = @{ Id=$app.Id; Version='1.0.0.0'; Architecture='x64'; RemoteETag='old'; Updated=$true; Cached=$true; PackageUri=$app.PackageUri }
             if ($app.Id -eq 'Microsoft365Apps') {
                 $cacheInfo.PayloadProfile = Get-OSDAppOfficePayloadProfile -Path (Join-Path $root 'configuration.xml')
             }
+            if ($app.Id -ne 'Microsoft365Apps') {
+                $cacheInfo.PayloadFileName = $app.File
+                $cacheInfo.Sha256 = (Get-FileHash -LiteralPath $payload).Hash
+                $cacheInfo.Size = (Get-Item -LiteralPath $payload).Length
+            }
             $cacheInfo | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Encoding UTF8
+            Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath -AllowPending
         }
     }
 
@@ -119,12 +135,11 @@ Describe 'Per-deployment acquisition reporting' {
         $script:usbRoot = Join-Path $TestDrive 'NativeUsb'
         Mock Restore-PreInstallBuiltInCache { }
         Mock Save-PreInstallDownload {
-            if ((Split-Path $DestinationPath -Leaf) -ne 'teamsbootstrapper.exe') {
-                $DestinationPath = Join-Path (Split-Path $DestinationPath -Parent) ('vendor-' + $Id + [IO.Path]::GetExtension($DestinationPath))
-            }
+            if ($DestinationDirectory) { $DestinationPath = Join-Path $DestinationDirectory ('vendor-' + $Id + $ExpectedExtension) }
             if ($DestinationPath -match '\.zip$') { New-TestArchive -Path $DestinationPath }
             elseif ($DestinationPath -match '\.msix$') { New-TestArchive -Path $DestinationPath -Teams }
             else { Set-Content -LiteralPath $DestinationPath -Value 'native fixture payload' }
+            Get-Item -LiteralPath $DestinationPath
         }
         . $script:preparationLoop
         @($appResults | Where-Object AcquisitionOutcome -ne Downloaded).Count | Should -Be 0
@@ -140,6 +155,7 @@ Describe 'Per-deployment acquisition reporting' {
         Mock Save-PreInstallDownload {
             if ((Split-Path $DestinationPath -Leaf) -ne 'teamsbootstrapper.exe') { throw 'Primary payload must be reused.' }
             Set-Content -LiteralPath $DestinationPath -Value 'bootstrapper fixture'
+            Get-Item -LiteralPath $DestinationPath
         }
         . $script:preparationLoop
         @($appResults | Where-Object AcquisitionOutcome -ne CacheReused).Count | Should -Be 0
@@ -283,7 +299,7 @@ Describe 'Per-deployment acquisition reporting' {
 
     It 'does not report successful fallback when the payload is absent and continues independent entries' {
         $script:builtInApps = @($builtInApps | Where-Object Id -in @('GoogleChromeEnterprise','CiscoWebex'))
-        Remove-Item -LiteralPath (Join-Path $StagedPath 'BuiltIn\GoogleChromeEnterprise\x64\Package.msi')
+        Remove-Item -LiteralPath (Join-Path $StagedPath 'BuiltIn\GoogleChromeEnterprise\x64\googlechromestandaloneenterprise64.msi')
         $script:failDownload = $true
         . $script:preparationLoop
         $appResults[0].Status | Should -Be Failed
@@ -334,26 +350,33 @@ Describe 'Per-deployment acquisition reporting' {
     }
 
 
-    It 'explains absent, unreadable and insufficient HTTP cache metadata without claiming a new version' {
+    It 'explains missing payload and insufficient freshness metadata without accepting malformed cache records' {
         $script:builtInApps = @($builtInApps | Where-Object Id -eq GoogleChromeEnterprise)
         $root = Join-Path $StagedPath 'BuiltIn\GoogleChromeEnterprise\x64'
         $infoPath = Join-Path $root 'CacheInfo.json'
         $script:remoteMatches = $true
-        Remove-Item -LiteralPath (Join-Path $root 'Package.msi')
+        Remove-Item -LiteralPath (Join-Path $root 'googlechromestandaloneenterprise64.msi')
         . $script:preparationLoop
         $appResults[0].AcquisitionOutcome | Should -Be Downloaded
         $appResults[0].CacheDecisionReason | Should -Match 'primary payload is missing'
 
         $appResults.Clear()
-        Set-Content -LiteralPath $infoPath -Value 'invalid JSON'
-        . $script:preparationLoop
-        $appResults[0].CacheDecisionReason | Should -Match 'CacheInfo.json is missing or unreadable'
-
         $appResults.Clear()
         Mock Get-RemoteMetadata { [pscustomobject]@{ ETag=$null; LastModified=$null; ContentLength=100; FinalUri='https://example.test/package' } }
         . $script:preparationLoop
         $appResults[0].AcquisitionOutcome | Should -Be Downloaded
         $appResults[0].CacheDecisionReason | Should -Match 'Comparable.*metadata is unavailable'
+    }
+
+    It 'rejects malformed metadata rather than inventing a vendor filename or reusing orphaned bytes' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq GoogleChromeEnterprise)
+        $root = Join-Path $StagedPath 'BuiltIn\GoogleChromeEnterprise\x64'
+        Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json') 'invalid JSON'
+        . $script:preparationLoop
+        $appResults[0].Status | Should -Be Failed
+        $appResults[0].AcquisitionOutcome | Should -Be Failed
+        Should -Invoke Save-PreInstallDownload -Times 0 -Exactly
+        Test-Path -LiteralPath (Join-Path $root 'googlechromestandaloneenterprise64.msi') | Should -BeTrue
     }
 
     It 'explains last-modified and length comparisons when ETags are absent' {
@@ -393,7 +416,7 @@ Describe 'Per-deployment acquisition reporting' {
         $appResults[0].CacheDecisionReason | Should -Match 'USB cache assessment:.*incompatible'
     }
 
-    It 'keeps older PreInstall results readable and does not infer freshness from old CacheInfo' {
+    It 'reports Unknown when the current result has no acquisition evidence' {
         $preInstallResult = [pscustomobject]@{ Apps=@([pscustomobject]@{ Id='MicrosoftTeams'; Status='Succeeded' }) }
         $result = New-RunnerAppResult -App $builtInApps[1] -Status Succeeded
         $result.AcquisitionOutcome | Should -Be Unknown
