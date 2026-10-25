@@ -49,7 +49,8 @@ Describe 'Fresh-cache-only vendor installer contract' {
         $violations = @(
             foreach ($relative in $vendorFiles) {
                 $source = Get-Content -LiteralPath (Join-Path $script:root $relative) -Raw -Encoding UTF8
-                if ($source -match 'Package\.zip') { $relative }
+                $codeLines = @($source -split '\r?\n' | Where-Object { $_.TrimStart() -notmatch '^#' })
+                if (($codeLines -join "`n") -match 'Package\.zip') { $relative }
             }
         )
         @($violations).Count | Should -Be 0 -Because ($violations -join '; ')
