@@ -64,7 +64,7 @@ Describe 'Microsoft Company Portal automatic Preinstall Kit download' {
                 (Get-FileHash -LiteralPath (Join-Path $prepared $file.Path) -Algorithm SHA256).Hash |
                     Should -Be $file.Sha256
             }
-            Should -Invoke Invoke-WebRequest -Exactly 1 -ParameterFilter { $Uri -like 'https://download.microsoft.com/*' }
+            Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter { $Uri -like 'https://download.microsoft.com/*' }
         }
     }
 
