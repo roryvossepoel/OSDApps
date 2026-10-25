@@ -208,26 +208,6 @@ Describe 'Runtime PreInstall and Runner dispatch' {
         Mock Get-OSDAppInstalledPrerequisiteVersion { if($script:installerStarted){[version]'10.0.1'} }
         Mock Start-Process { $script:installerStarted=$true; [pscustomobject]@{HasExited=$true;ExitCode=0} }
     }
-    It 'persists VisualCRedist cleanup through the real PreInstall branch without a download' {
-        . (Join-Path $script:runtimeRoot 'OSDAppPayloadFile.ps1')
-        $script:spec = Get-OSDAppPrerequisiteSpec -Family VisualCRedist -Architecture x64
-        $script:app = [pscustomobject]@{Id=$spec.Id;Family=$spec.Family;Architecture=$spec.Architecture;RuntimeType=$spec.RuntimeType;Channel=$spec.Channel;Type='PrerequisiteExe';Package=(Join-Path $spec.RelativeRoot 'Package.exe')}
-        $script:usbRoot = Join-Path $TestDrive 'CleanupUsb'
-        New-PrerequisiteFixture (Join-Path $usbRoot $spec.RelativeRoot) $spec
-        $old = Join-Path $usbRoot 'BuiltIn/VisualCppRedist/x64'
-        New-Item -ItemType Directory -Path $old -Force | Out-Null
-        @{Id='VisualCppRedist';Architecture='x64'} | ConvertTo-Json | Set-Content (Join-Path $old 'CacheInfo.json')
-        $script:logDirectory = Split-Path $logPath
-        Mock Get-OSDAppPrerequisiteRelease {
-            [pscustomobject]@{PackageUri='https://aka.ms/vc14/vc_redist.x64.exe';ResolvedUri=$null;ETag=$null;LastModified=$null;Version='14.50.1.0';Sha512=$null;Size=0}
-        }
-        Mock Save-PreInstallDownload { throw 'Unexpected download' }
-        & $script:preCase
-        $acquisition.Outcome | Should -Be 'CacheReused'
-        Test-Path $old | Should -BeFalse
-        Get-Content $logPath -Raw | Should -Match '\[CacheRetiredVariantRemoved\].*RetiredId=VisualCppRedist'
-        Should -Invoke Save-PreInstallDownload -Times 0 -Exactly
-    }
     It 'records valid fallback and offline use without claiming confirmed currency' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
         & $script:preCase

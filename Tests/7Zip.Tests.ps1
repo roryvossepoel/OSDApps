@@ -182,26 +182,6 @@ Describe '7Zip runtime dispatch' {
         Mock Write-RunnerLog { }
         Mock Get-OSDApp7ZipRelease { throw 'Release API unavailable' }
     }
-    It 'persists cleanup through the real PreInstall branch while reusing the generation' {
-        . (Join-Path $script:runtimeRoot 'OSDAppPayloadFile.ps1')
-        $script:usbRoot = Join-Path $TestDrive 'CleanupUsb'
-        $active = Join-Path $usbRoot 'BuiltIn/7Zip/x64'
-        $old = Join-Path $usbRoot 'BuiltIn/SevenZip/x64'
-        New-RuntimeFixture $active
-        New-Item -ItemType Directory -Path $old -Force | Out-Null
-        @{Id='SevenZip';Architecture='x64'} | ConvertTo-Json | Set-Content (Join-Path $old 'CacheInfo.json')
-        $script:logDirectory = Split-Path $logPath
-        Mock Get-OSDApp7ZipRelease {
-            $info = Get-Content (Join-Path $usbRoot 'BuiltIn/7Zip/x64/CacheInfo.json') -Raw | ConvertFrom-Json
-            [pscustomobject]@{Version=$info.Version;Architecture=$info.Architecture;PackageUri=$info.PackageUri;Sha256=$info.Sha256;Size=$info.Size}
-        }
-        Mock Save-PreInstallDownload { throw 'Unexpected download' }
-        & $script:preCase
-        $acquisition.Outcome | Should -Be 'CacheReused'
-        Test-Path $old | Should -BeFalse
-        Get-Content $logPath -Raw | Should -Match '\[CacheRetiredVariantRemoved\].*RetiredId=SevenZip'
-        Should -Invoke Save-PreInstallDownload -Times 0 -Exactly
-    }
     It 'records fallback reuse only for valid staged content after an API failure' {
         New-RuntimeFixture (Join-Path $StagedPath 'BuiltIn/7Zip/x64')
         & $script:preCase

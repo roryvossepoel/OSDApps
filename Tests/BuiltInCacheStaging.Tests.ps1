@@ -114,6 +114,7 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
             New-Item -ItemType Directory -Path $windows,$office,$teams,$officeVersionRoot -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $office 'setup.exe') -Value 'setup' -Encoding Ascii
             New-OSDAppOfficeConfiguration -Path (Join-Path $office 'configuration.xml')
+            $officeProfile = Get-OSDAppOfficePayloadProfile -Path (Join-Path $office 'configuration.xml')
             Set-Content -LiteralPath (Join-Path $officeVersionRoot 'stream.x64.x-none.dat') -Value 'payload' -Encoding Ascii
             Set-Content -LiteralPath (Join-Path $officeData 'v64.cab') -Value 'matching-cab' -Encoding Ascii
             Set-Content -LiteralPath (Join-Path $officeData "v64_$officeVersion.cab") -Value 'matching-cab' -Encoding Ascii
@@ -121,7 +122,8 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
                 Id = 'Microsoft365Apps'
                 Version = $officeVersion
                 Architecture = 'x64'
-            } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $office 'CacheInfo.json') -Encoding UTF8
+                PayloadProfile = $officeProfile
+            } | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $office 'CacheInfo.json') -Encoding UTF8
             Set-Content -LiteralPath (Join-Path $teams 'teams.msix') -Value 'msix' -Encoding Ascii
             Set-Content -LiteralPath (Join-Path $teams 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding Ascii
             Add-OSDAppMicrosoft365AppsInternal -CachePath $usb -WindowsPath $windows -Confirm:$false | Out-Null
