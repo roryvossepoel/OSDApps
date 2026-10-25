@@ -20,6 +20,8 @@ Describe 'Canonical OSDApps terminology' {
             $source = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8
             # The GitHub Accept header is an external MIME standard, not OSDApps terminology.
             $source = $source -replace ('(?i)' + $script:obsoleteTerm + '/vnd\\.github\\+json'), ''
+            # These are mandatory PSHost API overrides, not OSDApps-owned terminology.
+            $source = $source -replace ('Notify(Begin|End)' + $script:obsoleteTerm), ''
             if ($source -match $script:obsoletePattern) {
                 $found.Add("Content: $relative")
             }
