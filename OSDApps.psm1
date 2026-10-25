@@ -46,6 +46,8 @@ Export-ModuleMember -Function @(
     'Sync-OSDAppMozillaFirefoxEnterprise',
     'Clear-OSDAppCache',
     'Add-OSDApp',
+    'Add-OSDAppRegistryKey',
+    'Add-OSDAppRegistryValue',
     'Add-OSDAppWindowsInboxCleanup',
     'Add-OSDAppCMTraceOpen',
     'Add-OSDAppMicrosoftCompanyPortal',

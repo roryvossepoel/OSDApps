@@ -38,6 +38,35 @@
         SuccessCodes = 'Repository installer exit codes treated as success. Default accepts 0 and 3010.'
     }
     Commands = @{
+        'Add-OSDAppRegistryKey' = @{
+            Synopsis = 'Stage a registry key change without writing to the preparation PC or WinPE registry.'
+            Description = 'Adds or replaces an operation in one local RegistrySettings Script package. SetupComplete creates missing keys, preserves unrelated values and verifies every change by read-back. No view switch means the runtime host default. No external repository, download, registry ACL changes or profile loading is required.'
+            Environment = 'WinPE after OSDCloud has applied Windows. Execution happens later in full Windows under SetupComplete.'
+            Output = 'OSDApps.StagedApp with OperationCount. One RegistrySettings queue entry represents all registry operations; staging is not execution proof.'
+            Parameters = @{
+                Path = 'Absolute HKLM, HKCR or loaded HKU path. HKCR explicitly targets machine SOFTWARE\Classes. Missing child keys are created at runtime. HKCU, HKCC and explicit WOW6432Node are rejected.'
+                Registry32 = 'Use the explicit 32-bit registry view during SetupComplete. Mutually exclusive with Registry64.'
+                Registry64 = 'Use the explicit 64-bit registry view during SetupComplete. Rejected on 32-bit Windows. Mutually exclusive with Registry32.'
+            }
+            Examples = @(@{ Code = 'Add-OSDAppRegistryKey -Path ''HKLM:\SOFTWARE\OSDApps\Tests\RegistryStaging\Level1\Level2'' -Registry64'; Remarks = 'Stage a deep machine registry path in the explicit 64-bit view.' })
+            Link = 'docs/registry-staging.md'
+        }
+        'Add-OSDAppRegistryValue' = @{
+            Synopsis = 'Stage a registry value change without writing to the preparation PC or WinPE registry.'
+            Description = 'Adds or replaces an operation in one local RegistrySettings Script package. SetupComplete creates missing keys, preserves unrelated values and verifies every change by read-back. No view switch means the runtime host default. No external repository, download, registry ACL changes or profile loading is required.'
+            Environment = 'WinPE after OSDCloud has applied Windows. Execution happens later in full Windows under SetupComplete.'
+            Output = 'OSDApps.StagedApp with OperationCount. One RegistrySettings queue entry represents all registry operations; staging is not execution proof.'
+            Parameters = @{
+                Path = 'Absolute HKLM, HKCR or loaded HKU path. HKCR explicitly targets machine SOFTWARE\Classes. Missing child keys are created at runtime. HKCU, HKCC and explicit WOW6432Node are rejected.'
+                Registry32 = 'Use the explicit 32-bit registry view during SetupComplete. Mutually exclusive with Registry64.'
+                Registry64 = 'Use the explicit 64-bit registry view during SetupComplete. Rejected on 32-bit Windows. Mutually exclusive with Registry32.'
+                Name = 'Registry value name. An empty string selects the unnamed default value.'
+                Type = 'Explicit registry data type: String, ExpandString, MultiString, Binary, DWord or QWord.'
+                Value = 'Literal registry data. Byte arrays for Binary, string arrays for MultiString, strings or whole integers for numeric types. No text is executed as code.'
+            }
+            Examples = @(@{ Code = 'Add-OSDAppRegistryValue -Path ''HKLM:\SOFTWARE\OSDApps\Tests\RegistryStaging\Level1\Level2'' -Registry64 -Name ''Marker'' -Type String -Value ''CreatedIn64BitView'''; Remarks = 'Stage a deep machine registry path in the explicit 64-bit view.' })
+            Link = 'docs/registry-staging.md'
+        }
         'Add-OSDAppMicrosoftCompanyPortal' = @{
             Synopsis = 'Stage the Microsoft Company Portal offline Preinstall Kit for Windows provisioning.'
             Description = 'Stages the Microsoft-supplied appbundle, offline license and five matching dependencies from a locally prepared OSDCloud cache. SetupComplete provisions the package for newly created users; it does not directly deploy into an existing signed-in user session.'

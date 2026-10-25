@@ -88,7 +88,7 @@ Describe 'Built-in metadata' {
                 Select-Object -ExpandProperty Name |
                 Where-Object {
                     $_ -like 'Add-OSDApp*' -and
-                    $_ -notin @('Add-OSDApp','Add-OSDAppPackage')
+                    $_ -notin @('Add-OSDApp','Add-OSDAppPackage','Add-OSDAppRegistryKey','Add-OSDAppRegistryValue')
                 } |
                 Sort-Object
         )
