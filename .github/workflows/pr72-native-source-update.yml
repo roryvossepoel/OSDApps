@@ -1,0 +1,127 @@
+name: Validate PR72 native payload source
+on:
+  push:
+    branches: [feature/native-vendor-filenames-app-type]
+    paths: [.github/workflows/pr72-native-source-update.yml]
+permissions:
+  contents: write
+jobs:
+  validate-source:
+    if: github.repository == 'roryvossepoel/OSDApps' && github.ref == 'refs/heads/feature/native-vendor-filenames-app-type'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Apply checksum-verified source patch with exact preimage checks
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import base64, hashlib, json, os, pathlib, re, subprocess, urllib.request, zlib
+          repo = 'roryvossepoel/OSDApps'
+          chunks = ['d441bdaafb861588dc6c21cb4df715a794e627d2','77b7ed0f7c99c1002577d350f4527680d3ef433b','cdb98530ce6e024d9cc43ea07d5d2c2a801d20f8','8b194b00f790632487c0923044d82844c396f787','7fcb2c1eeec8b7c23d061d202ec297e1da268de7','f9e65090baa36f33d8151880c847877be24f69ae','35a9c63e885175efae96fb1c18b22eefd31a2729','103bafab0484bf67dcec01f15626ce3e88f2644d']
+          def api(path):
+              req = urllib.request.Request('https://api.github.com/repos/' + repo + path, headers={'Authorization':'Bearer ' + os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'OSDApps-PR72-Validation'})
+              with urllib.request.urlopen(req, timeout=60) as response:
+                  return json.load(response)
+          raw = b''.join(base64.b64decode(api('/git/blobs/' + sha)['content']) for sha in chunks)
+          patch = zlib.decompress(raw)
+          assert hashlib.sha256(patch).hexdigest() == '33115b30f156dba02812ad32d0c09793ea3082c8008f2bb85c55317405bc7f9d', 'Patch checksum mismatch'
+          targets = []
+          current = None
+          for line in patch.decode('utf-8').splitlines():
+              if line.startswith('diff --git '):
+                  match = re.fullmatch(r'diff --git a/(.+) b/(.+)', line)
+                  assert match and match[1] == match[2], 'Unexpected rename in source patch'
+                  current = match[1]
+                  assert re.fullmatch(r'(Public|Private|Runtime)/[A-Za-z0-9.-]+[.]ps1', current), 'Unexpected patch destination'
+                  targets.append(current)
+              elif line.startswith('index '):
+                  old = line.split()[1].split('..')[0]
+                  actual = subprocess.check_output(['git','rev-parse','HEAD:' + current], text=True).strip()
+                  assert actual == old, 'Source changed since inspection: ' + current
+          assert len(targets) == 46 and len(set(targets)) == 46, 'Unexpected patch scope'
+          subprocess.run(['git','config','core.autocrlf','false'], check=True)
+          subprocess.run(['git','checkout-index','--all','--force'], check=True)
+          patch_path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'pr72-native-payload.patch'
+          patch_path.write_bytes(patch)
+          subprocess.run(['git','apply','--check','--unidiff-zero',str(patch_path)], check=True)
+          subprocess.run(['git','apply','--unidiff-zero',str(patch_path)], check=True)
+          subprocess.run(['git','diff','--check'], check=True)
+          pathlib.Path(os.environ['RUNNER_TEMP'], 'pr72-targets.json').write_text(json.dumps(targets), encoding='utf-8')
+          print('Applied 46 exact-preimage source changes; no branch ref modified.')
+      - name: Parse source on Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $problems = @()
+          foreach ($folder in @('Public','Private','Runtime')) {
+            foreach ($file in Get-ChildItem -LiteralPath $folder -Filter '*.ps1' -File) {
+              $tokens = $null; $errors = $null
+              [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName,[ref]$tokens,[ref]$errors)
+              foreach ($entry in @($errors)) { $problems += "$($file.Name):$($entry.Extent.StartLineNumber): $($entry.Message)" }
+            }
+          }
+          if ($problems.Count) { throw ($problems -join "`n") }
+          Import-Module .\OSDApps.psd1 -Force -ErrorAction Stop
+          Write-Host 'Windows PowerShell 5.1 source parsing and module import passed.'
+      - name: Parse source on PowerShell 7
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $problems = @()
+          foreach ($folder in @('Public','Private','Runtime')) {
+            foreach ($file in Get-ChildItem -LiteralPath $folder -Filter '*.ps1' -File) {
+              $tokens = $null; $errors = $null
+              [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName,[ref]$tokens,[ref]$errors)
+              foreach ($entry in @($errors)) { $problems += "$($file.Name):$($entry.Extent.StartLineNumber): $($entry.Message)" }
+            }
+          }
+          if ($problems.Count) { throw ($problems -join "`n") }
+          Import-Module ./OSDApps.psd1 -Force -ErrorAction Stop
+          Write-Host 'PowerShell 7 source parsing and module import passed.'
+      - name: Prepare validated commit without moving any branch
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import json, os, pathlib, urllib.request
+          repo = 'roryvossepoel/OSDApps'
+          parent = os.environ['GITHUB_SHA']
+          workflow = '.github/workflows/pr72-native-source-update.yml'
+          def api(path, data=None):
+              body = None if data is None else json.dumps(data).encode('utf-8')
+              req = urllib.request.Request('https://api.github.com/repos/' + repo + path, data=body, headers={'Authorization':'Bearer ' + os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json','User-Agent':'OSDApps-PR72-Validation'}, method='GET' if body is None else 'POST')
+              with urllib.request.urlopen(req, timeout=90) as response:
+                  return json.load(response)
+          targets = json.loads(pathlib.Path(os.environ['RUNNER_TEMP'], 'pr72-targets.json').read_text(encoding='utf-8'))
+          base = api('/git/commits/' + parent)['tree']['sha']
+          entries = [{'path':name,'mode':'100644','type':'blob','content':pathlib.Path(name).read_text(encoding='utf-8')} for name in targets]
+          entries.append({'path':workflow,'mode':'100644','type':'blob','sha':None})
+          tree = api('/git/trees', {'base_tree':base,'tree':entries})['sha']
+          commit = api('/git/commits', {'message':'fix: preserve exact vendor filenames through download cache staging and runtime','tree':tree,'parents':[parent]})['sha']
+          output = pathlib.Path('NativePayloadValidation'); output.mkdir(exist_ok=True)
+          (output / 'commit.json').write_text(json.dumps({'parent':parent,'commit':commit,'tree':tree,'files':targets}, indent=2), encoding='utf-8')
+          print('NATIVE_PAYLOAD_COMMIT=' + commit)
+          print('Commit prepared; PR branch activation requires a separate guarded ref update.')
+      - name: Collect complete source snapshot for test updates
+        if: always()
+        shell: python
+        run: |
+          import pathlib, subprocess, zipfile
+          output = pathlib.Path('NativePayloadValidation'); output.mkdir(exist_ok=True)
+          names = subprocess.check_output(['git','ls-files'], text=True).splitlines()
+          with zipfile.ZipFile(output / 'source.zip', 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+              for name in names:
+                  if name == '.github/workflows/pr72-native-source-update.yml': continue
+                  path = pathlib.Path(name)
+                  if path.is_file(): archive.write(path, name)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr72-native-source
+          path: NativePayloadValidation/
+          retention-days: 7
