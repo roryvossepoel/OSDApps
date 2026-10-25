@@ -55,7 +55,7 @@ function Test-OSDAppDeployment {
     if (-not $ThrowOnFailure) { throw 'Preflight must terminate on failure.' }
     Invoke-Stub Preflight
     [pscustomobject]@{
-        WindowsPath = 'C:\'; DeploymentId = 'test'; ApplicationCount = 3
+        WindowsPath = 'C:\'; DeploymentId = 'test'; AppCount = 3
         Valid = $true; OfflineReady = $false; NetworkRequired = $true
     }
 }
