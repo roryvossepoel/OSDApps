@@ -28,4 +28,16 @@ Describe 'Canonical OSDApps terminology' {
         }
         @($found).Count | Should -Be 0 -Because (@($found) -join '; ')
     }
+    It 'keeps the vendor-mandated GitHub media type intact' {
+        $expected = ('applic' + 'ation/vnd.github+json')
+        foreach ($relative in @(
+            'Runtime/OSDApp7Zip.ps1',
+            'Public/Sync-OSDAppCMTraceOpen.ps1',
+            'tools/Test-OSDAppsMaintenance.ps1'
+        )) {
+            $content = Get-Content -LiteralPath (Join-Path $script:repositoryRoot $relative) -Raw -Encoding UTF8
+            $content | Should -Match ([regex]::Escape($expected)) -Because "$relative must retain the external GitHub API media type"
+            $content | Should -Not -Match 'app/vnd\.github\+json'
+        }
+    }
 }
