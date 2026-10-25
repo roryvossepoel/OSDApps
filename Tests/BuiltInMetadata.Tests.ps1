@@ -20,13 +20,9 @@ Describe 'Built-in metadata' {
         @($ids | Select-Object -Unique).Count | Should -Be $ids.Count
     }
 
-    It 'uses unique cache aliases that never collide with canonical ids' {
-        $ids = @($script:metadata.Apps.Id)
-        $aliases = @($script:metadata.Apps | ForEach-Object { @($_.Aliases) } | Where-Object { $_ })
-        @($aliases | Select-Object -Unique).Count | Should -Be $aliases.Count
-        foreach ($alias in $aliases) {
-            $alias | Should -Not -BeIn $ids
-            $alias | Should -Match '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+    It 'contains no retired built-in aliases' {
+        foreach ($app in @($script:metadata.Apps)) {
+            $app.PSObject.Properties.Name | Should -Not -Contain 'Aliases'
         }
     }
 
@@ -39,6 +35,9 @@ Describe 'Built-in metadata' {
             $app.Acquisition | Should -Not -BeNullOrEmpty
             if ($app.PackageType -eq 'Script') {
                 $app.SyncPhase | Should -Be 'None'
+            }
+            elseif ($app.Id -in @('MicrosoftCompanyPortal','CMTraceOpen')) {
+                $app.SyncPhase | Should -Be 'FullWindowsPreparation'
             }
             else {
                 $app.SyncPhase | Should -Be 'FullWindowsPreInstall'

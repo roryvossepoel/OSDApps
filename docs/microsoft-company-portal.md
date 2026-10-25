@@ -15,13 +15,13 @@ Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud
 Sync-OSDAppMicrosoftCompanyPortal -Architecture x64
 ~~~
 
-The automatic source is an official `download.microsoft.com` Preinstall Kit ZIP. OSDApps records its source URI and SHA-256, extracts the appxbundle, offline license and five architecture-specific Appx dependencies, reads the Microsoft Company Portal package identity and version, and records individual file hashes. A download or validation failure does not replace the previous cache; an automatic refresh can reuse content only after checking cached file hashes. The actual Appx signature is validated by Windows when provisioning.
+The automatic source is an official `download.microsoft.com` Preinstall Kit ZIP. OSDApps records its source URI and SHA-256, extracts the appxbundle, offline license and five architecture-specific Appx dependencies, reads the Microsoft Company Portal package identity and version, preserves the kit bundle/license/dependency filenames, and records individual file hashes. `PayloadFileName` and `LicenseFileName` record the exact bundle and license names. A download or validation failure does not replace the previous cache; an automatic refresh can reuse content only after checking cached file hashes. The actual Appx signature is validated by Windows when provisioning.
 
 An operator-supplied kit is also supported, with **no automatic download**:
 
 
 ~~~powershell
-Sync-OSDAppMicrosoftCompanyPortal -KitPath 'C:TempCompanyPortal-Universal-Production_x64_x86_ARM_ARM64.appxupload_Windows10_PreinstallKit.zip' -Architecture x64
+Sync-OSDAppMicrosoftCompanyPortal -KitPath 'C:\Temp\CompanyPortal-Universal-Production_x64_x86_ARM_ARM64.appxupload_Windows10_PreinstallKit.zip' -Architecture x64
 ~~~
 
 The tested Microsoft kit contained Company Portal **11.2.1495.0**. That is an observed bundle version, not a guarantee that the Microsoft download URL always serves the latest Microsoft Store version.

@@ -49,11 +49,11 @@
         }
         'Sync-OSDAppMicrosoftCompanyPortal' = @{
             Synopsis = 'Prepare Microsoft Company Portal from the official offline Preinstall Kit.'
-            Description = 'Consumes an operator-supplied official Microsoft ZIP, selects one appbundle, offline license and five architecture-specific dependencies, records SHA-256 hashes, and atomically updates the corresponding local USB cache variant. Does not download or redistribute Microsoft binaries.'
-            Environment = 'Full Windows preparation machine with the OSDCloud USB connected and access to the original Microsoft Preinstall Kit ZIP.'
+            Description = 'Downloads the official Microsoft Preinstall Kit by default. Optionally accepts a local official ZIP through -KitPath. Retains the original bundle, license and dependency filenames, records SHA-256 hashes and exact filename metadata, and transactionally updates the USB cache. WinPE stages prepared content; SetupComplete provisions it without a network download.'
+            Environment = 'Full Windows preparation machine with the OSDCloud USB connected; internet access for automatic download, or a local official kit.'
             Output = 'Cache preparation record including selected architecture, bundle version and target cache path.'
-            Parameters = @{ KitPath = 'Full path to the original Microsoft Company Portal Preinstall Kit ZIP downloaded by the operator.' }
-            Examples = @(@{ Code = 'Sync-OSDAppMicrosoftCompanyPortal -KitPath ''C:\Downloads\CompanyPortal-PreinstallKit.zip'' -Architecture x64'; Remarks = 'Prepare the x64 bundle, license and dependency cache for offline WinPE deployment.' })
+            Parameters = @{ KitPath = 'Optional path to an official Microsoft kit ZIP. Omit this parameter for automatic Microsoft download.' }
+            Examples = @(@{ Code = 'Sync-OSDAppMicrosoftCompanyPortal -Architecture x64'; Remarks = 'Download the official Microsoft kit and prepare the x64 cache. Supply -KitPath only to use a local official ZIP.' })
             Link = 'docs/microsoft-company-portal.md'
         }
         'Add-OSDAppCMTraceOpen' = @{
@@ -378,13 +378,13 @@
                 All = 'Clear repository and built-in caches. Also the default with no scope argument.'
                 Repository = 'Clear repository archives and CacheCatalog.json only.'
                 BuiltIn = 'Clear built-in cache only.'
-                Prune = 'With BuiltIn, remove only unmanaged top-level app folders and loose files. Preserve managed app trees, registered aliases, links and transaction recovery content. Preview with WhatIf; inspect Review in the result.'
+                Prune = 'With BuiltIn, remove only unmanaged top-level app folders and loose files. Preserve managed app trees, links and transaction recovery content. Preview with WhatIf; inspect Review in the result.'
                 Name = 'Exact safe cache Ids. Matching built-in and repository paths are both removed, including retired identities; inspect operations with WhatIf.'
                 IncludeLogs = 'Also remove existing cache logs; new audit entries are written afterward.'
             }
             Examples = @(
                 @{ Code = 'Clear-OSDAppCache -All -WhatIf'; Remarks = 'Preview the destructive all-cache scope.' },
-                @{ Code = 'Clear-OSDAppCache -BuiltIn -Prune -WhatIf'; Remarks = 'Preview unmanaged built-in namespace cleanup while retaining current app variants and legacy payload filenames.' },
+                @{ Code = 'Clear-OSDAppCache -BuiltIn -Prune -WhatIf'; Remarks = 'Preview unmanaged built-in namespace cleanup while retaining current app variants and transaction recovery content.' },
                 @{ Code = 'Clear-OSDAppCache -Name MicrosoftTeams -WhatIf'; Remarks = 'Preview a named entry; target staging remains separate.' }
             )
             Link = 'docs/faq.md'
@@ -472,9 +472,9 @@
         }
         'Sync-OSDAppMicrosoftTeams' = @{
             Synopsis = 'Prepare the Teams bootstrapper and MSIX cache.'
-            Description = 'Validates a new bootstrapper and Microsoft publisher. Reuses unchanged MSIX by metadata; Updated=False is not zero HTTP requests or no bootstrapper download. Explicit signature check does not cover MSIX. Architectures share the MicrosoftTeams cache directory. After the canonical payload is complete, a retired BuiltIn\Teams cache folder is removed.'
+            Description = 'Validates a new bootstrapper and Microsoft publisher. Reuses unchanged MSIX by metadata; Updated=False is not zero HTTP requests or no bootstrapper download. Explicit signature check does not cover MSIX. Architectures share the MicrosoftTeams cache directory. The cache records the exact vendor filename, SHA-256 and size. Start with a fresh cache; no old layout is migrated.'
             Environment = 'Full Windows only with configured cache and vendor access. WinPE is rejected.'
-            Output = 'OSDApps.BuiltInCache; Updated describes MSIX replacement and RemovedAliases reports retired folders removed.'
+            Output = 'OSDApps.BuiltInCache; Updated describes MSIX replacement; cache metadata pins the actual vendor filename.'
             Examples = @(@{ Code = 'Sync-OSDAppMicrosoftTeams -Architecture x64'; Remarks = 'Prepare x64 content without installing Teams.' })
             Link = 'docs/built-in-apps.md'
         }

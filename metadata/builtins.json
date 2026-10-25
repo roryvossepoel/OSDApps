@@ -256,8 +256,8 @@
       "DisplayName": "Microsoft Company Portal",
       "Source": "BuiltIn",
       "Vendor": "Microsoft",
-      "Acquisition": "OperatorSuppliedMicrosoftPreinstallKit",
-      "SyncPhase": "FullWindowsPreInstall",
+      "Acquisition": "MicrosoftPreinstallKit",
+      "SyncPhase": "FullWindowsPreparation",
       "AddCommand": "Add-OSDAppMicrosoftCompanyPortal",
       "SyncCommand": "Sync-OSDAppMicrosoftCompanyPortal",
       "Architectures": [
@@ -275,7 +275,7 @@
       "Source": "BuiltIn",
       "Vendor": "CMTrace Open",
       "Acquisition": "GitHubReleaseMsi",
-      "SyncPhase": "FullWindowsPreInstall",
+      "SyncPhase": "FullWindowsPreparation",
       "AddCommand": "Add-OSDAppCMTraceOpen",
       "SyncCommand": "Sync-OSDAppCMTraceOpen",
       "Architectures": [

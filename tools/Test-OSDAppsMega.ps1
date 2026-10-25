@@ -34,13 +34,23 @@ if ($docs) {
 
 if (-not [string]::IsNullOrWhiteSpace($DeploymentResultPath)) {
     $deployment = Get-Content -LiteralPath $DeploymentResultPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+    $required = @('DeploymentId','Status','ExpectedAppCount','SuccessfulAppCount','FailedAppCount','SkippedAppCount','Apps')
+    $missing = @($required | Where-Object { $_ -notin $deployment.PSObject.Properties.Name })
+    $entries = @($deployment.Apps)
+    $ids = @($entries | ForEach-Object { [string]$_.Id })
+    $deploymentId = [guid]::Empty
     $passed = (
+        $missing.Count -eq 0 -and
+        [guid]::TryParse([string]$deployment.DeploymentId,[ref]$deploymentId) -and
         $deployment.Status -eq 'Succeeded' -and
         [int]$deployment.ExpectedAppCount -gt 0 -and
+        $entries.Count -eq [int]$deployment.ExpectedAppCount -and
+        @($ids | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -eq 0 -and
+        @($ids | Select-Object -Unique).Count -eq $entries.Count -and
         [int]$deployment.ExpectedAppCount -eq [int]$deployment.SuccessfulAppCount -and
         [int]$deployment.FailedAppCount -eq 0 -and
         [int]$deployment.SkippedAppCount -eq 0 -and
-        @($deployment.Apps | Where-Object { $_.Status -ne 'Succeeded' -or $_.PackageType -notin @('App','Script') }).Count -eq 0
+        @($entries | Where-Object { $_.Status -ne 'Succeeded' -or $_.PackageType -notin @('App','Script') }).Count -eq 0
     )
     $checks.Add([pscustomobject]@{Name='Physical deployment result';Status=$(if($passed){'Passed'}else{'Failed'});ResultPath=$DeploymentResultPath})
 }
@@ -48,6 +58,7 @@ if (-not [string]::IsNullOrWhiteSpace($DeploymentResultPath)) {
 $report = [pscustomobject]@{
     CheckedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
     Checks = @($checks)
+    Scope = $(if($DeploymentResultPath){'Source validation and supplied deployment report'}else{'Source validation only; no physical deployment verified'})
     Status = $(if(@($checks | Where-Object Status -ne 'Passed').Count -eq 0){'Passed'}else{'Failed'})
 }
 $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $ResultsPath 'MegaTest.json') -Encoding UTF8

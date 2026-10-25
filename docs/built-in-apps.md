@@ -55,15 +55,17 @@ Unsafe names or a file extension that differs from the expected payload format
 are rejected before promotion. Downloads, signature/hash checks and complete
 cache-generation replacement follow the existing validation policies.
 
-Each built-in variant has one primary payload per format. Multiple MSI, EXE, ZIP
-or MSIX payloads of the same format in that variant are ambiguous and are rejected;
-OSDApps does not guess which version to install. Office keeps its ODT-managed layout.
+Each cached variant records its exact vendor `PayloadFileName`, SHA-256 and byte
+size in `CacheInfo.json`. Windows staging records that exact relative filename
+and hash in `DeviceManifest.json`. PreInstall updates the manifest only after
+acquiring and validating the selected payload; the runner validates the recorded
+path and hash again. Unrelated files with the same extension are never selected.
+Office keeps its ODT-managed layout and recorded payload profile.
 
-Existing caches named `Package.msi`, `Package.exe`, `Package.zip` or `teams.msix`
-remain readable without renaming or redownloading solely to change a filename.
-Their next normal refresh replaces the complete generation with vendor-named
-files. The manifest's legacy package path remains an internal payload reference;
-preflight and the runner resolve it to the actual filename in that variant.
+**Start with a fresh cache.** There is no old-name lookup, cache migration,
+filename conversion or compatibility alias. A cold online deployment records a
+pending payload with a null filename until acquisition succeeds; it does not use
+a fabricated package path. Old cache metadata is not repaired or guessed.
 
 **Custom repository apps and scripts still use `Package.zip`.** That repository
 archive contract is separate from built-in vendor installers.
@@ -226,7 +228,7 @@ The Teams cache contains:
 - The vendor-named Teams MSIX (for example, `MSTeams-x64.msix`)
 - `CacheInfo.json`
 
-The canonical built-in ID is `MicrosoftTeams`. Its USB cache and WinPE staging location is `BuiltIn\MicrosoftTeams`, containing `teamsbootstrapper.exe`, the vendor-named MSIX and `CacheInfo.json`. The 0.31.0 rename intentionally introduced no legacy commands or runtime identity. From 0.36.0, metadata recognizes `Teams` only as a retired **cache alias**: full-Windows `Sync-OSDAppMicrosoftTeams` and standalone PreInstall remove the old folder only after the canonical payload is complete and the bootstrapper passes the Microsoft trust gate. A PreInstall cleanup failure is logged as a warning rather than failing an otherwise usable deployment. The old cmdlet names and SetupComplete identity remain unsupported. Re-synchronize existing media before booting WinPE for an offline deployment.
+The canonical built-in ID is `MicrosoftTeams`. Its cache and WinPE staging directory is `BuiltIn\MicrosoftTeams`, containing the native bootstrapper, vendor-named MSIX and `CacheInfo.json`. Use a freshly synchronized cache; no old Teams identity or cache is migrated.
 
 Teams freshness is checked using HTTP metadata. ETag is preferred; Last-Modified plus Content-Length is the fallback.
 
@@ -506,11 +508,9 @@ XML is never replaced by the USB cache XML during PreInstall.
   implicit architecture/channel and other unresolved configuration cannot prove
   offline compatibility. They require successful online acquisition.
 
-New cache metadata includes a `PayloadProfile` derived from the acquisition XML.
-Existing USB caches can use their original `configuration.xml`; staging records
-that profile alongside the copied payload without changing the USB cache.
-A legacy staged directory without this record is not trusted merely because its
-current XML matches: that file may already describe a different deployment.
+Office cache metadata must contain a `PayloadProfile` derived from the acquisition
+XML. The selected deployment XML cannot substitute for missing provenance.
+Caches without the current metadata are not migrated; build a fresh cache.
 
 An incompatible cache is left intact. WinPE stages the requested configuration
 without copying unsuitable Office content and reports that online acquisition

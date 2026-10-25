@@ -72,15 +72,13 @@ An existing manifest means that target already has OSDApps staging; it does not 
 
 ## What happens to an old BuiltIn\Teams USB cache?
 
-The canonical Id remains `MicrosoftTeams`; its folder is `BuiltIn\MicrosoftTeams`, and the commands are `Add-OSDAppMicrosoftTeams` / `Sync-OSDAppMicrosoftTeams`. The public metadata now declares `Teams` as a **retired cache alias**, not as a command or deployable app Id.
-
-Run `Sync-OSDAppMicrosoftTeams` on full Windows. OSDApps prepares the canonical payload first and removes `BuiltIn\Teams` only after `BuiltIn\MicrosoftTeams` is complete. Standalone PreInstall applies the same guarded cleanup when it successfully uses or creates a canonical USB cache; cleanup failure is a warning and does not fail installation. If canonical preparation or trust validation fails, the old folder is preserved. You can inspect the condition beforehand with `Get-OSDAppCacheHealth -Offline` or explicitly preview manual removal with `Clear-OSDAppCache -Name Teams -WhatIf`.
-
-This does not reintroduce the old `Add-OSDAppTeams` or `Sync-OSDAppTeams` commands, and the SetupComplete runtime still accepts only the canonical identity. The original rename is recorded in the [0.31.0 changelog](../CHANGELOG.md#0310).
+It is not migrated or used. Start with a fresh cache and synchronize
+`MicrosoftTeams` using the current module. Its canonical folder is
+`BuiltIn\MicrosoftTeams`; there are no retired built-in cache aliases.
 
 ## Do built-in apps require an OSDCloud USB flash drive?
 
-No. With no cache volume, the Add cmdlets can stage intent and PreInstall can acquire built-ins directly to the local Windows runtime when online. Repository Add commands can use a temporary cache on the offline Windows disk when no USB cache is present.
+Most built-ins can stage intent without a cache volume and acquire their content during online PreInstall. **Company Portal and CMTrace Open must be synchronized on full Windows first and staged from the populated cache.** They do not download during SetupComplete. Repository Add commands can use a temporary cache on the offline Windows disk when no USB cache is present.
 
 A volume with the configured label, `OSDCloud` by default, is automatically used as the cache when present. Keep module files and installer cache content conceptually separate: `\Modules` is a convenient module location; `\OSDApps` is the cache directory.
 
@@ -151,11 +149,15 @@ Clear-OSDAppCache -BuiltIn -Prune -Confirm
 Get-OSDAppCacheHealth -Offline
 ```
 
-Unlike `Clear-OSDAppCache -BuiltIn` alone, adding `-Prune` **retains every current built-in app directory**, including all architecture, language and channel variants. Legacy `Package.*` and `teams.msix` filenames inside those app directories are still supported and are not a reason to delete or download anything. Retired unregistered directories such as `VisualCppRedist` or `SevenZip`, and unrelated top-level files, are candidates for removal; their contents are not migrated.
+Unlike `Clear-OSDAppCache -BuiltIn` alone, adding `-Prune` retains current built-in
+app directories, including their architecture, language and channel variants.
+It does not convert or repair their contents. This filename-contract update
+requires a fresh cache; clearing the managed cache is a separate operator action.
 
-Registered aliases, filesystem links and transaction/recovery content are preserved for review and reported in the result's `Review` property. Registered aliases use their canonical app's replacement-validation flow. Pruning does not clean arbitrary nested files inside a current app directory; each app's generation handling owns that layout. Missing or invalid current app content remains visible to cache health and requires synchronization or investigation, not namespace pruning.
-
-Known retired variants are cleaned automatically after successful synchronization, both through Sync cmdlets and Windows PreInstall: `VisualCppRedist` becomes `VisualCRedist`, and `SevenZip` becomes `7Zip`. Only the matching architecture is removed, after revalidating its current replacement and confirming the old metadata identity. Other variants, unknown folders, links and recovery content remain untouched. Cleanup failure warns without failing the successfully synchronized app. The empty retired parent is removed after its last variant. See [automatic retired-cache cleanup logs](maintenance.md#automatic-retired-cache-cleanup-logs) for removal, preservation and failure records in Client.log and Runtime.log.
+Filesystem links and transaction/recovery content are preserved for review.
+Unmanaged top-level directories are candidates for explicit pruning. There is
+no automatic old-identity replacement or migration. Missing, outdated or invalid
+current cache content requires synchronization or investigation.
 
 The broader namespace prune above remains explicit USB maintenance. The apply operation uses the cache writer lock and honors confirmation. `-WhatIf` does not create a lock or log. Repository cache and target staging remain separate; app synchronization continues to replace superseded managed generations transactionally.
 

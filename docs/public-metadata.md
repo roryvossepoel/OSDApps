@@ -12,15 +12,15 @@ This file is a **catalog of OSDApps' vendor-native built-in integrations**, **no
 
 ## Stable schema and fields
 
-`SchemaVersion: 1` and `Apps[]` remain backward-compatible. OSDApps
-0.36.0 adds the optional `Aliases` field; consumers that already ignore unknown
-optional fields require no schema change.
+The current catalog uses `Apps[]`. This PR changes the OSDApps-owned field
+contract and is not backward-compatible with earlier consumers. There are no
+retired built-in cache aliases. Rebuild caches and update external consumers
+before adopting this branch; do not mix it with previously staged manifests.
 
 | Field | Viewer use |
 | --- | --- |
 | `Id`, `DisplayName`, `Vendor` | Stable key and human-readable label |
-| `Aliases` | Optional retired built-in cache identities that resolve to `Id`; never render them as additional apps or command names |
-| `Source`, `Acquisition`, `SyncPhase` | Distinguish built-in ownership and acquisition phase |
+| `Source`, `Acquisition`, `SyncPhase` | Distinguish ownership and acquisition phase. `FullWindowsPreparation` means the cache must be prepared before WinPE; `FullWindowsPreInstall` permits first-boot acquisition. |
 | `AddCommand`, `SyncCommand` | Show ready-to-copy PowerShell examples |
 | `Architectures`, `DefaultArchitecture` | Selectable architectures, not necessarily field-validated ones. DefaultArchitecture is null when an explicit selection is required. |
 | `ArchitectureRequired` | When true, the runtime Add/Sync commands require one explicit architecture. |
@@ -30,18 +30,13 @@ optional fields require no schema change.
 | `RepositoryAlternative` | Explain the organization-maintained alternative |
 | `IconUrl` | Repository-hosted SVG icon for the card; see the relevant attribution |
 
-Use `Id` as the card key rather than display name. Render optional fields only when available. Keep the public schema backward-compatible; bump `SchemaVersion` and coordinate consumers before any future breaking change.
-
-For example, `MicrosoftTeams` declares `Teams` as a retired cache alias so
-health tooling can recognize and remove an old `BuiltIn/Teams` folder after a
-valid canonical replacement exists. `MicrosoftTeams` remains the only card,
-manifest identity and public command suffix.
+Use `Id` as the card key rather than display name. Render optional fields only when available. Coordinate schema changes with external consumers; old field aliases are not provided.
 
 <a id="0320-cisco-webex"></a>
 
 ## Example: Cisco Webex
 
-The public catalog includes seven built-in apps. This `CiscoWebex` entry illustrates the schema:
+The public catalog includes 14 built-in integrations. This `CiscoWebex` entry illustrates the schema:
 
 ```json
 {

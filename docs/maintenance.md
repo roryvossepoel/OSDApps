@@ -87,9 +87,9 @@ These are the checks used by cache inventory and inherited by cache health. They
 | --- | --- |
 | Repository apps and scripts | `Package.zip` is hashed against the recorded SHA-256. Online desired-state health uses the selected catalog hash when available. This does not validate script behavior or installer success. |
 | Microsoft 365 Apps | Required paths, exactly one version directory matching the recorded build, a nonempty payload directory, and equal SHA-256 hashes for the shared and version-specific CABs. This is generation consistency, not a hash check of every Office data file. |
-| Microsoft Teams | Bootstrapper and resolved MSIX file presence. Optional Authenticode inspection covers the bootstrapper only. |
-| Chrome, Firefox, Webex and Zoom | Resolved MSI file presence. Optional Authenticode inspection covers the MSI and expected publisher. |
-| Adobe Acrobat Unified | Resolved ZIP file presence. The outer ZIP is not Authenticode-assessed by cache inspection. |
+| Microsoft Teams | Bootstrapper plus the recorded MSIX filename, SHA-256 and size. Optional Authenticode inspection covers the bootstrapper only. |
+| Chrome, Firefox, Webex and Zoom | Recorded MSI filename, identity, SHA-256 and size. Optional Authenticode inspection covers the MSI and expected publisher. |
+| Adobe Acrobat Unified | Recorded ZIP filename, identity, SHA-256 and size. The outer ZIP is not Authenticode-assessed by cache inspection. |
 | 7Zip | Recorded release identity/source, file size, SHA-256 and executable architecture. Its digest comes from release metadata; Authenticode is not assessed. |
 | Visual Studio Code | Recorded release identity/platform/source, file size and SHA-256. Optional Authenticode inspection adds the Microsoft publisher check. |
 | VisualCRedist | Recorded variant/version/source, file size and SHA-256. Optional Authenticode inspection adds the Microsoft publisher check. |
@@ -117,34 +117,19 @@ Get-OSDAppCache -VerifySignatures |
 
 Office configuration matching happens separately during staging and PreInstall: the requested acquisition settings are compared with the recorded payload profile. Online acquisition then makes the vendor-freshness decision. A cache can pass local health checks yet need new content for another language/product selection or a newer advertised build. See [Office compatibility and file-check limits](built-in-apps.md#office-cache-compatibility-with-deployment-configuration) and [built-in update detection](built-in-apps.md#how-update-freshness-is-determined).
 
-## Automatic retired-cache cleanup logs
+## Fresh-cache contract and diagnostics
 
-After successful VisualCRedist or 7Zip synchronization, cleanup of the known `VisualCppRedist` or `SevenZip` predecessor records its decisions in the existing log:
+This breaking filename-contract change requires rebuilding the cache. No retired
+cache identity is recognized or migrated. Transaction recovery protects an
+interrupted write of the current format; it is not a format migration.
 
-- Public Sync commands: `<cache>\Logs\Client.log`, component `CacheCleanup`.
-- Windows PreInstall: the deployment's `Runtime.log`, component `PreInstall`.
+Read `PayloadFileName`, `Sha256` and `Size` in the selected variant's
+`CacheInfo.json`. For a staged device, compare the exact manifest payload path
+and `PayloadSha256`; an unrelated file with the same extension is not a substitute.
+PreInstall may populate pending paths after validated acquisition.
 
-| Event | Meaning |
-| --- | --- |
-| `CacheRetiredVariantRemoved` | The matching old architecture directory was removed after validating the active replacement. |
-| `CacheRetiredVariantRetained` | A guard prevented removal, such as mismatched metadata, a linked path or recovery content. |
-| `CacheRetiredParentRemoved` | The retired app directory was empty after variant cleanup and was removed. |
-| `CacheRetiredParentRetained` | Other content remains, or the requested architecture has no old variant. Other architectures are not removed by this operation. |
-| `CacheRetiredCleanupFailed` | Inspection, replacement validation or removal raised an error. `Stage` and `Error` identify the failed operation. A removal error can leave partially removed content; this event does not promise rollback. |
-
-Records include `Id`, `RetiredId`, `Architecture`, `ActivePath`, the affected `Path`, `Reason` and `Stage`. A parent-retained record does not validate the remaining files. A missing retired app directory produces no cleanup event. These messages describe this specific automatic cleanup, not all unmanaged content or explicit namespace pruning; Teams retains its existing alias-cleanup events.
-
-Cleanup still runs under the writer lock and uses the same replacement, identity and recovery guards. Logging adds no cleanup pass, vendor query or download. A logger failure warns without changing the cleanup decision. Existing synchronization result objects remain unchanged.
-
-Diagnostics mode includes available runtime records through its normal runtime-log collection. To also include USB maintenance history, explicitly add the client log (which may contain multiple deployments):
-
-```powershell
-$report = & .\tools\Test-OSDAppsMaintenance.ps1 -Mode Diagnostics `
-    -AdditionalLogPath D:\OSDApps\Logs\Client.log `
-    -OutputPath C:\Temp\OSDApps-Diagnostics.zip
-```
-
-Use the actual USB drive letter and a new ZIP path in an existing directory. The normal diagnostic size limits and sharing precautions apply.
+Runtime results and logs remain the evidence for each individual app. Test-suite
+success alone does not prove a physical deployment or provisioning result.
 
 ## Check a published release
 

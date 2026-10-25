@@ -233,7 +233,6 @@ Runtime `LogPath` can be configured. The Viewer discovers known default location
 | `BuiltInRefreshStart` / `BuiltInRefreshComplete` | Refresh/acquisition attempt and successful readiness of content. |
 | `BuiltInRefreshFailed` | A refresh failed and the existing local fallback was selected after applicable checks. |
 | `AppRefreshFailed` / `RefreshCompletedWithErrors` | One built-in could not be prepared; its installer will be skipped while independent apps continue. |
-| `CacheAliasPruned` / `CacheAliasPruneFailed` | Guarded removal of a retired cache identity after canonical validation, or a nonfatal cleanup warning. |
 | `RefreshFailed` | PreInstall encountered a fatal phase/trust failure; Runner is not started. |
 | `PreInstallComplete` | The built-in preparation phase completed successfully or with explicitly reported per-app errors. |
 | `PackageIntegrityValidated` | A repository package passed the pre-execution integrity gate. |
