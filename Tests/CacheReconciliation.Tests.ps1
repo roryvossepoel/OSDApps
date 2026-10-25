@@ -7,11 +7,11 @@ Describe 'Transactional desired-state cache reconciliation' {
         function global:New-ReconciliationCatalog {
             param(
                 [Parameter(Mandatory)][string]$Root,
-                [Parameter(Mandatory)][object[]]$App
+                [Parameter(Mandatory)][object[]]$Definitions
             )
 
             $catalogApps = @()
-            foreach ($definition in $App) {
+            foreach ($definition in $Definitions) {
                 $id = [string]$definition.Id
                 $version = [string]$definition.Version
                 $packageRoot = Join-Path $Root "Apps\$id\$version\x64"
@@ -53,12 +53,12 @@ Describe 'Transactional desired-state cache reconciliation' {
     It 'replaces aliases, prunes obsolete and orphaned folders, and retains a valid pin' {
         InModuleScope OSDApps {
             $cache = Join-Path $TestDrive 'ReconciledCache'
-            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'OldRepository') -App @(
+            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'OldRepository') -Definitions @(
                 [pscustomobject]@{Id='OldApp';Version='1.0.0'},
                 [pscustomobject]@{Id='GoneApp';Version='1.0.0'},
                 [pscustomobject]@{Id='PinnedApp';Version='1.0.0'}
             )
-            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'NewRepository') -App @(
+            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'NewRepository') -Definitions @(
                 [pscustomobject]@{Id='NewApp';Version='2.0.0';Aliases=@('OldApp')}
             )
             Sync-OSDAppCache -CatalogPath $oldCatalog -CachePath $cache -Confirm:$false | Out-Null
@@ -87,11 +87,11 @@ Describe 'Transactional desired-state cache reconciliation' {
     It 'restores removed folders and the prior catalog when the commit fails' {
         InModuleScope OSDApps {
             $cache = Join-Path $TestDrive 'RollbackCache'
-            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'RollbackOld') -App @(
+            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'RollbackOld') -Definitions @(
                 [pscustomobject]@{Id='OldApp';Version='1.0.0'},
                 [pscustomobject]@{Id='GoneApp';Version='1.0.0'}
             )
-            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'RollbackNew') -App @(
+            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'RollbackNew') -Definitions @(
                 [pscustomobject]@{Id='NewApp';Version='2.0.0';Aliases=@('OldApp')}
             )
             Sync-OSDAppCache -CatalogPath $oldCatalog -CachePath $cache -Confirm:$false | Out-Null
@@ -118,10 +118,10 @@ Describe 'Transactional desired-state cache reconciliation' {
     It 'does not change files while previewing a prune operation' {
         InModuleScope OSDApps {
             $cache = Join-Path $TestDrive 'PreviewCache'
-            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'PreviewOld') -App @(
+            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'PreviewOld') -Definitions @(
                 [pscustomobject]@{Id='OldApp';Version='1.0.0'}
             )
-            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'PreviewNew') -App @(
+            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'PreviewNew') -Definitions @(
                 [pscustomobject]@{Id='NewApp';Version='2.0.0';Aliases=@('OldApp')}
             )
             Sync-OSDAppCache -CatalogPath $oldCatalog -CachePath $cache -Confirm:$false | Out-Null
@@ -139,10 +139,10 @@ Describe 'Transactional desired-state cache reconciliation' {
     It 'keeps merge-only files non-destructively while retiring ambiguous alias metadata' {
         InModuleScope OSDApps {
             $cache = Join-Path $TestDrive 'MergeOnlyRenameCache'
-            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'MergeOnlyRenameOld') -App @(
+            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'MergeOnlyRenameOld') -Definitions @(
                 [pscustomobject]@{Id='OldApp';Version='1.0.0'}
             )
-            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'MergeOnlyRenameNew') -App @(
+            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'MergeOnlyRenameNew') -Definitions @(
                 [pscustomobject]@{Id='NewApp';Version='2.0.0';Aliases=@('OldApp')}
             )
             Sync-OSDAppCache -CatalogPath $oldCatalog -CachePath $cache -Confirm:$false | Out-Null
@@ -166,10 +166,10 @@ Describe 'Transactional desired-state cache reconciliation' {
                 Should -Throw '*complete catalog synchronization*'
 
             $cache = Join-Path $TestDrive 'InvalidPinCache'
-            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'InvalidPinOld') -App @(
+            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'InvalidPinOld') -Definitions @(
                 [pscustomobject]@{Id='PinnedApp';Version='1.0.0'}
             )
-            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'InvalidPinNew') -App @(
+            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'InvalidPinNew') -Definitions @(
                 [pscustomobject]@{Id='DesiredApp';Version='2.0.0'}
             )
             Sync-OSDAppCache -CatalogPath $oldCatalog -CachePath $cache -Confirm:$false | Out-Null
@@ -184,7 +184,7 @@ Describe 'Transactional desired-state cache reconciliation' {
 
     It 'rejects alias and unknown pins before creating cache content' {
         InModuleScope OSDApps {
-            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'RejectedPinRepository') -App @(
+            $desiredCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'RejectedPinRepository') -Definitions @(
                 [pscustomobject]@{Id='NewApp';Version='2.0.0';Aliases=@('OldApp')}
             )
             $aliasCache = Join-Path $TestDrive 'RejectedAliasPinCache'
@@ -215,7 +215,7 @@ Describe 'Transactional desired-state cache reconciliation' {
     It 'can reconcile to an intentionally empty desired repository' {
         InModuleScope OSDApps {
             $cache = Join-Path $TestDrive 'EmptyDesiredCache'
-            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'EmptyDesiredOld') -App @(
+            $oldCatalog = New-ReconciliationCatalog -Root (Join-Path $TestDrive 'EmptyDesiredOld') -Definitions @(
                 [pscustomobject]@{Id='RetiredApp';Version='1.0.0'}
             )
             $emptyRoot = Join-Path $TestDrive 'EmptyDesiredRepository'
