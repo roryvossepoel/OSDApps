@@ -104,7 +104,7 @@ jobs:
               }
               if ($definitions.Count -ne $expected.Count) { throw 'Built-in metadata count mismatch.' }
               foreach ($id in $expected.Keys) {
-                  $info = Get-OSDAppUIDisplayInfo -Application ([pscustomobject]@{Id=$id;Source='BuiltIn'}) -BuiltInMetadata $definitions
+                  $info = Get-OSDAppUIDisplayInfo -App ([pscustomobject]@{Id=$id;Source='BuiltIn'}) -BuiltInMetadata $definitions
                   if ($info.Vendor -ne $expected[$id] -or -not $info.DisplayName -or ($info.DisplayName -eq $id -and $id -ne '7Zip')) { throw "Incorrect metadata: $id" }
               }
               Write-Host 'Windows PowerShell 5.1 built-in metadata smoke checks passed.'
