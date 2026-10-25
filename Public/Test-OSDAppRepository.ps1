@@ -108,10 +108,10 @@ function Test-OSDAppRepository {
                 -not [string]::IsNullOrWhiteSpace([string]$manifest.PackageType)) {
                 [string]$manifest.PackageType
             }
-            else { 'Application' }
-            $packageTypeValid = $packageType -in @('Application','Script')
+            else { 'App' }
+            $packageTypeValid = $packageType -in @('App','Script')
             if ($packageTypeValid) {
-                $packageType = if ($packageType -ieq 'Script') { 'Script' } else { 'Application' }
+                $packageType = if ($packageType -ieq 'Script') { 'Script' } else { 'App' }
             }
 
             [pscustomobject]@{

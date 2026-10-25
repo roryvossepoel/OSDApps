@@ -329,9 +329,9 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
             (Get-OSDAppUIPackageType -Application ([pscustomobject]@{Source='Repository';PackageType='Script'})) |
                 Should -Be 'Script'
             (Get-OSDAppUIPackageType -Application ([pscustomobject]@{Source='Repository'})) |
-                Should -Be 'Application'
+                Should -Be 'App'
             (Get-OSDAppUIPackageType -Application ([pscustomobject]@{Source='BuiltIn'})) |
-                Should -Be 'Application'
+                Should -Be 'App'
         }
     }
 
@@ -382,7 +382,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$entry'
         $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$app'
         $source | Should -Match "cacheList.Columns.Add\('Vendor'"
-        $source | Should -Not -Match "Columns.Add\('Application'"
+        $source | Should -Not -Match "Columns.Add\('App'"
         $source | Should -Match "stagedList.Columns.Add\('Display Name'"
         $source | Should -Match "catalogList.Columns.Add\('Display Name'"
         $source | Should -Match "cacheList.Columns.Add\('Display Name'"

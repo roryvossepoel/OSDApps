@@ -293,7 +293,7 @@ function Test-OSDAppDeployment {
         elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'CompanyPortalAppxBundle') {
             $prefix = 'BuiltIn\MicrosoftCompanyPortal\' + [string]$app.Architecture + '\'
             $definitionValid = ($id -eq 'MicrosoftCompanyPortal' -and
-                [string]$app.PackageType -eq 'Application' -and
+                [string]$app.PackageType -eq 'App' -and
                 [string]$app.Architecture -in @('x64','arm64') -and
                 [string]$app.Package -eq ($prefix + 'Bundle.appxbundle') -and
                 [string]$app.License -eq ($prefix + 'License.xml') -and

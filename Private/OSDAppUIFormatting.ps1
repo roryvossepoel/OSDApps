@@ -105,7 +105,7 @@ function Get-OSDAppUIPackageType {
     param([Parameter(Mandatory)]$Application)
 
     if ([string]$Application.PackageType -eq 'Script') { return 'Script' }
-    return 'Application'
+    return 'App'
 }
 
 function Get-OSDAppUICachedVersion {

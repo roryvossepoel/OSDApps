@@ -11,7 +11,7 @@ function Add-OSDAppPackage {
         [ValidateSet('x64','arm64','any')]
         [string]$Architecture = 'x64',
 
-        [ValidateSet('Application','Script')]
+        [ValidateSet('App','Script')]
         [string]$PackageType,
 
         [int[]]$SuccessCodes = @(0,3010),
@@ -34,7 +34,7 @@ function Add-OSDAppPackage {
     $catalog = Get-OSDAppRepositoryManifest -RepositoryPath $RepositoryPath
     $existingApplication = @($catalog.Applications | Where-Object { $_.Id -eq $Id } | Select-Object -First 1)
     if ($PSBoundParameters.ContainsKey('PackageType')) {
-        $PackageType = if ($PackageType -ieq 'Script') { 'Script' } else { 'Application' }
+        $PackageType = if ($PackageType -ieq 'Script') { 'Script' } else { 'App' }
     }
     elseif (Test-Path -LiteralPath $targetManifest -PathType Leaf) {
         $existingPackageManifest = Get-OSDAppManifest -Path $targetManifest
@@ -43,15 +43,15 @@ function Add-OSDAppPackage {
             [string]$existingPackageManifest.PackageType
         }
         else {
-            'Application'
+            'App'
         }
-        if ($existingPackageType -notin @('Application','Script')) {
+        if ($existingPackageType -notin @('App','Script')) {
             throw "Existing package '$Id' has unsupported PackageType '$existingPackageType'."
         }
-        $PackageType = if ($existingPackageType -ieq 'Script') { 'Script' } else { 'Application' }
+        $PackageType = if ($existingPackageType -ieq 'Script') { 'Script' } else { 'App' }
     }
     else {
-        $PackageType = 'Application'
+        $PackageType = 'App'
     }
     $effectiveAliases = if ($PSBoundParameters.ContainsKey('Alias')) {
         @($Alias | ForEach-Object { ([string]$_).Trim() } | Select-Object -Unique)

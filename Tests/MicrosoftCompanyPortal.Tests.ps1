@@ -7,7 +7,7 @@ Describe 'Microsoft Company Portal built-in staging' {
     It 'exposes Company Portal as a built-in application without an online catalog' {
         $app = Get-OSDApp -Name MicrosoftCompanyPortal -Offline
         $app.Id | Should -Be 'MicrosoftCompanyPortal'
-        $app.PackageType | Should -Be 'Application'
+        $app.PackageType | Should -Be 'App'
         $app.Source | Should -Be 'BuiltIn'
     }
 

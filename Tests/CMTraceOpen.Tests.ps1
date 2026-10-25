@@ -8,7 +8,7 @@ Describe 'CMTrace Open built-in staging' {
         $app = Get-OSDApp -Name CMTraceOpen -Offline
         $app.Id | Should -Be 'CMTraceOpen'
         $app.Source | Should -Be 'BuiltIn'
-        $app.PackageType | Should -Be 'Application'
+        $app.PackageType | Should -Be 'App'
     }
 
     It 'fails closed when cached MSI bytes do not match release SHA-256' {

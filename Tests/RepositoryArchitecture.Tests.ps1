@@ -22,7 +22,7 @@ Describe 'Repository target architecture' {
                     Set-Content -LiteralPath $archive -Value "payload-$id-$variant" -Encoding ASCII
                     @{
                         SchemaVersion=1; Id=$id; DisplayName=$id; Version='1.0.0'; Architecture=$variant
-                        PackageType=$(if ($id -eq 'NeutralScript') { 'Script' } else { 'Application' }); SuccessCodes=@(0)
+                        PackageType=$(if ($id -eq 'NeutralScript') { 'Script' } else { 'App' }); SuccessCodes=@(0)
                         Archive=@{FileName='Package.zip';Sha256=(Get-FileHash $archive -Algorithm SHA256).Hash}
                     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $packageRoot 'manifest.json') -Encoding UTF8
                     $references += @{Architecture=$variant;Manifest="$relative/manifest.json"}

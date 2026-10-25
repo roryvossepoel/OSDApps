@@ -78,7 +78,7 @@ Each deployable package keeps its metadata directly beside `Package.zip`.
   "Vendor": "Example Software",
   "Version": "1.0.0",
   "Architecture": "x64",
-  "PackageType": "Application",
+  "PackageType": "App",
   "SuccessCodes": [
     0,
     3010
@@ -104,7 +104,7 @@ metadata. The existing cache archive is reused when its SHA-256 still matches.
 Previously staged `DeviceManifest.json` files are not silently rewritten.
 
 `PackageType` is optional classification metadata with two supported values:
-`Application` and `Script`. When it is absent, OSDApps uses `Application` for
+`App` and `Script`. When it is absent, OSDApps uses `App` for
 backward compatibility. Both types use the same `Package/Install.ps1` entry
 point, SHA-256 checks, cache and staging paths, ordered SetupComplete queue,
 timeouts, success codes and failure handling. The value does not enable a
@@ -112,7 +112,7 @@ different or less trusted execution path.
 
 When an existing package variant is republished, omitting `-PackageType`
 preserves its current classification. A newly published package defaults to
-`Application`.
+`App`.
 
 Use `Script` for machine-context configuration, debloat or remediation logic
 that must run once during SetupComplete. Such scripts run as SYSTEM, must not
@@ -288,7 +288,7 @@ Add-OSDAppPackage `
     -Vendor 'Example Software' `
     -Version 1.0.0 `
     -Architecture x64 `
-    -PackageType Application `
+    -PackageType App `
     -PackagePath C:\OSDApps\Build\ExampleApp\Package.zip `
     -RepositoryPath C:\OSDApps\Repository
 ```

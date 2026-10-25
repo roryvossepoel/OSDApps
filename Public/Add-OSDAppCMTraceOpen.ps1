@@ -66,7 +66,7 @@ function Add-OSDAppCMTraceOpen {
     }
     $app = [pscustomobject]@{
         Id='CMTraceOpen'; DisplayName='CMTrace Open'; Source='BuiltIn'
-        PackageType='Application'; Type='VendorMsi'; Vendor='CMTrace Open'
+        PackageType='App'; Type='VendorMsi'; Vendor='CMTrace Open'
         Version=[string]$info.Version; Architecture=$Architecture
         Package=(Join-Path $relativeRoot $vendorFileName)
         ExpectedSha256=[string]$info.Sha256
@@ -82,6 +82,6 @@ function Add-OSDAppCMTraceOpen {
     [pscustomobject]@{
         PSTypeName='OSDApps.StagedApp'
         Name='CMTraceOpen'; Version=[string]$info.Version; Source='BuiltIn'
-        PackageType='Application'; WindowsPath=$target; StagedPath=$destination
+        PackageType='App'; WindowsPath=$target; StagedPath=$destination
     }
 }

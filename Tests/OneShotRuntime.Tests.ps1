@@ -15,7 +15,7 @@ Describe 'One-shot fault-tolerant runtime' {
                 [Parameter(Mandatory)][string]$Stage,
                 [Parameter(Mandatory)][string]$Id,
                 [Parameter(Mandatory)][string]$InstallScript,
-                [ValidateSet('Application','Script')][string]$PackageType = 'Application'
+                [ValidateSet('App','Script')][string]$PackageType = 'App'
             )
 
             $sourceRoot = Join-Path (Split-Path $Stage -Parent) ("Source-{0}-{1}" -f $Id, [guid]::NewGuid().ToString('N'))
@@ -106,7 +106,7 @@ Describe 'One-shot fault-tolerant runtime' {
         $result.Applications[0].ExitCode | Should -Be 42
         $result.Applications[0].FailureType | Should -Be 'InstallerFailed'
         $result.Applications[0].PackageType | Should -Be 'Script'
-        $result.Applications[1].PackageType | Should -Be 'Application'
+        $result.Applications[1].PackageType | Should -Be 'App'
         (Get-Content -LiteralPath $fixture.LogPath -Raw) | Should -Match '\[InstallCompletedWithErrors\]'
     }
 

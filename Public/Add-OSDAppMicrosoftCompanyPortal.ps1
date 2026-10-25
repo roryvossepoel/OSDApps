@@ -56,7 +56,7 @@ function Add-OSDAppMicrosoftCompanyPortal {
     $depPaths = @($fileHashes | Where-Object { $_.Path -match '\\Dependencies\\' } | ForEach-Object { [string]$_.Path })
     $app = [pscustomobject]@{
         Id='MicrosoftCompanyPortal'; DisplayName='Microsoft Company Portal'
-        Source='BuiltIn'; PackageType='Application'; Type='CompanyPortalAppxBundle'
+        Source='BuiltIn'; PackageType='App'; Type='CompanyPortalAppxBundle'
         Version=[string]$info.Version; Architecture=$Architecture
         Package=(Join-Path $relativeRoot 'Bundle.appxbundle')
         License=(Join-Path $relativeRoot 'License.xml')
@@ -69,7 +69,7 @@ function Add-OSDAppMicrosoftCompanyPortal {
     Add-OSDAppSetupComplete -WindowsPath $target -StagedRelativePath 'Windows\Temp\OSDApps' -Confirm:$false | Out-Null
 
     [pscustomobject]@{
-        Name='MicrosoftCompanyPortal'; Source='BuiltIn'; PackageType='Application'
+        Name='MicrosoftCompanyPortal'; Source='BuiltIn'; PackageType='App'
         Version=[string]$info.Version; Architecture=$Architecture
         WindowsPath=$target; StagedPath=$destination
     }

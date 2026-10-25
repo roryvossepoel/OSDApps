@@ -27,7 +27,7 @@ Describe 'Repository authoring and validation' {
         $result[0].HashValid | Should -BeTrue
         $result[0].PackageValid | Should -BeTrue
         $result[0].SuccessCodesValid | Should -BeTrue
-        $result[0].PackageType | Should -Be 'Application'
+        $result[0].PackageType | Should -Be 'App'
         $result[0].PackageTypeValid | Should -BeTrue
         $result[0].ArchiveDefinitionValid | Should -BeTrue
         $result[0].Orphaned | Should -BeFalse

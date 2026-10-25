@@ -251,7 +251,7 @@ No. SetupComplete is a one-shot Windows Setup phase and OSDApps does not create 
 | File | Role |
 | --- | --- |
 | `catalog.json` | Online repository index |
-| `Apps/<Id>/<Version>/<Architecture>/manifest.json` | Per-package metadata, including archive hash, optional Vendor and optional `PackageType` (`Application` or `Script`) |
+| `Apps/<Id>/<Version>/<Architecture>/manifest.json` | Per-package metadata, including archive hash, optional Vendor and optional `PackageType` (`App` or `Script`) |
 | `CacheCatalog.json` | Local repository-cache metadata snapshot |
 | `CacheInfo.json` | Per-built-in cache metadata |
 | `DeviceManifest.json` | The selected Windows target's ordered application queue and runtime configuration |

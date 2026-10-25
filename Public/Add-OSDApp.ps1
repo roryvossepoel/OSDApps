@@ -142,7 +142,7 @@ function Add-OSDApp {
             [pscustomobject]@{
                 PSTypeName='OSDApps.StagedApp'
                 Name=$app
-                PackageType=if($stagedEntry.Count -gt 0 -and $stagedEntry[0].PackageType){[string]$stagedEntry[0].PackageType}else{'Application'}
+                PackageType=if($stagedEntry.Count -gt 0 -and $stagedEntry[0].PackageType){[string]$stagedEntry[0].PackageType}else{'App'}
                 CachePath=$cachePath
                 WindowsPath=$resolvedWindowsPath
                 StagedPath=(Join-Path $resolvedWindowsPath $stagedRelativePath)

@@ -128,12 +128,12 @@ function Get-OSDAppCatalogPackages {
                 [string]$packageManifest.PackageType
             }
             else {
-                'Application'
+                'App'
             }
-            if ($packageType -notin @('Application','Script')) {
-                throw "Package '$($application.Id)' has unsupported PackageType '$packageType'. Expected Application or Script."
+            if ($packageType -notin @('App','Script')) {
+                throw "Package '$($application.Id)' has unsupported PackageType '$packageType'. Expected App or Script."
             }
-            $packageType = if ($packageType -ieq 'Script') { 'Script' } else { 'Application' }
+            $packageType = if ($packageType -ieq 'Script') { 'Script' } else { 'App' }
 
             if (-not $packageManifest.Archive -or
                 [string]$packageManifest.Archive.Sha256 -notmatch '^[A-Fa-f0-9]{64}$') {
