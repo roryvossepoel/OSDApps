@@ -68,15 +68,15 @@ try {
     foreach ($result in @($pre,$runner)) {
         if ([string](Get-TestField $result 'DeploymentId') -ne $deploymentId -or
             [string](Get-TestField $result 'Status') -ne 'Succeeded') { throw 'A phase failed or belongs to a different deployment.' }
-        $entries = @(Get-TestField $result 'Applications')
+        $entries = @(Get-TestField $result 'Apps')
         if ($entries.Count -ne 1 -or [string](Get-TestField $entries[0] 'Id') -ne '7Zip' -or
             [string](Get-TestField $entries[0] 'Status') -ne 'Succeeded') { throw 'Expected one successful 7Zip result in each phase.' }
     }
-    $installed = @(Get-TestField $runner 'Applications')[0]
-    $acquired = @(Get-TestField $pre 'Applications')[0]
+    $installed = @(Get-TestField $runner 'Apps')[0]
+    $acquired = @(Get-TestField $pre 'Apps')[0]
     $code = Get-TestField $installed 'ExitCode'
     if ($null -eq $code -or [int]$code -notin @(0,3010)) { throw '7Zip installer did not report success.' }
-    foreach ($counter in @('FailedApplicationCount','SkippedApplicationCount')) {
+    foreach ($counter in @('FailedAppCount','SkippedAppCount')) {
         $value = Get-TestField $runner $counter
         if ($null -eq $value -or [int]$value -ne 0) { throw "Unexpected result counter: $counter" }
     }

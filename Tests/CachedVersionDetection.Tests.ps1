@@ -1,3 +1,4 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Built-in cache version detection (read-only)' {
     BeforeAll {
         $script:root = Split-Path -Path $PSScriptRoot -Parent
@@ -9,7 +10,7 @@ Describe 'Built-in cache version detection (read-only)' {
             Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
             $cache = Join-Path $TestDrive 'Adobe'
             New-Item -ItemType Directory -Path $cache -Force | Out-Null
-            $path = Join-Path $cache 'Package.zip'
+            $path = Join-Path $cache 'Acrobat_DC_Web_x64_WWMUI.zip'
             $archive = [System.IO.Compression.ZipFile]::Open($path,[System.IO.Compression.ZipArchiveMode]::Create)
             try {
                 $entry = $archive.CreateEntry('Adobe Acrobat/setup.ini')
@@ -26,7 +27,7 @@ Describe 'Built-in cache version detection (read-only)' {
             finally { $archive.Dispose() }
 
             $hashBefore = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
-            $result = Get-OSDAppCachedPackageVersion -Id AdobeAcrobatUnified -CacheEntryPath $cache
+            $result = Get-OSDAppCachedPackageVersion -Id AdobeAcrobatUnified -CacheEntryPath $cache -PayloadPath $path
             $result.Version | Should -Be '26.002.21931'
             $result.VersionSource | Should -Be 'AdobePatchFileName'
             (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash | Should -Be $hashBefore
@@ -39,7 +40,7 @@ Describe 'Built-in cache version detection (read-only)' {
             Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
             $cache = Join-Path $TestDrive 'AdobeWithoutPatch'
             New-Item -ItemType Directory -Path $cache -Force | Out-Null
-            $path = Join-Path $cache 'Package.zip'
+            $path = Join-Path $cache 'Acrobat_DC_Web_x64_WWMUI.zip'
             $archive = [System.IO.Compression.ZipFile]::Open($path,[System.IO.Compression.ZipArchiveMode]::Create)
             try {
                 $entry = $archive.CreateEntry('Adobe Acrobat/setup.ini')
@@ -48,7 +49,7 @@ Describe 'Built-in cache version detection (read-only)' {
                 finally { $writer.Dispose() }
             }
             finally { $archive.Dispose() }
-            $result = Get-OSDAppCachedPackageVersion -Id AdobeAcrobatUnified -CacheEntryPath $cache
+            $result = Get-OSDAppCachedPackageVersion -Id AdobeAcrobatUnified -CacheEntryPath $cache -PayloadPath $path
             $result.Version | Should -BeNullOrEmpty
             $result.VersionSource | Should -BeNullOrEmpty
         }
@@ -58,10 +59,10 @@ Describe 'Built-in cache version detection (read-only)' {
         InModuleScope OSDApps {
             $cache = Join-Path $TestDrive 'Msi'
             New-Item -ItemType Directory -Path $cache -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $cache 'Package.msi') -Value 'test sentinel' -Encoding ASCII
+            Set-Content -LiteralPath (Join-Path $cache 'vendor-installer.msi') -Value 'test sentinel' -Encoding ASCII
             Mock Get-OSDAppMsiProductVersion { '155.0.999.0' }
             foreach ($id in @('GoogleChromeEnterprise','CiscoWebex','ZoomWorkplace','MozillaFirefoxEnterprise')) {
-                $version = Get-OSDAppCachedPackageVersion -Id $id -CacheEntryPath $cache
+                $version = Get-OSDAppCachedPackageVersion -Id $id -CacheEntryPath $cache -PayloadPath (Join-Path $cache 'vendor-installer.msi')
                 $version.Version | Should -Be '155.0.999.0'
                 $version.VersionSource | Should -Be 'MsiProductVersion'
             }
@@ -74,10 +75,12 @@ Describe 'Built-in cache version detection (read-only)' {
             $cache = Join-Path $TestDrive 'Usb\OSDApps'
             $builtin = Join-Path $cache 'BuiltIn\GoogleChromeEnterprise\x64'
             New-Item -ItemType Directory -Path $builtin -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $builtin 'Package.msi') -Value 'original' -Encoding ASCII
+            Set-Content -LiteralPath (Join-Path $builtin 'vendor-installer.msi') -Value 'original' -Encoding ASCII
             $infoPath = Join-Path $builtin 'CacheInfo.json'
             '{"Id":"GoogleChromeEnterprise","Version":"123.4.5","Architecture":"x64","VersionSource":"MsiProductVersion"}' |
                 Set-Content -LiteralPath $infoPath -Encoding UTF8
+            $record = Get-Content -LiteralPath $infoPath -Raw | ConvertFrom-Json
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $builtin 'vendor-installer.msi') -Id $record.Id -Metadata @{Version=$record.Version;VersionSource=$record.VersionSource}
             $before = (Get-FileHash -LiteralPath $infoPath -Algorithm SHA256).Hash
             $script:FixtureCachePath = $cache
             Mock Get-OSDAppCachePath { $script:FixtureCachePath }
@@ -93,15 +96,17 @@ Describe 'Built-in cache version detection (read-only)' {
         }
     }
 
-    It 'can inspect a legacy Current-only cache from Windows without writing metadata' {
+    It 'can inspect a recorded Current-only payload from Windows without writing metadata' {
         InModuleScope OSDApps {
-            $cache = Join-Path $TestDrive 'UsbLegacy\OSDApps'
+            $cache = Join-Path $TestDrive 'UsbCurrent\OSDApps'
             $builtin = Join-Path $cache 'BuiltIn\CiscoWebex\x64'
             New-Item -ItemType Directory -Path $builtin -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $builtin 'Package.msi') -Value 'original' -Encoding ASCII
+            Set-Content -LiteralPath (Join-Path $builtin 'vendor-installer.msi') -Value 'original' -Encoding ASCII
             $infoPath = Join-Path $builtin 'CacheInfo.json'
             '{"Id":"CiscoWebex","Version":"Current","Architecture":"x64"}' |
                 Set-Content -LiteralPath $infoPath -Encoding UTF8
+            $record = Get-Content -LiteralPath $infoPath -Raw | ConvertFrom-Json
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $builtin 'vendor-installer.msi') -Id $record.Id -Metadata @{Version=$record.Version;VersionSource=$record.VersionSource}
             $before = (Get-FileHash -LiteralPath $infoPath -Algorithm SHA256).Hash
 
             $script:FixtureCachePath = $cache
@@ -180,15 +185,16 @@ Describe 'Built-in cache version detection (read-only)' {
         }
     }
 
-    It 'trims whitespace from old built-in cache metadata without modifying USB files' {
+    It 'trims whitespace from built-in cache metadata without modifying USB files' {
         InModuleScope OSDApps {
             $cache = Join-Path $TestDrive 'WhitespaceUsb\OSDApps'
             $entry = Join-Path $cache 'BuiltIn\CiscoWebex\x64'
             New-Item -ItemType Directory -Path $entry -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $entry 'Package.msi') -Value 'mock' -Encoding ASCII
+            Set-Content -LiteralPath (Join-Path $entry 'vendor-installer.msi') -Value 'mock' -Encoding ASCII
             $infoPath = Join-Path $entry 'CacheInfo.json'
             '{"Id":"CiscoWebex","Version":" 46.9.0.35800 ","Architecture":"x64","VersionSource":"MsiProductVersion"}' |
                 Set-Content -LiteralPath $infoPath -Encoding UTF8
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $entry 'vendor-installer.msi') -Id CiscoWebex -Metadata @{Version=' 46.9.0.35800 ';VersionSource='MsiProductVersion'}
             $hash = (Get-FileHash -LiteralPath $infoPath -Algorithm SHA256).Hash
             $script:FixtureCachePath = $cache
             Mock Get-OSDAppCachePath { $script:FixtureCachePath }
@@ -207,8 +213,9 @@ Describe 'Built-in cache version detection (read-only)' {
         InModuleScope OSDApps {
             $entry = Join-Path $TestDrive 'MsiSpaces'
             New-Item -ItemType Directory -Path $entry -Force | Out-Null
+            Set-Content -LiteralPath (Join-Path $entry 'vendor-installer.msi') 'fixture'
             Mock Get-OSDAppMsiProductVersion { ' 155.0.8059.40 ' }
-            $result = Get-OSDAppCachedPackageVersion -Id GoogleChromeEnterprise -CacheEntryPath $entry
+            $result = Get-OSDAppCachedPackageVersion -Id GoogleChromeEnterprise -CacheEntryPath $entry -PayloadPath (Join-Path $entry 'vendor-installer.msi')
             $result.Version | Should -Be '155.0.8059.40'
         }
     }

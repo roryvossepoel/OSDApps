@@ -2,7 +2,7 @@
 
 [Examples](README.md) · [Next: online WinPE](WinPE-Online.md) · [Next: offline WinPE](WinPE-Offline.md)
 
-**Run on a full Windows preparation machine, not in WinPE.** This example saves the module to an existing USB volume and optionally refreshes application content. It does not stage apps against the preparation machine's Windows drive, format the volume or create bootable OSDCloud media. The optional repository reconciliation section can remove stale repository cache folders only after a separate `-Prune` confirmation.
+**Run on a full Windows preparation machine, not in WinPE.** This example saves the module to an existing USB volume and optionally refreshes app content. It does not stage apps against the preparation machine's Windows drive, format the volume or create bootable OSDCloud media. The optional repository reconciliation section can remove stale repository cache folders only after a separate `-Prune` confirmation.
 
 Use Windows PowerShell 5.1 with PowerShellGet available and internet access. Attach exactly one intended cache volume labeled `OSDCloud`; prepare/label the media separately before running this example. There must be enough free space for the module and selected payloads, including any existing content.
 
@@ -81,7 +81,7 @@ Skip this section for built-ins-only deployment. It requires an already publishe
 ```powershell
 # Full Windows, same session. Enter values for your own published repository.
 $CatalogUri = Read-Host 'Enter the HTTPS URL of your repository catalog.json'
-$RepoAppId = Read-Host 'Enter an application Id present in that repository'
+$RepoAppId = Read-Host 'Enter an app Id present in that repository'
 
 Set-OSDAppConfiguration -CatalogUri $CatalogUri
 Sync-OSDAppRepository -Name $RepoAppId -Architecture x64

@@ -27,6 +27,15 @@ function Test-OSDAppBuiltInCacheGeneration {
         throw "Built-in cache generation '$Id' has inconsistent cache metadata."
     }
 
+    if ($Id -ne 'Microsoft365Apps') {
+        $payload = Resolve-OSDAppBuiltInPayloadPath -Root $Root
+        if ([string]$cacheInfo.Sha256 -notmatch '^[a-fA-F0-9]{64}$' -or
+            [long]$cacheInfo.Size -le 0 -or (Get-Item -LiteralPath $payload -ErrorAction Stop).Length -ne [long]$cacheInfo.Size -or
+            (Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash -ne [string]$cacheInfo.Sha256) {
+            throw [IO.InvalidDataException]::new("Built-in cache generation '$Id' failed payload SHA-256 or size validation.")
+        }
+    }
+
     foreach ($relativePath in $RequiredFile) {
         $path = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root $relativePath))
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {

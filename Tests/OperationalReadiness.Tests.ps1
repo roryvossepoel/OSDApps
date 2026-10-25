@@ -1,9 +1,11 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Operational readiness and deployment results' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Path $PSScriptRoot -Parent
         $script:manifestPath = Join-Path $script:moduleRoot 'OSDApps.psd1'
         Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
         Import-Module $script:manifestPath -Force
+        . (Join-Path $script:moduleRoot 'Runtime/OSDAppPayloadFile.ps1')
 
         function New-OperationalDeploymentFixture {
             param(
@@ -50,7 +52,8 @@ Describe 'Operational readiness and deployment results' {
                         Id = 'MicrosoftTeams'; DisplayName = 'Microsoft Teams'; Source = 'BuiltIn'
                         Type = 'MicrosoftTeamsBootstrapper'; Architecture = 'x64'
                         Setup = 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe'
-                        OfflinePackage = 'BuiltIn\MicrosoftTeams\teams.msix'
+                        OfflinePackage = $null
+                        PayloadRoot = 'BuiltIn\MicrosoftTeams'; PayloadExtension = '.msix'; PayloadSha256 = $null
                     }
                 )
             } | ConvertTo-Json -Depth 20 |
@@ -73,8 +76,14 @@ Describe 'Operational readiness and deployment results' {
                 $teams = Join-Path $stage 'BuiltIn\MicrosoftTeams'
                 New-Item -ItemType Directory -Path $teams -Force | Out-Null
                 Set-Content -LiteralPath (Join-Path $teams 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding ASCII
-                Set-Content -LiteralPath (Join-Path $teams 'teams.msix') -Value 'msix' -Encoding ASCII
+                Set-Content -LiteralPath (Join-Path $teams 'MSTeams-x64.msix') -Value 'msix' -Encoding ASCII
+                Set-OSDAppsTestPayloadInfo -Path (Join-Path $teams 'MSTeams-x64.msix') -Id MicrosoftTeams
             }
+
+            $manifestPath = Join-Path $stage 'DeviceManifest.json'
+            $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+            Set-OSDAppManifestPayload -App $manifest.Apps[1] -StagedPath $stage -AllowPending
+            $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
             [pscustomobject]@{
                 Root = $Root
@@ -93,8 +102,8 @@ Describe 'Operational readiness and deployment results' {
         $result.OfflineReady | Should -BeFalse
         $result.NetworkRequired | Should -BeTrue
         $result.DeploymentId | Should -Be $fixture.DeploymentId
-        @($result.Applications).Count | Should -Be 2
-        ($result.Applications | Where-Object Id -eq 'MicrosoftTeams').PayloadReady | Should -BeFalse
+        @($result.Apps).Count | Should -Be 2
+        ($result.Apps | Where-Object Id -eq 'MicrosoftTeams').PayloadReady | Should -BeFalse
     }
 
     It 'accepts only a Boolean when optional PreventSleep is present' -TestCases @(
@@ -148,11 +157,11 @@ Describe 'Operational readiness and deployment results' {
 
         $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
         $result.Valid | Should -BeFalse
-        ($result.Checks | Where-Object { $_.Name -eq 'ApplicationDefinition' -and $_.ApplicationId -eq 'ExampleApp' }).Passed |
+        ($result.Checks | Where-Object { $_.Name -eq 'AppDefinition' -and $_.AppId -eq 'ExampleApp' }).Passed |
             Should -BeFalse
     }
 
-    It 'accepts exactly one <Source> application on Windows PowerShell and PowerShell' -TestCases @(
+    It 'accepts exactly one <Source> app on Windows PowerShell and PowerShell' -TestCases @(
         @{ Source = 'Repository' }
         @{ Source = 'BuiltIn' }
     ) {
@@ -166,8 +175,8 @@ Describe 'Operational readiness and deployment results' {
         $result = Test-OSDAppDeployment -WindowsPath $fixture.Root -RequireOfflineReady -ThrowOnFailure
         $result.Valid | Should -BeTrue
         $result.OfflineReady | Should -BeTrue
-        $result.ApplicationCount | Should -Be 1
-        ($result.Checks | Where-Object Name -eq 'ApplicationQueue').Passed | Should -BeTrue
+        $result.AppCount | Should -Be 1
+        ($result.Checks | Where-Object Name -eq 'AppQueue').Passed | Should -BeTrue
     }
 
     It 'rejects an empty or invalid queue: <Case>' -TestCases @(
@@ -188,8 +197,8 @@ Describe 'Operational readiness and deployment results' {
 
         $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
         $result.Valid | Should -BeFalse
-        ($result.Checks | Where-Object Name -eq 'ApplicationQueue').Passed | Should -BeFalse
-        { Test-OSDAppDeployment -WindowsPath $fixture.Root -ThrowOnFailure } | Should -Throw '*Application queue*'
+        ($result.Checks | Where-Object Name -eq 'AppQueue').Passed | Should -BeFalse
+        { Test-OSDAppDeployment -WindowsPath $fixture.Root -ThrowOnFailure } | Should -Throw '*App queue*'
     }
 
     It 'rejects a staged runtime that differs from the loaded module' {
@@ -203,7 +212,7 @@ Describe 'Operational readiness and deployment results' {
 
     It 'reads a valid machine-readable deployment result' {
         $path = Join-Path $TestDrive 'Latest.json'
-        @{ SchemaVersion='1.0'; DeploymentId='test'; Status='Succeeded'; Applications=@() } |
+        @{ SchemaVersion='1.0'; DeploymentId='test'; Status='Succeeded'; Apps=@() } |
             ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $path -Encoding UTF8
 
         $result = Get-OSDAppDeploymentResult -Path $path
@@ -271,7 +280,7 @@ Describe 'Operational readiness and deployment results' {
         $result = Get-OSDAppDeploymentResult -Path $resultPath
         $result.Status | Should -Be 'Succeeded'
         $result.DeploymentId | Should -Be $deploymentId
-        $result.ExpectedApplicationCount | Should -Be 0
+        $result.ExpectedAppCount | Should -Be 0
         $result.CleanupMode | Should -Be 'Never'
         $result.PreInstall.Status | Should -Be 'Succeeded'
         $result.PreInstall.DeploymentId | Should -Be $deploymentId

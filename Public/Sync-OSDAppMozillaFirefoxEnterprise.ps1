@@ -9,7 +9,7 @@ function Sync-OSDAppMozillaFirefoxEnterprise {
     $cacheLock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'built-in cache synchronization'
     try {
     Write-OSDAppLog -LogPath $log -Component MozillaFirefoxEnterprise -Event BuiltInSyncStart -Message 'Synchronizing Mozilla Firefox Enterprise built-in cache.' -Data @{Channel=$Channel;Architecture=$Architecture;Language=$Language;Transactional=$true}
-    $sync=Sync-OSDAppVendorBuiltInCache -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Id MozillaFirefoxEnterprise -Root $root -PackageUri $PackageUri -Architecture $Architecture -PackageFileName Package.msi -Activity "Downloading Mozilla Firefox Enterprise $Channel $Architecture MSI" -AdditionalMetadata @{Channel=$Channel;Language=$Language} -LogPath $log -SignedPackage
+    $sync=Sync-OSDAppVendorBuiltInCache -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Id MozillaFirefoxEnterprise -Root $root -PackageUri $PackageUri -Architecture $Architecture -ExpectedExtension '.msi' -Activity "Downloading Mozilla Firefox Enterprise $Channel $Architecture MSI" -AdditionalMetadata @{Channel=$Channel;Language=$Language} -LogPath $log -SignedPackage
     Write-OSDAppLog -LogPath $log -Component MozillaFirefoxEnterprise -Event BuiltInSyncComplete -Message 'Mozilla Firefox Enterprise built-in cache synchronized.' -Data @{Channel=$Channel;Architecture=$Architecture;Language=$Language;Updated=$sync.Updated;Path=$root;Transactional=$true}
     [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='MozillaFirefoxEnterprise';Version=$sync.Version;Channel=$Channel;Architecture=$Architecture;Language=$Language;CachePath=$root;Cached=$true;Updated=$sync.Updated}
     }

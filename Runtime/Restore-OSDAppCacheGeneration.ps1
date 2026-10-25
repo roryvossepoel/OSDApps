@@ -64,11 +64,15 @@ function Assert-OSDAppRecoverableBuiltInGeneration {
     if ([string]$info.Id -ne $Id -or $info.Cached -ne $true) {
         throw "Recovery metadata does not describe a cached '$Id' generation."
     }
+    $payloadPath = $null
+    if ($Id -ne 'Microsoft365Apps') {
+        $extension = if ($Id -eq 'MicrosoftTeams') { '.msix' } elseif ($Id -eq 'AdobeAcrobatUnified') { '.zip' } else { '.msi' }
+        $payloadPath = Assert-OSDAppCachedPayload -Root $Root -ExpectedExtension $extension -Id $Id
+    }
     $required = switch ($Id) {
         'Microsoft365Apps' { 'setup.exe'; 'configuration.xml' }
-        'MicrosoftTeams' { 'teamsbootstrapper.exe'; 'teams.msix' }
-        'AdobeAcrobatUnified' { 'Package.zip' }
-        default { 'Package.msi' }
+        'MicrosoftTeams' { 'teamsbootstrapper.exe'; [string]$info.PayloadFileName }
+        default { [string]$info.PayloadFileName }
     }
     foreach ($file in $required) {
         $path = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root $file))
@@ -86,19 +90,19 @@ function Assert-OSDAppRecoverableBuiltInGeneration {
         }
         'MicrosoftTeams' {
             & $SignatureValidator $Id (Join-Path $Root 'teamsbootstrapper.exe') | Out-Null
-            $version = & $TeamsVersionReader ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'teams.msix')))
+            $version = & $TeamsVersionReader $payloadPath
             if (-not $version -or [string]$version -ne [string]$info.Version) {
                 throw 'Teams recovery package version does not match its metadata.'
             }
         }
         'AdobeAcrobatUnified' {
             Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
-            $archive = [IO.Compression.ZipFile]::OpenRead(((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'Package.zip'))))
+            $archive = [IO.Compression.ZipFile]::OpenRead($payloadPath)
             try {
                 if ($archive.Entries.Count -eq 0) { throw 'Adobe recovery archive is empty.' }
             }
             finally { $archive.Dispose() }
         }
-        default { & $SignatureValidator $Id ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'Package.msi'))) | Out-Null }
+        default { & $SignatureValidator $Id $payloadPath | Out-Null }
     }
 }

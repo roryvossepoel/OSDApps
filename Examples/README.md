@@ -14,7 +14,7 @@ Choose an example for the environment you are using. These are reference workflo
 
 The deployment examples use x64 Microsoft 365 Apps (MonthlyEnterprise/en-us), Adobe Acrobat Unified and Google Chrome Enterprise. Preparation and staging select the same variants. The online example loads the module from Gallery and discovers an optional USB flash drive by label. The offline example loads the newest saved module from the USB flash drive and requires prepared content. Staging does not format disks or reboot automatically; the online guide shows a separate manual reboot command. Repository pruning appears only as a separate preview-and-confirm maintenance step.
 
-Add other apps only after selecting their intended configuration. For example, match Office architecture, channel, language and products between cache preparation and staging. See [Built-in applications](../docs/built-in-apps.md).
+Add other apps only after selecting their intended configuration. For example, match Office architecture, channel, language and products between cache preparation and staging. See [Built-in apps](../docs/built-in-apps.md).
 
 ## Build a repository package
 
@@ -24,18 +24,18 @@ for a complete workflow on the Windows preparation machine:
 1. Prepare your own unattended `Install.ps1` and supporting files.
 2. Build the ZIP, add package metadata and check validation results.
 3. Publish the static files and update the catalog last.
-4. Stage the application or script package in WinPE.
+4. Stage the app or script package in WinPE.
 
 The existing `PackageSource/ExampleApp/Install.ps1` file is only a layout
-placeholder that prints a message and exits 0. It does not install an application;
+placeholder that prints a message and exits 0. It does not install an app;
 replace it with your own logic before using it in a deployment.
 
 ## Repository template
 
-`Repository/catalog.json` is an empty valid catalog template. It deliberately contains no real vendor installers or deployable sample applications. To start a new local repository without copying the template:
+`Repository/catalog.json` is an empty valid catalog template. It deliberately contains no real vendor installers or deployable sample apps. To start a new local repository without copying the template:
 
 ```powershell
 New-OSDAppRepository -Path C:\OSDApps\Repository
 ```
 
-See [Repository applications](../docs/repository.md) for per-app manifests, archive hashes, publishing and deployment. No tenant-specific URL, credential or organization deployment profile is supplied by these examples.
+See [Repository apps](../docs/repository.md) for per-app manifests, archive hashes, publishing and deployment. No tenant-specific URL, credential or organization deployment profile is supplied by these examples.

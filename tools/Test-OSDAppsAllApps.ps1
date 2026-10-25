@@ -29,7 +29,7 @@ function Assert-TestIdSet {
     if ($actual.Count -ne $Expected.Count -or
         @($actual | Sort-Object -Unique).Count -ne $Expected.Count -or
         @(Compare-Object -ReferenceObject $Expected -DifferenceObject $actual).Count -ne 0) {
-        throw "$Context does not contain exactly the expected application IDs."
+        throw "$Context does not contain exactly the expected app IDs."
     }
 }
 
@@ -37,7 +37,7 @@ try {
     $winPE = Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Control\MiniNT'
     if ($Phase -eq 'Stage') {
         if (-not $winPE) { throw 'Run Stage in WinPE after OSDCloud, before the first Windows boot.' }
-        if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'This nine-application test requires an x64 PC and x64 WinPE.' }
+        if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'This nine-app test requires an x64 PC and x64 WinPE.' }
         if (-not $CatalogUri -or $CatalogUri.Scheme -ne 'https') { throw 'Supply the HTTPS repository catalog containing NotepadPlusPlus and OmnissaHorizonClient.' }
 
         Write-Host '1. Loading OSDApps 0.45.0 from PowerShell Gallery...' -ForegroundColor Cyan
@@ -96,7 +96,7 @@ try {
         [pscustomobject]@{ CachePath=$cache; PreviousCacheBackup=$backupPath; ModuleVersion=$requiredVersion } |
             ConvertTo-Json | Set-Content (Join-Path $testRoot 'AllApps-Preparation.json') -Encoding UTF8
 
-        Write-Host '4. Staging seven built-ins and two repository applications...' -ForegroundColor Cyan
+        Write-Host '4. Staging seven built-ins and two repository apps...' -ForegroundColor Cyan
         Set-OSDAppConfiguration -CatalogUri $CatalogUri -CacheVolumeLabel OSDCloud -CleanupMode OnSuccess
         Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language nl-nl -Architecture x64 -WindowsPath $windows | Out-Host
         Add-OSDAppMicrosoftTeams -Architecture x64 -WindowsPath $windows | Out-Host
@@ -130,8 +130,8 @@ try {
     $expected = Read-TestRecord (Join-Path $root 'Tests\AllApps-Staging.json')
     $pre = Read-TestRecord (Join-Path $root 'Results\PreInstall.json')
     $runner = Read-TestRecord (Join-Path $root 'Results\Latest.json')
-    $preApps = @(Get-TestField $pre 'Applications')
-    $runApps = @(Get-TestField $runner 'Applications')
+    $preApps = @(Get-TestField $pre 'Apps')
+    $runApps = @(Get-TestField $runner 'Apps')
     $preApps | Select-Object Id,Status,AcquisitionOutcome,CacheUsed,DurationSeconds,RefreshError,Error | Format-Table -AutoSize
     $runApps | Select-Object Id,Status,DurationSeconds,ExitCode,Error | Format-Table -AutoSize
     $deploymentId = [string](Get-TestField $expected 'DeploymentId')
@@ -143,7 +143,7 @@ try {
     Assert-TestIdSet -Entries $preApps -Expected $builtInIds -Context 'PreInstall results'
     Assert-TestIdSet -Entries $runApps -Expected $expectedIds -Context 'Runner results'
     foreach ($entry in @($preApps) + @($runApps)) {
-        if ([string](Get-TestField $entry 'Status') -ne 'Succeeded') { throw "Application failed or skipped: $($entry.Id)" }
+        if ([string](Get-TestField $entry 'Status') -ne 'Succeeded') { throw "App failed or skipped: $($entry.Id)" }
     }
     foreach ($entry in $preApps) {
         if ([string](Get-TestField $entry 'AcquisitionOutcome') -ne 'Downloaded' -or
@@ -151,7 +151,7 @@ try {
             throw "Cold acquisition was not confirmed for $($entry.Id). Inspect acquisition details."
         }
     }
-    foreach ($counter in @('FailedApplicationCount','SkippedApplicationCount')) {
+    foreach ($counter in @('FailedAppCount','SkippedAppCount')) {
         $value = Get-TestField $runner $counter
         if ($null -eq $value -or [int]$value -ne 0) { throw "Unexpected result counter: $counter" }
     }
@@ -170,8 +170,8 @@ try {
         ModuleVersion=$expected.ModuleVersion; TestMode=$expected.TestMode; DeploymentId=$deploymentId
         PreInstallSeconds=$pre.DurationSeconds; RunnerSeconds=$runner.DurationSeconds
         TotalSeconds=[math]::Round(([double]$pre.DurationSeconds + [double]$runner.DurationSeconds),1)
-        DownloadedBuiltIns=$preApps.Count; SuccessfulApplications=$runApps.Count
-        FailedApplications=0; SkippedApplications=0; StagingRemoved=$clean; CleanupHelperRemoved=$clean
+        DownloadedBuiltIns=$preApps.Count; SuccessfulApps=$runApps.Count
+        FailedApps=0; SkippedApps=0; StagingRemoved=$clean; CleanupHelperRemoved=$clean
         PreviousCacheBackup=$expected.PreviousCacheBackup
     } | Format-List
     Write-Host 'ALL APPS COLD OOBE VALIDATION PASSED!' -ForegroundColor Green

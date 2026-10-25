@@ -4,10 +4,10 @@ Describe 'Microsoft Company Portal built-in staging' {
         Import-Module (Join-Path $root 'OSDApps.psd1') -Force
     }
 
-    It 'exposes Company Portal as a built-in application without an online catalog' {
+    It 'exposes Company Portal as a built-in app without an online catalog' {
         $app = Get-OSDApp -Name MicrosoftCompanyPortal -Offline
         $app.Id | Should -Be 'MicrosoftCompanyPortal'
-        $app.PackageType | Should -Be 'Application'
+        $app.PackageType | Should -Be 'App'
         $app.Source | Should -Be 'BuiltIn'
     }
 
@@ -17,7 +17,7 @@ Describe 'Microsoft Company Portal built-in staging' {
             $target = Join-Path $TestDrive 'OfflineWindows'
             $variant = Join-Path $cache 'BuiltIn\MicrosoftCompanyPortal\x64'
             New-Item -ItemType Directory -Path (Join-Path $variant 'Dependencies') -Force | Out-Null
-            $relative = @('Bundle.appxbundle','License.xml',
+            $relative = @('CompanyPortal_11_2_1495_0_neutral.appxbundle','CompanyPortal_License1.xml',
                 'Dependencies\Microsoft.NET.Native.Framework.2.2_1_x64__test.appx',
                 'Dependencies\Microsoft.NET.Native.Runtime.2.2_1_x64__test.appx',
                 'Dependencies\Microsoft.Services.Store.Engagement_1_x64__test.appx',
@@ -34,6 +34,8 @@ Describe 'Microsoft Company Portal built-in staging' {
             }
             [ordered]@{
                 Id='MicrosoftCompanyPortal'; Architecture='x64'; Version='11.2.1495.0'
+                PayloadFileName='CompanyPortal_11_2_1495_0_neutral.appxbundle'; LicenseFileName='CompanyPortal_License1.xml'
+                Sha256=$files[0].Sha256; Size=(Get-Item (Join-Path $variant 'CompanyPortal_11_2_1495_0_neutral.appxbundle')).Length
                 DependencyCount=5; Files=@($files)
             } | ConvertTo-Json -Depth 12 |
                 Set-Content -LiteralPath (Join-Path $variant 'CacheInfo.json') -Encoding UTF8
@@ -52,7 +54,7 @@ Describe 'Microsoft Company Portal built-in staging' {
             $check.Valid | Should -BeTrue
             $check.OfflineReady | Should -BeTrue
 
-            $bundle = Join-Path $target 'Windows\Temp\OSDApps\BuiltIn\MicrosoftCompanyPortal\x64\Bundle.appxbundle'
+            $bundle = Join-Path $target 'Windows\Temp\OSDApps\BuiltIn\MicrosoftCompanyPortal\x64\CompanyPortal_11_2_1495_0_neutral.appxbundle'
             Set-Content -LiteralPath $bundle -Value 'changed' -Encoding ASCII
             $broken = Test-OSDAppDeployment -WindowsPath $target -RequireOfflineReady
             $broken.Valid | Should -BeFalse

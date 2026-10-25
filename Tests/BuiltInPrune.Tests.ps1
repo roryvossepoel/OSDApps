@@ -35,7 +35,7 @@ Describe 'Explicit managed built-in namespace pruning' {
             Should -Invoke Enter-OSDAppCacheLock -Times 0 -Exactly
         }
     }
-    It 'preserves registered aliases and top-level or nested recovery content for review' {
+    It 'removes unmanaged roots while preserving transaction recovery content' {
         InModuleScope OSDApps {
             $cache = Join-Path $TestDrive 'Recovery'
             foreach ($name in @('Teams','MicrosoftTeams.osdapps-old-123','Unknown\x64.osdapps-new-123','VisualCRedist\x64.osdapps-old-123')) {
@@ -43,9 +43,10 @@ Describe 'Explicit managed built-in namespace pruning' {
             }
             Mock Get-OSDAppCachePath { $cache }
             $result = Clear-OSDAppCache -BuiltIn -Prune -Confirm:$false -WarningAction SilentlyContinue
-            $result.Removed.Count | Should -Be 0
-            $result.Review.Count | Should -Be 3
+            $result.Removed.Count | Should -Be 1
+            $result.Review.Count | Should -Be 2
             Test-Path (Join-Path $cache 'BuiltIn\VisualCRedist\x64.osdapps-old-123') | Should -BeTrue
+            Test-Path (Join-Path $cache 'BuiltIn\Teams') | Should -BeFalse
         }
     }
     It 'does not prune when another writer holds the cache lock' {

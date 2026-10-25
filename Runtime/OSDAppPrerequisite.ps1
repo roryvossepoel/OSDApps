@@ -121,7 +121,7 @@ function Assert-OSDAppPrerequisiteGeneration {
         if ($Release.Sha512 -and [string]$info.Sha512 -ne [string]$Release.Sha512) { throw 'Runtime cache release SHA-512 differs.' }
         if ($Release.Size -gt 0 -and [long]$info.Size -ne [long]$Release.Size) { throw 'Runtime cache release size differs.' }
     }
-    $package = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'Package.exe'))
+    $package = (Resolve-OSDAppBuiltInPayloadPath -Root $Root -ExpectedExtension '.exe')
     if ((Get-Item -LiteralPath $package -ErrorAction Stop).Length -ne [long]$info.Size -or
         (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash -ne [string]$info.Sha256) { throw 'Runtime cache size or SHA-256 mismatch.' }
     if ($Spec.Family -eq 'DotNetRuntime' -and (Get-FileHash -LiteralPath $package -Algorithm SHA512).Hash -ne [string]$info.Sha512) { throw '.NET release SHA-512 mismatch.' }
@@ -146,9 +146,9 @@ function Sync-OSDAppPrerequisiteGeneration {
         $downloadAction = $Download
         Invoke-OSDAppBuiltInCacheTransaction -Root $Root -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Build {
             param($candidate)
-            $package = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $candidate 'Package.exe'))
-            & $downloadAction $release.PackageUri $package | Out-Null
-            $package = Resolve-OSDAppBuiltInPayloadPath -Path $package
+            $downloaded = & $downloadAction $release.PackageUri $candidate
+            if (-not $downloaded -or -not $downloaded.FullName) { throw 'Download must return its exact vendor filename.' }
+            $package = Resolve-OSDAppBuiltInPayloadPath -Path ([string]$downloaded.FullName)
             Assert-OSDAppPrerequisitePublisher -Path $package
             $version = $release.Version
             if ($Spec.Family -eq 'VisualCRedist') {
@@ -157,6 +157,7 @@ function Sync-OSDAppPrerequisiteGeneration {
                 $version = $Matches.version
             }
             [ordered]@{
+                PayloadFileName=(Split-Path -Path $package -Leaf);
                 Id=$Spec.Family; VariantId=$Spec.Id; DisplayName=$Spec.DisplayName; Cached=$true; Version=$version;
                 Architecture=$Spec.Architecture; RuntimeType=$Spec.RuntimeType; Channel=$Spec.Channel;
                 VersionSource='Microsoft'; PackageUri=$release.PackageUri; ResolvedUri=$release.ResolvedUri;
@@ -167,12 +168,6 @@ function Sync-OSDAppPrerequisiteGeneration {
             } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $candidate 'CacheInfo.json') -Encoding UTF8
         } -Validate { param($candidate) Assert-OSDAppPrerequisiteGeneration -Root $candidate -Spec $Spec -Release $release -VerifyPublisher } | Out-Null
         $info = Assert-OSDAppPrerequisiteGeneration -Root $Root -Spec $Spec -VerifyPublisher
-    }
-    if ($Spec.Family -eq 'VisualCRedist') {
-        Remove-OSDAppRetiredCacheVariant -Root $Root -Id VisualCRedist -Architecture $Spec.Architecture -Log $Log -Validate {
-            param($candidate)
-            Assert-OSDAppPrerequisiteGeneration -Root $candidate -Spec $Spec -Release $release -VerifyPublisher
-        }
     }
     [pscustomobject]@{ Id=$Spec.Id; Version=$info.Version; Architecture=$Spec.Architecture; Root=$Root; Updated=(-not $current); CacheDecisionReason=$cacheDecisionReason }
 }

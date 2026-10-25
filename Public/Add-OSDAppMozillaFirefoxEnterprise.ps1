@@ -53,7 +53,7 @@ function Add-OSDAppMozillaFirefoxEnterprise {
     $relativeRoot = Join-Path 'BuiltIn\MozillaFirefoxEnterprise' (Join-Path $Channel (Join-Path $Architecture $Language))
 
     if ($cachePath) {
-        $existingCache = Test-Path -LiteralPath (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cachePath (Join-Path $relativeRoot 'Package.msi'))) -PathType Leaf
+        $existingCache = Test-OSDAppBuiltInPayload -Root (Join-Path $cachePath $relativeRoot) -ExpectedExtension '.msi'
         $message = if ($existingCache) { 'Existing cache found; cached MSI will be staged as fallback and refreshed during SetupComplete' } else { 'No existing cache found; cache will be created during SetupComplete' }
         if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level $(if ($existingCache) { 'Success' } else { 'Info' }) -Component 'MozillaFirefoxEnterprise' -Message $message }
     }
@@ -70,7 +70,7 @@ function Add-OSDAppMozillaFirefoxEnterprise {
     Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
 
     if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'MozillaFirefoxEnterprise' -Message 'Device manifest updated and SetupComplete integration verified' }
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=MozillaFirefoxEnterprise; Channel=$Channel; Architecture=$Architecture; Language=$Language; Timeout=$InstallTimeoutMinutes min; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("App=MozillaFirefoxEnterprise; Channel=$Channel; Architecture=$Architecture; Language=$Language; Timeout=$InstallTimeoutMinutes min; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
 
     if ($cachePath -and -not $script:OSDAppCacheMediaWarningShown) {
         Write-Warning 'OSDCloud cache media detected. Keep the USB flash drive connected until OOBE is displayed.'

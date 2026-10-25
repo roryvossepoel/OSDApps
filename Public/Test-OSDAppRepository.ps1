@@ -20,10 +20,10 @@ function Test-OSDAppRepository {
     }
 
     $allRefs = @()
-    foreach ($application in @($catalog.Applications)) {
-        foreach ($packageRef in @($application.Packages)) {
+    foreach ($app in @($catalog.Apps)) {
+        foreach ($packageRef in @($app.Packages)) {
             $allRefs += [pscustomobject]@{
-                Id = [string]$application.Id
+                Id = [string]$app.Id
                 Architecture = [string]$packageRef.Architecture
                 Manifest = [string]$packageRef.Manifest
             }
@@ -39,19 +39,19 @@ function Test-OSDAppRepository {
 
     $referencedManifestPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
-    foreach ($application in @($catalog.Applications)) {
-        foreach ($packageRef in @($application.Packages)) {
+    foreach ($app in @($catalog.Apps)) {
+        foreach ($packageRef in @($app.Packages)) {
             $manifestPath = Join-Path $resolvedRepository ($packageRef.Manifest -replace '/', [IO.Path]::DirectorySeparatorChar)
             $fullManifestPath = [IO.Path]::GetFullPath($manifestPath)
             [void]$referencedManifestPaths.Add($fullManifestPath)
 
             $manifestExists = Test-Path -LiteralPath $manifestPath -PathType Leaf
-            $duplicateReference = ("$(([string]$application.Id).ToLowerInvariant())|$(([string]$packageRef.Architecture).ToLowerInvariant())") -in $duplicateKeys
+            $duplicateReference = ("$(([string]$app.Id).ToLowerInvariant())|$(([string]$packageRef.Architecture).ToLowerInvariant())") -in $duplicateKeys
 
             if (-not $manifestExists) {
                 [pscustomobject]@{
                     PSTypeName            = 'OSDApps.RepositoryValidation'
-                    Id                    = $application.Id
+                    Id                    = $app.Id
                     Version               = $null
                     Architecture          = $packageRef.Architecture
                     ManifestExists        = $false
@@ -98,7 +98,7 @@ function Test-OSDAppRepository {
                 ([string]$manifest.Architecture).ToLowerInvariant() -in @('x64','arm64','any') -and
                 ([string]$manifest.Architecture).ToLowerInvariant() -eq ([string]$packageRef.Architecture).ToLowerInvariant()
             )
-            $idValid = [string]$manifest.Id -eq [string]$application.Id
+            $idValid = [string]$manifest.Id -eq [string]$app.Id
             $successCodes = @($manifest.SuccessCodes)
             $successCodesValid = (
                 $successCodes.Count -gt 0 -and
@@ -108,10 +108,10 @@ function Test-OSDAppRepository {
                 -not [string]::IsNullOrWhiteSpace([string]$manifest.PackageType)) {
                 [string]$manifest.PackageType
             }
-            else { 'Application' }
-            $packageTypeValid = $packageType -in @('Application','Script')
+            else { 'App' }
+            $packageTypeValid = $packageType -in @('App','Script')
             if ($packageTypeValid) {
-                $packageType = if ($packageType -ieq 'Script') { 'Script' } else { 'Application' }
+                $packageType = if ($packageType -ieq 'Script') { 'Script' } else { 'App' }
             }
 
             [pscustomobject]@{

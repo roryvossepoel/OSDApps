@@ -75,45 +75,33 @@ function Get-OSDAppBuiltInSignature {
         return [pscustomobject]@{ Status='Not assessed'; Scope='Release SHA-256 (checked separately)'; File=$null; Signer=$null; Detail='7Zip uses the official release digest, not Authenticode publisher validation.' }
     }
 
-    $relativeFile = switch ($Id) {
-        'Microsoft365Apps'         { 'setup.exe'; break }
-        'MicrosoftTeams'           { 'teamsbootstrapper.exe'; break }
-        'VisualStudioCode'         { 'Package.exe'; break }
-        'VisualCRedist'          { 'Package.exe'; break }
-        'DotNetRuntime'            { 'Package.exe'; break }
-        'GoogleChromeEnterprise'   { 'Package.msi'; break }
-        'CiscoWebex'               { 'Package.msi'; break }
-        'ZoomWorkplace'            { 'Package.msi'; break }
-        'MozillaFirefoxEnterprise' { 'Package.msi'; break }
-        default                    { $null }
+    $fixedFile = switch ($Id) {
+        'Microsoft365Apps' { 'setup.exe' }
+        'MicrosoftTeams' { 'teamsbootstrapper.exe' }
+        default { $null }
     }
-
-    if (-not $relativeFile) {
-        return [pscustomobject]@{
-            Status='Not assessed'; Scope='ZIP / unsupported type'
-            File=$null; Signer=$null; Detail='An Authenticode signature was not checked for this cache format.'
-        }
+    $extension = switch ($Id) {
+        { $_ -in @('Microsoft365Apps','MicrosoftTeams','VisualStudioCode','VisualCRedist','DotNetRuntime') } { '.exe' }
+        { $_ -in @('GoogleChromeEnterprise','CiscoWebex','ZoomWorkplace','MozillaFirefoxEnterprise','CMTraceOpen') } { '.msi' }
+        default { $null }
     }
-
-    $scope = if ($Id -eq 'MicrosoftTeams') {
-        'Bootstrapper EXE only (MSIX not checked)'
-    } elseif ($Id -eq 'Microsoft365Apps') {
-        'Office setup.exe only (Office data not checked)'
-    } elseif ($relativeFile.EndsWith('.msi')) {
-        'MSI package'
-    } else {
-        'EXE file'
+    if (-not $extension) {
+        return [pscustomobject]@{Status='Not assessed';Scope='ZIP / unsupported type';File=$null;Signer=$null;Detail='Authenticode is not checked for this cache format.'}
     }
-
-    if (-not $FilePath -and -not $CacheEntryPath) {
-        throw 'Specify -CacheEntryPath or -FilePath.'
+    $scope = if ($Id -eq 'MicrosoftTeams') { 'Bootstrapper EXE only (MSIX not checked)' }
+        elseif ($Id -eq 'Microsoft365Apps') { 'Office setup.exe only (Office data not checked)' }
+        elseif ($extension -eq '.msi') { 'MSI package' } else { 'EXE file' }
+    if (-not $FilePath -and -not $CacheEntryPath) { throw 'Specify -CacheEntryPath or -FilePath.' }
+    $path = $null
+    try {
+        $path = if ($FilePath) { $FilePath } elseif ($fixedFile) { Join-Path $CacheEntryPath $fixedFile }
+            else { Resolve-OSDAppBuiltInPayloadPath -Root $CacheEntryPath -ExpectedExtension $extension }
     }
-    $path = if ($FilePath) { $FilePath } else { Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $CacheEntryPath $relativeFile) }
+    catch {
+        return [pscustomobject]@{Status='File missing';Scope=$scope;File=$null;Signer=$null;Detail=$_.Exception.Message}
+    }
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-        return [pscustomobject]@{
-            Status='File missing';Scope=$scope;File=$path;Signer=$null
-            Detail='Required signature target is missing.'
-        }
+        return [pscustomobject]@{Status='File missing';Scope=$scope;File=$path;Signer=$null;Detail='Required signature target is missing.'}
     }
     if (Test-OSDAppWinPE) {
         return [pscustomobject]@{

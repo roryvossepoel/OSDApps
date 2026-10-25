@@ -39,7 +39,7 @@ Describe 'Transactional multi-app repository synchronization' {
             @{
                 SchemaVersion=1
                 GeneratedAt=(Get-Date).ToUniversalTime().ToString('o')
-                Applications=$apps
+                Apps=$apps
             } | ConvertTo-Json -Depth 20 |
                 Set-Content -LiteralPath $catalogPath -Encoding UTF8
 

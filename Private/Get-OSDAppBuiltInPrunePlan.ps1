@@ -7,14 +7,12 @@ function Get-OSDAppBuiltInPrunePlan {
     $metadataPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'metadata\builtins.json'
     $metadata = Get-Content -LiteralPath $metadataPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
     $known = @{}
-    $aliases = @{}
-    foreach ($app in @($metadata.Applications)) {
+    foreach ($app in @($metadata.Apps)) {
         $id = [string]$app.Id
         if ($id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $id -match '\.\.' -or $known.ContainsKey($id)) {
             throw 'Built-in metadata is invalid; no cache content was pruned.'
         }
         $known[$id] = $true
-        foreach ($alias in @($app.Aliases)) { if ($alias) { $aliases[[string]$alias] = $true } }
     }
     if ($known.Count -eq 0) { throw 'Built-in metadata is empty; no cache content was pruned.' }
 
@@ -28,7 +26,6 @@ function Get-OSDAppBuiltInPrunePlan {
     foreach ($item in @(Get-ChildItem -LiteralPath $root -Force -ErrorAction Stop)) {
         if ($known.ContainsKey($item.Name) -and $item.PSIsContainer) { continue }
         $reason = $null
-        if ($aliases.ContainsKey($item.Name)) { $reason = 'Retired alias: use its canonical app synchronization to validate replacement before removal.' }
         $pending = [System.Collections.Generic.Stack[System.IO.FileSystemInfo]]::new()
         $pending.Push($item)
         while ($pending.Count -gt 0 -and -not $reason) {
@@ -47,7 +44,7 @@ function Get-OSDAppBuiltInPrunePlan {
             Path = $item.FullName
             Name = $item.Name
             Action = if ($reason) { 'Review' } else { 'Remove' }
-            Reason = if ($reason) { $reason } else { 'Not a managed built-in application directory.' }
+            Reason = if ($reason) { $reason } else { 'Not a managed built-in app directory.' }
         }
     }
 }

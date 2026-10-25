@@ -52,8 +52,8 @@ Describe 'Built-in Windows Inbox Cleanup staging' {
             $check = Test-OSDAppDeployment -WindowsPath $target -RequireOfflineReady -ThrowOnFailure
             $check.Valid | Should -BeTrue
             $check.OfflineReady | Should -BeTrue
-            @($check.Applications).Count | Should -Be 1
-            $check.Applications[0].IntegrityValid | Should -BeTrue
+            @($check.Apps).Count | Should -Be 1
+            $check.Apps[0].IntegrityValid | Should -BeTrue
         }
     }
 
@@ -67,11 +67,11 @@ Describe 'Built-in Windows Inbox Cleanup staging' {
             $check = Test-OSDAppDeployment -WindowsPath $target -RequireOfflineReady
             $check.Valid | Should -BeFalse
             $check.OfflineReady | Should -BeFalse
-            $check.Applications[0].IntegrityValid | Should -BeFalse
+            $check.Apps[0].IntegrityValid | Should -BeFalse
         }
     }
 
-    It 'preserves unrelated staged applications when the cleanup is re-added' {
+    It 'preserves unrelated staged apps when the cleanup is re-added' {
         InModuleScope OSDApps {
             $target = Join-Path $TestDrive 'Order'
             Mock Resolve-OSDAppWindowsPath { $target }

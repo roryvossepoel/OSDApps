@@ -15,8 +15,8 @@ Describe 'Read-only maintenance tool' {
         $script:resultPath = Join-Path $TestDrive 'Latest.json'
         $script:result = [ordered]@{
             SchemaVersion='1.0'; Status='Succeeded'; DeploymentId='fixture-deployment'
-            ExpectedApplicationCount=1; SuccessfulApplicationCount=1; FailedApplicationCount=0; SkippedApplicationCount=0
-            Applications=@([pscustomobject]@{ Id='AppA'; Status='Succeeded' })
+            ExpectedAppCount=1; SuccessfulAppCount=1; FailedAppCount=0; SkippedAppCount=0
+            Apps=@([pscustomobject]@{ Id='AppA'; Status='Succeeded' })
         }
         $global:OSDAppsMaintenanceTestciConclusion = 'success'
         $global:OSDAppsMaintenanceTestpublishConclusion = 'success'
@@ -45,10 +45,10 @@ Describe 'Read-only maintenance tool' {
         Save-ResultFixture
         $report = & $tool -Mode Result -ResultPath $resultPath -DeploymentId fixture-deployment
         $report.Status | Should -Be Passed
-        $report.Details.Result.Applications.Count | Should -Be 1
+        $report.Details.Result.Apps.Count | Should -Be 1
     }
     It 'reports successful installation with acquisition fallback as review required' {
-        $result.Applications[0] | Add-Member NoteProperty AcquisitionOutcome FallbackCacheUsed
+        $result.Apps[0] | Add-Member NoteProperty AcquisitionOutcome FallbackCacheUsed
         Save-ResultFixture
         $report = & $tool -Mode Result -ResultPath $resultPath
         $report.Status | Should -Be ReviewRequired
@@ -57,23 +57,23 @@ Describe 'Read-only maintenance tool' {
     It 'does not report unfinished or empty deployments as passed' {
         $result.Status='Running'; Save-ResultFixture
         (& $tool -Mode Result -ResultPath $resultPath).Status | Should -Be ReviewRequired
-        $result.Status='Succeeded'; $result.Applications=@(); $result.ExpectedApplicationCount=0; $result.SuccessfulApplicationCount=0
+        $result.Status='Succeeded'; $result.Apps=@(); $result.ExpectedAppCount=0; $result.SuccessfulAppCount=0
         Save-ResultFixture
         (& $tool -Mode Result -ResultPath $resultPath).Status | Should -Be ReviewRequired
     }
     It 'rejects failed, contradictory and incorrectly identified results' {
         $result.Status='Failed'; Save-ResultFixture
         (& $tool -Mode Result -ResultPath $resultPath).Status | Should -Be Failed
-        $result.Status='Succeeded'; $result.SuccessfulApplicationCount=2; Save-ResultFixture
+        $result.Status='Succeeded'; $result.SuccessfulAppCount=2; Save-ResultFixture
         (& $tool -Mode Result -ResultPath $resultPath).Status | Should -Be Failed
-        $result.SuccessfulApplicationCount=1; Save-ResultFixture
+        $result.SuccessfulAppCount=1; Save-ResultFixture
         (& $tool -Mode Result -ResultPath $resultPath -DeploymentId another-deployment).Status | Should -Be Failed
     }
-    It 'rejects missing fields and duplicate application identities' {
+    It 'rejects missing fields and duplicate app identities' {
         $result.Remove('SchemaVersion'); Save-ResultFixture
         (& $tool -Mode Result -ResultPath $resultPath).Status | Should -Be Failed
-        $result.SchemaVersion='1.0'; $result.Applications += $result.Applications[0]
-        $result.SuccessfulApplicationCount=2; $result.ExpectedApplicationCount=2; Save-ResultFixture
+        $result.SchemaVersion='1.0'; $result.Apps += $result.Apps[0]
+        $result.SuccessfulAppCount=2; $result.ExpectedAppCount=2; Save-ResultFixture
         (& $tool -Mode Result -ResultPath $resultPath).Status | Should -Be Failed
     }
     It 'passes release checks only with exact Gallery version and successful release-commit workflows' {

@@ -30,7 +30,9 @@ Describe 'Runtime selection and staging' {
             foreach ($arch in @('x86','x64')) {
                 $entry = $manifest.Apps | Where-Object Id -eq "VisualCRedist-$arch"
                 $entry.Family | Should -Be 'VisualCRedist'
-                $entry.Package.Replace('\','/') | Should -Be "BuiltIn/VisualCRedist/$arch/Package.exe"
+                $entry.Package | Should -BeNullOrEmpty
+                $entry.PayloadRoot.Replace('\','/') | Should -Be "BuiltIn/VisualCRedist/$arch"
+                $entry.PayloadExtension | Should -Be '.exe'
             }
             $manifest.Apps.Id | Should -Contain 'DotNetRuntime-Runtime-8.0-x64'
             $manifest.Apps.Id | Should -Contain 'DotNetRuntime-Desktop-10.0-x64'
@@ -68,7 +70,7 @@ Describe 'Runtime release selection and transaction integrity' {
             Mock Assert-OSDAppTransactionSpace { }
             $script:cache = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
             $script:downloadCount = 0
-            $script:download = {param($uri,$path) $script:downloadCount++; [IO.File]::WriteAllBytes($path,$script:payload)}
+            $script:download = {param($uri,$directory) $script:downloadCount++; $path=Join-Path $directory ([IO.Path]::GetFileName(([uri]$uri).AbsolutePath)); [IO.File]::WriteAllBytes($path,$script:payload); Get-Item -LiteralPath $path}
         }
     }
     It 'selects desktop and standalone EXEs using separate official metadata fields' {
@@ -96,10 +98,10 @@ Describe 'Runtime release selection and transaction integrity' {
     It 'rejects EOL metadata without downloading or replacing an existing valid generation' {
         InModuleScope OSDApps {
             Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download
-            $before = (Get-FileHash (Join-Path $script:cache 'Package.exe')).Hash
+            $before = (Get-FileHash (Join-Path $script:cache 'windowsdesktop-runtime-10.0.1-win-x64.exe')).Hash
             $script:metadata.'support-phase'='eol'
             { Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download } | Should -Throw '*not a supported stable channel*'
-            (Get-FileHash (Join-Path $script:cache 'Package.exe')).Hash | Should -Be $before
+            (Get-FileHash (Join-Path $script:cache 'windowsdesktop-runtime-10.0.1-win-x64.exe')).Hash | Should -Be $before
             $script:downloadCount | Should -Be 1
         }
     }
@@ -140,7 +142,7 @@ Describe 'Runtime release selection and transaction integrity' {
             $script:downloadCount | Should -Be 1
             $other = Get-OSDAppPrerequisiteSpec -Family DotNetRuntime -Architecture x86 -Channel 10.0
             { Assert-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $other } | Should -Throw '*incompatible*'
-            Add-Content (Join-Path $script:cache 'Package.exe') 'corrupt'
+            Add-Content (Join-Path $script:cache 'windowsdesktop-runtime-10.0.1-win-x64.exe') 'corrupt'
             { Assert-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec } | Should -Throw '*SHA-256*'
             $repaired = Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download
             $repaired.Updated | Should -BeTrue
@@ -150,10 +152,10 @@ Describe 'Runtime release selection and transaction integrity' {
     It 'preserves the old generation after a bad candidate digest and removes temporary folders' {
         InModuleScope OSDApps {
             Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download $script:download
-            $before = (Get-FileHash (Join-Path $script:cache 'Package.exe')).Hash
+            $before = (Get-FileHash (Join-Path $script:cache 'windowsdesktop-runtime-10.0.1-win-x64.exe')).Hash
             $script:metadata.'latest-runtime'='10.0.2';$script:metadata.releases[0].'release-version'='10.0.2';$script:component.version='10.0.2';$script:component.files[0].url=$script:component.files[0].url.Replace('10.0.1','10.0.2')
-            { Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download {param($u,$p) Set-Content $p 'wrong'} } | Should -Throw '*SHA-512*'
-            (Get-FileHash (Join-Path $script:cache 'Package.exe')).Hash | Should -Be $before
+            { Sync-OSDAppPrerequisiteGeneration -Root $script:cache -Spec $script:spec -Download {param($u,$directory) $path=Join-Path $directory ([IO.Path]::GetFileName(([uri]$u).AbsolutePath)); Set-Content $path 'wrong'; Get-Item -LiteralPath $path} } | Should -Throw '*SHA-512*'
+            (Get-FileHash (Join-Path $script:cache 'windowsdesktop-runtime-10.0.1-win-x64.exe')).Hash | Should -Be $before
             @(Get-ChildItem (Split-Path $script:cache) -Filter "$(Split-Path $script:cache -Leaf).osdapps-*").Count | Should -Be 0
         }
     }
@@ -188,16 +190,18 @@ Describe 'Runtime PreInstall and Runner dispatch' {
         function New-PrerequisiteFixture {
             param($Path,$Spec)
             New-Item -ItemType Directory -Path $Path -Force | Out-Null
-            Set-Content (Join-Path $Path 'Package.exe') 'runtime fixture'
             $version=if($Spec.Family -eq 'VisualCRedist'){'14.50.1.0'}else{'10.0.1'}
             $uri=if($Spec.Family -eq 'VisualCRedist'){"https://aka.ms/vc14/vc_redist.$($Spec.Architecture).exe"}else{'https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/10.0.1/windowsdesktop-runtime-10.0.1-win-x64.exe'}
-            @{ Id=$Spec.Family;VariantId=$Spec.Id;Architecture=$Spec.Architecture;RuntimeType=$Spec.RuntimeType;Channel=$Spec.Channel;Version=$version;PackageUri=$uri;Size=(Get-Item (Join-Path $Path 'Package.exe')).Length;Sha256=(Get-FileHash (Join-Path $Path 'Package.exe')).Hash;Sha512=(Get-FileHash (Join-Path $Path 'Package.exe') -Algorithm SHA512).Hash } | ConvertTo-Json | Set-Content (Join-Path $Path 'CacheInfo.json')
+            $name = [IO.Path]::GetFileName(([uri]$uri).AbsolutePath)
+            $payload = Join-Path $Path $name
+            Set-Content -LiteralPath $payload 'runtime fixture'
+            @{ Id=$Spec.Family;VariantId=$Spec.Id;Architecture=$Spec.Architecture;RuntimeType=$Spec.RuntimeType;Channel=$Spec.Channel;Version=$version;PackageUri=$uri;PayloadFileName=$name;Size=(Get-Item -LiteralPath $payload).Length;Sha256=(Get-FileHash -LiteralPath $payload).Hash;Sha512=(Get-FileHash -LiteralPath $payload -Algorithm SHA512).Hash } | ConvertTo-Json | Set-Content (Join-Path $Path 'CacheInfo.json')
         }
     }
     BeforeEach {
         Mock Get-Date { [datetime]'2026-10-21T12:00:00Z' }
         $script:spec=Get-OSDAppPrerequisiteSpec -Family DotNetRuntime -Architecture x64 -Channel 10.0
-        $script:app=[pscustomobject]@{Id=$spec.Id;Family=$spec.Family;Architecture=$spec.Architecture;RuntimeType=$spec.RuntimeType;Channel=$spec.Channel;Type='PrerequisiteExe';Package=(Join-Path $spec.RelativeRoot 'Package.exe');DisplayName=$spec.DisplayName;InstallTimeoutMinutes=10}
+        $script:app=[pscustomobject]@{Id=$spec.Id;Family=$spec.Family;Architecture=$spec.Architecture;RuntimeType=$spec.RuntimeType;Channel=$spec.Channel;Type='PrerequisiteExe';Package=$null;PayloadRoot=$spec.RelativeRoot;PayloadExtension='.exe';DisplayName=$spec.DisplayName;InstallTimeoutMinutes=10}
         $script:StagedPath=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         $script:logPath=Join-Path $StagedPath 'runtime.log'
         $script:usbRoot=$null;$script:networkAvailable=$true;$script:acquisition=@{}
@@ -208,28 +212,9 @@ Describe 'Runtime PreInstall and Runner dispatch' {
         Mock Get-OSDAppInstalledPrerequisiteVersion { if($script:installerStarted){[version]'10.0.1'} }
         Mock Start-Process { $script:installerStarted=$true; [pscustomobject]@{HasExited=$true;ExitCode=0} }
     }
-    It 'persists VisualCRedist cleanup through the real PreInstall branch without a download' {
-        . (Join-Path $script:runtimeRoot 'OSDAppPayloadFile.ps1')
-        $script:spec = Get-OSDAppPrerequisiteSpec -Family VisualCRedist -Architecture x64
-        $script:app = [pscustomobject]@{Id=$spec.Id;Family=$spec.Family;Architecture=$spec.Architecture;RuntimeType=$spec.RuntimeType;Channel=$spec.Channel;Type='PrerequisiteExe';Package=(Join-Path $spec.RelativeRoot 'Package.exe')}
-        $script:usbRoot = Join-Path $TestDrive 'CleanupUsb'
-        New-PrerequisiteFixture (Join-Path $usbRoot $spec.RelativeRoot) $spec
-        $old = Join-Path $usbRoot 'BuiltIn/VisualCppRedist/x64'
-        New-Item -ItemType Directory -Path $old -Force | Out-Null
-        @{Id='VisualCppRedist';Architecture='x64'} | ConvertTo-Json | Set-Content (Join-Path $old 'CacheInfo.json')
-        $script:logDirectory = Split-Path $logPath
-        Mock Get-OSDAppPrerequisiteRelease {
-            [pscustomobject]@{PackageUri='https://aka.ms/vc14/vc_redist.x64.exe';ResolvedUri=$null;ETag=$null;LastModified=$null;Version='14.50.1.0';Sha512=$null;Size=0}
-        }
-        Mock Save-PreInstallDownload { throw 'Unexpected download' }
-        & $script:preCase
-        $acquisition.Outcome | Should -Be 'CacheReused'
-        Test-Path $old | Should -BeFalse
-        Get-Content $logPath -Raw | Should -Match '\[CacheRetiredVariantRemoved\].*RetiredId=VisualCppRedist'
-        Should -Invoke Save-PreInstallDownload -Times 0 -Exactly
-    }
     It 'records valid fallback and offline use without claiming confirmed currency' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         & $script:preCase
         $acquisition.Outcome | Should -Be 'FallbackCacheUsed'
         $script:networkAvailable=$false
@@ -240,32 +225,38 @@ Describe 'Runtime PreInstall and Runner dispatch' {
     It 'fails without valid content and does not accept another requested variant' {
         { & $script:preCase } | Should -Throw '*no valid staged fallback*'
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         $app.Architecture='x86'
         { & $script:preCase } | Should -Throw '*identity*'
     }
     It 'rejects corrupt, wrong-channel and untrusted staged fallback during a metadata outage' {
         $root = Join-Path $StagedPath $spec.RelativeRoot
         New-PrerequisiteFixture $root $spec
-        Add-Content (Join-Path $root 'Package.exe') 'corrupt'
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
+        Add-Content (Resolve-OSDAppBuiltInPayloadPath -Root $root -ExpectedExtension '.exe') 'corrupt'
         { & $script:preCase } | Should -Throw '*no valid staged fallback*'
         New-PrerequisiteFixture $root $spec
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         $info = Get-Content (Join-Path $root 'CacheInfo.json') -Raw | ConvertFrom-Json
         $info.Channel='9.0'
         $info | ConvertTo-Json | Set-Content (Join-Path $root 'CacheInfo.json')
         { & $script:preCase } | Should -Throw '*no valid staged fallback*'
         New-PrerequisiteFixture $root $spec
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         Mock Get-AuthenticodeSignature { [pscustomobject]@{Status='Valid';SignerCertificate=[pscustomobject]@{Subject='O=Other Corporation'}} }
         { & $script:preCase } | Should -Throw '*no valid staged fallback*'
         Should -Invoke Start-Process -Times 0 -Exactly
     }
     It 'does not fall back when Microsoft explicitly reports the channel is unsupported' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         Mock Get-OSDAppPrerequisiteRelease { throw [NotSupportedException]::new('Channel is EOL') }
         { & $script:preCase } | Should -Throw '*Channel is EOL*'
         Should -Invoke Start-Process -Times 0 -Exactly
     }
     It 'rejects an expired channel before offline fallback or execution' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         Mock Get-Date { [datetime]'2028-11-15T00:00:00Z' }
         $script:networkAvailable=$false
         { & $script:preCase } | Should -Throw '*support ended*'
@@ -274,31 +265,36 @@ Describe 'Runtime PreInstall and Runner dispatch' {
     }
     It 'uses silent install without reboot and confirms the installed version' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         (& $script:runCase).ExitCode | Should -Be 0
         Should -Invoke Start-Process -Times 1 -Exactly -ParameterFilter { ($ArgumentList -join ' ') -eq '/install /quiet /norestart' }
         Should -Invoke Get-OSDAppInstalledPrerequisiteVersion -Times 2 -Exactly
     }
     It 'preserves newer installed runtime versions without starting the installer' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         Mock Get-OSDAppInstalledPrerequisiteVersion { [version]'10.0.2' }
         (& $script:runCase).ExitCode | Should -Be 0
         Should -Invoke Start-Process -Times 0 -Exactly
     }
     It 'does not report success when exit code is zero but installation is absent' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         Mock Get-OSDAppInstalledPrerequisiteVersion { $null }
         { & $script:runCase } | Should -Throw '*not detected*'
     }
     It 'rejects corrupted content before launching any executable' {
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         Add-Content (Join-Path $StagedPath $app.Package) 'corruption'
         { & $script:runCase } | Should -Throw '*SHA-256*'
         Should -Invoke Start-Process -Times 0 -Exactly
     }
     It 'keeps x86 Visual C++ distinct when x64 is already installed' {
         $script:spec=Get-OSDAppPrerequisiteSpec -Family VisualCRedist -Architecture x86
-        $app.Id=$spec.Id;$app.Family=$spec.Family;$app.Architecture=$spec.Architecture;$app.Channel=$spec.Channel;$app.RuntimeType=$spec.RuntimeType;$app.Package=Join-Path $spec.RelativeRoot 'Package.exe'
+        $app.Id=$spec.Id;$app.Family=$spec.Family;$app.Architecture=$spec.Architecture;$app.Channel=$spec.Channel;$app.RuntimeType=$spec.RuntimeType;$app.Package=$null;$app.PayloadRoot=$spec.RelativeRoot
         New-PrerequisiteFixture (Join-Path $StagedPath $spec.RelativeRoot) $spec
+        Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath
         Mock Get-OSDAppInstalledPrerequisiteVersion { if($Spec.Architecture -eq 'x64' -or $script:installerStarted){[version]'14.50.1.0'} }
         (& $script:runCase).ExitCode | Should -Be 0
         Should -Invoke Start-Process -Times 1 -Exactly

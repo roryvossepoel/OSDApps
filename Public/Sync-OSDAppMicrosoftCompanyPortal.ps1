@@ -10,11 +10,12 @@ function Sync-OSDAppMicrosoftCompanyPortal {
     }
     $cachePath = Get-OSDAppCachePath
     $target = Join-Path $cachePath ('BuiltIn\MicrosoftCompanyPortal\' + $Architecture)
-    if (-not $PSCmdlet.ShouldProcess($target, 'Prepare Microsoft Company Portal from the supplied Preinstall Kit')) { return }
+    if (-not $PSCmdlet.ShouldProcess($target, 'Download or import the official Microsoft Preinstall Kit')) { return }
 
     $automatic = [string]::IsNullOrWhiteSpace($KitPath)
     $downloadUri = 'https://download.microsoft.com/download/ac93b367-7b17-4838-a079-c6f3377bf582/CompanyPortal-Universal-Production_x64_x86_ARM_ARM64.appxupload_Windows10_PreinstallKit.zip'
     $kit = $null
+    $kitDirectory = $null
     Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
     Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
     $lock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'Microsoft Company Portal cache synchronization'
@@ -22,8 +23,9 @@ function Sync-OSDAppMicrosoftCompanyPortal {
     $backup = $target + '.osdapps-old-' + [guid]::NewGuid().ToString('N')
     try {
         if ($automatic) {
-            $kit = Join-Path $cachePath ('CompanyPortal-PreinstallKit-' + [guid]::NewGuid().ToString('N') + '.zip')
-            Invoke-WebRequest -Uri $downloadUri -OutFile $kit -UseBasicParsing -TimeoutSec 900 -ErrorAction Stop
+            $kitDirectory = Join-Path $cachePath ('.osdapps-kit-' + [guid]::NewGuid().ToString('N'))
+            $download = Save-OSDAppDownload -Uri $downloadUri -DestinationDirectory $kitDirectory -ExpectedExtension '.zip' -Activity 'Downloading Microsoft Company Portal Preinstall Kit'
+            $kit = [string]$download.FullName
         } else {
             $kit = (Resolve-Path -LiteralPath $KitPath -ErrorAction Stop).Path
         }
@@ -56,8 +58,8 @@ function Sync-OSDAppMicrosoftCompanyPortal {
             New-Item -ItemType Directory -Path (Join-Path $candidate 'Dependencies') -Force -ErrorAction Stop | Out-Null
 
             $selected = @(
-                @{ Entry=$bundles[0]; Relative='Bundle.appxbundle' },
-                @{ Entry=$licenses[0]; Relative='License.xml' }
+                @{ Entry=$bundles[0]; Relative=[string]$bundles[0].Name },
+                @{ Entry=$licenses[0]; Relative=[string]$licenses[0].Name }
             )
             foreach ($dep in $dependencies) {
                 $selected += @{ Entry=$dep; Relative=('Dependencies\' + $dep.Name) }
@@ -75,7 +77,7 @@ function Sync-OSDAppMicrosoftCompanyPortal {
         finally { $zip.Dispose() }
 
         # Read app identity and version from the actual vendor-signed bundle metadata.
-        $bundle = [IO.Compression.ZipFile]::OpenRead((Join-Path $candidate 'Bundle.appxbundle'))
+        $bundle = [IO.Compression.ZipFile]::OpenRead((Join-Path $candidate ([string]$bundles[0].Name)))
         try {
             $manifestEntry = $bundle.GetEntry('AppxMetadata/AppxBundleManifest.xml')
             if (-not $manifestEntry) { throw 'AppxBundleManifest.xml was not found.' }
@@ -94,6 +96,8 @@ function Sync-OSDAppMicrosoftCompanyPortal {
 
         [ordered]@{
             Id='MicrosoftCompanyPortal'; Version=$version; Architecture=$Architecture
+            PayloadFileName=[string]$bundles[0].Name; LicenseFileName=[string]$licenses[0].Name
+            Sha256=[string]$files[0].Sha256; Size=(Get-Item -LiteralPath (Join-Path $candidate ([string]$bundles[0].Name))).Length
             Source=$(if($automatic){'Microsoft Download Center'}else{'Microsoft Preinstall Kit (operator supplied)'})
             SourceUri=$(if($automatic){$downloadUri}else{$null})
             SourceKitSha256=(Get-FileHash -LiteralPath $kit -Algorithm SHA256).Hash
@@ -102,6 +106,8 @@ function Sync-OSDAppMicrosoftCompanyPortal {
         } | ConvertTo-Json -Depth 10 |
             Set-Content -LiteralPath (Join-Path $candidate 'CacheInfo.json') -Encoding UTF8 -ErrorAction Stop
 
+        $candidateInfo = Get-Content -LiteralPath (Join-Path $candidate 'CacheInfo.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        New-OSDAppCompanyPortalManifestEntry -CacheInfo $candidateInfo -Architecture $Architecture | Out-Null
         if (Test-Path -LiteralPath $target) {
             Move-Item -LiteralPath $target -Destination $backup -ErrorAction Stop
         }
@@ -122,15 +128,9 @@ function Sync-OSDAppMicrosoftCompanyPortal {
         if ($automatic -and (Test-Path -LiteralPath (Join-Path $target 'CacheInfo.json') -PathType Leaf)) {
             try {
                 $previous = Get-Content (Join-Path $target 'CacheInfo.json') -Raw | ConvertFrom-Json
-                $healthy = ($previous.Id -eq 'MicrosoftCompanyPortal' -and $previous.Architecture -eq $Architecture -and @($previous.Files).Count -eq 7)
-                foreach ($item in @($previous.Files)) {
-                    $relative = [string]$item.Path
-                    if ($relative -notmatch '^(Bundle\.appxbundle|License\.xml|Dependencies\\[A-Za-z0-9._-]+\.appx)$' -or
-                        [string]$item.Sha256 -notmatch '^[0-9A-Fa-f]{64}$') { $healthy = $false; break }
-                    $file = Join-Path $target $relative
-                    if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or
-                        (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $item.Sha256) { $healthy = $false; break }
-                }
+                $entry = New-OSDAppCompanyPortalManifestEntry -CacheInfo $previous -Architecture $Architecture
+                Assert-OSDAppCompanyPortalFiles -App $entry -StagedPath $cachePath
+                $healthy = $true
                 if ($healthy) {
                     Write-Warning ('Company Portal download failed; verified cache reused: {0}' -f $originalError.Exception.Message)
                     return [pscustomobject]@{Id='MicrosoftCompanyPortal';Version=$previous.Version;Architecture=$Architecture;Cached=$true;Updated=$false;CacheReused=$true;CachePath=$target;Files=7}
@@ -140,8 +140,8 @@ function Sync-OSDAppMicrosoftCompanyPortal {
         throw $originalError
     }
     finally {
-        if ($automatic -and $kit -and (Test-Path -LiteralPath $kit -PathType Leaf)) {
-            Remove-Item -LiteralPath $kit -Force -ErrorAction SilentlyContinue
+        if ($kitDirectory -and (Test-Path -LiteralPath $kitDirectory)) {
+            Remove-Item -LiteralPath $kitDirectory -Recurse -Force -ErrorAction SilentlyContinue
         }
         if (Test-Path -LiteralPath $candidate) { Remove-Item -LiteralPath $candidate -Recurse -Force -ErrorAction SilentlyContinue }
         if ($lock) { $lock.Dispose() }

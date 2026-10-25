@@ -1,3 +1,4 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Built-in cache generation transactions' {
     BeforeAll {
         $moduleRoot = Split-Path -Parent $PSScriptRoot
@@ -8,17 +9,17 @@ Describe 'Built-in cache generation transactions' {
         InModuleScope OSDApps {
             $root = Join-Path $TestDrive 'BuiltIn\Example\x64'
             New-Item -ItemType Directory -Path $root -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $root 'Package.msi') -Value 'old-generation' -Encoding ASCII
-            $before = (Get-FileHash -LiteralPath (Join-Path $root 'Package.msi') -Algorithm SHA256).Hash
+            Set-Content -LiteralPath (Join-Path $root 'vendor-installer.msi') -Value 'old-generation' -Encoding ASCII
+            $before = (Get-FileHash -LiteralPath (Join-Path $root 'vendor-installer.msi') -Algorithm SHA256).Hash
 
             {
                 Invoke-OSDAppBuiltInCacheTransaction -Root $root -Build {
                     param($candidate)
-                    Set-Content -LiteralPath (Join-Path $candidate 'Package.msi') -Value 'new-generation' -Encoding ASCII
+                    Set-Content -LiteralPath (Join-Path $candidate 'vendor-installer.msi') -Value 'new-generation' -Encoding ASCII
                 } -Validate { throw 'simulated candidate validation failure' }
             } | Should -Throw '*simulated candidate validation failure*'
 
-            (Get-FileHash -LiteralPath (Join-Path $root 'Package.msi') -Algorithm SHA256).Hash | Should -Be $before
+            (Get-FileHash -LiteralPath (Join-Path $root 'vendor-installer.msi') -Algorithm SHA256).Hash | Should -Be $before
             @((Get-ChildItem -LiteralPath (Split-Path $root -Parent) -Directory | Where-Object Name -Like 'x64.osdapps-*')).Count | Should -Be 0
         }
     }
@@ -27,19 +28,19 @@ Describe 'Built-in cache generation transactions' {
         InModuleScope OSDApps {
             $root = Join-Path $TestDrive 'BuiltIn\Example\x64'
             New-Item -ItemType Directory -Path $root -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $root 'Package.msi') -Value 'old-generation' -Encoding ASCII
+            Set-Content -LiteralPath (Join-Path $root 'vendor-installer.msi') -Value 'old-generation' -Encoding ASCII
             New-Item -ItemType Directory -Path "$root.osdapps-new-stale" -Force | Out-Null
             New-Item -ItemType Directory -Path "$root.osdapps-old-stale" -Force | Out-Null
 
             Invoke-OSDAppBuiltInCacheTransaction -Root $root -Build {
                 param($candidate)
-                Set-Content -LiteralPath (Join-Path $candidate 'Package.msi') -Value 'new-generation' -Encoding ASCII
+                Set-Content -LiteralPath (Join-Path $candidate 'vendor-installer.msi') -Value 'new-generation' -Encoding ASCII
             } -Validate {
                 param($candidate)
-                if ((Get-Content -LiteralPath (Join-Path $candidate 'Package.msi') -Raw).Trim() -ne 'new-generation') { throw 'invalid candidate' }
+                if ((Get-Content -LiteralPath (Join-Path $candidate 'vendor-installer.msi') -Raw).Trim() -ne 'new-generation') { throw 'invalid candidate' }
             } | Out-Null
 
-            (Get-Content -LiteralPath (Join-Path $root 'Package.msi') -Raw).Trim() | Should -Be 'new-generation'
+            (Get-Content -LiteralPath (Join-Path $root 'vendor-installer.msi') -Raw).Trim() | Should -Be 'new-generation'
             @((Get-ChildItem -LiteralPath (Split-Path $root -Parent) -Directory | Where-Object Name -Like 'x64.osdapps-*')).Count | Should -Be 0
         }
     }
@@ -52,11 +53,36 @@ Describe 'Built-in cache generation transactions' {
         }
     }
 
-    It 'uses sibling transactions in every SetupComplete non-Office refresh path' {
-        $runtime = Get-Content -LiteralPath (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1') -Raw
-        @([regex]::Matches($runtime,'\.osdapps-new-')).Count | Should -BeGreaterOrEqual 4
-        $runtime | Should -Match 'candidate generation is incomplete'
-        $runtime | Should -Match 'Adobe candidate metadata is inconsistent'
-        $runtime | Should -Match 'candidateBootstrapper=Join-Path \$transactionRoot ''teamsbootstrapper.exe'''
+    It 'routes each SetupComplete MSI and ZIP branch through the validated transaction helper' {
+        $path = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1'
+        $tokens = $null
+        $parseErrors = $null
+        $ast = [Management.Automation.Language.Parser]::ParseFile($path,[ref]$tokens,[ref]$parseErrors)
+        @($parseErrors).Count | Should -Be 0
+        $helper = $ast.Find({
+            param($node)
+            $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Sync-PreInstallVendorMsi'
+        },$true)
+        $helper | Should -Not -BeNullOrEmpty
+        $helper.Extent.Text | Should -Match 'Invoke-OSDAppBuiltInCacheTransaction'
+        $helper.Extent.Text | Should -Match 'Assert-SelectedPayload'
+        $helper.Extent.Text | Should -Match '-Validate'
+        $dispatch = $ast.Find({
+            param($node)
+            $node -is [Management.Automation.Language.SwitchStatementAst] -and $node.Condition.Extent.Text -eq '$app.Id'
+        },$true)
+        $dispatch | Should -Not -BeNullOrEmpty
+        foreach ($id in @('GoogleChromeEnterprise','MozillaFirefoxEnterprise','CiscoWebex','ZoomWorkplace','AdobeAcrobatUnified')) {
+            $clauses = @($dispatch.Clauses | Where-Object { $_.Item1.Value -eq $id })
+            $clauses.Count | Should -Be 1 -Because "$id must have one explicit acquisition branch"
+            $clauses[0].Item2.Extent.Text | Should -Match 'Sync-PreInstallVendorMsi' -Because "$id must use the shared validated transaction"
+        }
+        $adobe = @($dispatch.Clauses | Where-Object { $_.Item1.Value -eq 'AdobeAcrobatUnified' })[0]
+        $adobe.Item2.Extent.Text | Should -Match '-ExpectedExtension ''.zip'''
+        $teams = @($dispatch.Clauses | Where-Object { $_.Item1.Value -eq 'MicrosoftTeams' })
+        $teams.Count | Should -Be 1
+        $teams[0].Item2.Extent.Text | Should -Match 'Invoke-OSDAppBuiltInCacheTransaction'
+        $teams[0].Item2.Extent.Text | Should -Match 'Assert-OSDAppCachedPayload'
+        $teams[0].Item2.Extent.Text | Should -Match '-Validate'
     }
 }

@@ -29,15 +29,44 @@
         DefaultTheme = 'Optional Cisco Webex theme. Omission preserves vendor behavior.'
         EmailHint = 'Literal Cisco placeholder: $userPrincipalName, $mail or $SAMAccountName. Quote the placeholder. A fixed email address is rejected for this all-users install.'
         AdditionalMsiProperties = 'Cisco NAME=VALUE pairs. Managed properties, duplicates, unsupported quotes and control characters are rejected. Prefer dedicated parameters.'
-        Id = 'Technical repository application identifier, used in metadata and paths; not a display name.'
+        Id = 'Technical repository app identifier, used in metadata and paths; not a display name.'
         DisplayName = 'Human-readable repository app name for discovery and the Viewer.'
         Vendor = 'Optional descriptive publisher metadata, not a cryptographic result or installer argument.'
-        Version = 'Repository package version written into authoring metadata and paths. Does not query installed applications.'
+        Version = 'Repository package version written into authoring metadata and paths. Does not query installed apps.'
         PackagePath = 'Existing Package.zip archive. Repository archives require Package/Install.ps1.'
         RepositoryPath = 'Local repository root containing catalog.json and Apps; not a remote URL or deployment target.'
         SuccessCodes = 'Repository installer exit codes treated as success. Default accepts 0 and 3010.'
     }
     Commands = @{
+        'Add-OSDAppRegistryKey' = @{
+            Synopsis = 'Stage a registry key change without writing to the preparation PC or WinPE registry.'
+            Description = 'Adds or replaces an operation in one local RegistrySettings Script package. SetupComplete creates missing keys, preserves unrelated values and verifies every change by read-back. No view switch means the runtime host default. No external repository, download, registry ACL changes or profile loading is required.'
+            Environment = 'WinPE after OSDCloud has applied Windows. Execution happens later in full Windows under SetupComplete.'
+            Output = 'OSDApps.StagedApp with OperationCount. One RegistrySettings queue entry represents all registry operations; staging is not execution proof.'
+            Parameters = @{
+                Path = 'Absolute HKLM, HKCR or loaded HKU path. HKCR explicitly targets machine SOFTWARE\Classes. Missing child keys are created at runtime. HKCU, HKCC and explicit WOW6432Node are rejected.'
+                Registry32 = 'Use the explicit 32-bit registry view during SetupComplete. Mutually exclusive with Registry64.'
+                Registry64 = 'Use the explicit 64-bit registry view during SetupComplete. Rejected on 32-bit Windows. Mutually exclusive with Registry32.'
+            }
+            Examples = @(@{ Code = 'Add-OSDAppRegistryKey -Path ''HKLM:\SOFTWARE\OSDApps\Tests\RegistryStaging\Level1\Level2'' -Registry64'; Remarks = 'Stage a deep machine registry path in the explicit 64-bit view.' })
+            Link = 'docs/registry-staging.md'
+        }
+        'Add-OSDAppRegistryValue' = @{
+            Synopsis = 'Stage a registry value change without writing to the preparation PC or WinPE registry.'
+            Description = 'Adds or replaces an operation in one local RegistrySettings Script package. SetupComplete creates missing keys, preserves unrelated values and verifies every change by read-back. No view switch means the runtime host default. No external repository, download, registry ACL changes or profile loading is required.'
+            Environment = 'WinPE after OSDCloud has applied Windows. Execution happens later in full Windows under SetupComplete.'
+            Output = 'OSDApps.StagedApp with OperationCount. One RegistrySettings queue entry represents all registry operations; staging is not execution proof.'
+            Parameters = @{
+                Path = 'Absolute HKLM, HKCR or loaded HKU path. HKCR explicitly targets machine SOFTWARE\Classes. Missing child keys are created at runtime. HKCU, HKCC and explicit WOW6432Node are rejected.'
+                Registry32 = 'Use the explicit 32-bit registry view during SetupComplete. Mutually exclusive with Registry64.'
+                Registry64 = 'Use the explicit 64-bit registry view during SetupComplete. Rejected on 32-bit Windows. Mutually exclusive with Registry32.'
+                Name = 'Registry value name. An empty string selects the unnamed default value.'
+                Type = 'Explicit registry data type: String, ExpandString, MultiString, Binary, DWord or QWord.'
+                Value = 'Literal registry data. Byte arrays for Binary, string arrays for MultiString, strings or whole integers for numeric types. No text is executed as code.'
+            }
+            Examples = @(@{ Code = 'Add-OSDAppRegistryValue -Path ''HKLM:\SOFTWARE\OSDApps\Tests\RegistryStaging\Level1\Level2'' -Registry64 -Name ''Marker'' -Type String -Value ''CreatedIn64BitView'''; Remarks = 'Stage a deep machine registry path in the explicit 64-bit view.' })
+            Link = 'docs/registry-staging.md'
+        }
         'Add-OSDAppMicrosoftCompanyPortal' = @{
             Synopsis = 'Stage the Microsoft Company Portal offline Preinstall Kit for Windows provisioning.'
             Description = 'Stages the Microsoft-supplied appbundle, offline license and five matching dependencies from a locally prepared OSDCloud cache. SetupComplete provisions the package for newly created users; it does not directly deploy into an existing signed-in user session.'
@@ -49,11 +78,11 @@
         }
         'Sync-OSDAppMicrosoftCompanyPortal' = @{
             Synopsis = 'Prepare Microsoft Company Portal from the official offline Preinstall Kit.'
-            Description = 'Consumes an operator-supplied official Microsoft ZIP, selects one appbundle, offline license and five architecture-specific dependencies, records SHA-256 hashes, and atomically updates the corresponding local USB cache variant. Does not download or redistribute Microsoft binaries.'
-            Environment = 'Full Windows preparation machine with the OSDCloud USB connected and access to the original Microsoft Preinstall Kit ZIP.'
+            Description = 'Downloads the official Microsoft Preinstall Kit by default. Optionally accepts a local official ZIP through -KitPath. Retains the original bundle, license and dependency filenames, records SHA-256 hashes and exact filename metadata, and transactionally updates the USB cache. WinPE stages prepared content; SetupComplete provisions it without a network download.'
+            Environment = 'Full Windows preparation machine with the OSDCloud USB connected; internet access for automatic download, or a local official kit.'
             Output = 'Cache preparation record including selected architecture, bundle version and target cache path.'
-            Parameters = @{ KitPath = 'Full path to the original Microsoft Company Portal Preinstall Kit ZIP downloaded by the operator.' }
-            Examples = @(@{ Code = 'Sync-OSDAppMicrosoftCompanyPortal -KitPath ''C:\Downloads\CompanyPortal-PreinstallKit.zip'' -Architecture x64'; Remarks = 'Prepare the x64 bundle, license and dependency cache for offline WinPE deployment.' })
+            Parameters = @{ KitPath = 'Optional path to an official Microsoft kit ZIP. Omit this parameter for automatic Microsoft download.' }
+            Examples = @(@{ Code = 'Sync-OSDAppMicrosoftCompanyPortal -Architecture x64'; Remarks = 'Download the official Microsoft kit and prepare the x64 cache. Supply -KitPath only to use a local official ZIP.' })
             Link = 'docs/microsoft-company-portal.md'
         }
         'Add-OSDAppCMTraceOpen' = @{
@@ -145,7 +174,7 @@
         }
         'Sync-OSDAppVisualStudioCode' = @{
             Synopsis = 'Synchronize a verified Visual Studio Code system-installer cache.'
-            Description = 'Checks the official Stable update metadata. Reuses a matching verified generation or downloads and validates a complete candidate before replacing the active generation. Requires access to update.code.visualstudio.com and vscode.download.prss.microsoft.com. No applications are installed.'
+            Description = 'Checks the official Stable update metadata. Reuses a matching verified generation or downloads and validates a complete candidate before replacing the active generation. Requires access to update.code.visualstudio.com and vscode.download.prss.microsoft.com. No apps are installed.'
             Environment = 'Full Windows preparation computer with cache volume attached.'
             Output = 'OSDApps.BuiltInCache with Version, Architecture and Updated.'
             Examples = @(@{ Code = 'Sync-OSDAppVisualStudioCode'; Remarks = 'Prepare or update the x64 cache.' }, @{ Code = 'Sync-OSDAppVisualStudioCode -WhatIf'; Remarks = 'Preview without downloading or changing the cache.' })
@@ -162,7 +191,7 @@
         }
         'Sync-OSDApp7Zip' = @{
             Synopsis = 'Synchronize a validated 7Zip generation on the configured cache volume.'
-            Description = 'Checks the latest stable official GitHub release. Reuses a hash-valid matching generation or downloads and validates a complete candidate before replacing the active generation. Requires GitHub API and release-download access. No applications are installed.'
+            Description = 'Checks the latest stable official GitHub release. Reuses a hash-valid matching generation or downloads and validates a complete candidate before replacing the active generation. Requires GitHub API and release-download access. No apps are installed.'
             Environment = 'Full Windows preparation computer with cache volume attached.'
             Output = 'OSDApps.BuiltInCache with Version, Architecture and Updated.'
             Examples = @(@{ Code = 'Sync-OSDApp7Zip'; Remarks = 'Prepare or update the x64 cache.' }, @{ Code = 'Sync-OSDApp7Zip -WhatIf'; Remarks = 'Preview without downloading or changing the cache.' })
@@ -201,11 +230,11 @@
             Description = 'Reads catalog metadata over HTTP/HTTPS and reports app count and schema version. Does not download archives. No configured catalog or a read failure produces Available=False, not a detailed cause diagnosis.'
             Environment = 'Full Windows or WinPE; online lookup when configured.'
             Output = 'OSDApps.CatalogStatus object.'
-            Examples = @(@{ Code = 'Get-OSDAppCatalog | Format-List'; Remarks = 'Check catalog metadata, not installed applications.' })
+            Examples = @(@{ Code = 'Get-OSDAppCatalog | Format-List'; Remarks = 'Check catalog metadata, not installed apps.' })
             Link = 'docs/repository.md'
         }
         'Get-OSDApp' = @{
-            Synopsis = 'Discover built-in and repository applications.'
+            Synopsis = 'Discover built-in and repository apps.'
             Description = 'Combines built-in definitions, configured online repository and existing cache metadata. Does not synchronize or stage apps. Cached/CachedOnly describe local repository availability with/without an online match, not installation state.'
             Environment = 'Full Windows or WinPE; online discovery unless Offline is supplied or no catalog is configured.'
             Output = 'OSDApps.App objects, not installed-software inventory.'
@@ -220,7 +249,7 @@
             Link = 'docs/viewer.md'
         }
         'Get-OSDAppCache' = @{
-            Synopsis = 'Inspect the detected application cache without changing it.'
+            Synopsis = 'Inspect the detected app cache without changing it.'
             Description = 'Lists repository ZIP and built-in CacheInfo entries. Repository Valid means matching archive hash; built-in Valid means required files present. SignatureStatus is separate. Missing media returns no entries. Does not refresh or install packages.'
             Environment = 'Full Windows or WinPE; version/signature inspection has reduced capability in WinPE.'
             Output = 'OSDApps.CacheEntry objects with variant, size, validity and optional signature details.'
@@ -257,14 +286,14 @@
         }
         'Get-OSDAppDeploymentResult' = @{
             Synopsis = 'Read the latest machine-readable SetupComplete deployment result.'
-            Description = 'Reads and minimally validates the JSON written atomically by the standalone one-shot runner. It reports PreInstall context, succeeded/failed/skipped counts and per-app outcomes; it does not retry deployment or infer licensing, sign-in or later application health.'
+            Description = 'Reads and minimally validates the JSON written atomically by the standalone one-shot runner. It reports PreInstall context, succeeded/failed/skipped counts and per-app outcomes; it does not retry deployment or infer licensing, sign-in or later app health.'
             Environment = 'Full Windows after or during SetupComplete; any host with access to a copied result file can use Path.'
-            Output = 'OSDApps.DeploymentResult with status, timing, PreInstall context and application results.'
+            Output = 'OSDApps.DeploymentResult with status, timing, PreInstall context and app results.'
             Parameters = @{
                 Path = 'Optional explicit result JSON path. Omit it to use the current session ResultPath configuration.'
             }
             Examples = @(
-                @{ Code = 'Get-OSDAppDeploymentResult | Select-Object Status, SuccessfulApplicationCount, FailedApplicationCount, SkippedApplicationCount'; Remarks = 'Read the configured Latest.json after first boot.' },
+                @{ Code = 'Get-OSDAppDeploymentResult | Select-Object Status, SuccessfulAppCount, FailedAppCount, SkippedAppCount'; Remarks = 'Read the configured Latest.json after first boot.' },
                 @{ Code = 'Get-OSDAppDeploymentResult -Path ''C:\Evidence\Latest.json'''; Remarks = 'Inspect a result copied from another device.' }
             )
             Link = 'docs/runtime.md'
@@ -288,9 +317,9 @@
         }
         'Test-OSDAppDeployment' = @{
             Synopsis = 'Preflight staged OSDApps deployment intent before reboot.'
-            Description = 'Validates DeviceManifest.json, queue identity, SetupComplete integration, staged runtime version, repository hashes, built-in definitions and optional complete offline payload readiness. It does not install applications or contact vendors.'
+            Description = 'Validates DeviceManifest.json, queue identity, SetupComplete integration, staged runtime version, repository hashes, built-in definitions and optional complete offline payload readiness. It does not install apps or contact vendors.'
             Environment = 'WinPE after all Add commands and before reboot; can also inspect a mounted offline Windows tree.'
-            Output = 'One OSDApps.DeploymentValidation object with required checks and per-application readiness.'
+            Output = 'One OSDApps.DeploymentValidation object with required checks and per-app readiness.'
             Parameters = @{
                 RequireOfflineReady = 'Fail validation unless every repository and built-in payload required by the queue is already staged locally. Alias: RequireCache.'
                 MinimumFreeSpaceGB = 'Optional minimum free space required on the offline Windows volume. Zero records available space without enforcing a threshold.'
@@ -322,9 +351,9 @@
             Link = 'docs/viewer.md'
         }
         'Add-OSDApp' = @{
-            Synopsis = 'Synchronize and stage repository applications for SetupComplete.'
+            Synopsis = 'Synchronize and stage repository apps for SetupComplete.'
             Description = 'Resolves exact Ids, validates SHA-256 and updates local payloads, ordered device manifest and OSDApps SetupComplete blocks. May fall back only when all requested cache entries are valid. Without USB, uses target-local repository cache. Built-ins require dedicated Add commands. Re-adding an Id moves it to the end without duplication.'
-            Environment = 'Intended for WinPE after Windows image application and before first boot. Do not target the running preparation PC.'
+            Environment = 'Intended for WinPE after Windows image app and before first boot. Do not target the running preparation PC.'
             Output = 'OSDApps.StagedApp objects; not installation proof.'
             Parameters = @{
                 Name = 'Exact canonical repository Ids or declared retired aliases, with pipeline support. Built-in Ids and wildcard selections are not supported here.'
@@ -342,7 +371,7 @@
             Environment = 'WinPE for real target removal; full Windows requires TestMode and only touches the isolated TEMP target.'
             Output = 'OSDApps.UnstagedApps with Removed, Remaining and Changed.'
             Parameters = @{
-                Name = 'Exact staged application Ids; no wildcard expansion.'
+                Name = 'Exact staged app Ids; no wildcard expansion.'
                 WindowsPath = 'WinPE offline Windows volume root. Cannot combine with TestMode.'
                 TestMode = 'Full Windows only: remove staging in the isolated TEMP test folder, not active Windows.'
             }
@@ -370,7 +399,7 @@
             Link = 'docs/repository.md'
         }
         'Clear-OSDAppCache' = @{
-            Synopsis = 'Delete selected application cache content.'
+            Synopsis = 'Delete selected app cache content.'
             Description = 'Deletes cache, not installed apps or staging. WITHOUT A SCOPE, clears ALL repository and built-in cache content. Preview with WhatIf. Logs remain unless IncludeLogs is supplied; the clear operation may write a new Client.log.'
             Environment = 'Full Windows or WinPE with the intended cache volume attached.'
             Output = 'OSDApps.CacheClearResult with scope and removed entries.'
@@ -378,13 +407,13 @@
                 All = 'Clear repository and built-in caches. Also the default with no scope argument.'
                 Repository = 'Clear repository archives and CacheCatalog.json only.'
                 BuiltIn = 'Clear built-in cache only.'
-                Prune = 'With BuiltIn, remove only unmanaged top-level app folders and loose files. Preserve managed app trees, registered aliases, links and transaction recovery content. Preview with WhatIf; inspect Review in the result.'
+                Prune = 'With BuiltIn, remove only unmanaged top-level app folders and loose files. Preserve managed app trees, links and transaction recovery content. Preview with WhatIf; inspect Review in the result.'
                 Name = 'Exact safe cache Ids. Matching built-in and repository paths are both removed, including retired identities; inspect operations with WhatIf.'
                 IncludeLogs = 'Also remove existing cache logs; new audit entries are written afterward.'
             }
             Examples = @(
                 @{ Code = 'Clear-OSDAppCache -All -WhatIf'; Remarks = 'Preview the destructive all-cache scope.' },
-                @{ Code = 'Clear-OSDAppCache -BuiltIn -Prune -WhatIf'; Remarks = 'Preview unmanaged built-in namespace cleanup while retaining current app variants and legacy payload filenames.' },
+                @{ Code = 'Clear-OSDAppCache -BuiltIn -Prune -WhatIf'; Remarks = 'Preview unmanaged built-in namespace cleanup while retaining current app variants and transaction recovery content.' },
                 @{ Code = 'Clear-OSDAppCache -Name MicrosoftTeams -WhatIf'; Remarks = 'Preview a named entry; target staging remains separate.' }
             )
             Link = 'docs/faq.md'
@@ -472,9 +501,9 @@
         }
         'Sync-OSDAppMicrosoftTeams' = @{
             Synopsis = 'Prepare the Teams bootstrapper and MSIX cache.'
-            Description = 'Validates a new bootstrapper and Microsoft publisher. Reuses unchanged MSIX by metadata; Updated=False is not zero HTTP requests or no bootstrapper download. Explicit signature check does not cover MSIX. Architectures share the MicrosoftTeams cache directory. After the canonical payload is complete, a retired BuiltIn\Teams cache folder is removed.'
+            Description = 'Validates a new bootstrapper and Microsoft publisher. Reuses unchanged MSIX by metadata; Updated=False is not zero HTTP requests or no bootstrapper download. Explicit signature check does not cover MSIX. Architectures share the MicrosoftTeams cache directory. The cache records the exact vendor filename, SHA-256 and size. Start with a fresh cache; no old layout is migrated.'
             Environment = 'Full Windows only with configured cache and vendor access. WinPE is rejected.'
-            Output = 'OSDApps.BuiltInCache; Updated describes MSIX replacement and RemovedAliases reports retired folders removed.'
+            Output = 'OSDApps.BuiltInCache; Updated describes MSIX replacement; cache metadata pins the actual vendor filename.'
             Examples = @(@{ Code = 'Sync-OSDAppMicrosoftTeams -Architecture x64'; Remarks = 'Prepare x64 content without installing Teams.' })
             Link = 'docs/built-in-apps.md'
         }
@@ -533,14 +562,14 @@
         }
         'Add-OSDAppPackage' = @{
             Synopsis = 'Publish an existing package into a local repository.'
-            Description = 'Validates input structure and the canonical Id/alias graph before asking for destination approval. Only after approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. PackageType classifies the shared Install.ps1 execution unit as Application or Script without changing its runtime path. Omitting Alias on an update preserves existing aliases; an explicitly empty Alias removes them. WhatIf or declined confirmation leaves the destination unchanged. Older repository source folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
+            Description = 'Validates input structure and the canonical Id/alias graph before asking for destination approval. Only after approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. PackageType classifies the shared Install.ps1 execution unit as App or Script without changing its runtime path. Omitting Alias on an update preserves existing aliases; an explicitly empty Alias removes them. WhatIf or declined confirmation leaves the destination unchanged. Older repository source folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
             Environment = 'Repository preparation machine with writable local repository.'
             Output = 'OSDApps.RepositoryPackage with archive SHA-256 and manifest reference after publication; no package-success object when previewed or declined.'
             Parameters = @{
                 Alias = 'Optional retired Ids that resolve to this canonical Id and are eligible for renamed-cache detection. Values cannot collide with another Id or alias.'
-                PackageType = 'Optional Application or Script classification. New packages default to Application; republishing an existing variant preserves its current type when omitted. Classification does not change integrity checks, execution context or failure handling.'
+                PackageType = 'Optional App or Script classification. New packages default to App; republishing an existing variant preserves its current type when omitted. Classification does not change integrity checks, execution context or failure handling.'
             }
-            Examples = @(@{ Code = 'Add-OSDAppPackage -Id ConfigureWindows -DisplayName ''Configure Windows'' -Version 1.0.0 -Architecture x64 -PackageType Script -PackagePath ''C:\Work\Build\ConfigureWindows\Package.zip'' -RepositoryPath ''C:\Work\Repository'''; Remarks = 'Publish a script package using the same repository and SetupComplete runtime contract as an application.' })
+            Examples = @(@{ Code = 'Add-OSDAppPackage -Id ConfigureWindows -DisplayName ''Configure Windows'' -Version 1.0.0 -Architecture x64 -PackageType Script -PackagePath ''C:\Work\Build\ConfigureWindows\Package.zip'' -RepositoryPath ''C:\Work\Repository'''; Remarks = 'Publish a script package using the same repository and SetupComplete runtime contract as an app.' })
             Link = 'docs/repository.md'
         }
         'Test-OSDAppPackage' = @{

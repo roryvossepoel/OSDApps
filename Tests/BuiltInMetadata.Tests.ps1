@@ -15,23 +15,19 @@ Describe 'Built-in metadata' {
         $script:metadata.Project | Should -Be 'OSDApps'
     }
 
-    It 'contains unique built-in application ids' {
-        $ids = @($script:metadata.Applications.Id)
+    It 'contains unique built-in app ids' {
+        $ids = @($script:metadata.Apps.Id)
         @($ids | Select-Object -Unique).Count | Should -Be $ids.Count
     }
 
-    It 'uses unique cache aliases that never collide with canonical ids' {
-        $ids = @($script:metadata.Applications.Id)
-        $aliases = @($script:metadata.Applications | ForEach-Object { @($_.Aliases) } | Where-Object { $_ })
-        @($aliases | Select-Object -Unique).Count | Should -Be $aliases.Count
-        foreach ($alias in $aliases) {
-            $alias | Should -Not -BeIn $ids
-            $alias | Should -Match '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+    It 'contains no retired built-in aliases' {
+        foreach ($app in @($script:metadata.Apps)) {
+            $app.PSObject.Properties.Name | Should -Not -Contain 'Aliases'
         }
     }
 
     It 'contains required fields for every built-in' {
-        foreach ($app in @($script:metadata.Applications)) {
+        foreach ($app in @($script:metadata.Apps)) {
             $app.Id | Should -Not -BeNullOrEmpty
             $app.DisplayName | Should -Not -BeNullOrEmpty
             $app.Source | Should -Be 'BuiltIn'
@@ -39,6 +35,9 @@ Describe 'Built-in metadata' {
             $app.Acquisition | Should -Not -BeNullOrEmpty
             if ($app.PackageType -eq 'Script') {
                 $app.SyncPhase | Should -Be 'None'
+            }
+            elseif ($app.Id -in @('MicrosoftCompanyPortal','CMTraceOpen')) {
+                $app.SyncPhase | Should -Be 'FullWindowsPreparation'
             }
             else {
                 $app.SyncPhase | Should -Be 'FullWindowsPreInstall'
@@ -58,7 +57,7 @@ Describe 'Built-in metadata' {
     }
 
     It 'keeps public raw icon URLs aligned with tracked SVG files' {
-        foreach ($app in @($script:metadata.Applications)) {
+        foreach ($app in @($script:metadata.Apps)) {
             $expectedUrl = 'https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/'
             $app.IconUrl.StartsWith($expectedUrl) | Should -BeTrue
             $fileName = $app.IconUrl.Substring($expectedUrl.Length)
@@ -68,7 +67,7 @@ Describe 'Built-in metadata' {
     }
 
     It 'advertises Cisco Webex with the stable viewer contract' {
-        $webex = @($script:metadata.Applications | Where-Object Id -eq 'CiscoWebex')
+        $webex = @($script:metadata.Apps | Where-Object Id -eq 'CiscoWebex')
         $webex.Count | Should -Be 1
         $webex[0].AddCommand | Should -Be 'Add-OSDAppCiscoWebex'
         $webex[0].SyncCommand | Should -Be 'Sync-OSDAppCiscoWebex'
@@ -78,7 +77,7 @@ Describe 'Built-in metadata' {
 
     It 'maps every metadata command to an exported function' {
         $exported = @(Get-Command -Module OSDApps -CommandType Function | Select-Object -ExpandProperty Name)
-        foreach ($app in @($script:metadata.Applications)) {
+        foreach ($app in @($script:metadata.Apps)) {
             $app.AddCommand | Should -BeIn $exported
             if ($app.SyncCommand) { $app.SyncCommand | Should -BeIn $exported }
         }
@@ -89,12 +88,12 @@ Describe 'Built-in metadata' {
                 Select-Object -ExpandProperty Name |
                 Where-Object {
                     $_ -like 'Add-OSDApp*' -and
-                    $_ -notin @('Add-OSDApp','Add-OSDAppPackage')
+                    $_ -notin @('Add-OSDApp','Add-OSDAppPackage','Add-OSDAppRegistryKey','Add-OSDAppRegistryValue')
                 } |
                 Sort-Object
         )
 
-        $metadataCommands = @($script:metadata.Applications.AddCommand | Sort-Object)
+        $metadataCommands = @($script:metadata.Apps.AddCommand | Sort-Object)
 
         Compare-Object -ReferenceObject $exportedBuiltIns -DifferenceObject $metadataCommands |
             Should -BeNullOrEmpty

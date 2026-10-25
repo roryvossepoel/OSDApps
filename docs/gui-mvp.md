@@ -13,7 +13,7 @@ The user guide is now **[docs/viewer.md](viewer.md)**. This address is retained 
 <a id="optional-built-in-digital-signature-inspection"></a>
 <a id="built-in-digital-signature-inspection"></a>
 <a id="compact-header"></a>
-<a id="consistent-application-names-and-vendor"></a>
+<a id="consistent-app-names-and-vendor"></a>
 <a id="first-field-test-with-two-winpe-pcs"></a>
 <a id="display-terminology-gui"></a>
 <a id="final-read-only-presentation-polish"></a>

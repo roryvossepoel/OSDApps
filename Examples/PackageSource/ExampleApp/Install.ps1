@@ -3,7 +3,7 @@ param()
 
 $ErrorActionPreference = 'Stop'
 
-# Replace this example with the application's unattended installation.
+# Replace this example with the app's unattended installation.
 # Package.zip must contain this script at:
 #
 # Package/

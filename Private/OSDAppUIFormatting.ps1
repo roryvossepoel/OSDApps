@@ -25,7 +25,7 @@ function Get-OSDAppUIBuiltInMetadata {
     try {
         $metadata = Get-Content -LiteralPath $metadataPath -Raw -Encoding UTF8 |
             ConvertFrom-Json -ErrorAction Stop
-        foreach ($app in @($metadata.Applications)) {
+        foreach ($app in @($metadata.Apps)) {
             if ($app -and $app.Id) { $app }
         }
     }
@@ -37,14 +37,14 @@ function Get-OSDAppUIBuiltInMetadata {
 function Get-OSDAppUIDisplayInfo {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]$Application,
+        [Parameter(Mandatory)]$App,
         [object[]]$CatalogApps = @(),
         [object[]]$BuiltInMetadata = @()
     )
 
-    $id = [string]$Application.Id
-    $display = [string]$Application.DisplayName
-    $vendor = [string]$Application.Vendor
+    $id = [string]$App.Id
+    $display = [string]$App.DisplayName
+    $vendor = [string]$App.Vendor
 
     # PowerShell 5.1 can unwrap a single pipeline result to a scalar object.
     # Do not depend on .Count and [0] on those results: a scalar PSCustomObject
@@ -66,7 +66,7 @@ function Get-OSDAppUIDisplayInfo {
         if (-not $vendor) { $vendor = [string]$catalogMatch.Vendor }
     }
 
-    if ([string]$Application.Source -eq 'BuiltIn') {
+    if ([string]$App.Source -eq 'BuiltIn') {
         foreach ($candidate in $BuiltInMetadata) {
             if ($null -eq $candidate -or
                 -not [string]::Equals([string]$candidate.Id, $id, [StringComparison]::OrdinalIgnoreCase)) {
@@ -90,42 +90,42 @@ function Get-OSDAppUIDisplayInfo {
 
 function Get-OSDAppUIDisplayVersion {
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Application)
+    param([Parameter(Mandatory)]$App)
 
     # "Current" applies to evergreen vendor installers; a bundled script
     # has a concrete, module-owned revision instead of an acquisition policy.
-    if ([string]$Application.Source -eq 'BuiltIn' -and [string]$Application.PackageType -ne 'Script') { return 'Current' }
-    $version = [string]$Application.Version
+    if ([string]$App.Source -eq 'BuiltIn' -and [string]$App.PackageType -ne 'Script') { return 'Current' }
+    $version = [string]$App.Version
     if (-not [string]::IsNullOrWhiteSpace($version)) { return $version }
     return '-'
 }
 
 function Get-OSDAppUIPackageType {
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Application)
+    param([Parameter(Mandatory)]$App)
 
-    if ([string]$Application.PackageType -eq 'Script') { return 'Script' }
-    return 'Application'
+    if ([string]$App.PackageType -eq 'Script') { return 'Script' }
+    return 'App'
 }
 
 function Get-OSDAppUICachedVersion {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]$Application,
+        [Parameter(Mandatory)]$App,
         [object[]]$CacheEntries = @()
     )
 
-    $id = [string]$Application.Id
+    $id = [string]$App.Id
     $ids = if ($id -eq 'MicrosoftTeams') { @('MicrosoftTeams','Teams') } else { @($id) }
     $cacheMatches = @($CacheEntries | Where-Object { [string]$_.Id -in $ids -and $_.Valid -and -not [string]::IsNullOrWhiteSpace([string]$_.Version) })
 
     # Never show the version from another architecture or channel as though
-    # it belongs to the staged application.
-    $architecture = [string]$Application.Architecture
+    # it belongs to the staged app.
+    $architecture = [string]$App.Architecture
     if ($architecture -and $architecture -notin @('Auto','Any')) {
         $cacheMatches = @($cacheMatches | Where-Object { [string]$_.Architecture -eq $architecture })
     }
-    $channel = [string]$Application.Channel
+    $channel = [string]$App.Channel
     if ($channel) {
         $cacheMatches = @($cacheMatches | Where-Object { -not $_.Channel -or [string]$_.Channel -eq $channel })
     }

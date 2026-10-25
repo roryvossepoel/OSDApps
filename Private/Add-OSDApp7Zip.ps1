@@ -14,7 +14,7 @@ function Add-OSDApp7ZipInternal {
     $clientLogPath = if ($CachePath) { Join-Path $CachePath 'Logs\Client.log' } else { Join-Path $WindowsPath 'ProgramData\OSDApps\Logs\Client.log' }
 
     $cacheRoot = if ($CachePath) { Join-Path $CachePath (Join-Path 'BuiltIn\7Zip' $Architecture) } else { $null }
-    $cacheHasPayload = $cacheRoot -and (Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'Package.exe'))) -PathType Leaf)
+    $cacheHasPayload = $cacheRoot -and (Test-OSDAppBuiltInPayload -Root $cacheRoot -ExpectedExtension '.exe')
 
     if (-not $PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage 7Zip deployment intent and available cache')) { return }
 
@@ -38,12 +38,13 @@ function Add-OSDApp7ZipInternal {
         Id = '7Zip'
         DisplayName = '7Zip'
         Type = '7ZipExe'
-        Package = (Join-Path 'BuiltIn\7Zip' (Join-Path $Architecture 'Package.exe'))
+        Package = $null
         Architecture = $Architecture
         InstallTimeoutMinutes = $InstallTimeoutMinutes
         CachePreferred = [bool]$CachePath
     }
 
+    Set-OSDAppManifestPayload -App $manifestApp -StagedPath $destinationRoot -AllowPending
     $deviceManifest = Set-OSDAppManifestApp -Manifest $deviceManifest -App $manifestApp
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8

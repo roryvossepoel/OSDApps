@@ -344,11 +344,11 @@ function Get-OSDAppCacheHealthState {
     $builtInAliasOwners = @{}
     if (Test-Path -LiteralPath $builtInMetadataPath -PathType Leaf) {
         $builtInMetadata = Get-Content -LiteralPath $builtInMetadataPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        foreach ($application in @($builtInMetadata.Applications)) {
-            $builtInCanonical[([string]$application.Id).ToLowerInvariant()] = $application
-            foreach ($aliasValue in @($application.Aliases)) {
+        foreach ($app in @($builtInMetadata.Apps)) {
+            $builtInCanonical[([string]$app.Id).ToLowerInvariant()] = $app
+            foreach ($aliasValue in @($app.Aliases)) {
                 $alias = ([string]$aliasValue).Trim()
-                if ($alias) { $builtInAliasOwners[$alias.ToLowerInvariant()] = [string]$application.Id }
+                if ($alias) { $builtInAliasOwners[$alias.ToLowerInvariant()] = [string]$app.Id }
             }
         }
     }
@@ -458,7 +458,7 @@ function Get-OSDAppCacheHealthState {
                 $state = 'Incomplete'; $action = 'Refresh'; $reason = 'The canonical built-in folder has no readable CacheInfo.json.'
             }
             else {
-                $state = 'Orphaned'; $action = 'Remove'; $reason = 'The folder is not registered as a current built-in application.'
+                $state = 'Orphaned'; $action = 'Remove'; $reason = 'The folder is not registered as a current built-in app.'
             }
             $entries.Add((New-CacheHealthEntry `
                 -Id $directory.Name -CanonicalId $canonicalId -DisplayName $directory.Name `

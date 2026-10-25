@@ -15,7 +15,7 @@ function Sync-OSDApp7Zip {
             Write-OSDAppLog -LogPath (Join-Path $cachePath 'Logs\Client.log') -Component CacheCleanup -Event $record.Event -Level $record.Level -Message $record.Message -Data $record.Data -ErrorAction Stop
         } -Download {
             param($uri, $destination)
-            Save-OSDAppDownload -PreserveFileName -Uri $uri -DestinationPath $destination -Activity 'Downloading 7Zip'
+            Save-OSDAppDownload -Uri $uri -DestinationDirectory $destination -ExpectedExtension '.exe' -Activity 'Downloading 7Zip'
         }
         Write-OSDAppLog -LogPath (Join-Path $cachePath 'Logs\Client.log') -Component 7Zip -Event BuiltInSyncComplete -Message '7Zip release SHA-256 validated and cache synchronized.' -Data @{Version=$sync.Version;Architecture=$Architecture;Updated=$sync.Updated}
         [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='7Zip';Version=$sync.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=$sync.Updated}

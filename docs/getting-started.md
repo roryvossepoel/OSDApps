@@ -8,7 +8,7 @@ This guide separates the three environments used by OSDApps. The commands you ru
 
 Run OSDApps after OSDCloud has applied the Windows image and before the first Windows boot. OSDApps does not replace Windows image deployment.
 
-The examples target x64 and use the current Gallery release or the newest module version saved on your USB. Individual built-ins have different architecture options; consult [Built-in applications](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
+The examples target x64 and use the current Gallery release or the newest module version saved on your USB. Individual built-ins have different architecture options; consult [Built-in apps](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
 
 Decide which source types you need:
 
@@ -22,7 +22,7 @@ For an online deployment, vendor/repository access must be available when acquis
 
 ## 1. Preparation machine — install or save the module
 
-**Environment: full Windows.** This preparation step is optional for online deployment: the WinPE example below loads the module directly from Gallery. Preparation can write module files and USB cache content. It must not stage applications against the preparation machine's Windows installation.
+**Environment: full Windows.** This preparation step is optional for online deployment: the WinPE example below loads the module directly from Gallery. Preparation can write module files and USB cache content. It must not stage apps against the preparation machine's Windows installation.
 
 ```powershell
 Install-Module OSDApps -Force -SkipPublisherCheck
@@ -49,7 +49,7 @@ before approving removals.
 
 **Environment: WinPE, after OSDCloud has applied Windows and before the first Windows boot.** Run this phase on the target machine, not the preparation machine.
 
-Load the module from Gallery and add the intended applications. OSDApps discovers the offline Windows target automatically. Choose the appropriate workflow:
+Load the module from Gallery and add the intended apps. OSDApps discovers the offline Windows target automatically. Choose the appropriate workflow:
 
 - [Online WinPE deployment](../Examples/WinPE-Online.md): use the current Gallery module with or without a USB flash drive; optionally add repository packages.
 - [Offline WinPE deployment](../Examples/WinPE-Offline.md): validate the expected cache entries, stage them locally and skip repository refresh explicitly.
@@ -81,7 +81,7 @@ For repository apps, configure your actual catalog URL and use app IDs that it c
 
 ```powershell
 Test-OSDAppDeployment -ThrowOnFailure |
-    Format-List Valid, OfflineReady, NetworkRequired, ApplicationCount
+    Format-List Valid, OfflineReady, NetworkRequired, AppCount
 ```
 
 `Valid=True` means the manifest, queue, SetupComplete integration, staged runtime and required repository packages passed. `OfflineReady=False` is allowed for an online cold deployment: it means PreInstall must acquire one or more built-ins. For a deliberately disconnected deployment, make that a hard requirement:
@@ -120,7 +120,7 @@ Close the Viewer before continuing the deployment. Keep the USB flash drive atta
 
 **Environment: deployed Windows, automatically through SetupComplete.** Do not launch the runtime scripts manually as an alternative to the normal deployment sequence.
 
-PreInstall prepares the built-in content, validates supported installer signatures/publishers and uses a usable local fallback when refresh is unavailable. Runner then processes the full built-in/repository queue from local staging. A normal app-local acquisition or installer failure is recorded and does not prevent independent applications from being attempted. Integrity, trust and invalid-manifest failures remain blocking. The module does not need to be installed in this Windows installation.
+PreInstall prepares the built-in content, validates supported installer signatures/publishers and uses a usable local fallback when refresh is unavailable. Runner then processes the full built-in/repository queue from local staging. A normal app-local acquisition or installer failure is recorded and does not prevent independent apps from being attempted. Integrity, trust and invalid-manifest failures remain blocking. The module does not need to be installed in this Windows installation.
 
 A successful staging command is not a successful installation. SetupComplete is a one-shot execution: OSDApps does not automatically retry after a reboot or leave a scheduled task, RunOnce entry or service behind. A failed installer will normally leave a final `Failed` result and retained staging even when later queue entries succeeded.
 
@@ -130,11 +130,11 @@ A successful staging command is not a successful installation. SetupComplete is 
 
 ```powershell
 $Result = Get-Content -LiteralPath "$env:ProgramData\OSDApps\Results\Latest.json" -Raw | ConvertFrom-Json
-$Result | Format-List Status, SuccessfulApplicationCount, FailedApplicationCount, SkippedApplicationCount
-$Result.Applications | Format-Table Id, PackageType, Status, ExitCode, DurationSeconds
+$Result | Format-List Status, SuccessfulAppCount, FailedAppCount, SkippedAppCount
+$Result.Apps | Format-Table Id, PackageType, Status, ExitCode, DurationSeconds
 $Result | Select-Object -ExpandProperty PreInstall -ErrorAction SilentlyContinue |
-    Format-List Status, HasAcquisitionWarnings, FallbackApplicationCount, OfflineCacheApplicationCount
-$Result.Applications | Format-Table Id, AcquisitionOutcome, RefreshFailureType
+    Format-List Status, HasAcquisitionWarnings, FallbackAppCount, OfflineCacheAppCount
+$Result.Apps | Format-Table Id, AcquisitionOutcome, RefreshFailureType
 ```
 
 Check installation and acquisition separately: `Succeeded` means processing succeeded, while `FallbackCacheUsed` means a refresh failed and an acceptable cached payload was used. `OfflineCacheUsed` records intentionally or automatically detected offline use. `CacheReused` means vendor metadata allowed reuse; `Downloaded` records acquired content. Repository entries report `NotApplicable` for this built-in acquisition field. Older results may omit these fields or report `Unknown`.
@@ -142,7 +142,7 @@ Check installation and acquisition separately: `Succeeded` means processing succ
 If a refresh needs investigation, inspect its error without confusing it with the installer error:
 
 ```powershell
-$Result.Applications |
+$Result.Apps |
     Where-Object AcquisitionOutcome -eq 'FallbackCacheUsed' |
     Format-List Id, Status, AcquisitionOutcome, RefreshFailureType, RefreshError, Error
 ```
@@ -159,8 +159,8 @@ When the OSDApps module is available, read the atomic machine result first:
 
 ```powershell
 $Result = Get-OSDAppDeploymentResult
-$Result | Format-List Status, DeploymentId, SuccessfulApplicationCount, FailedApplicationCount, SkippedApplicationCount, DurationSeconds
-$Result.Applications | Format-Table Id, Status, AcquisitionOutcome, FailureType, ExitCode, Version, DurationSeconds
+$Result | Format-List Status, DeploymentId, SuccessfulAppCount, FailedAppCount, SkippedAppCount, DurationSeconds
+$Result.Apps | Format-Table Id, Status, AcquisitionOutcome, FailureType, ExitCode, Version, DurationSeconds
 ```
 
 The default file is `%ProgramData%\OSDApps\Results\Latest.json`. It remains outside local staging, so `CleanupMode OnSuccess` does not remove it. Without the module, the JSON can be read with `Get-Content -Raw | ConvertFrom-Json`.
@@ -174,7 +174,7 @@ if (-not (Test-Path -LiteralPath $Log -PathType Leaf)) {
 }
 
 Get-Content -LiteralPath $Log |
-    Select-String 'ApplicationAcquisitionComplete|BuiltInSignatureVerified|BuiltInRefreshSkipped|BuiltInRefreshFailed|ApplicationRefreshFailed|PreInstallComplete|ApplicationInstallComplete|ApplicationInstallFailed|ApplicationInstallSkipped|InstallComplete|InstallCompletedWithErrors|RefreshFailed|InstallFailed'
+    Select-String 'AppAcquisitionComplete|BuiltInSignatureVerified|BuiltInRefreshSkipped|BuiltInRefreshFailed|AppRefreshFailed|PreInstallComplete|AppInstallComplete|AppInstallFailed|AppInstallSkipped|InstallComplete|InstallCompletedWithErrors|RefreshFailed|InstallFailed'
 ```
 
 Look for individual install/provisioning outcomes and exactly one final `InstallComplete`, `InstallCompletedWithErrors` or `InstallFailed` outcome. In an intentionally offline deployment, `BuiltInRefreshSkipped` reports use of existing staged content; it is recorded as a warning, not an installer failure.

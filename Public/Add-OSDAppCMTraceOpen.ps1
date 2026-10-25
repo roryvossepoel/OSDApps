@@ -23,15 +23,11 @@ function Add-OSDAppCMTraceOpen {
     }
 
     $vendorFileName = 'CMTrace-Open_{0}_{1}.msi' -f $info.Version,$Architecture
-    if ([string]$info.AssetName -cne $vendorFileName) {
+    if ([string]$info.PayloadFileName -cne $vendorFileName) {
         throw 'CMTrace Open cached asset name differs from the official release.'
     }
 
     $sourceMsi = Join-Path $source $vendorFileName
-    if (-not (Test-Path -LiteralPath $sourceMsi -PathType Leaf)) {
-        # Legacy cache support: OSDApps previously renamed the verified vendor MSI.
-        $sourceMsi = Join-Path $source 'Package.msi'
-    }
     if (-not (Test-Path -LiteralPath $sourceMsi -PathType Leaf) -or
         (Get-FileHash -LiteralPath $sourceMsi -Algorithm SHA256).Hash -ne [string]$info.Sha256) {
         throw 'CMTrace Open cached MSI is missing or failed SHA-256 verification.'
@@ -66,7 +62,7 @@ function Add-OSDAppCMTraceOpen {
     }
     $app = [pscustomobject]@{
         Id='CMTraceOpen'; DisplayName='CMTrace Open'; Source='BuiltIn'
-        PackageType='Application'; Type='VendorMsi'; Vendor='CMTrace Open'
+        PackageType='App'; Type='VendorMsi'; Vendor='CMTrace Open'
         Version=[string]$info.Version; Architecture=$Architecture
         Package=(Join-Path $relativeRoot $vendorFileName)
         ExpectedSha256=[string]$info.Sha256
@@ -82,6 +78,6 @@ function Add-OSDAppCMTraceOpen {
     [pscustomobject]@{
         PSTypeName='OSDApps.StagedApp'
         Name='CMTraceOpen'; Version=[string]$info.Version; Source='BuiltIn'
-        PackageType='Application'; WindowsPath=$target; StagedPath=$destination
+        PackageType='App'; WindowsPath=$target; StagedPath=$destination
     }
 }

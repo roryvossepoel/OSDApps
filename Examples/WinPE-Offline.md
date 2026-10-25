@@ -96,7 +96,7 @@ Do not run full-Windows built-in `Sync-OSDApp*` commands here. The content has a
 Omit this section for built-ins-only deployment. The app must already exist as a valid, compatible package in `CacheCatalog.json` and the USB cache. `-SkipCacheRefresh` explicitly prevents a repository synchronization attempt.
 
 ```powershell
-$RepoAppId = Read-Host 'Enter a repository application Id already cached on this USB flash drive'
+$RepoAppId = Read-Host 'Enter a repository app Id already cached on this USB flash drive'
 Add-OSDApp -Name $RepoAppId -SkipCacheRefresh -WindowsPath $WindowsPath
 ```
 

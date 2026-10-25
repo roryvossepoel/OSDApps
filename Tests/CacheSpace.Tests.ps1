@@ -1,3 +1,4 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Cache transaction space budgets' {
     BeforeAll {
         Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) 'OSDApps.psd1') -Force
@@ -33,7 +34,7 @@ Describe 'Cache transaction space budgets' {
         InModuleScope OSDApps {
             $root = Join-Path $TestDrive 'Active'
             New-Item -ItemType Directory -Path $root | Out-Null
-            $payload = Join-Path $root 'Package.msi'
+            $payload = Join-Path $root 'googlechromestandaloneenterprise64.msi'
             Set-Content -LiteralPath $payload -Value 'old signed payload fixture'
             $hash = (Get-FileHash -LiteralPath $payload).Hash
             Mock Get-OSDAppAvailableDiskBytes { 1MB }
@@ -61,14 +62,14 @@ Describe 'Cache transaction space budgets' {
         InModuleScope OSDApps {
             $root = Join-Path $TestDrive 'Vendor'
             New-Item -ItemType Directory -Path $root | Out-Null
-            Set-Content -LiteralPath (Join-Path $root 'Package.msi') -Value 'current'
-            @{RemoteETag='same';Version='1.0'} | ConvertTo-Json | Set-Content (Join-Path $root 'CacheInfo.json')
+            Set-Content -LiteralPath (Join-Path $root 'googlechromestandaloneenterprise64.msi') -Value 'current'
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $root 'googlechromestandaloneenterprise64.msi') -Id GoogleChromeEnterprise -Metadata @{RemoteETag='same';Version='1.0';PackageUri='https://example.invalid/app.msi'}
             Mock Restore-OSDAppBuiltInCache { }
             Mock Get-OSDAppRemoteFileMetadata { [pscustomobject]@{ETag='same';ContentLength=100MB} }
             Mock Test-OSDAppBuiltInCacheGeneration { $true }
             Mock Get-OSDAppCachedPackageVersion { [pscustomobject]@{Version='1.0';VersionSource='Fixture'} }
             Mock Get-OSDAppAvailableDiskBytes { throw 'space query must not run for reuse' }
-            $result = Sync-OSDAppVendorBuiltInCache -Id GoogleChromeEnterprise -Root $root -PackageUri 'https://example.invalid/app.msi' -Architecture x64 -PackageFileName Package.msi -Activity test
+            $result = Sync-OSDAppVendorBuiltInCache -Id GoogleChromeEnterprise -Root $root -PackageUri 'https://example.invalid/app.msi' -Architecture x64 -ExpectedExtension '.msi' -Activity test
             $result.Updated | Should -BeFalse
             Should -Invoke Get-OSDAppAvailableDiskBytes -Times 0 -Exactly
         }
@@ -107,6 +108,7 @@ Describe 'Standalone PreInstall low-space fallback' {
         . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime/OSDAppPayloadFile.ps1')
         $root = Split-Path -Parent $PSScriptRoot
         . (Join-Path $root 'Runtime\Assert-OSDAppTransactionSpace.ps1')
+        . (Join-Path $root 'Runtime\Invoke-OSDAppBuiltInCacheTransaction.ps1')
         $tokens = $null; $errors = $null
         $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'Runtime\Invoke-OSDAppPreInstall.ps1'), [ref]$tokens, [ref]$errors)
         foreach ($name in @('Test-LocalMsiSource','Sync-PreInstallVendorMsi','Set-PreInstallAcquisitionResult','Get-PreInstallFailureType','Get-PreInstallHttpCacheReason')) {
@@ -127,17 +129,17 @@ Describe 'Standalone PreInstall low-space fallback' {
         $relative = 'BuiltIn\GoogleChromeEnterprise\x64'
         $active = Join-Path $usbRoot $relative
         New-Item -ItemType Directory -Path $active -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path $active 'Package.msi') -Value 'working payload'
-        @{Id='GoogleChromeEnterprise';RemoteETag='old';Version='1.0'} | ConvertTo-Json | Set-Content (Join-Path $active 'CacheInfo.json')
-        $hash = (Get-FileHash -LiteralPath (Join-Path $active 'Package.msi')).Hash
+        Set-Content -LiteralPath (Join-Path $active 'googlechromestandaloneenterprise64.msi') -Value 'working payload'
+        Set-OSDAppsTestPayloadInfo -Path (Join-Path $active 'googlechromestandaloneenterprise64.msi') -Id GoogleChromeEnterprise -Metadata @{RemoteETag='old';Version='1.0';PackageUri='https://example.invalid/googlechromestandaloneenterprise64.msi'}
+        $hash = (Get-FileHash -LiteralPath (Join-Path $active 'googlechromestandaloneenterprise64.msi')).Hash
         Mock Get-OSDAppAvailableDiskBytes { 100MB }
         Mock Get-RemoteMetadata { [pscustomobject]@{ETag='new';ContentLength=200MB} }
         Mock Save-PreInstallDownload { throw 'download must not start' }
         Mock Write-PreInstallLog { }
         $acquisition = @{ Outcome='Failed'; RefreshFailureType=$null; RefreshError=$null }
-        Sync-PreInstallVendorMsi -App ([pscustomobject]@{Id='GoogleChromeEnterprise';Architecture='x64'}) -RelativeRoot $relative -PackageUri 'https://example.invalid/package.msi' -DisplayName Chrome -Acquisition $acquisition
-        (Get-FileHash -LiteralPath (Join-Path $active 'Package.msi')).Hash | Should -Be $hash
-        (Get-FileHash -LiteralPath (Join-Path (Join-Path $StagedPath $relative) 'Package.msi')).Hash | Should -Be $hash
+        Sync-PreInstallVendorMsi -App ([pscustomobject]@{Id='GoogleChromeEnterprise';Architecture='x64'}) -RelativeRoot $relative -PackageUri 'https://example.invalid/googlechromestandaloneenterprise64.msi' -DisplayName Chrome -Acquisition $acquisition
+        (Get-FileHash -LiteralPath (Join-Path $active 'googlechromestandaloneenterprise64.msi')).Hash | Should -Be $hash
+        (Get-FileHash -LiteralPath (Join-Path (Join-Path $StagedPath $relative) 'googlechromestandaloneenterprise64.msi')).Hash | Should -Be $hash
         $acquisition.Outcome | Should -Be FallbackCacheUsed
         $acquisition.RefreshFailureType | Should -Be InsufficientDiskSpace
         $acquisition.CacheDecisionReason | Should -Match 'Refresh failed.*Insufficient free space'
