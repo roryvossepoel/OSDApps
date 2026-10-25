@@ -1,0 +1,29 @@
+name: Validation source snapshot
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    name: Archive validation source
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Archive tracked files only
+        run: |
+          git rev-parse HEAD > source-commit.txt
+          git archive --format=zip --output=validation-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validation-source
+          path: |
+            validation-source.zip
+            source-commit.txt
+          retention-days: 3
+          if-no-files-found: error
