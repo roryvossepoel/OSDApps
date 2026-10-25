@@ -1,10 +1,11 @@
 # Microsoft Company Portal (built-in)
 
-This optional integration provisions the official Microsoft Company Portal Preinstall Kit for **future Windows user profiles** during SetupComplete. OSDApps includes no Microsoft application binaries or licenses. Preparation happens on full Windows; WinPE and SetupComplete consume an already synchronized local cache.
+This optional integration provisions the official Microsoft Company Portal Preinstall Kit for **future Windows user profiles** during SetupComplete. OSDApps includes no Microsoft app binaries or licenses. Preparation happens on full Windows; WinPE and SetupComplete consume an already synchronized local cache.
 
 ## Preparation PC (full Windows)
 
 Connect the OSDCloud USB device and run:
+
 
 ~~~powershell
 Import-Module OSDApps
@@ -14,9 +15,10 @@ Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud
 Sync-OSDAppMicrosoftCompanyPortal -Architecture x64
 ~~~
 
-The automatic source is an official `download.microsoft.com` Preinstall Kit ZIP. OSDApps records its source URI and SHA-256, extracts the appxbundle, offline license and five architecture-specific Appx dependencies, reads the Microsoft Company Portal package identity and version, and records individual file hashes. A download or validation failure does not replace the previous cache; an automatic refresh can reuse content only after checking cached file hashes. The actual Appx signature is validated by Windows when provisioning.
+The automatic source is an official `download.microsoft.com` Preinstall Kit ZIP. OSDApps records its source URI and SHA-256, extracts the appxbundle, offline license and five architecture-specific Appx dependencies, reads the Microsoft Company Portal package identity and version, preserves the kit bundle/license/dependency filenames, and records individual file hashes. `PayloadFileName` and `LicenseFileName` record the exact bundle and license names. A download or validation failure does not replace the previous cache; an automatic refresh can reuse content only after checking cached file hashes. The actual Appx signature is validated by Windows when provisioning.
 
 An operator-supplied kit is also supported, with **no automatic download**:
+
 
 ~~~powershell
 Sync-OSDAppMicrosoftCompanyPortal -KitPath 'C:\Temp\CompanyPortal-Universal-Production_x64_x86_ARM_ARM64.appxupload_Windows10_PreinstallKit.zip' -Architecture x64
@@ -26,6 +28,7 @@ The tested Microsoft kit contained Company Portal **11.2.1495.0**. That is an ob
 
 ## WinPE after OSDCloud
 
+
 ~~~powershell
 Import-Module OSDApps
 Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud -CleanupMode OnSuccess
@@ -34,6 +37,7 @@ Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
 ~~~
 
 During first boot, SetupComplete uses `Add-AppxProvisionedPackage -Online` with the app bundle, offline license and five dependencies, using `-Regions all`. Company Portal is then available to provision for new user profiles. Check after Autopilot sign-in:
+
 
 ~~~powershell
 Get-AppxProvisionedPackage -Online | Where-Object DisplayName -eq 'Microsoft.CompanyPortal'

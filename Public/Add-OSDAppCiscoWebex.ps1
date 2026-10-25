@@ -38,7 +38,7 @@ function Add-OSDAppCiscoWebex {
 
     $stagedRelativePath = 'Windows\Temp\OSDApps'
     if ($cachePath) {
-        $existingCache = Test-Path -LiteralPath (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cachePath (Join-Path 'BuiltIn\CiscoWebex' (Join-Path $Architecture 'Package.msi')))) -PathType Leaf
+        $existingCache = Test-OSDAppBuiltInPayload -Root (Join-Path $cachePath (Join-Path 'BuiltIn\CiscoWebex' $Architecture)) -ExpectedExtension '.msi'
         $message = if ($existingCache) { 'Existing cached MSI will be staged to the OS disk and refreshed during SetupComplete' } else { 'No cached MSI found; cache will be populated during SetupComplete' }
         if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level $(if ($existingCache) { 'Success' } else { 'Info' }) -Component 'CiscoWebex' -Message $message }
     }
@@ -70,7 +70,7 @@ function Add-OSDAppCiscoWebex {
     Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
 
     if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'CiscoWebex' -Message 'Device manifest updated and SetupComplete integration verified' }
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=CiscoWebex; Architecture=$Architecture; Timeout=$InstallTimeoutMinutes min; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("App=CiscoWebex; Architecture=$Architecture; Timeout=$InstallTimeoutMinutes min; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
 
     if ($cachePath -and -not $script:OSDAppCacheMediaWarningShown) {
         Write-Warning 'OSDCloud cache media detected. Keep the USB flash drive connected until OOBE is displayed.'

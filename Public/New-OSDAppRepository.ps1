@@ -15,7 +15,7 @@ function New-OSDAppRepository {
             [ordered]@{
                 SchemaVersion = 1
                 GeneratedAt   = (Get-Date).ToUniversalTime().ToString('o')
-                Applications  = @()
+                Apps  = @()
             } |
                 ConvertTo-Json -Depth 20 |
                 Set-Content -LiteralPath $catalogPath -Encoding UTF8

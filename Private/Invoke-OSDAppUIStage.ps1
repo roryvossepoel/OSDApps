@@ -41,7 +41,7 @@ function Get-OSDAppUITestWindowsPath {
 function Format-OSDAppUIStagedDetails {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]$Application,
+        [Parameter(Mandatory)]$App,
         [string]$Vendor
     )
 
@@ -56,7 +56,7 @@ function Format-OSDAppUIStagedDetails {
         'ExcludeApp','SelectedPackages','DiagnoseOnly','AutoStartWithWindows','PreventPreLoginUpdates',
         'EnableOutlookIntegration','DefaultTheme','InstallTimeoutMinutes'
     )) {
-        $property = $Application.PSObject.Properties[$key]
+        $property = $App.PSObject.Properties[$key]
         if ($null -eq $property -or $null -eq $property.Value) { continue }
         $value = if ($property.Value -is [array]) {
             @($property.Value) -join ', '
@@ -68,7 +68,7 @@ function Format-OSDAppUIStagedDetails {
         }
     }
     $lines.Add('')
-    $lines.Add('Staged for SetupComplete. This does not confirm the application was installed.')
+    $lines.Add('Staged for SetupComplete. This does not confirm the app was installed.')
     $lines -join [Environment]::NewLine
 }
 

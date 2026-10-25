@@ -64,7 +64,7 @@ Describe 'Standalone SetupComplete PreInstall built-in signer checks' {
         Mock Write-PreInstallLog { }
         { Assert-PreInstallSignedPayload -Id CiscoWebex -Path $file } |
             Should -Throw '*signature validation failed*'
-        { Assert-PreInstallSignedPayload -Id UnknownApplication -Path $file } |
+        { Assert-PreInstallSignedPayload -Id UnknownApp -Path $file } |
             Should -Throw '*No trusted signer policy*'
         Should -Invoke Write-PreInstallLog -Exactly 0
     }

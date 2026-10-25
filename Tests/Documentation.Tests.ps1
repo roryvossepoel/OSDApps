@@ -96,16 +96,40 @@ Get-Date
         { & $script:validator -Root $folder } | Should -Throw '*missing section anchor*'
     }
 
-    It 'keeps Company Portal help and public metadata aligned with automatic acquisition' {
+    It 'does not close a longer tilde fence with a shorter or different fence' {
+        $folder = Join-Path $TestDrive 'MatchingFences'
+        New-Item -ItemType Directory -Path $folder -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $folder 'README.md') -Encoding UTF8 -Value @'
+# Document
+~~~~text
+~~~
+```
+# Not a section
+[not a prose link](missing.md)
+~~~~
+'@
+        $result = & $script:validator -Root $folder
+        $result.LocalLinksChecked | Should -Be 0
+        $result.PowerShellBlocksParsed | Should -Be 0
+        $result.ExamplesExecuted | Should -BeFalse
+    }
+
+    It 'keeps Company Portal help and Apps metadata aligned with automatic acquisition' {
         $helpData = Import-PowerShellDataFile -Path (Join-Path $script:root 'help/CommandHelp.psd1')
         $help = $helpData.Commands['Sync-OSDAppMicrosoftCompanyPortal']
-        $help.Description | Should -Match 'By default downloads'
+        $help.Description | Should -Match 'Downloads.*Microsoft Preinstall Kit by default'
+        $help.Description | Should -Match 'Optionally.*-KitPath'
+        $help.Parameters.KitPath | Should -Match '^Optional'
         $help.Examples[0].Code | Should -Be 'Sync-OSDAppMicrosoftCompanyPortal -Architecture x64'
-        $help.Examples[1].Code | Should -Match '\-KitPath'
         $catalog = Get-Content -LiteralPath (Join-Path $script:root 'metadata/builtins.json') -Raw | ConvertFrom-Json
-        $companyPortal = @($catalog.Applications | Where-Object Id -eq 'MicrosoftCompanyPortal')
+        $catalog.PSObject.Properties.Name | Should -Contain 'Apps'
+        $companyPortal = @($catalog.Apps | Where-Object Id -eq 'MicrosoftCompanyPortal')
         $companyPortal.Count | Should -Be 1
         $companyPortal[0].Acquisition | Should -Be 'MicrosoftPreinstallKit'
+        $companyPortal[0].SyncPhase | Should -Be 'FullWindowsPreparation'
+        $cmTrace = @($catalog.Apps | Where-Object Id -eq 'CMTraceOpen')
+        $cmTrace.Count | Should -Be 1
+        $cmTrace[0].SyncPhase | Should -Be 'FullWindowsPreparation'
     }
 
     It 'does not treat PowerShell comments in code fences as document headings' {

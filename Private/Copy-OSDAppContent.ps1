@@ -35,7 +35,7 @@ function Copy-OSDAppContent {
     }
 
     $clientLogPath = Join-Path $CachePath 'Logs\Client.log'
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageStart' -Message 'Starting application staging.' -Data @{ WindowsPath = $WindowsPath; DestinationRelativePath = $DestinationRelativePath; Packages = @($packages | ForEach-Object { "$($_.Id):$($_.Architecture)" }) }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageStart' -Message 'Starting app staging.' -Data @{ WindowsPath = $WindowsPath; DestinationRelativePath = $DestinationRelativePath; Packages = @($packages | ForEach-Object { "$($_.Id):$($_.Architecture)" }) }
 
     $destinationRoot = Join-Path $WindowsPath $DestinationRelativePath
     $destinationPackages = Join-Path $destinationRoot 'Packages'
@@ -52,7 +52,7 @@ function Copy-OSDAppContent {
                 Remove-Item -LiteralPath $target -Recurse -Force
             }
             Copy-Item -LiteralPath $source -Destination $target -Recurse -Force
-            Write-OSDAppLog -LogPath $clientLogPath -Component 'Stage' -Event 'PackageStaged' -Message 'Package copied to offline Windows volume.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; PackageType = if ($package.PackageType) { [string]$package.PackageType } else { 'Application' }; Destination = $target }
+            Write-OSDAppLog -LogPath $clientLogPath -Component 'Stage' -Event 'PackageStaged' -Message 'Package copied to offline Windows volume.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; PackageType = if ($package.PackageType) { [string]$package.PackageType } else { 'App' }; Destination = $target }
         }
 
         if (Test-Path -LiteralPath $deviceManifestPath -PathType Leaf) {
@@ -86,9 +86,9 @@ function Copy-OSDAppContent {
         $runtimeSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'
         Copy-Item -LiteralPath $runtimeSource -Destination (Join-Path $destinationRoot 'Invoke-OSDAppRunner.ps1') -Force
 
-        Write-OSDAppLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageComplete' -Message 'Application staging completed.' -Data @{
+        Write-OSDAppLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageComplete' -Message 'App staging completed.' -Data @{
             Destination = $destinationRoot
-            ApplicationCount = if ($deviceManifest.PSObject.Properties.Name -contains 'Apps') { @($deviceManifest.Apps).Count } else { 0 }
+            AppCount = if ($deviceManifest.PSObject.Properties.Name -contains 'Apps') { @($deviceManifest.Apps).Count } else { 0 }
         }
     }
 

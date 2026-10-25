@@ -37,7 +37,7 @@ Removing the USB flash drive only after staging is not a clean no-cache test: ca
 
 ```powershell
 $CatalogUri = Read-Host 'Enter the HTTPS URL of your repository catalog.json'
-$RepoAppId = Read-Host 'Enter an application Id present in that repository'
+$RepoAppId = Read-Host 'Enter an app Id present in that repository'
 
 Set-OSDAppConfiguration -CatalogUri $CatalogUri
 Add-OSDApp -Name $RepoAppId

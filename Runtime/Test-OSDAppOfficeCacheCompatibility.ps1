@@ -76,8 +76,7 @@ function Test-OSDAppOfficeCacheCompatibility {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$OfficeRoot,
-        [Parameter(Mandatory)][string]$ConfigurationPath,
-        [switch]$AllowLegacyConfiguration
+        [Parameter(Mandatory)][string]$ConfigurationPath
     )
     $reasons = [System.Collections.Generic.List[string]]::new()
     $cached = $null
@@ -86,11 +85,6 @@ function Test-OSDAppOfficeCacheCompatibility {
         $info = Get-Content -LiteralPath (Join-Path $OfficeRoot 'CacheInfo.json') -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json
         $profileProperty = $info.PSObject.Properties['PayloadProfile']
         if ($profileProperty) { $cached = $profileProperty.Value }
-        elseif ($AllowLegacyConfiguration) {
-            # Only the untouched USB cache XML may describe a legacy payload.
-            # The staged XML is deployment intent and may have been replaced.
-            $cached = Get-OSDAppOfficePayloadProfile -Path (Join-Path $OfficeRoot 'configuration.xml')
-        }
         if (-not $cached -or $cached.SchemaVersion -ne 1) { throw 'Office cache has no supported payload configuration record.' }
         if (-not $requested.Static -or -not $cached.Static) { $reasons.Add('Dynamic or implicit Office configuration cannot be proven compatible for fallback.') }
         if ($requested.Architecture -ne $cached.Architecture) { $reasons.Add('Office architecture differs.') }

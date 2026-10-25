@@ -4,7 +4,7 @@
 
 OSDApps uses standalone scripts during SetupComplete. The module itself does **not** need to be installed in the deployed Windows installation.
 
-![Application queue and install order](images/application-queue.svg)
+![App queue and install order](images/app-queue.svg)
 
 ## Runtime content
 
@@ -57,7 +57,7 @@ Runner reads the ordered queue and installs from **local staging**. Before start
 
 For built-ins it invokes the corresponding local installer/provisioning mechanism. Adobe's archive is extracted locally before Adobe Setup runs. Vendor MSI built-ins use Windows Installer with silent arguments. Installer exit codes, timeouts and missing app-local source are isolated to that queue entry; Runner records the error and proceeds to the next independent app. Invalid manifest state and integrity/trust failures stop the queue. Any failed or skipped entry makes the final deployment `Failed` and prevents cleanup.
 
-Installer/provisioning success is not independent evidence of application activation, user sign-in or every interactive feature.
+Installer/provisioning success is not independent evidence of app activation, user sign-in or every interactive feature.
 
 ## Runtime configuration
 
@@ -113,11 +113,11 @@ PreInstall writes a phase record, and Runner atomically replaces `Latest.json` a
 ```powershell
 $Result = Get-OSDAppDeploymentResult
 $Result.Status
-$Result | Select-Object Status, SuccessfulApplicationCount, FailedApplicationCount, SkippedApplicationCount
-$Result.Applications | Select-Object Id, Status, FailureType, ExitCode, Version, DurationSeconds, Integrity, CacheUsed, PackageUpdated
+$Result | Select-Object Status, SuccessfulAppCount, FailedAppCount, SkippedAppCount
+$Result.Apps | Select-Object Id, Status, FailureType, ExitCode, Version, DurationSeconds, Integrity, CacheUsed, PackageUpdated
 ```
 
-The top-level status is `Running`, `Succeeded` or `Failed`. The final record includes the deployment ID, timestamps, duration, expected/success/failed/skipped counts, configured cleanup/log paths, the PreInstall phase record and one entry for every selected package. Each result includes `PackageType` (`Application` or `Script`; legacy entries default to `Application`). Status is `Succeeded`, `Failed` or `Skipped`; `Skipped` means OSDApps deliberately did not invoke that package, for example because its PreInstall acquisition failed or a preceding critical safety failure aborted the queue. Runner updates through a temporary file and rename so readers do not observe partially written JSON.
+The top-level status is `Running`, `Succeeded` or `Failed`. The final record includes the deployment ID, timestamps, duration, expected/success/failed/skipped counts, configured cleanup/log paths, the PreInstall phase record and one entry for every selected package. Each result includes `PackageType` (`App` or `Script`; missing package-type metadata defaults to `App`). Status is `Succeeded`, `Failed` or `Skipped`; `Skipped` means OSDApps deliberately did not invoke that package, for example because its PreInstall acquisition failed or a preceding critical safety failure aborted the queue. Runner updates through a temporary file and rename so readers do not observe partially written JSON.
 
 `Integrity` records the check actually performed by Runner. Repository archives report SHA-256 validation; supported built-in publishers are validated in PreInstall and carried as phase context. `CacheUsed` and `PackageUpdated` come from built-in `CacheInfo.json` when available. Null means the fact was not available for that source, not false.
 
@@ -125,7 +125,7 @@ The top-level status is `Running`, `Succeeded` or `Failed`. The final record inc
 
 From 0.42.0, `AcquisitionOutcome` describes how PreInstall prepared a built-in's
 primary payload during **this deployment**. It is copied to the matching Runner
-application result; `Status`, `ExitCode`, `FailureType` and `Error` continue to
+app result; `Status`, `ExitCode`, `FailureType` and `Error` continue to
 report installation or a blocking preparation failure.
 
 | AcquisitionOutcome | Meaning |
@@ -147,8 +147,8 @@ Teams can report `CacheReused` for its MSIX while downloading the bootstrapper;
 reuse does not mean zero network traffic. These checks do not authenticate or
 verify every nested payload file.
 
-The embedded `PreInstall` record adds `FallbackApplicationCount`,
-`OfflineCacheApplicationCount` and `HasAcquisitionWarnings`. A fallback can
+The embedded `PreInstall` record adds `FallbackAppCount`,
+`OfflineCacheAppCount` and `HasAcquisitionWarnings`. A fallback can
 therefore coexist with a final `Status=Succeeded`: all installations succeeded,
 but one or more refreshes did not. `OnSuccess` cleanup still follows installation
 success, and the persistent result retains the warning after source cleanup.
@@ -156,13 +156,13 @@ These are additive fields in result schema `1.0`.
 
 ```powershell
 $Result = Get-OSDAppDeploymentResult
-$Result.PreInstall | Select-Object Status, HasAcquisitionWarnings, FallbackApplicationCount, OfflineCacheApplicationCount
-$Result.Applications | Select-Object Id, Status, AcquisitionOutcome, CacheDecisionReason, RefreshFailureType, RefreshError, ExitCode, Error
+$Result.PreInstall | Select-Object Status, HasAcquisitionWarnings, FallbackAppCount, OfflineCacheAppCount
+$Result.Apps | Select-Object Id, Status, AcquisitionOutcome, CacheDecisionReason, RefreshFailureType, RefreshError, ExitCode, Error
 ```
 
 `CacheDecisionReason` explains the decision made during this deployment. It is
 recorded per built-in in PreInstall, copied into Runner results and included in
-the `ApplicationAcquisitionComplete` log event. For example:
+the `AppAcquisitionComplete` log event. For example:
 
 | Situation | Explanation |
 |---|---|
@@ -172,7 +172,7 @@ the `ApplicationAcquisitionComplete` log event. For example:
 | Office generation invalid | Generation validation failed, with the original validation message. |
 | Office custom source or unrecognized CDN channel | The public CDN check cannot establish currency for that configuration. |
 | Office build mismatch | The compatible generation does not match the explicit build pin or CDN-advertised build. |
-| HTTP metadata changed | The ETag or last-modified/length comparison differs. This does **not** prove a newer application version. |
+| HTTP metadata changed | The ETag or last-modified/length comparison differs. This does **not** prove a newer app version. |
 | HTTP metadata insufficient | Comparable metadata is unavailable, so currency cannot be established. |
 | Release-validated package rejected | The existing 7Zip, Visual Studio Code or prerequisite generation failed current-release validation; the original validation message is retained. |
 | Confirmed reuse | The applicable current-build, HTTP or release checks accepted the existing payload. |
@@ -195,7 +195,7 @@ Use `AcquisitionOutcome` for current-deployment freshness and fallback decisions
 Legacy `CacheUsed` describes USB/cache context, not proof of reuse or freshness;
 `PackageUpdated` is read from stored cache metadata and can describe an earlier
 synchronization when fallback is used. These fields are retained for compatibility.
-The `ApplicationAcquisitionComplete` log event records the same preparation
+The `AppAcquisitionComplete` log event records the same preparation
 outcome, and `PreInstallComplete` includes fallback/offline counts on success.
 No retry, extra download or changed fallback acceptance rule is introduced.
 
@@ -203,7 +203,7 @@ Result writing is best effort so an evidence-path problem does not convert an ot
 
 ## Cleanup policy
 
-With `OnSuccess`, Runner writes its final events, starts a cleanup helper and exits only after every selected application succeeded; the helper removes the staging directory and itself. With `Never`, cleanup is skipped. A failed or skipped application also produces `CleanupSkipped` and retains staging regardless of the configured mode.
+With `OnSuccess`, Runner writes its final events, starts a cleanup helper and exits only after every selected app succeeded; the helper removes the staging directory and itself. With `Never`, cleanup is skipped. A failed or skipped app also produces `CleanupSkipped` and retains staging regardless of the configured mode.
 
 The USB cache is separate and is not deleted by local source cleanup. The persistent log should be outside the staging directory; the default ProgramData path is retained. A completion line containing `CleanupMode=OnSuccess` identifies the selected policy. Check cleanup events or filesystem state when you need to prove that cleanup itself finished.
 
@@ -232,18 +232,17 @@ Runtime `LogPath` can be configured. The Viewer discovers known default location
 | `BuiltInRefreshSkipped` | No network was reported; existing staged built-in content was selected. Recorded as a warning, not an installer failure. |
 | `BuiltInRefreshStart` / `BuiltInRefreshComplete` | Refresh/acquisition attempt and successful readiness of content. |
 | `BuiltInRefreshFailed` | A refresh failed and the existing local fallback was selected after applicable checks. |
-| `ApplicationRefreshFailed` / `RefreshCompletedWithErrors` | One built-in could not be prepared; its installer will be skipped while independent apps continue. |
-| `CacheAliasPruned` / `CacheAliasPruneFailed` | Guarded removal of a retired cache identity after canonical validation, or a nonfatal cleanup warning. |
+| `AppRefreshFailed` / `RefreshCompletedWithErrors` | One built-in could not be prepared; its installer will be skipped while independent apps continue. |
 | `RefreshFailed` | PreInstall encountered a fatal phase/trust failure; Runner is not started. |
 | `PreInstallComplete` | The built-in preparation phase completed successfully or with explicitly reported per-app errors. |
 | `PackageIntegrityValidated` | A repository package passed the pre-execution integrity gate. |
 | `BuiltInInstallComplete` / `PackageInstallComplete` | Individual installer/provisioning outcome. |
-| `ApplicationInstallComplete` | Complete processing duration for one queue entry. |
-| `ApplicationInstallFailed` | One installer/source failed; independent queue entries continue. |
-| `ApplicationInstallSkipped` | The installer was deliberately not invoked because preparation failed. |
-| `InstallCompletedWithErrors` | The one-shot queue finished with at least one failed or skipped application. |
+| `AppInstallComplete` | Complete processing duration for one queue entry. |
+| `AppInstallFailed` | One installer/source failed; independent queue entries continue. |
+| `AppInstallSkipped` | The installer was deliberately not invoked because preparation failed. |
+| `InstallCompletedWithErrors` | The one-shot queue finished with at least one failed or skipped app. |
 | `InstallFailed` | A critical Runner failure aborted the queue; remaining entries are reported as skipped. |
-| `InstallComplete` | Runner completed the full queue; check its application count and individual results. |
+| `InstallComplete` | Runner completed the full queue; check its app count and individual results. |
 | `CleanupScheduled` / `CleanupSkipped` | Cleanup was scheduled or intentionally skipped. |
 
 An offline installation is not demonstrated by a short runtime alone. Review `BuiltInRefreshSkipped`, signature checks and final installation outcomes. An online cache hit can also be fast.
@@ -276,9 +275,9 @@ The generic MSI runner uses a 10-minute default installation timeout, logs waiti
 | --- | --- |
 | `PreInstallComplete.DurationSeconds` | Built-in preparation phase |
 | `BuiltInRefreshComplete.DurationSeconds` | One built-in's acquisition/refresh processing |
-| `ApplicationInstallComplete.DurationSeconds` | Complete queue-item processing, including validation/extraction where applicable |
+| `AppInstallComplete.DurationSeconds` | Complete queue-item processing, including validation/extraction where applicable |
 | `InstallComplete.DurationSeconds` | Full Runner phase |
 
-PreInstall failure types include `NetworkUnavailable`, `Timeout`, `CacheOrSourceMissing`, `RemoteAcquisition`, `TrustValidationFailed`, `ManifestInvalid` and `PreInstallError`. Runner types include `HashMismatch`, `ManifestInvalid`, `PreInstallFailed`, `SourceMissing`, `Timeout`, `InstallerFailed`, `ApplicationError`, `ApplicationFailures` and `RuntimeError`. The original message remains alongside the category; use it to diagnose the actual cause. These outcomes never schedule an automatic retry.
+PreInstall failure types include `NetworkUnavailable`, `Timeout`, `CacheOrSourceMissing`, `RemoteAcquisition`, `TrustValidationFailed`, `ManifestInvalid` and `PreInstallError`. Runner types include `HashMismatch`, `ManifestInvalid`, `PreInstallFailed`, `SourceMissing`, `Timeout`, `InstallerFailed`, `AppError`, `AppFailures` and `RuntimeError`. The original message remains alongside the category; use it to diagnose the actual cause. These outcomes never schedule an automatic retry.
 
 The [validation matrix](testing.md) and [performance history](performance.md) distinguish measured phases from image deployment, WinPE staging, boot and OOBE time.

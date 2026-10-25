@@ -1,4 +1,4 @@
-Describe 'DeviceManifest application queue' {
+Describe 'DeviceManifest app queue' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Path $PSScriptRoot -Parent
         $script:manifestPath = Join-Path $script:moduleRoot 'OSDApps.psd1'
@@ -6,7 +6,7 @@ Describe 'DeviceManifest application queue' {
         Import-Module $script:manifestPath -Force
     }
 
-    It 'appends applications in Add order' {
+    It 'appends apps in Add order' {
         InModuleScope OSDApps {
             $manifest = [pscustomobject]@{}
             $manifest = Set-OSDAppManifestApp -Manifest $manifest -App ([pscustomobject]@{ Id='First'; Source='Repository' })
@@ -16,7 +16,7 @@ Describe 'DeviceManifest application queue' {
         }
     }
 
-    It 'moves a re-added application to the end without duplication' {
+    It 'moves a re-added app to the end without duplication' {
         InModuleScope OSDApps {
             $manifest = [pscustomobject]@{
                 Apps = @(

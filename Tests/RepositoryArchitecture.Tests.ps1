@@ -10,7 +10,7 @@ Describe 'Repository target architecture' {
             $script:architectureTestSource = Join-Path $architectureTestRoot 'Repository'
             $script:architectureTestCache = Join-Path $architectureTestRoot 'Cache'
             $script:architectureTestCatalog = Join-Path $architectureTestSource 'catalog.json'
-            $applications = @()
+            $apps = @()
             foreach ($id in @('AppA','NeutralScript')) {
                 $variants = if ($id -eq 'AppA') { @('x64','arm64','any') } else { @('any') }
                 $references = @()
@@ -22,14 +22,14 @@ Describe 'Repository target architecture' {
                     Set-Content -LiteralPath $archive -Value "payload-$id-$variant" -Encoding ASCII
                     @{
                         SchemaVersion=1; Id=$id; DisplayName=$id; Version='1.0.0'; Architecture=$variant
-                        PackageType=$(if ($id -eq 'NeutralScript') { 'Script' } else { 'Application' }); SuccessCodes=@(0)
+                        PackageType=$(if ($id -eq 'NeutralScript') { 'Script' } else { 'App' }); SuccessCodes=@(0)
                         Archive=@{FileName='Package.zip';Sha256=(Get-FileHash $archive -Algorithm SHA256).Hash}
                     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $packageRoot 'manifest.json') -Encoding UTF8
                     $references += @{Architecture=$variant;Manifest="$relative/manifest.json"}
                 }
-                $applications += @{Id=$id;Packages=$references}
+                $apps += @{Id=$id;Packages=$references}
             }
-            @{SchemaVersion=1;GeneratedAt='2026-10-16T00:00:00Z';Applications=$applications} | ConvertTo-Json -Depth 15 | Set-Content -LiteralPath $architectureTestCatalog -Encoding UTF8
+            @{SchemaVersion=1;GeneratedAt='2026-10-16T00:00:00Z';Apps=$apps} | ConvertTo-Json -Depth 15 | Set-Content -LiteralPath $architectureTestCatalog -Encoding UTF8
             Mock Get-OSDAppHostArchitecture { 'arm64' }
         }
     }
@@ -65,7 +65,7 @@ Describe 'Repository target architecture' {
         InModuleScope OSDApps {
             Sync-OSDAppCache -CatalogPath $architectureTestCatalog -CachePath $architectureTestCache -Confirm:$false | Out-Null
             $source = Get-Content $architectureTestCatalog -Raw | ConvertFrom-Json
-            $source.Applications[0].Packages = @($source.Applications[0].Packages | Where-Object Architecture -eq arm64)
+            $source.Apps[0].Packages = @($source.Apps[0].Packages | Where-Object Architecture -eq arm64)
             $source | ConvertTo-Json -Depth 15 | Set-Content $architectureTestCatalog -Encoding UTF8
             $before = @(Get-ChildItem $architectureTestCache -File -Recurse | Get-FileHash | ForEach-Object { "$($_.Path):$($_.Hash)" } | Sort-Object)
             { Sync-OSDAppCache -CatalogPath $architectureTestCatalog -CachePath $architectureTestCache -Architecture x64 -Confirm:$false } | Should -Throw '*No compatible package variant*'
@@ -91,7 +91,7 @@ Describe 'Repository target architecture' {
         InModuleScope OSDApps {
             Sync-OSDAppCache -CatalogPath $architectureTestCatalog -CachePath $architectureTestCache -Confirm:$false | Out-Null
             $source = Get-Content $architectureTestCatalog -Raw | ConvertFrom-Json
-            $source.Applications = @($source.Applications | Where-Object Id -eq AppA)
+            $source.Apps = @($source.Apps | Where-Object Id -eq AppA)
             $source | ConvertTo-Json -Depth 15 | Set-Content $architectureTestCatalog -Encoding UTF8
             $before = @(Get-ChildItem $architectureTestCache -File -Recurse | Get-FileHash | ForEach-Object { "$($_.Path):$($_.Hash)" } | Sort-Object)
             Sync-OSDAppCache -CatalogPath $architectureTestCatalog -CachePath $architectureTestCache -Architecture x64 -Prune -WhatIf | Out-Null

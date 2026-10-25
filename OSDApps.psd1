@@ -34,7 +34,9 @@
         'Sync-OSDAppMozillaFirefoxEnterprise',
         'Clear-OSDAppCache',
         'Add-OSDApp',
-        'Add-OSDAppWindowsInboxCleanup',
+        'Add-OSDAppRegistryKey',
+    'Add-OSDAppRegistryValue',
+    'Add-OSDAppWindowsInboxCleanup',
         'Add-OSDAppCMTraceOpen',
         'Add-OSDAppMicrosoftCompanyPortal',
         'Add-OSDAppMicrosoft365Apps',
@@ -59,7 +61,7 @@
     AliasesToExport   = @()
     PrivateData = @{
         PSData = @{
-            Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
+            Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','AppDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','AppCache','AppPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
             ReleaseNotes = '0.51.0: Add Microsoft Company Portal offline provisioning with automatic download from the official Microsoft Download Center and optional manual Preinstall Kit; add CMTrace Open with upstream MSI SHA-256 and Authenticode verification and original vendor filenames. Validated x64 WinPE to SetupComplete deployment (4/4 succeeded) and direct Microsoft download on Windows.'

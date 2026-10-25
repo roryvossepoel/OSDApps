@@ -9,7 +9,7 @@ function Sync-OSDAppAdobeAcrobatUnified {
     $cacheLock = Enter-OSDAppCacheLock -CachePath $cachePath -Operation 'built-in cache synchronization'
     try {
     Write-OSDAppLog -LogPath $log -Component AdobeAcrobatUnified -Event BuiltInSyncStart -Message 'Synchronizing Adobe Acrobat Unified built-in cache.' -Data @{Architecture=$Architecture;Transactional=$true}
-    $sync=Sync-OSDAppVendorBuiltInCache -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Id AdobeAcrobatUnified -Root $root -PackageUri $PackageUri -Architecture $Architecture -PackageFileName Package.zip -Activity "Downloading Adobe Acrobat Unified $Architecture package" -LogPath $log -ZipPackage
+    $sync=Sync-OSDAppVendorBuiltInCache -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Id AdobeAcrobatUnified -Root $root -PackageUri $PackageUri -Architecture $Architecture -ExpectedExtension '.zip' -Activity "Downloading Adobe Acrobat Unified $Architecture package" -LogPath $log -ZipPackage
     Write-OSDAppLog -LogPath $log -Component AdobeAcrobatUnified -Event BuiltInSyncComplete -Message 'Adobe Acrobat Unified built-in cache synchronized.' -Data @{Architecture=$Architecture;Updated=$sync.Updated;Path=$root;Transactional=$true}
     [pscustomobject]@{PSTypeName='OSDApps.BuiltInCache';Id='AdobeAcrobatUnified';Version=$sync.Version;Architecture=$Architecture;CachePath=$root;Cached=$true;Updated=$sync.Updated}
     }

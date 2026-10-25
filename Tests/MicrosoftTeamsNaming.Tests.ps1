@@ -1,4 +1,5 @@
-Describe 'MicrosoftTeams canonical naming and cache alias contract' {
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
+Describe 'MicrosoftTeams canonical naming' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Parent $PSScriptRoot
         Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
@@ -14,17 +15,17 @@ Describe 'MicrosoftTeams canonical naming and cache alias contract' {
         $exports | Should -Not -Contain 'Sync-OSDAppTeams'
     }
 
-    It 'publishes only the canonical MicrosoftTeams identity plus its retired cache alias' {
-        $ids = @($script:metadata.Applications.Id)
+    It 'publishes only the canonical MicrosoftTeams identity' {
+        $ids = @($script:metadata.Apps.Id)
         $ids | Should -Contain 'MicrosoftTeams'
         $ids | Should -Not -Contain 'Teams'
-        $app = @($script:metadata.Applications | Where-Object Id -eq 'MicrosoftTeams')[0]
+        $app = @($script:metadata.Apps | Where-Object Id -eq 'MicrosoftTeams')[0]
         $app.DisplayName | Should -Be 'Microsoft Teams'
         $app.AddCommand | Should -Be 'Add-OSDAppMicrosoftTeams'
         $app.SyncCommand | Should -Be 'Sync-OSDAppMicrosoftTeams'
         $app.Acquisition | Should -Be 'MicrosoftTeamsBootstrapper'
         $app.CachePath | Should -Be 'BuiltIn/MicrosoftTeams'
-        @($app.Aliases) | Should -Be @('Teams')
+        $app.PSObject.Properties.Name | Should -Not -Contain 'Aliases'
         $app.IconUrl | Should -Match '/metadata/icons/microsoftteams\.svg$'
         (Test-Path -LiteralPath (Join-Path $script:moduleRoot 'metadata\icons\microsoftteams.svg') -PathType Leaf) | Should -BeTrue
     }
@@ -36,7 +37,8 @@ Describe 'MicrosoftTeams canonical naming and cache alias contract' {
             $sourceRoot = Join-Path $usb 'BuiltIn\MicrosoftTeams'
             New-Item -ItemType Directory -Path $windows,$sourceRoot -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $sourceRoot 'teamsbootstrapper.exe') -Value 'bootstrapper fixture' -Encoding Ascii
-            Set-Content -LiteralPath (Join-Path $sourceRoot 'teams.msix') -Value 'msix fixture' -Encoding Ascii
+            Set-Content -LiteralPath (Join-Path $sourceRoot 'MSTeams-x64.msix') -Value 'msix fixture' -Encoding Ascii
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $sourceRoot 'MSTeams-x64.msix') -Id MicrosoftTeams
 
             $result = Add-OSDAppMicrosoftTeamsInternal -CachePath $usb -WindowsPath $windows -Architecture x64 -Confirm:$false
             $stage = Join-Path $windows 'Windows\Temp\OSDApps'
@@ -48,8 +50,8 @@ Describe 'MicrosoftTeams canonical naming and cache alias contract' {
             $result.StagedPath | Should -Be (Join-Path $stage 'BuiltIn\MicrosoftTeams')
             $app.Type | Should -Be 'MicrosoftTeamsBootstrapper'
             $app.Setup | Should -Be 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe'
-            $app.OfflinePackage | Should -Be 'BuiltIn\MicrosoftTeams\teams.msix'
-            foreach ($filename in @('teamsbootstrapper.exe','teams.msix')) {
+            $app.OfflinePackage | Should -Be 'BuiltIn\MicrosoftTeams\MSTeams-x64.msix'
+            foreach ($filename in @('teamsbootstrapper.exe','MSTeams-x64.msix')) {
                 $source = Join-Path $sourceRoot $filename
                 $destination = Join-Path $result.StagedPath $filename
                 (Test-Path -LiteralPath $destination -PathType Leaf) | Should -BeTrue
@@ -65,10 +67,11 @@ Describe 'MicrosoftTeams canonical naming and cache alias contract' {
             $folder = Join-Path $usb 'BuiltIn\MicrosoftTeams'
             New-Item -ItemType Directory -Path $folder -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $folder 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding Ascii
-            Set-Content -LiteralPath (Join-Path $folder 'teams.msix') -Value 'msix' -Encoding Ascii
+            Set-Content -LiteralPath (Join-Path $folder 'MSTeams-x64.msix') -Value 'msix' -Encoding Ascii
             @{Id='MicrosoftTeams';Version='1.2.3.4';Architecture='x64';SyncedAt='2026-10-09T00:00:00Z'} |
                 ConvertTo-Json | Set-Content -LiteralPath (Join-Path $folder 'CacheInfo.json') -Encoding UTF8
 
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $folder 'MSTeams-x64.msix') -Id MicrosoftTeams -Metadata @{Version='1.2.3.4';SyncedAt='2026-10-09T00:00:00Z'}
             Mock Get-OSDAppCachePath { Join-Path $TestDrive 'CacheUsb' }
             $entries = @(Get-OSDAppCache -Name 'MicrosoftTeams')
             $entries.Count | Should -Be 1
@@ -85,8 +88,8 @@ Describe 'MicrosoftTeams canonical naming and cache alias contract' {
         $preinstall.Contains("'MicrosoftTeams' {") | Should -BeTrue
         $preinstall.Contains('BuiltIn\MicrosoftTeams') | Should -BeTrue
         $preinstall.Contains("'Teams' {") | Should -BeFalse
-        $preinstall.Contains('function Remove-LegacyMicrosoftTeamsCache') | Should -BeTrue
-        $preinstall.Contains('BuiltIn\Teams') | Should -BeTrue
+        $preinstall.Contains('function Remove-LegacyMicrosoftTeamsCache') | Should -BeFalse
+        $preinstall.Contains('BuiltIn\Teams') | Should -BeFalse
         $runner.Contains("'MicrosoftTeamsBootstrapper' {") | Should -BeTrue
         $runner.Contains("'TeamsBootstrapper' {") | Should -BeFalse
         $runner.Contains('BuiltIn\Teams') | Should -BeFalse

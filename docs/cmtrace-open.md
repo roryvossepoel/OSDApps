@@ -25,7 +25,7 @@ Add-OSDAppCMTraceOpen -Architecture x64 -DisableUpdateChecks $true
 Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
 ```
 
-The built-in uses a **pre-synchronized MSI**, rather than downloading the MSI during SetupComplete. OSDApps retains the upstream vendor filename (for x64 release 1.6.3, `CMTrace-Open_1.6.3_x64.msi`). A verified older USB cache containing `Package.msi` can be staged under the correct vendor filename without downloading the MSI again. It reuses the existing built-in VendorMsi runner with `/qn /norestart` and optional `DISABLEUPDATECHECKS=1`. MSI hash and Authenticode checks run again before installation.
+The built-in uses a **pre-synchronized MSI**, rather than downloading the MSI during SetupComplete. OSDApps retains the upstream vendor filename (for x64 release 1.6.3, `CMTrace-Open_1.6.3_x64.msi`). Build a fresh cache; no generic-filename cache is accepted or converted. It reuses the existing built-in VendorMsi runner with `/qn /norestart` and optional `DISABLEUPDATECHECKS=1`. MSI hash and Authenticode checks run again before installation.
 
 ## Validation and remaining tests
 

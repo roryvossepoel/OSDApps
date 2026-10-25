@@ -11,7 +11,7 @@ function Get-OSDAppRepositoryManifest {
         return [pscustomobject]@{
             SchemaVersion = 1
             GeneratedAt   = (Get-Date).ToUniversalTime().ToString('o')
-            Applications  = @()
+            Apps  = @()
         }
     }
 

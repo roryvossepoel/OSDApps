@@ -7,11 +7,11 @@ Describe 'Repository canonical Id and alias contract' {
         function global:New-AliasCatalogFixture {
             param(
                 [Parameter(Mandatory)][string]$Root,
-                [Parameter(Mandatory)][object[]]$Application
+                [Parameter(Mandatory)][object[]]$Definitions
             )
 
             $apps = @()
-            foreach ($definition in $Application) {
+            foreach ($definition in $Definitions) {
                 $id = [string]$definition.Id
                 $packageRoot = Join-Path $Root "Apps\$id\1.0.0\x64"
                 New-Item -ItemType Directory -Path $packageRoot -Force | Out-Null
@@ -30,7 +30,7 @@ Describe 'Repository canonical Id and alias contract' {
                 $apps += [pscustomobject]$app
             }
             $catalogPath = Join-Path $Root 'catalog.json'
-            @{SchemaVersion=1;GeneratedAt='2026-10-13T00:00:00Z';Applications=$apps} |
+            @{SchemaVersion=1;GeneratedAt='2026-10-13T00:00:00Z';Apps=$apps} |
                 ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $catalogPath -Encoding UTF8
             $catalogPath
         }
@@ -42,7 +42,7 @@ Describe 'Repository canonical Id and alias contract' {
 
     It 'resolves a requested alias to one canonical package' {
         InModuleScope OSDApps {
-            $catalogPath = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'AliasCatalog') -Application @(
+            $catalogPath = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'AliasCatalog') -Definitions @(
                 [pscustomobject]@{Id='NewApp';Aliases=@('OldApp')}
             )
 
@@ -56,14 +56,14 @@ Describe 'Repository canonical Id and alias contract' {
 
     It 'rejects aliases that collide with canonical Ids or have multiple owners' {
         InModuleScope OSDApps {
-            $canonicalConflict = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'CanonicalConflict') -Application @(
+            $canonicalConflict = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'CanonicalConflict') -Definitions @(
                 [pscustomobject]@{Id='AppA';Aliases=@('AppB')},
                 [pscustomobject]@{Id='AppB'}
             )
             { Get-OSDAppCatalogPackages -CatalogPath $canonicalConflict } |
-                Should -Throw '*conflicts with a canonical application Id*'
+                Should -Throw '*conflicts with a canonical app Id*'
 
-            $ownerConflict = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'OwnerConflict') -Application @(
+            $ownerConflict = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'OwnerConflict') -Definitions @(
                 [pscustomobject]@{Id='AppA';Aliases=@('OldApp')},
                 [pscustomobject]@{Id='AppB';Aliases=@('OldApp')}
             )
@@ -89,20 +89,20 @@ Describe 'Repository canonical Id and alias contract' {
             -RepositoryPath $repository -Confirm:$false | Out-Null
 
         $catalog = Get-Content -LiteralPath (Join-Path $repository 'catalog.json') -Raw | ConvertFrom-Json
-        @($catalog.Applications).Count | Should -Be 1
-        @($catalog.Applications[0].Aliases) | Should -Be @('OldApp')
-        $catalog.Applications[0].Packages[0].Manifest | Should -Be 'Apps/NewApp/2.0.0/x64/manifest.json'
+        @($catalog.Apps).Count | Should -Be 1
+        @($catalog.Apps[0].Aliases) | Should -Be @('OldApp')
+        $catalog.Apps[0].Packages[0].Manifest | Should -Be 'Apps/NewApp/2.0.0/x64/manifest.json'
 
         $third = New-OSDAppPackage -Id NewApp -Version 3.0.0 -SourcePath $source -OutputPath $buildThree -Confirm:$false
         Add-OSDAppPackage -Id NewApp -DisplayName 'New App' -Version 3.0.0 -PackagePath $third.PackagePath `
             -RepositoryPath $repository -Alias @() -Confirm:$false | Out-Null
 
         $catalog = Get-Content -LiteralPath (Join-Path $repository 'catalog.json') -Raw | ConvertFrom-Json
-        $catalog.Applications[0].PSObject.Properties.Name | Should -Not -Contain 'Aliases'
-        $catalog.Applications[0].Packages[0].Manifest | Should -Be 'Apps/NewApp/3.0.0/x64/manifest.json'
+        $catalog.Apps[0].PSObject.Properties.Name | Should -Not -Contain 'Aliases'
+        $catalog.Apps[0].Packages[0].Manifest | Should -Be 'Apps/NewApp/3.0.0/x64/manifest.json'
     }
 
-    It 'discovers a canonical cached application through its retired alias' {
+    It 'discovers a canonical cached app through its retired alias' {
         InModuleScope OSDApps {
             $cache = Join-Path $TestDrive 'AliasDiscoveryCache'
             $packageRoot = Join-Path $cache 'Packages\NewApp'
@@ -127,7 +127,7 @@ Describe 'Repository canonical Id and alias contract' {
         }
     }
 
-    It 'rejects an authoring alias already owned by another application without changing the catalog' {
+    It 'rejects an authoring alias already owned by another app without changing the catalog' {
         $source = Join-Path $TestDrive 'ConflictSource'
         $repository = Join-Path $TestDrive 'ConflictRepository'
         New-Item -ItemType Directory -Path $source -Force | Out-Null

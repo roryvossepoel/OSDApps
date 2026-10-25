@@ -38,7 +38,7 @@ function Add-OSDAppCiscoWebexInternal {
     $cacheRoot = if ($CachePath) { Join-Path $CachePath $relativeRoot } else { $null }
     $cacheHasPayload = $false
     if ($cacheRoot) {
-        $cacheHasPayload = Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'Package.msi'))) -PathType Leaf
+        $cacheHasPayload = Test-OSDAppBuiltInPayload -Root $cacheRoot -ExpectedExtension '.msi'
     }
 
     if (-not $PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage Cisco Webex deployment intent and available cache')) { return }
@@ -50,11 +50,11 @@ function Add-OSDAppCiscoWebexInternal {
 
     if ($cacheHasPayload) {
         Copy-Item -Path (Join-Path $cacheRoot '*') -Destination $destinationBuiltIn -Recurse -Force -ErrorAction Stop
-        $stagedMsi = (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $destinationBuiltIn 'Package.msi'))
+        $stagedMsi = (Resolve-OSDAppBuiltInPayloadPath -Root $destinationBuiltIn -ExpectedExtension '.msi')
         if (-not (Test-Path -LiteralPath $stagedMsi -PathType Leaf)) {
             throw "Cisco Webex cache staging failed; expected MSI: $stagedMsi"
         }
-        if ((Get-Item -LiteralPath $stagedMsi).Length -ne (Get-Item -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'Package.msi')))).Length) {
+        if ((Get-Item -LiteralPath $stagedMsi).Length -ne (Get-Item -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Root $cacheRoot -ExpectedExtension '.msi'))).Length) {
             throw "Cisco Webex cache staging failed; MSI size differs: $stagedMsi"
         }
     }
@@ -75,7 +75,7 @@ function Add-OSDAppCiscoWebexInternal {
         Id = 'CiscoWebex'
         DisplayName = 'Cisco Webex'
         Type = 'VendorMsi'
-        Package = (Join-Path $relativeRoot 'Package.msi')
+        Package = $null
         PackageUri = $PackageUri
         Architecture = $Architecture
         MsiProperties = @($msiProperties)
@@ -83,6 +83,7 @@ function Add-OSDAppCiscoWebexInternal {
         CachePreferred = [bool]$CachePath
     }
 
+    Set-OSDAppManifestPayload -App $manifestApp -StagedPath $destinationRoot -AllowPending
     $deviceManifest = Set-OSDAppManifestApp -Manifest $deviceManifest -App $manifestApp
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8

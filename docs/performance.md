@@ -6,7 +6,7 @@ The [validation matrix](testing.md) includes newer 0.36.0 and 0.39.0 measurement
 
 ## Office online warm cache reuse — 0.45.1 implementation candidate (19 October 2026)
 
-An x64 PC staged one Office application with MonthlyEnterprise / nl-nl, no exact build pin, a populated USB cache and networking available. The implementation commit was `0ed52e56351a21d723751cbfa3e1290c14d9fbb8`; its manifest still reported 0.45.0.
+An x64 PC staged one Office app with MonthlyEnterprise / nl-nl, no exact build pin, a populated USB cache and networking available. The implementation commit was `0ed52e56351a21d723751cbfa3e1290c14d9fbb8`; its manifest still reported 0.45.0.
 
 | Measurement | Duration | Result |
 | --- | ---: | --- |
@@ -15,7 +15,7 @@ An x64 PC staged one Office application with MonthlyEnterprise / nl-nl, no exact
 | Complete Runner phase | 151.1 s | Succeeded; Office exit code 0 |
 | **Measured Windows total** | **155.2 s** | **Matching installed build and completed cleanup** |
 
-The Office preparation item is part of PreInstall, not an additional phase. These are single-run observations for an Office-only queue, not directly comparable to the older multi-application benchmarks. Image deployment, WinPE staging, reboot and OOBE are excluded. See the [validation evidence](testing.md#office-online-warm-cache-reuse--19-october-2026).
+The Office preparation item is part of PreInstall, not an additional phase. These are single-run observations for an Office-only queue, not directly comparable to the older multi-app benchmarks. Image deployment, WinPE staging, reboot and OOBE are excluded. See the [validation evidence](testing.md#office-online-warm-cache-reuse--19-october-2026).
 
 ## OSDApps 0.35.0 release candidate — populated USB cache, online (12 October 2026)
 
@@ -38,15 +38,15 @@ On two freshly installed x64 test PCs, the same six built-ins and two repository
 | PC 1 — initially empty OSDCloud USB cache, online | 551.9 s | 366.7 s | **918.6 s (15:19)** | **8/8** installed |
 | PC 2 — populated USB cache, LAN disconnected | 5.4 s | 394.2 s | **399.6 s (6:40)** | **8/8** installed |
 
-The offline PreInstall phase was **546.5 s shorter**; the overall measured Windows phase was **519.0 s shorter**. PC 1 downloaded vendor content (including Office/Adobe), while PC 2 recorded six `BuiltInRefreshSkipped` events and used signed local content. The two devices and their network/cache conditions differed, so these are observed times, **not a controlled hardware speed comparison or guaranteed throughput**. WinPE staging, OSDCloud OS application, boot and OOBE are excluded.
+The offline PreInstall phase was **546.5 s shorter**; the overall measured Windows phase was **519.0 s shorter**. PC 1 downloaded vendor content (including Office/Adobe), while PC 2 recorded six `BuiltInRefreshSkipped` events and used signed local content. The two devices and their network/cache conditions differed, so these are observed times, **not a controlled hardware speed comparison or guaranteed throughput**. WinPE staging, OSDCloud OS app, boot and OOBE are excluded.
 
 See the [0.34.0 validation matrix](testing.md#osdapps-0340-release-candidate-physical-validation--11-october-2026) for app order, package variants and verification boundaries.
 
 ## End-to-end measurements — OSDApps 0.30.0 (9 October 2026)
 
-Four fresh OSDCloud v2 deployments validated the same six-application queue: Microsoft 365 Apps, Teams, Chrome Enterprise, Adobe Acrobat Unified, Omnissa Horizon Client (repository), and Notepad++ (repository). The fourth run changed the Office XML to MonthlyEnterprise / nl-nl with Visio and Project.
+Four fresh OSDCloud v2 deployments validated the same six-app queue: Microsoft 365 Apps, Teams, Chrome Enterprise, Adobe Acrobat Unified, Omnissa Horizon Client (repository), and Notepad++ (repository). The fourth run changed the Office XML to MonthlyEnterprise / nl-nl with Visio and Project.
 
-| Scenario | PreInstall | Runner | Measured Windows total | Application results |
+| Scenario | PreInstall | Runner | Measured Windows total | App results |
 | --- | ---: | ---: | ---: | --- |
 | 1. No USB cache, online | 217.3 s | 329.3 s | **546.6 s (9:07)** | 6/6 successful |
 | 2. Cold USB cache, online | 114.2 s | 328.4 s | **442.6 s (7:23)** | 6/6 successful |
@@ -66,11 +66,11 @@ The timings are reported by the runtime itself; the measured total is the **sum 
 
 The no-USB Adobe transfer took approximately 137 seconds, versus 21.9 seconds for the cold-USB Adobe transfer. This is an observed network/CDN difference and **must not be represented as caching speedup**: both scenarios acquired Adobe content from the vendor for the first time.
 
-### Per-application processing times (seconds)
+### Per-app processing times (seconds)
 
-These timings are from `ApplicationInstallComplete` and include any per-item validation or extraction performed in Runner.
+These timings are from `AppInstallComplete` and include any per-item validation or extraction performed in Runner.
 
-| Application | No USB | Cold USB | Warm USB | Changed Office |
+| App | No USB | Cold USB | Warm USB | Changed Office |
 | --- | ---: | ---: | ---: | ---: |
 | Microsoft 365 Apps | 136.4 | 136.5 | 138.5 | 150.8 |
 | Microsoft Teams | 1.1 | 1.1 | 1.1 | 1.1 |
@@ -92,14 +92,14 @@ See [Validation matrix](testing.md) for the test sequence, acceptance criteria, 
 | Phase | Duration |
 | --- | ---: |
 | PreInstall (offline cache fallback) | 7.6 s |
-| Runner (six applications) | 380.7 s |
+| Runner (six apps) | 380.7 s |
 | **Measured total** | **388.3 s (6:28)** |
 
 All six installer/provisioning calls exited with code `0` with networking disconnected before reboot. The populated USB cache was recognized. Office, Teams and Chrome used existing local staging, while Adobe was restaged from USB after a local staging path mismatch. That mismatch is corrected in **0.30.1**; these numbers describe the original successful **0.30.0** field run, not a benchmark of the patched release.
 
 ## Historical cold/warm cache benchmark — OSDApps 0.29.1
 
-The following benchmark was captured with OSDApps 0.29.1 using the same hardware, the same OSDCloud USB flash drive, the same application order, and the same deployment configuration.
+The following benchmark was captured with OSDApps 0.29.1 using the same hardware, the same OSDCloud USB flash drive, the same app order, and the same deployment configuration.
 
 ![OSDApps 0.29.1 cold vs warm cache benchmark](images/cold-warm-benchmark.svg)
 
@@ -119,11 +119,11 @@ Difference  1 min 28 s faster
 
 The warm-cache run is about 19% faster across the measured PreInstall + Runner phases.
 
-## Application set
+## App set
 
-The validated queue deliberately mixed built-in and repository applications:
+The validated queue deliberately mixed built-in and repository apps:
 
-| Application | Source |
+| App | Source |
 | --- | --- |
 | Microsoft 365 Apps | Built-in |
 | Microsoft Teams | Built-in |
@@ -152,11 +152,11 @@ Runner
 
 The Runner remains almost identical between both runs. The cache therefore does what it is designed to do: reduce acquisition and refresh work before installation while keeping the installation queue and install behavior stable.
 
-## Per-application installation consistency
+## Per-app installation consistency
 
-The complete application-processing timings were also highly consistent:
+The complete app-processing timings were also highly consistent:
 
-| Application | Cold cache | Warm cache | Difference |
+| App | Cold cache | Warm cache | Difference |
 | --- | ---: | ---: | ---: |
 | Microsoft 365 Apps | 142.6 s | 141.6 s | -1.0 s |
 | Microsoft Teams | 1.1 s | 1.1 s | 0.0 s |
@@ -167,7 +167,7 @@ The complete application-processing timings were also highly consistent:
 
 In this recorded pair, the difference was concentrated in acquisition rather than installation. Two runs do not establish a general performance rule.
 
-For repository applications, `ApplicationInstallComplete` includes the complete processing time for that queue item, including SHA-256 validation and extraction before `Install.ps1` is started.
+For repository apps, `AppInstallComplete` includes the complete processing time for that queue item, including SHA-256 validation and extraction before `Install.ps1` is started.
 
 ## Cold-cache acquisition observations
 
@@ -216,7 +216,7 @@ existing cache
 
 This is the historical 0.29.1 command sequence, including its module path and test-repository IDs. For a new test, use the current [online deployment guide](../Examples/WinPE-Online.md), supply your own repository and record the loaded module version and settings. Do not expect a current build to reproduce historical timings.
 
-The historical runs used this application order:
+The historical runs used this app order:
 
 ```powershell
 Import-Module E:\Modules\OSDApps\OSDApps.psd1 -Force
@@ -230,7 +230,7 @@ Add-OSDAppMicrosoft365Apps
 Add-OSDAppMicrosoftTeams
 Add-OSDAppGoogleChromeEnterprise
 
-# Example applications from the configured repository
+# Example apps from the configured repository
 Add-OSDApp OmnissaHorizonClient
 Add-OSDApp NotepadPlusPlus
 
@@ -245,7 +245,7 @@ Relevant runtime events include:
 ```text
 BuiltInRefreshComplete
 PreInstallComplete
-ApplicationInstallComplete
+AppInstallComplete
 InstallComplete
 ```
 
@@ -261,4 +261,4 @@ The module-side cache and staging log remains:
 <OSDCloud>:\OSDApps\Logs\Client.log
 ```
 
-Performance depends on network, vendor CDN throughput, storage, CPU, application behavior, and hardware. These numbers are therefore a validated reference measurement, not a guaranteed deployment duration.
+Performance depends on network, vendor CDN throughput, storage, CPU, app behavior, and hardware. These numbers are therefore a validated reference measurement, not a guaranteed deployment duration.

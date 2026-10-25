@@ -70,7 +70,7 @@ Describe 'Optional repository Vendor metadata' {
             $manifest.PSObject.Properties.Name | Should -Not -Contain 'Vendor'
             $catalog = Get-OSDAppCatalogPackages -CatalogPath (Join-Path $repo 'catalog.json')
             $catalog.Packages[0].Vendor | Should -BeNullOrEmpty
-            $catalog.Packages[0].PackageType | Should -Be 'Application'
+            $catalog.Packages[0].PackageType | Should -Be 'App'
         }
     }
 }

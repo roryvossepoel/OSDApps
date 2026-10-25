@@ -1,12 +1,12 @@
-Describe 'Built-in application architecture contracts' {
+Describe 'Built-in app architecture contracts' {
     BeforeAll {
         $moduleRoot = Split-Path -Parent $PSScriptRoot
         Import-Module (Join-Path $moduleRoot 'OSDApps.psd1') -Force
         $metadata = Get-Content -LiteralPath (Join-Path $moduleRoot 'metadata\builtins.json') -Raw | ConvertFrom-Json
     }
 
-    It 'requires one explicit runtime architecture and keeps other application defaults' {
-        foreach ($app in $metadata.Applications) {
+    It 'requires one explicit runtime architecture and keeps other app defaults' {
+        foreach ($app in $metadata.Apps) {
             if ($app.PackageType -eq 'Script') {
                 $app.Architectures | Should -Be @('any')
                 $app.DefaultArchitecture | Should -Be 'any'
@@ -31,7 +31,7 @@ Describe 'Built-in application architecture contracts' {
     }
 
     It 'exposes only the advertised architectures' {
-        foreach ($app in $metadata.Applications) {
+        foreach ($app in $metadata.Apps) {
             if ($app.PackageType -eq 'Script') {
                 (Get-Command $app.AddCommand).Parameters.ContainsKey('Architecture') | Should -BeFalse
                 continue
@@ -47,7 +47,7 @@ Describe 'Built-in application architecture contracts' {
     }
 
     It 'does not expose Auto or numeric Office values' {
-        foreach ($app in $metadata.Applications) {
+        foreach ($app in $metadata.Apps) {
             $app.Architectures | Should -Not -Contain 'Auto'
             $app.Architectures | Should -Not -Contain '32'
             $app.Architectures | Should -Not -Contain '64'

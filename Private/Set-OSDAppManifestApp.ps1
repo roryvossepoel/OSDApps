@@ -6,7 +6,7 @@ function Set-OSDAppManifestApp {
     )
 
     if (-not $App.Id) {
-        throw 'Manifest application entry must contain Id.'
+        throw 'Manifest app entry must contain Id.'
     }
 
     $apps = @()
@@ -26,7 +26,7 @@ function Set-OSDAppManifestApp {
         $Manifest | Add-Member -NotePropertyName Apps -NotePropertyValue @($apps)
     }
 
-    # DeviceManifest v2 uses Apps as the single ordered application queue.
+    # DeviceManifest v2 uses Apps as the single ordered app queue.
     foreach ($legacyProperty in @('Packages','BuiltInApps','InstallOrder')) {
         if ($Manifest.PSObject.Properties.Name -contains $legacyProperty) {
             $Manifest.PSObject.Properties.Remove($legacyProperty)

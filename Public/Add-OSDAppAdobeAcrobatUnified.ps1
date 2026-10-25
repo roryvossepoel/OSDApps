@@ -37,7 +37,7 @@ function Add-OSDAppAdobeAcrobatUnified {
     $stagedRelativePath = 'Windows\Temp\OSDApps'
 
     if ($cachePath) {
-        $existingCache = Test-Path -LiteralPath (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $Architecture 'Package.zip')))) -PathType Leaf
+        $existingCache = Test-OSDAppBuiltInPayload -Root (Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' $Architecture)) -ExpectedExtension '.zip'
         if ($existingCache) {
             if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'AdobeAcrobatUnified' -Message 'Existing cache found; cached package will be staged as fallback and refreshed during SetupComplete' }
         }
@@ -65,7 +65,7 @@ function Add-OSDAppAdobeAcrobatUnified {
     Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
 
     if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'AdobeAcrobatUnified' -Message 'Device manifest updated and SetupComplete integration verified' }
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=AdobeAcrobatUnified; Architecture=$Architecture; Timeout=$InstallTimeoutMinutes min; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("App=AdobeAcrobatUnified; Architecture=$Architecture; Timeout=$InstallTimeoutMinutes min; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
 
     if ($cachePath -and -not $script:OSDAppCacheMediaWarningShown) {
         Write-Warning 'OSDCloud cache media detected. Keep the USB flash drive connected until OOBE is displayed.'

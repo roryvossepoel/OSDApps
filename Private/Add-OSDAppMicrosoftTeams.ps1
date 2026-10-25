@@ -26,7 +26,7 @@ function Add-OSDAppMicrosoftTeamsInternal {
     $cacheHasPayload = $false
     if ($cacheRoot) {
         $cacheHasPayload = (
-            (Test-Path -LiteralPath ((Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cacheRoot 'teams.msix'))) -PathType Leaf) -and
+            (Test-OSDAppBuiltInPayload -Root $cacheRoot -ExpectedExtension '.msix') -and
             (Test-Path -LiteralPath (Join-Path $cacheRoot 'teamsbootstrapper.exe') -PathType Leaf)
         )
     }
@@ -55,7 +55,7 @@ function Add-OSDAppMicrosoftTeamsInternal {
         DisplayName = 'Microsoft Teams'
         Type = 'MicrosoftTeamsBootstrapper'
         Setup = 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe'
-        OfflinePackage = 'BuiltIn\MicrosoftTeams\teams.msix'
+        OfflinePackage = $null
         InstallMeetingAddin = $InstallMeetingAddin
         Architecture = $resolvedArchitecture
         BootstrapperUri = $MicrosoftTeamsBootstrapperUri
@@ -63,6 +63,7 @@ function Add-OSDAppMicrosoftTeamsInternal {
         CachePreferred = [bool]$CachePath
     }
 
+    Set-OSDAppManifestPayload -App $manifestApp -StagedPath $destinationRoot -AllowPending
     $deviceManifest = Set-OSDAppManifestApp -Manifest $deviceManifest -App $manifestApp
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8

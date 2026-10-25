@@ -1,6 +1,6 @@
 # All-app cold deployment validation
 
-**Historical procedure for OSDApps 0.45.0.** This is not a current-release regression test or a required step after every update. Its [recorded successful cold run](testing.md#nine-application-cold-deployment--19-october-2026) is separate from the procedure. For current deployment instructions, use the [online WinPE example](../Examples/WinPE-Online.md); for inspections, use [Choose the right check](maintenance.md#choose-the-right-check).
+**Historical procedure for OSDApps 0.45.0.** This is not a current-release regression test or a required step after every update. Its [recorded successful cold run](testing.md#nine-app-cold-deployment--19-october-2026) is separate from the procedure. For current deployment instructions, use the [online WinPE example](../Examples/WinPE-Online.md); for inspections, use [Choose the right check](maintenance.md#choose-the-right-check).
 
 This operator test uses the published OSDApps **0.45.0** module from PowerShell
 Gallery. Download
@@ -22,7 +22,7 @@ The old cache is not deleted or automatically restored. A failure preserves the
 backup and diagnostic staging; do not rerun the entire staging script on that
 partially prepared deployment.
 
-| Source | Applications / configuration |
+| Source | Apps / configuration |
 | --- | --- |
 | Built-in | Microsoft 365 Apps: MonthlyEnterprise, nl-nl, x64, default O365ProPlusRetail product |
 | Built-in | Microsoft Teams, Google Chrome Enterprise, Cisco Webex, Adobe Acrobat Unified: x64 defaults |
@@ -31,7 +31,7 @@ partially prepared deployment.
 | Repository | NotepadPlusPlus and OmnissaHorizonClient; supply a catalog with compatible x64 or any packages |
 
 Repository packages are downloaded during WinPE staging. The seven built-ins
-are acquired in Windows before their installers run. Application-specific
+are acquired in Windows before their installers run. App-specific
 production configuration and a script package are outside this test.
 
 ## Stage and reboot
@@ -63,11 +63,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\ProgramData\OSDApps\T
 The read-only checker prints acquisition and installer results, then requires
 matching deployment IDs, exactly seven successful built-in preparations with
 `Downloaded` and no refresh errors, exactly nine successful runner entries, no
-failed/skipped applications, and completed staging/helper cleanup. Cached
+failed/skipped apps, and completed staging/helper cleanup. Cached
 fallback may permit an installation to succeed, but cannot pass this cold test.
 
 This checks the module's recorded installation results and cleanup. It does not
-launch all nine applications, prove first-user behavior, compare every installed
+launch all nine apps, prove first-user behavior, compare every installed
 version with its source, or perform a complete post-installation USB cache health
 check. Preserve the old cache until the new cache has also been reviewed. Share
 the two result tables and final summary; never rerun SetupComplete manually.

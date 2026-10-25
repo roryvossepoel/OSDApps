@@ -18,7 +18,7 @@
 
   <rect width="1100" height="640" fill="#ffffff"/>
   <text x="60" y="55" class="title">OSDApps 0.29.1 — cold vs warm cache</text>
-  <text x="60" y="84" class="subtitle">Same USB flash drive, same hardware, same application set</text>
+  <text x="60" y="84" class="subtitle">Same USB flash drive, same hardware, same app set</text>
 
   <rect x="760" y="34" width="280" height="82" rx="12" class="card"/>
   <text x="785" y="66" class="small">Warm-cache improvement</text>

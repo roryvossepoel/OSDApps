@@ -20,7 +20,7 @@ Describe 'Maintenance diagnostic bundle' {
         $now=[datetime]::UtcNow
         $result=@{DeploymentId='test-deployment';Status='Failed';LogPath=$logPath;StartedAtUtc=$now.AddMinutes(-5).ToString('o');CompletedAtUtc=$now.ToString('o');PreInstall=@{StartedAtUtc=$now.AddMinutes(-15).ToString('o')}}
         $result | ConvertTo-Json | Set-Content $resultPath
-        Set-Content $logPath 'Application failed'
+        Set-Content $logPath 'App failed'
         Set-Content "$logPath.1" 'Prior runtime lines'
         $installer=Join-Path $case 'PC-20261022-1200.log'
         Set-Content $installer 'Office download evidence'

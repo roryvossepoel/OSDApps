@@ -27,7 +27,7 @@ function Add-OSDAppVisualStudioCode {
 
     $stagedRelativePath = 'Windows\Temp\OSDApps'
     if ($cachePath) {
-        $existingCache = Test-Path -LiteralPath (Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $cachePath (Join-Path 'BuiltIn\VisualStudioCode' (Join-Path $Architecture 'Package.exe')))) -PathType Leaf
+        $existingCache = Test-OSDAppBuiltInPayload -Root (Join-Path $cachePath (Join-Path 'BuiltIn\VisualStudioCode' $Architecture)) -ExpectedExtension '.exe'
         $message = if ($existingCache) { 'Existing cache found; cached EXE will be staged as fallback and refreshed during SetupComplete' } else { 'No existing cache found; cache will be created during SetupComplete' }
         if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level $(if ($existingCache) { 'Success' } else { 'Info' }) -Component 'VisualStudioCode' -Message $message }
     }
@@ -46,7 +46,7 @@ function Add-OSDAppVisualStudioCode {
     Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
 
     if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'VisualStudioCode' -Message 'Device manifest updated and SetupComplete integration verified' }
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=VisualStudioCode; Architecture=$Architecture; Timeout=$InstallTimeoutMinutes min; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("App=VisualStudioCode; Architecture=$Architecture; Timeout=$InstallTimeoutMinutes min; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
 
     if ($cachePath -and -not $script:OSDAppCacheMediaWarningShown) {
         Write-Warning 'OSDCloud cache media detected. Keep the USB flash drive connected until OOBE is displayed.'

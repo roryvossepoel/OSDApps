@@ -309,37 +309,37 @@ switch ($Mode) {
         try {
             if (-not $ResultPath) { throw 'Specify -ResultPath with a saved Latest.json file.' }
             $result = Get-Content -LiteralPath $ResultPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
-            foreach ($field in @('SchemaVersion','Status','DeploymentId','ExpectedApplicationCount','SuccessfulApplicationCount','FailedApplicationCount','SkippedApplicationCount','Applications')) {
+            foreach ($field in @('SchemaVersion','Status','DeploymentId','ExpectedAppCount','SuccessfulAppCount','FailedAppCount','SkippedAppCount','Apps')) {
                 if ($null -eq $result -or $result.PSObject.Properties.Name -notcontains $field) { throw "Result is missing required field: $field" }
             }
             if ([string]$result.SchemaVersion -ne '1.0') { throw "Unsupported result schema: $($result.SchemaVersion)" }
             if ([string]$result.Status -notin @('Running','Succeeded','Failed')) { throw "Unsupported result status: $($result.Status)" }
             if ([string]::IsNullOrWhiteSpace([string]$result.DeploymentId)) { throw 'Result has no deployment identity.' }
             if ($DeploymentId -and [string]$result.DeploymentId -ne $DeploymentId) { throw 'Result belongs to another deployment.' }
-            foreach ($field in @('ExpectedApplicationCount','SuccessfulApplicationCount','FailedApplicationCount','SkippedApplicationCount')) {
+            foreach ($field in @('ExpectedAppCount','SuccessfulAppCount','FailedAppCount','SkippedAppCount')) {
                 if ([string]$result.$field -notmatch '^\d+$') { throw "Invalid result count: $field" }
             }
-            $apps = @($result.Applications)
+            $apps = @($result.Apps)
             $ids = @($apps | ForEach-Object { [string](Get-MaintenanceValue $_ Id) })
-            if (@($ids | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -gt 0 -or @($ids | Select-Object -Unique).Count -ne $ids.Count) { throw 'Result contains missing or duplicate application identities.' }
+            if (@($ids | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -gt 0 -or @($ids | Select-Object -Unique).Count -ne $ids.Count) { throw 'Result contains missing or duplicate app identities.' }
             foreach ($state in @('Succeeded','Failed','Skipped')) {
-                $field = switch ($state) { Succeeded { 'SuccessfulApplicationCount' } Failed { 'FailedApplicationCount' } Skipped { 'SkippedApplicationCount' } }
+                $field = switch ($state) { Succeeded { 'SuccessfulAppCount' } Failed { 'FailedAppCount' } Skipped { 'SkippedAppCount' } }
                 $count = @($apps | Where-Object { (Get-MaintenanceValue $_ Status) -eq $state }).Count
-                if ($count -ne [int]$result.$field) { throw "Application entries do not match $field." }
+                if ($count -ne [int]$result.$field) { throw "App entries do not match $field." }
             }
-            if (@($apps | Where-Object { (Get-MaintenanceValue $_ Status) -notin @('Succeeded','Failed','Skipped') }).Count -gt 0) { throw 'An application has an unsupported status.' }
-            if ($apps.Count -gt [int]$result.ExpectedApplicationCount) { throw 'Result contains more entries than expected.' }
+            if (@($apps | Where-Object { (Get-MaintenanceValue $_ Status) -notin @('Succeeded','Failed','Skipped') }).Count -gt 0) { throw 'An app has an unsupported status.' }
+            if ($apps.Count -gt [int]$result.ExpectedAppCount) { throw 'Result contains more entries than expected.' }
             $details.Result = $result
             $details.ResultPath = (Get-Item -LiteralPath $ResultPath).FullName
             $preInstall = Get-MaintenanceValue $result PreInstall
             if ($result.Status -eq 'Failed') { Add-MaintenanceCheck Deployment Failed 'Deployment failed. Inspect Details.Result, including failed and skipped entries.' }
             elseif ($result.Status -eq 'Running') { Add-MaintenanceCheck Deployment Warning 'Result is not final: deployment is still recorded as Running.' }
-            elseif ($apps.Count -ne [int]$result.ExpectedApplicationCount -or [int]$result.FailedApplicationCount -gt 0 -or [int]$result.SkippedApplicationCount -gt 0 -or (Get-MaintenanceValue $preInstall Status) -in @('Failed','CompletedWithErrors')) {
-                throw 'Succeeded result contradicts its application or PreInstall outcomes.'
+            elseif ($apps.Count -ne [int]$result.ExpectedAppCount -or [int]$result.FailedAppCount -gt 0 -or [int]$result.SkippedAppCount -gt 0 -or (Get-MaintenanceValue $preInstall Status) -in @('Failed','CompletedWithErrors')) {
+                throw 'Succeeded result contradicts its app or PreInstall outcomes.'
             }
-            elseif ($apps.Count -eq 0) { Add-MaintenanceCheck Deployment Warning 'Successful result contains no application executions.' }
-            else { Add-MaintenanceCheck Deployment Passed "$($apps.Count) successful application entries. DeploymentId=$($result.DeploymentId). This is recorded installer evidence, not a fresh device health test." }
-            $preApps = @(Get-MaintenanceValue $preInstall Applications -Default @())
+            elseif ($apps.Count -eq 0) { Add-MaintenanceCheck Deployment Warning 'Successful result contains no app executions.' }
+            else { Add-MaintenanceCheck Deployment Passed "$($apps.Count) successful app entries. DeploymentId=$($result.DeploymentId). This is recorded installer evidence, not a fresh device health test." }
+            $preApps = @(Get-MaintenanceValue $preInstall Apps -Default @())
             $acquisitionWarnings = @(@($apps) + @($preApps) | Where-Object { (Get-MaintenanceValue $_ AcquisitionOutcome) -in @('FallbackCacheUsed','OfflineCacheUsed') })
             if ((Get-MaintenanceValue $preInstall HasAcquisitionWarnings -Default $false) -or $acquisitionWarnings.Count -gt 0) {
                 Add-MaintenanceCheck Acquisition Warning 'Offline cache use or fallback was recorded. Installation can still have succeeded; inspect acquisition outcomes and refresh errors.'

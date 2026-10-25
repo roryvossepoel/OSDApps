@@ -121,7 +121,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
                 PackageUri='https://example.org/installer?token=sensitive'
                 CommandLine='Do-Not-Surface'
             }
-            $details = Format-OSDAppUIStagedDetails -Application $app
+            $details = Format-OSDAppUIStagedDetails -App $app
             $details | Should -Match 'Channel: MonthlyEnterprise'
             $details | Should -Match 'Language: nl-nl, en-us'
             $details | Should -Match 'SharedComputerLicensing: True'
@@ -156,13 +156,13 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
     It 'shows Current for all built-in version policies regardless of cached version' {
         InModuleScope OSDApps {
             $builtin = [pscustomobject]@{ Id='Microsoft365Apps'; Source='BuiltIn'; Version='16.0.20430.20146' }
-            (Get-OSDAppUIDisplayVersion -Application $builtin) | Should -Be 'Current'
+            (Get-OSDAppUIDisplayVersion -App $builtin) | Should -Be 'Current'
             $staged = [pscustomobject]@{ Id='MicrosoftTeams'; Source='BuiltIn'; Version=$null }
-            (Get-OSDAppUIDisplayVersion -Application $staged) | Should -Be 'Current'
+            (Get-OSDAppUIDisplayVersion -App $staged) | Should -Be 'Current'
             $scriptApp = [pscustomobject]@{ Id='WindowsInboxCleanup'; Source='BuiltIn'; PackageType='Script'; Version='1.0.0' }
-            (Get-OSDAppUIDisplayVersion -Application $scriptApp) | Should -Be '1.0.0'
+            (Get-OSDAppUIDisplayVersion -App $scriptApp) | Should -Be '1.0.0'
             $repo = [pscustomobject]@{ Id='NotepadPlusPlus'; Source='Repository'; Version='8.9.8.1' }
-            (Get-OSDAppUIDisplayVersion -Application $repo) | Should -Be '8.9.8.1'
+            (Get-OSDAppUIDisplayVersion -App $repo) | Should -Be '8.9.8.1'
         }
     }
 
@@ -170,11 +170,11 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         InModuleScope OSDApps {
             $app = [pscustomobject]@{ Id='Microsoft365Apps';Source='BuiltIn' }
             $cache = @([pscustomobject]@{Id='Microsoft365Apps';Source='BuiltIn';Version='16.0.20430.20146';Valid=$true})
-            (Get-OSDAppUICachedVersion -Application $app -CacheEntries $cache) | Should -Be '16.0.20430.20146'
+            (Get-OSDAppUICachedVersion -App $app -CacheEntries $cache) | Should -Be '16.0.20430.20146'
             $cache[0].Version = 'Current'
-            (Get-OSDAppUICachedVersion -Application $app -CacheEntries $cache) | Should -Be 'Not recorded'
+            (Get-OSDAppUICachedVersion -App $app -CacheEntries $cache) | Should -Be 'Not recorded'
             $cache[0].Valid = $false
-            (Get-OSDAppUICachedVersion -Application $app -CacheEntries $cache) | Should -Be '-'
+            (Get-OSDAppUICachedVersion -App $app -CacheEntries $cache) | Should -Be '-'
         }
     }
 
@@ -230,7 +230,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
                 Id='AdobeAcrobatUnified';Source='BuiltIn';Architecture='x64'
                 Version='26.002.21931';VersionSource='AdobePatchFileName';Valid=$true
             })
-            (Get-OSDAppUICachedVersion -Application $app -CacheEntries $cache) |
+            (Get-OSDAppUICachedVersion -App $app -CacheEntries $cache) |
                 Should -Be '26.002.21931'
         }
         $source = Get-Content -LiteralPath (Join-Path $script:root 'Public\Show-OSDAppUI.ps1') -Raw
@@ -298,11 +298,11 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
             $definitions = @(Get-OSDAppUIBuiltInMetadata)
             $definitions.Count | Should -BeGreaterThan 0
             $cache = [pscustomobject]@{Id='GoogleChromeEnterprise';Source='BuiltIn'}
-            $display = Get-OSDAppUIDisplayInfo -Application $cache -BuiltInMetadata $definitions
+            $display = Get-OSDAppUIDisplayInfo -App $cache -BuiltInMetadata $definitions
             $display.DisplayName | Should -Be 'Google Chrome Enterprise'
             $display.Vendor | Should -Be 'Google'
 
-            $office = Get-OSDAppUIDisplayInfo -Application ([pscustomobject]@{Id='Microsoft365Apps';Source='BuiltIn'}) -BuiltInMetadata $definitions
+            $office = Get-OSDAppUIDisplayInfo -App ([pscustomobject]@{Id='Microsoft365Apps';Source='BuiltIn'}) -BuiltInMetadata $definitions
             $office.DisplayName | Should -Be 'Microsoft 365 Apps'
             $office.Vendor | Should -Be 'Microsoft'
         }
@@ -314,11 +314,11 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
                 Id='NotepadPlusPlus';Source='Repository';DisplayName='Notepad++';Vendor='Example Publisher'
             })
             $cached = [pscustomobject]@{Id='NotepadPlusPlus';Source='Repository'}
-            $info = Get-OSDAppUIDisplayInfo -Application $cached -CatalogApps $repository
+            $info = Get-OSDAppUIDisplayInfo -App $cached -CatalogApps $repository
             $info.DisplayName | Should -Be 'Notepad++'
             $info.Vendor | Should -Be 'Example Publisher'
 
-            $withoutVendor = Get-OSDAppUIDisplayInfo -Application ([pscustomobject]@{Id='CustomTool';Source='Repository'})
+            $withoutVendor = Get-OSDAppUIDisplayInfo -App ([pscustomobject]@{Id='CustomTool';Source='Repository'})
             $withoutVendor.DisplayName | Should -Be 'CustomTool'
             $withoutVendor.Vendor | Should -Be '-'
         }
@@ -326,12 +326,12 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
 
     It 'labels repository scripts separately without changing their execution source' {
         InModuleScope OSDApps {
-            (Get-OSDAppUIPackageType -Application ([pscustomobject]@{Source='Repository';PackageType='Script'})) |
+            (Get-OSDAppUIPackageType -App ([pscustomobject]@{Source='Repository';PackageType='Script'})) |
                 Should -Be 'Script'
-            (Get-OSDAppUIPackageType -Application ([pscustomobject]@{Source='Repository'})) |
-                Should -Be 'Application'
-            (Get-OSDAppUIPackageType -Application ([pscustomobject]@{Source='BuiltIn'})) |
-                Should -Be 'Application'
+            (Get-OSDAppUIPackageType -App ([pscustomobject]@{Source='Repository'})) |
+                Should -Be 'App'
+            (Get-OSDAppUIPackageType -App ([pscustomobject]@{Source='BuiltIn'})) |
+                Should -Be 'App'
         }
     }
 
@@ -343,10 +343,10 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
             $catalog = @([pscustomobject]@{
                 Id='NotepadPlusPlus';Source='Repository';DisplayName='Some other name';Vendor='Publisher Ltd.'
             })
-            $info = Get-OSDAppUIDisplayInfo -Application $staged -CatalogApps $catalog
+            $info = Get-OSDAppUIDisplayInfo -App $staged -CatalogApps $catalog
             $info.DisplayName | Should -Be 'Notepad++'
             $info.Vendor | Should -Be 'Publisher Ltd.'
-            $details = Format-OSDAppUIStagedDetails -Application $staged -Vendor $info.Vendor
+            $details = Format-OSDAppUIStagedDetails -App $staged -Vendor $info.Vendor
             $details | Should -Match 'Vendor: Publisher Ltd.'
             $details | Should -Match 'Version: 8.9.8.1'
         }
@@ -379,10 +379,10 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source | Should -Match "catalogTab = \[System.Windows.Forms.TabPage\]::new\('Apps'\)"
         $source | Should -Match "catalogList.Columns.Add\('Vendor'"
         $source | Should -Match "stagedList.Columns.Add\('Vendor'"
-        $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$entry'
-        $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$app'
+        $source | Should -Match 'Get-OSDAppUIDisplayInfo -App \$entry'
+        $source | Should -Match 'Get-OSDAppUIDisplayInfo -App \$app'
         $source | Should -Match "cacheList.Columns.Add\('Vendor'"
-        $source | Should -Not -Match "Columns.Add\('Application'"
+        $source | Should -Not -Match "Columns.Add\('App'"
         $source | Should -Match "stagedList.Columns.Add\('Display Name'"
         $source | Should -Match "catalogList.Columns.Add\('Display Name'"
         $source | Should -Match "cacheList.Columns.Add\('Display Name'"
@@ -396,7 +396,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         # Both detail panes must be populated from actual read-only row data.
         $source | Should -Match '\$State\.StagedList\.Items\[0\]'
         $source | Should -Match '\$visible\.Items\[\$visible\.Items\.Count - 1\]'
-        $source | Should -Match 'Format-OSDAppUIStagedDetails -Application \$selected\.Application'
+        $source | Should -Match 'Format-OSDAppUIStagedDetails -App \$selected\.App'
         $source | Should -Match '\$State\.LogDetails\.Text = "Time:'
         $source | Should -Not -Match '\bSet-OSDAppConfiguration\b'
         $source | Should -Not -Match '\bRemove-OSDAppStaging\b'
@@ -427,7 +427,7 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         $source | Should -Match "cacheList.Columns.Add\('Package Type',95\)"
         $source | Should -Match "cacheList.Columns.Add\('Vendor',88\)"
         $source | Should -Match 'elseif \(\$Key -eq ''Cache'' -and \$column -eq 7\)'
-        $source | Should -Match 'Get-OSDAppUIDisplayInfo -Application \$entry'
+        $source | Should -Match 'Get-OSDAppUIDisplayInfo -App \$entry'
         $source | Should -Match '\$item.SubItems.Add\(\[string\]\$displayInfo.Vendor\)'
         $source | Should -Not -Match '(?i)\bRemove-OSDAppStaging\b'
         $source | Should -Not -Match '(?i)\bSet-OSDAppConfiguration\b'

@@ -20,7 +20,7 @@ The module is needed wherever you run its public CLI commands or open the Viewer
 
 Normal Intune detection rules still apply. For a required Win32 app tracked as blocking by the Enrollment Status Page (ESP), Intune evaluates whether the app is already installed. If detection succeeds, Intune does not download or run that app's installer again, even when OSDApps installed it before OOBE. ESP still needs to process app policy and detection; this does not bypass enrollment or other ESP requirements.
 
-OSDApps built-ins can install a newer vendor release than the version packaged in Intune. Design detection to accept **the required version or a newer compatible version**, where your application policy allows this, rather than requiring an exact older version.
+OSDApps built-ins can install a newer vendor release than the version packaged in Intune. Design detection to accept **the required version or a newer compatible version**, where your app policy allows this, rather than requiring an exact older version.
 
 For example, if Intune requires version `1.2.0` and OSDApps installed `1.3.0`, a suitable minimum-version rule recognizes the installed app. An exact `1.2.0` rule can report it as missing and cause Intune to attempt installation unnecessarily.
 
@@ -72,15 +72,13 @@ An existing manifest means that target already has OSDApps staging; it does not 
 
 ## What happens to an old BuiltIn\Teams USB cache?
 
-The canonical Id remains `MicrosoftTeams`; its folder is `BuiltIn\MicrosoftTeams`, and the commands are `Add-OSDAppMicrosoftTeams` / `Sync-OSDAppMicrosoftTeams`. The public metadata now declares `Teams` as a **retired cache alias**, not as a command or deployable application Id.
-
-Run `Sync-OSDAppMicrosoftTeams` on full Windows. OSDApps prepares the canonical payload first and removes `BuiltIn\Teams` only after `BuiltIn\MicrosoftTeams` is complete. Standalone PreInstall applies the same guarded cleanup when it successfully uses or creates a canonical USB cache; cleanup failure is a warning and does not fail installation. If canonical preparation or trust validation fails, the old folder is preserved. You can inspect the condition beforehand with `Get-OSDAppCacheHealth -Offline` or explicitly preview manual removal with `Clear-OSDAppCache -Name Teams -WhatIf`.
-
-This does not reintroduce the old `Add-OSDAppTeams` or `Sync-OSDAppTeams` commands, and the SetupComplete runtime still accepts only the canonical identity. The original rename is recorded in the [0.31.0 changelog](../CHANGELOG.md#0310).
+It is not migrated or used. Start with a fresh cache and synchronize
+`MicrosoftTeams` using the current module. Its canonical folder is
+`BuiltIn\MicrosoftTeams`; there are no retired built-in cache aliases.
 
 ## Do built-in apps require an OSDCloud USB flash drive?
 
-Not for most built-ins. Without a cache volume, supported Add cmdlets can stage intent and PreInstall can acquire their content directly to the local Windows runtime when online. **Microsoft Company Portal and CMTrace Open are exceptions:** both require a populated OSDCloud cache during WinPE staging and do not acquire content during SetupComplete. Company Portal's preparation command downloads the official kit automatically on full Windows; its `-KitPath` option is only a fallback for a locally supplied kit. Windows Inbox Cleanup uses a bundled script rather than a downloaded installer. Repository Add commands can use a temporary cache on the offline Windows disk when no USB cache is present.
+Most built-ins can stage intent without a cache volume and acquire their content during online PreInstall. **Company Portal and CMTrace Open must be synchronized on full Windows first and staged from the populated cache.** They do not download during SetupComplete. Repository Add commands can use a temporary cache on the offline Windows disk when no USB cache is present.
 
 A volume with the configured label, `OSDCloud` by default, is automatically used as the cache when present. Keep module files and installer cache content conceptually separate: `\Modules` is a convenient module location; `\OSDApps` is the cache directory.
 
@@ -88,7 +86,7 @@ A volume with the configured label, `OSDCloud` by default, is automatically used
 
 For **OSDApps cache use**, a suitable volume with the configured label is enough; `\OSDApps` and its content folders can be created by the acquisition path. This is not a claim that an otherwise blank USB flash drive can boot WinPE or deploy Windows. Boot media preparation belongs to OSDCloud, outside these examples.
 
-An empty application cache works for online acquisition. It cannot supply apps for a fully offline deployment.
+An empty app cache works for online acquisition. It cannot supply apps for a fully offline deployment.
 
 <a id="can-the-osdcloud-usb-be-completely-blank"></a>
 
@@ -151,11 +149,15 @@ Clear-OSDAppCache -BuiltIn -Prune -Confirm
 Get-OSDAppCacheHealth -Offline
 ```
 
-Unlike `Clear-OSDAppCache -BuiltIn` alone, adding `-Prune` **retains every current built-in application directory**, including all architecture, language and channel variants. Legacy `Package.*` and `teams.msix` filenames inside those app directories are still supported and are not a reason to delete or download anything. Retired unregistered directories such as `VisualCppRedist` or `SevenZip`, and unrelated top-level files, are candidates for removal; their contents are not migrated.
+Unlike `Clear-OSDAppCache -BuiltIn` alone, adding `-Prune` retains current built-in
+app directories, including their architecture, language and channel variants.
+It does not convert or repair their contents. This filename-contract update
+requires a fresh cache; clearing the managed cache is a separate operator action.
 
-Registered aliases, filesystem links and transaction/recovery content are preserved for review and reported in the result's `Review` property. Registered aliases use their canonical app's replacement-validation flow. Pruning does not clean arbitrary nested files inside a current app directory; each app's generation handling owns that layout. Missing or invalid current app content remains visible to cache health and requires synchronization or investigation, not namespace pruning.
-
-Known retired variants are cleaned automatically after successful synchronization, both through Sync cmdlets and Windows PreInstall: `VisualCppRedist` becomes `VisualCRedist`, and `SevenZip` becomes `7Zip`. Only the matching architecture is removed, after revalidating its current replacement and confirming the old metadata identity. Other variants, unknown folders, links and recovery content remain untouched. Cleanup failure warns without failing the successfully synchronized app. The empty retired parent is removed after its last variant. See [automatic retired-cache cleanup logs](maintenance.md#automatic-retired-cache-cleanup-logs) for removal, preservation and failure records in Client.log and Runtime.log.
+Filesystem links and transaction/recovery content are preserved for review.
+Unmanaged top-level directories are candidates for explicit pruning. There is
+no automatic old-identity replacement or migration. Missing, outdated or invalid
+current cache content requires synchronization or investigation.
 
 The broader namespace prune above remains explicit USB maintenance. The apply operation uses the cache writer lock and honors confirmation. `-WhatIf` does not create a lock or log. Repository cache and target staging remain separate; app synchronization continues to replace superseded managed generations transactionally.
 
@@ -242,25 +244,25 @@ An empty Staged for device tab after cleanup does not mean installation failed. 
 
 No. The runtime retains source on failure so the manifest, payload and work directory can be inspected. Do not delete that evidence before collecting the relevant log. `CleanupMode=OnSuccess` in a completion line names the policy; use the cleanup events or filesystem state to verify cleanup itself.
 
-## Does SetupComplete retry a failed application after reboot?
+## Does SetupComplete retry a failed app after reboot?
 
-No. SetupComplete is a one-shot Windows Setup phase and OSDApps does not create a scheduled task, RunOnce value or service to repeat it. During that single run, an ordinary app-local acquisition or installer failure is recorded and independent remaining applications continue. The final result is still `Failed`, staging is retained and remediation is an explicit administrator action. Manifest, hash and supported-publisher trust failures stop the queue instead of continuing.
+No. SetupComplete is a one-shot Windows Setup phase and OSDApps does not create a scheduled task, RunOnce value or service to repeat it. During that single run, an ordinary app-local acquisition or installer failure is recorded and independent remaining apps continue. The final result is still `Failed`, staging is retained and remediation is an explicit administrator action. Manifest, hash and supported-publisher trust failures stop the queue instead of continuing.
 
 ## What is the difference between catalog.json, CacheCatalog.json, and DeviceManifest.json?
 
 | File | Role |
 | --- | --- |
 | `catalog.json` | Online repository index |
-| `Apps/<Id>/<Version>/<Architecture>/manifest.json` | Per-package metadata, including archive hash, optional Vendor and optional `PackageType` (`Application` or `Script`) |
+| `Apps/<Id>/<Version>/<Architecture>/manifest.json` | Per-package metadata, including archive hash, optional Vendor and optional `PackageType` (`App` or `Script`) |
 | `CacheCatalog.json` | Local repository-cache metadata snapshot |
 | `CacheInfo.json` | Per-built-in cache metadata |
-| `DeviceManifest.json` | The selected Windows target's ordered application queue and runtime configuration |
+| `DeviceManifest.json` | The selected Windows target's ordered app queue and runtime configuration |
 
 The old `CacheManifest.json` filename is not used. USB cache and device staging are separate locations.
 
-## Can I request another built-in application?
+## Can I request another built-in app?
 
-Yes. Review the [built-in request policy](built-in-apps.md#requesting-a-new-built-in-application) and [contribution guide](../CONTRIBUTING.md). Built-ins are reserved for broadly useful integrations with stable vendor-native acquisition and unattended installation paths.
+Yes. Review the [built-in request policy](built-in-apps.md#requesting-a-new-built-in-app) and [contribution guide](../CONTRIBUTING.md). Built-ins are reserved for broadly useful integrations with stable vendor-native acquisition and unattended installation paths.
 
 Customer-specific, authenticated or otherwise non-generic content belongs in an organization-managed repository instead.
 

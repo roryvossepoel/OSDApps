@@ -43,7 +43,7 @@ optional desired catalog without changing files. Explicit
 `Sync-OSDAppRepository -Prune` reconciles the complete catalog for the selected architecture
 transactionally; normal selective synchronization remains merge-only.
 
-### Built-in applications
+### Built-in apps
 
 Built-ins are vendor-native integrations maintained by OSDApps. The module does not ship their installer payloads.
 
@@ -141,7 +141,7 @@ These checks apply to local acquisition volumes, including the Windows disk
 when no USB cache is present. They are estimates, not disk reservations: a
 server can omit or misreport size, Office content can grow, and other processes
 can consume space afterward. Transaction validation/rollback remain necessary.
-They do not size application installation or extraction workspace, nor change
+They do not size app installation or extraction workspace, nor change
 `Test-OSDAppDeployment -MinimumFreeSpaceGB` on the offline Windows target.
 
 ## Runtime locations
@@ -155,7 +155,7 @@ They do not size application installation or extraction workspace, nor change
 
 Typical local staging contains `DeviceManifest.json`, `Invoke-OSDAppPreInstall.ps1`, `Invoke-OSDAppRunner.ps1`, `Restore-OSDAppCacheGeneration.ps1`, `Assert-OSDAppTransactionSpace.ps1`, `Enter-OSDAppCacheLock.ps1`, `Packages`, `BuiltIn` and `Work`.
 
-`CleanupMode OnSuccess` schedules removal of temporary device source only after every selected application succeeded; `Never` retains it. A failed or skipped application retains source for investigation. The persistent log, result and reusable USB cache are separate from that staging directory.
+`CleanupMode OnSuccess` schedules removal of temporary device source only after every selected app succeeded; `Never` retains it. A failed or skipped app retains source for investigation. The persistent log, result and reusable USB cache are separate from that staging directory.
 
 SetupComplete is a one-shot Windows Setup phase. OSDApps deliberately creates no scheduled task, RunOnce value, service or other retry persistence. PreInstall and Runner therefore isolate ordinary app-local failures and continue independent entries during that one execution. Manifest, hash and supported-publisher trust failures remain blocking safety boundaries.
 
@@ -182,7 +182,7 @@ Optional repository Vendor metadata is descriptive. It is not a signing certific
 
 ## Device manifest
 
-Repository packages can be classified as `Application` or `Script`. Both execute `Package/Install.ps1` as SYSTEM, with the same hash checks and one-shot failure handling; the type is presentation and reporting metadata. Scripts must be unattended and must not trigger a restart.
+Repository packages can be classified as `App` or `Script`. Both execute `Package/Install.ps1` as SYSTEM, with the same hash checks and one-shot failure handling; the type is presentation and reporting metadata. Scripts must be unattended and must not trigger a restart.
 
 The manifest has a stable per-staging `DeploymentId` and one ordered `Apps` array containing `Source=BuiltIn` or `Source=Repository` entries. PreInstall filters the built-ins for preparation; Runner processes the full array from top to bottom and uses the identity to correlate phase results.
 
@@ -190,4 +190,4 @@ Adding a new Id appends it. Re-adding an existing Id replaces its entry and move
 
 `Set-OSDAppConfiguration` is session-scoped. Add commands capture runtime settings in the manifest so SetupComplete does not need the module or the original PowerShell session.
 
-For exact package fields, see [Repository apps and scripts](repository.md), [Built-in applications](built-in-apps.md) and the [public metadata contract](public-metadata.md). For proven scenarios and remaining limitations, see [Validation matrix](testing.md).
+For exact package fields, see [Repository apps and scripts](repository.md), [Built-in apps](built-in-apps.md) and the [public metadata contract](public-metadata.md). For proven scenarios and remaining limitations, see [Validation matrix](testing.md).

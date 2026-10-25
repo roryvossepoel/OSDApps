@@ -1,3 +1,4 @@
+BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Built-in Authenticode cache inspection (read-only)' {
     BeforeAll {
         $script:root = Split-Path -Path $PSScriptRoot -Parent
@@ -8,8 +9,9 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
         InModuleScope OSDApps {
             $dir = Join-Path $TestDrive 'Msi'
             New-Item -Path $dir -ItemType Directory -Force | Out-Null
-            $msi = Join-Path $dir 'Package.msi'
+            $msi = Join-Path $dir 'vendor-installer.msi'
             Set-Content -LiteralPath $msi -Value 'original mock package' -Encoding ASCII
+            Set-OSDAppsTestPayloadInfo -Path $msi -Id GoogleChromeEnterprise
             $before = (Get-FileHash -LiteralPath $msi -Algorithm SHA256).Hash
             Mock Test-OSDAppWinPE { $false }
             Mock Get-AuthenticodeSignature {
@@ -34,7 +36,8 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
         InModuleScope OSDApps {
             $dir = Join-Path $TestDrive 'Untrusted'
             New-Item -Path $dir -ItemType Directory -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $dir 'Package.msi') -Value 'unsigned' -Encoding ASCII
+            Set-Content -LiteralPath (Join-Path $dir 'vendor-installer.msi') -Value 'unsigned' -Encoding ASCII
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $dir 'vendor-installer.msi') -Id CiscoWebex
             Mock Test-OSDAppWinPE { $false }
             Mock Get-AuthenticodeSignature { [pscustomobject]@{Status='NotSigned';SignerCertificate=$null;StatusMessage='No digital signature'} }
             $found = Get-OSDAppBuiltInSignature -Id CiscoWebex -CacheEntryPath $dir
@@ -74,7 +77,8 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
         InModuleScope OSDApps {
             $dir = Join-Path $TestDrive 'WinPE'
             New-Item -Path $dir -ItemType Directory -Force | Out-Null
-            Set-Content -LiteralPath (Join-Path $dir 'Package.msi') -Value 'package' -Encoding ASCII
+            Set-Content -LiteralPath (Join-Path $dir 'vendor-installer.msi') -Value 'package' -Encoding ASCII
+            Set-OSDAppsTestPayloadInfo -Path (Join-Path $dir 'vendor-installer.msi') -Id MozillaFirefoxEnterprise
             Mock Test-OSDAppWinPE { $true }
             Mock Get-AuthenticodeSignature { throw 'Do not invoke in WinPE' }
             $r = Get-OSDAppBuiltInSignature -Id MozillaFirefoxEnterprise -CacheEntryPath $dir
@@ -88,11 +92,12 @@ Describe 'Built-in Authenticode cache inspection (read-only)' {
             $cache = Join-Path $TestDrive 'USB\OSDApps'
             $root = Join-Path $cache 'BuiltIn\CiscoWebex\x64'
             New-Item -ItemType Directory -Path $root -Force | Out-Null
-            $msi = Join-Path $root 'Package.msi'
+            $msi = Join-Path $root 'vendor-installer.msi'
             $metadata = Join-Path $root 'CacheInfo.json'
             Set-Content -LiteralPath $msi -Value 'existing installer' -Encoding ASCII
             '{"Id":"CiscoWebex","Version":"46.9.0.35800","Architecture":"x64"}' |
                 Set-Content -LiteralPath $metadata -Encoding UTF8
+            Set-OSDAppsTestPayloadInfo -Path $msi -Id CiscoWebex -Metadata @{Version='46.9.0.35800'}
             $before = (Get-FileHash -LiteralPath $metadata -Algorithm SHA256).Hash
             $script:SignatureTestCacheRoot = $cache
             Mock Get-OSDAppCachePath { $script:SignatureTestCacheRoot }

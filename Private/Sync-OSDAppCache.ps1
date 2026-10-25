@@ -95,9 +95,9 @@ function Sync-OSDAppCache {
     }
 
     $action = if ($Prune) {
-        "Reconcile $($packages.Count) desired application(s) and prune stale cache folders as a single transaction"
+        "Reconcile $($packages.Count) desired app(s) and prune stale cache folders as a single transaction"
     }
-    else { "Synchronize $($packages.Count) application(s) as a single cache transaction" }
+    else { "Synchronize $($packages.Count) app(s) as a single cache transaction" }
     if (-not $PSCmdlet.ShouldProcess($CachePath, $action)) { return }
 
     $cacheLock = Enter-OSDAppCacheLock -CachePath $CachePath -Operation 'repository cache synchronization'

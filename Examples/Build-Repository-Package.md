@@ -40,7 +40,7 @@ Import-Module OSDApps -Force
 $Id = 'YourPackage'
 $Version = '1.0.0'
 $Architecture = 'x64'
-$PackageType = 'Application' # Use Script for your configuration script.
+$PackageType = 'App' # Use Script for your configuration script.
 $SourcePath = "C:\OSDApps\Source\$Id"
 $OutputPath = "C:\OSDApps\Build\$Id\$Version\$Architecture"
 $RepositoryPath = 'C:\OSDApps\Repository'

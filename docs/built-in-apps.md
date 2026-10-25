@@ -1,10 +1,10 @@
-# Built-in applications
+# Built-in apps
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Repository apps and scripts](repository.md)
 
 Built-in **software installers** use vendor-native acquisition and installation instead of the repository package contract. Built-in scripts, such as Windows Inbox Cleanup, ship with OSDApps itself and are staged directly without network access or an app repository.
 
-Application built-ins default to x64. Runtime prerequisite cmdlets require one explicit architecture (x86 or x64). Supported choices differ by product; support in the interface is separate from [field validation](testing.md#validated-built-ins-and-remaining-variants).
+App built-ins default to x64. Runtime prerequisite cmdlets require one explicit architecture (x86 or x64). Supported choices differ by product; support in the interface is separate from [field validation](testing.md#validated-built-ins-and-remaining-variants).
 
 | Built-in | Architectures | Main configuration choices |
 | --- | --- | --- |
@@ -55,26 +55,28 @@ Unsafe names or a file extension that differs from the expected payload format
 are rejected before promotion. Downloads, signature/hash checks and complete
 cache-generation replacement follow the existing validation policies.
 
-Each built-in variant has one primary payload per format. Multiple MSI, EXE, ZIP
-or MSIX payloads of the same format in that variant are ambiguous and are rejected;
-OSDApps does not guess which version to install. Office keeps its ODT-managed layout.
+Each cached variant records its exact vendor `PayloadFileName`, SHA-256 and byte
+size in `CacheInfo.json`. Windows staging records that exact relative filename
+and hash in `DeviceManifest.json`. PreInstall updates the manifest only after
+acquiring and validating the selected payload; the runner validates the recorded
+path and hash again. Unrelated files with the same extension are never selected.
+Office keeps its ODT-managed layout and recorded payload profile.
 
-Existing caches named `Package.msi`, `Package.exe`, `Package.zip` or `teams.msix`
-remain readable without renaming or redownloading solely to change a filename.
-Their next normal refresh replaces the complete generation with vendor-named
-files. The manifest's legacy package path remains an internal payload reference;
-preflight and the runner resolve it to the actual filename in that variant.
+**Start with a fresh cache.** There is no old-name lookup, cache migration,
+filename conversion or compatibility alias. A cold online deployment records a
+pending payload with a null filename until acquisition succeeds; it does not use
+a fabricated package path. Old cache metadata is not repaired or guessed.
 
 **Custom repository apps and scripts still use `Package.zip`.** That repository
 archive contract is separate from built-in vendor installers.
 
 ## Machine-readable metadata
 
-The current built-in application catalog is also published as:
+The current built-in app catalog is also published as:
 
 [`metadata/builtins.json`](../metadata/builtins.json)
 
-This JSON is intended for external tooling and includes the application Id, display name, vendor, supported architectures/channels, Add command, acquisition model, cache path and phase. Installer built-ins have a Sync command and USB cache path; module-bundled scripts have neither.
+This JSON is intended for external tooling and includes the app Id, display name, vendor, supported architectures/channels, Add command, acquisition model, cache path and phase. Installer built-ins have a Sync command and USB cache path; module-bundled scripts have neither.
 
 CI validates the file against the module's exported built-in Add commands so a new built-in cannot be added without updating the metadata.
 
@@ -82,7 +84,7 @@ CI validates the file against the module's exported built-in Add commands so a n
 
 Built-in third-party software installers are always sourced directly from their software vendor. OSDApps-owned built-in scripts are bundled as text in the module and do not download installers.
 
-OSDApps does not contain, embed, mirror, redistribute, or publish built-in application installers or payloads. The module only contains acquisition and installation logic plus vendor-owned URLs or supported endpoints.
+OSDApps does not contain, embed, mirror, redistribute, or publish built-in app installers or payloads. The module only contains acquisition and installation logic plus vendor-owned URLs or supported endpoints.
 
 ```text
 Vendor
@@ -96,7 +98,7 @@ The OSDCloud USB cache is only a local deployment cache of vendor content. It is
 
 This rule is absolute for built-in **software products**: if an installer cannot be obtained directly and maintainably from the vendor, it is not eligible for built-in installer support. The Windows Inbox Cleanup script is a separate OSDApps-maintained configuration action, not a third-party redistributable.
 
-Repository applications are different. Repository content is controlled by the repository owner, and OSDApps does not prescribe where that organization obtains or hosts those packages.
+Repository apps are different. Repository content is controlled by the repository owner, and OSDApps does not prescribe where that organization obtains or hosts those packages.
 
 ## Authenticode and publisher policy (0.34.0)
 
@@ -226,7 +228,7 @@ The Teams cache contains:
 - The vendor-named Teams MSIX (for example, `MSTeams-x64.msix`)
 - `CacheInfo.json`
 
-The canonical built-in ID is `MicrosoftTeams`. Its USB cache and WinPE staging location is `BuiltIn\MicrosoftTeams`, containing `teamsbootstrapper.exe`, the vendor-named MSIX and `CacheInfo.json`. The 0.31.0 rename intentionally introduced no legacy commands or runtime identity. From 0.36.0, metadata recognizes `Teams` only as a retired **cache alias**: full-Windows `Sync-OSDAppMicrosoftTeams` and standalone PreInstall remove the old folder only after the canonical payload is complete and the bootstrapper passes the Microsoft trust gate. A PreInstall cleanup failure is logged as a warning rather than failing an otherwise usable deployment. The old cmdlet names and SetupComplete identity remain unsupported. Re-synchronize existing media before booting WinPE for an offline deployment.
+The canonical built-in ID is `MicrosoftTeams`. Its cache and WinPE staging directory is `BuiltIn\MicrosoftTeams`, containing the native bootstrapper, vendor-named MSIX and `CacheInfo.json`. Use a freshly synchronized cache; no old Teams identity or cache is migrated.
 
 Teams freshness is checked using HTTP metadata. ETag is preferred; Last-Modified plus Content-Length is the fallback.
 
@@ -403,11 +405,11 @@ The Webex glyph in `metadata/icons/ciscowebex.svg` is from [Simple Icons](https:
 
 ## How update freshness is determined
 
-Built-in applications use evergreen vendor sources. Most integrations can reuse payloads after an HTTP metadata check; Office PreInstall compares the channel version descriptor before deciding whether a new complete generation is needed.
+Built-in apps use evergreen vendor sources. Most integrations can reuse payloads after an HTTP metadata check; Office PreInstall compares the channel version descriptor before deciding whether a new complete generation is needed.
 
 The freshness mechanism is product-specific:
 
-| Application | Update check | Download behavior |
+| App | Update check | Download behavior |
 | --- | --- | --- |
 | Microsoft 365 Apps | PreInstall checks configuration compatibility, generation consistency and the channel version CAB (or an exact build pin) | A current compatible generation is reused. Otherwise ODT downloads into a separate new generation, validated before replacement. Explicit `Sync-OSDAppMicrosoft365Apps` still acquires a fresh generation. |
 | Microsoft Teams | HTTP metadata for the official MSIX: `ETag` preferred, otherwise `Last-Modified + Content-Length` | MSIX is downloaded only when the metadata changed or no valid cached MSIX exists. The Teams bootstrapper is refreshed on every online sync. |
@@ -506,11 +508,9 @@ XML is never replaced by the USB cache XML during PreInstall.
   implicit architecture/channel and other unresolved configuration cannot prove
   offline compatibility. They require successful online acquisition.
 
-New cache metadata includes a `PayloadProfile` derived from the acquisition XML.
-Existing USB caches can use their original `configuration.xml`; staging records
-that profile alongside the copied payload without changing the USB cache.
-A legacy staged directory without this record is not trusted merely because its
-current XML matches: that file may already describe a different deployment.
+Office cache metadata must contain a `PayloadProfile` derived from the acquisition
+XML. The selected deployment XML cannot substitute for missing provenance.
+Caches without the current metadata are not migrated; build a fresh cache.
 
 An incompatible cache is left intact. WinPE stages the requested configuration
 without copying unsuitable Office content and reports that online acquisition
@@ -593,7 +593,7 @@ the acquisition mechanism when a replacement is needed. Replacements require
 additional temporary disk space, but unchanged deployments avoid downloading
 all Office content again.
 
-If deployment speed is more important than checking Microsoft for a current Office build during SetupComplete, Microsoft 365 Apps can instead be packaged as a normal repository application.
+If deployment speed is more important than checking Microsoft for a current Office build during SetupComplete, Microsoft 365 Apps can instead be packaged as a normal repository app.
 
 In that model:
 
@@ -613,9 +613,9 @@ This is an intentional OSDApps design choice:
 | Built-in Microsoft 365 Apps | Microsoft / ODT | Full Windows | ODT synchronization before install | Evergreen Office with minimal package maintenance |
 | Repository-packaged Microsoft 365 Apps | Repository owner | WinPE | No built-in ODT refresh step | Maximum deployment-time predictability and organization-controlled versioning |
 
-Neither approach is inherently better. Built-ins optimize for vendor-native evergreen maintenance; repository applications optimize for organization-owned packaging, version control, and deterministic deployment behavior.
+Neither approach is inherently better. Built-ins optimize for vendor-native evergreen maintenance; repository apps optimize for organization-owned packaging, version control, and deterministic deployment behavior.
 
-This same principle applies more broadly in OSDApps: a supported built-in is a convenience path, not a requirement. Any application can still be delivered through the self-maintained repository when that better matches the deployment strategy.
+This same principle applies more broadly in OSDApps: a supported built-in is a convenience path, not a requirement. Any app can still be delivered through the self-maintained repository when that better matches the deployment strategy.
 
 ### Microsoft Teams bootstrapper
 
@@ -729,9 +729,9 @@ Validated behavior includes:
 
 See [Validation matrix](testing.md) and [Performance](performance.md) for the tested versions and limits. Earlier Office incremental-refresh timings do not predict the current complete-generation refresh cost.
 
-## Requesting a new built-in application
+## Requesting a new built-in app
 
-Built-ins are maintained as product-specific code in OSDApps, so they are deliberately selective. A request should only be considered when the application is a good fit for a generic, repeatable deployment path.
+Built-ins are maintained as product-specific code in OSDApps, so they are deliberately selective. A request should only be considered when the app is a good fit for a generic, repeatable deployment path.
 
 ### Required characteristics
 
@@ -765,7 +765,7 @@ If the vendor changes a stable URL behind the scenes while keeping the published
 
 ### When to use the repository instead
 
-The repository model is the default for applications that are:
+The repository model is the default for apps that are:
 
 - customer-specific;
 - line-of-business or internally developed;
@@ -775,7 +775,7 @@ The repository model is the default for applications that are:
 - distributed through portals with non-deterministic download links;
 - unsuitable for a generic vendor-native maintenance flow.
 
-Those applications belong in `catalog.json` / `Package.zip`, where the organization controls acquisition and packaging.
+Those apps belong in `catalog.json` / `Package.zip`, where the organization controls acquisition and packaging.
 
 ### What to include in a request
 
@@ -786,7 +786,7 @@ A useful built-in request should include:
 - direct installer URL(s) or documented download endpoint;
 - supported architectures;
 - unattended installation command;
-- evidence that the application is broadly used;
+- evidence that the app is broadly used;
 - expected update/freshness mechanism if known.
 
 A request meeting these criteria can still be declined if the vendor's acquisition or installation model is too fragile to maintain safely.
@@ -887,7 +887,7 @@ not protect against an attacker changing both the installer and its local metada
 If the release API or download fails (including GitHub rate limits), PreInstall
 may use a valid staged generation, reporting `FallbackCacheUsed` and the refresh
 error. Without network it reports `OfflineCacheUsed`. With no valid fallback,
-7Zip fails acquisition and is skipped; other queued applications can continue.
+7Zip fails acquisition and is skipped; other queued apps can continue.
 Keep access to `api.github.com`, `github.com` and GitHub's release asset CDN available.
 Use a custom repository package when you require a pinned release or custom setup.
 
@@ -934,7 +934,7 @@ on full Windows for trust inspection; metadata alone is not a signature.
 
 If acquisition fails, a fully verified staged generation of the requested
 architecture can be used as fallback. Without one, acquisition fails and the
-installation is skipped; other queued applications can continue.
+installation is skipped; other queued apps can continue.
 
 ### Installation behavior
 
@@ -967,13 +967,13 @@ first-user behavior remains a separate check.
 ## Microsoft runtime prerequisites
 
 Visual C++ v14 and modern .NET runtimes are optional built-ins. Add them in WinPE
-after Windows is applied, just like applications:
+after Windows is applied, just like apps:
 
 ```powershell
 # Select exactly one architecture per command.
 Add-OSDAppVisualCRedist -Architecture x64
 
-# Standalone runtime for console applications and services.
+# Standalone runtime for console apps and services.
 Add-OSDAppDotNetRuntime -RuntimeType Runtime -Channel 10.0 -Architecture x64
 
 # Desktop runtime for WPF/Windows Forms; includes the ordinary .NET runtime.
@@ -989,9 +989,9 @@ Separate explicit calls remain separate deployment items. Native ARM64 runtimes 
 in this addition. Legacy .NET Framework, ASP.NET Core, SDKs, Java and older
 Visual C++ runtime families such as 2013 are separate products and are not installed.
 
-Runtime staging puts these prerequisites before application entries while
+Runtime staging puts these prerequisites before app entries while
 preserving the relative order within each group. This is not a dependency engine:
-OSDApps does not infer which applications need which runtimes, and its normal
+OSDApps does not infer which apps need which runtimes, and its normal
 continue-queue behavior still applies if a prerequisite fails.
 
 ### Why Visual C++ has one evergreen family
@@ -1000,20 +1000,20 @@ continue-queue behavior still applies if a prerequisite fails.
 v14 redistributable through Microsoft's official evergreen endpoint. There is no
 year or legacy-version selector. Visual Studio 2017, 2019, 2022 and 2026 use the
 same v14 runtime family; the redistributable must be at least as recent as the
-build tools used by the application. Microsoft also documents upgrading the
+build tools used by the app. Microsoft also documents upgrading the
 original 2015 redistributable in place to the current v14 runtime.
 
 Separate 2017/2019/2022 built-ins would duplicate this selection. Some older v14
 servicing branches remain supported, but this built-in deliberately follows the
 latest supported release instead of pinning a servicing branch. Select exactly
-one architecture explicitly per command; x64 does not satisfy an x86 application's
+one architecture explicitly per command; x64 does not satisfy an x86 app's
 runtime requirement.
 
 Visual C++ 2013 (v12), 2012 (v11), 2010 (v10), 2008 (v9) and 2005 (v8) are separate
 legacy families outside general support. The latest v14 does not replace their
 dependencies. Do not remove them from an existing computer simply because v14 is
 installed. A legacy dependency, or a vendor-required pinned branch, belongs in an
-explicitly maintained [repository package](repository.md) for the application
+explicitly maintained [repository package](repository.md) for the app
 that needs it, rather than another evergreen built-in. Packaging it yourself does
 not restore Microsoft support. Microsoft's limited product-specific support
 exceptions do not make those old runtimes generally supported.

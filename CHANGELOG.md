@@ -6,7 +6,7 @@
 
 - Add the opt-in Microsoft Company Portal built-in. `Sync-OSDAppMicrosoftCompanyPortal` now downloads the official Microsoft Preinstall Kit automatically on full Windows, while `-KitPath` remains available for a manual/offline source. Stage the architecture-matched bundle, offline license and dependencies in WinPE; provision Company Portal for future user profiles during SetupComplete.
 - Add the opt-in CMTrace Open built-in. Synchronize the latest stable upstream x64 or ARM64 MSI, validate the official GitHub release SHA-256 and Authenticode signature on full Windows, preserve the vendor MSI filename, and verify integrity again before silent MSI installation during SetupComplete. Support previously synchronized legacy `Package.msi` caches without another download.
-- Keep both built-ins independent of custom Azure repository packages and compatible with the existing OSDApps application queue and Windows Inbox Cleanup script.
+- Keep both built-ins independent of custom Azure repository packages and compatible with the existing OSDApps app queue and Windows Inbox Cleanup script.
 - Physical x64 validation (PC1): Windows Inbox Cleanup removed the three selected packages under SYSTEM; Company Portal 11.2.1495.0 provisioned and was available to the signed-in Autopilot user; CMTrace Open 1.6.3 and the separate DisplayLink repository package installed. Result: four succeeded, zero failed or skipped.
 - Separate full-Windows preparation test confirmed the automatic Microsoft Company Portal download without `-KitPath`: `Updated=True`, `CacheReused=False`, seven selected cached files, official Microsoft Download Center source. ARM64 is supported in the interface but was not physically validated.
 
@@ -33,16 +33,16 @@
 
 - Preserve vendor installer filenames for built-in downloads, USB caches and Windows staging, including the Teams MSIX. Continue reading legacy generic-name caches without forced downloads. Keep the `Package.zip` contract for custom repository apps and scripts. Reject unsafe download filenames and ambiguous built-in payloads.
 
-- Document Intune ESP detection for applications preinstalled by OSDApps, including compatible newer versions.
+- Document Intune ESP detection for apps preinstalled by OSDApps, including compatible newer versions.
 - Validate vendor filenames and legacy cache reuse on two physical deployments and USB caches, plus isolated automatic cleanup on Windows.
 
 ## 0.48.1
 
-- Explain built-in cache reuse, acquisition, offline fallback and failures with a per-deployment `CacheDecisionReason` in PreInstall results, Runner results and acquisition logs. Preserve the existing cache policies and distinguish changed HTTP metadata from a confirmed new application version.
+- Explain built-in cache reuse, acquisition, offline fallback and failures with a per-deployment `CacheDecisionReason` in PreInstall results, Runner results and acquisition logs. Preserve the existing cache policies and distinguish changed HTTP metadata from a confirmed new app version.
 
 ## 0.48.0
 
-- Add Visual C++ v14 x86/x64 and .NET Runtime/Desktop built-ins with separate variant identities, Microsoft verification, transactional caches and installed-version checks. Runtime items are staged before applications.
+- Add Visual C++ v14 x86/x64 and .NET Runtime/Desktop built-ins with separate variant identities, Microsoft verification, transactional caches and installed-version checks. Runtime items are staged before apps.
 - Require exactly one explicit architecture for all four runtime Add/Sync cmdlets. Offer only supported stable .NET channels, enforce offline support deadlines and reject known EOL channels without cached fallback. Network failures may still use verified cache content within the supported channel lifetime.
 - Use `VisualCRedist` consistently for public commands, package IDs and cache folders. Earlier preview cache folders are not migrated or deleted automatically.
 - Validate physical cold and warm deployments of Visual C++ x86/x64 and .NET 10 Runtime x86/Desktop x64, followed by a successful deployment using the final VisualCRedist names. All four installed versions and exit codes passed; staging was removed. See [validation evidence](docs/testing.md#visual-c-and-net-prerequisite-candidate).
@@ -87,7 +87,7 @@
 
 ### Fixes and documentation
 
-- Accept valid single-application queues on Windows PowerShell 5.1 while continuing to reject empty, duplicate or invalid queues.
+- Accept valid single-app queues on Windows PowerShell 5.1 while continuing to reject empty, duplicate or invalid queues.
 - Build packaged help under inherited StrictMode and read parameter defaults from exported function bodies correctly.
 - Simplify the Gallery quick start, add a WinPE launcher example with an exit-code gate, expand repository package authoring and align documentation around USB flash drives and pre-OOBE execution.
 - Refresh workflow diagrams and aggregate Gallery downloads across versions. Align the Gallery module description with the README. No new public commands or GUI staging features are included.
@@ -108,7 +108,7 @@
 
 - Record each built-in's current-deployment acquisition outcome in PreInstall and Runner results: `Downloaded`, `CacheReused`, `OfflineCacheUsed`, `FallbackCacheUsed` or `Failed`.
 - Preserve the refresh failure type and message when an acceptable staged fallback allows preparation and installation to continue. Classify insufficient acquisition space as `InsufficientDiskSpace`.
-- Add fallback/offline counts and an acquisition-warning flag to the PreInstall record, plus an `ApplicationAcquisitionComplete` log event. Successful preparation with fallback/offline use emits a warning-level completion summary.
+- Add fallback/offline counts and an acquisition-warning flag to the PreInstall record, plus an `AppAcquisitionComplete` log event. Successful preparation with fallback/offline use emits a warning-level completion summary.
 - Keep installer status, exit codes, one-shot execution, cleanup decisions and existing result fields unchanged. Older PreInstall records report `Unknown`; repository entries report `NotApplicable` for the built-in acquisition outcome.
 
 ## 0.41.0
@@ -135,7 +135,7 @@
 - Remove release pins and unnecessary switches from installation examples; USB workflows discover the newest version saved on the selected USB flash drive.
 - Correct the workflow diagrams: independent package sources, optional cache preparation, machine-context scripts and one-shot SetupComplete processing. Use explicit backgrounds for readable diagrams in light and dark GitHub themes.
 - Show total PowerShell Gallery downloads across all versions and update the module description and discovery tags.
-- Document existing Application/Script labeling in all relevant Viewer tabs. No public commands, UI behavior, installer logic or cache transaction behavior changed.
+- Document existing App/Script labeling in all relevant Viewer tabs. No public commands, UI behavior, installer logic or cache transaction behavior changed.
 
 ## 0.39.0
 
@@ -156,12 +156,12 @@
 
 ### Added
 
-- Added optional repository `PackageType` metadata with supported values `Application` and `Script`. `Add-OSDAppPackage` writes `Application` by default; existing manifests without the property remain compatible and resolve to `Application`.
-- Package type now flows unchanged through catalog resolution, transactional cache synchronization, `Get-OSDApp`, `Get-OSDAppCache`, device staging, the read-only Viewer, runtime logs and each `Latest.json` application result.
+- Added optional repository `PackageType` metadata with supported values `App` and `Script`. `Add-OSDAppPackage` writes `App` by default; existing manifests without the property remain compatible and resolve to `App`.
+- Package type now flows unchanged through catalog resolution, transactional cache synchronization, `Get-OSDApp`, `Get-OSDAppCache`, device staging, the read-only Viewer, runtime logs and each `Latest.json` app result.
 
 ### Execution contract
 
-- Applications and scripts use the same `Package/Install.ps1` entry point, SHA-256 enforcement, ordered one-shot SetupComplete queue, timeout, success-code handling and 0.37.0 failure-isolation behavior. `PackageType` is classification metadata and does not select a different or less trusted runtime path.
+- Apps and scripts use the same `Package/Install.ps1` entry point, SHA-256 enforcement, ordered one-shot SetupComplete queue, timeout, success-code handling and 0.37.0 failure-isolation behavior. `PackageType` is classification metadata and does not select a different or less trusted runtime path.
 - OSDApps does not automatically reboot, retry or roll back script changes. Scripts run as SYSTEM during SetupComplete and must not initiate a restart; user-profile (`HKCU`) configuration is outside this phase's machine-context contract.
 
 ### Validation
@@ -177,15 +177,15 @@
 
 ### Added
 
-- Added one-shot, per-application fault isolation to the standalone SetupComplete runtime. A normal acquisition, source, timeout or installer failure is recorded for that application while independent queue entries continue exactly once.
-- PreInstall now writes per-built-in outcomes and can finish as `CompletedWithErrors`. Runner skips only built-ins that PreInstall could not prepare, continues repository and unaffected built-in applications, and records `SkippedApplicationCount` and `UnsuccessfulApplicationCount` in `Latest.json`.
-- Added explicit `ApplicationRefreshFailed`, `RefreshCompletedWithErrors`, `ApplicationInstallSkipped` and `InstallCompletedWithErrors` events for partial outcomes.
+- Added one-shot, per-app fault isolation to the standalone SetupComplete runtime. A normal acquisition, source, timeout or installer failure is recorded for that app while independent queue entries continue exactly once.
+- PreInstall now writes per-built-in outcomes and can finish as `CompletedWithErrors`. Runner skips only built-ins that PreInstall could not prepare, continues repository and unaffected built-in apps, and records `SkippedAppCount` and `UnsuccessfulAppCount` in `Latest.json`.
+- Added explicit `AppRefreshFailed`, `RefreshCompletedWithErrors`, `AppInstallSkipped` and `InstallCompletedWithErrors` events for partial outcomes.
 
 ### Safety and execution contract
 
 - SetupComplete remains a single execution path. OSDApps does not create RunOnce entries, scheduled tasks, services or any other automatic retry mechanism.
-- Repository SHA-256 checks now run for every available selected archive before the first installer starts. A hash mismatch, invalid manifest/queue or supported-publisher trust failure remains fatal and prevents further application execution.
-- Installer exit-code failures, timeouts and missing app-local source do not block unrelated applications. The final deployment still reports `Failed`, returns a nonzero Runner exit code, retains staging and suppresses `OnSuccess` cleanup whenever any application failed or was skipped.
+- Repository SHA-256 checks now run for every available selected archive before the first installer starts. A hash mismatch, invalid manifest/queue or supported-publisher trust failure remains fatal and prevents further app execution.
+- Installer exit-code failures, timeouts and missing app-local source do not block unrelated apps. The final deployment still reports `Failed`, returns a nonzero Runner exit code, retains staging and suppresses `OnSuccess` cleanup whenever any app failed or was skipped.
 
 ### Validation
 
@@ -218,7 +218,7 @@
 ### Compatibility and scope
 
 - Windows PowerShell 5.1 remains the minimum supported version. Existing schema-1 repositories without `Aliases` remain compatible, and normal synchronization remains non-destructive unless `-Prune` is explicitly supplied.
-- Repository pruning changes persistent cache content only; it does not prune the source repository, built-in caches or device staging. Cache health is diagnostic evidence, not installed-application or licensing state.
+- Repository pruning changes persistent cache content only; it does not prune the source repository, built-in caches or device staging. Cache health is diagnostic evidence, not installed-app or licensing state.
 
 ## 0.35.0
 
@@ -226,7 +226,7 @@
 
 - Added `Test-OSDAppDeployment` for pre-reboot validation of the manifest, ordered queue, SetupComplete integration, staged runtime version, repository SHA-256, built-in definitions, free space and optional hard offline readiness.
 - Added `Test-OSDAppCache` for one aggregate cache-readiness result with entry counts, payload validity and optional supported signature checks. `Get-OSDAppCache` also accepts an explicit `-CachePath`.
-- Added atomic `%ProgramData%\OSDApps\Results\Latest.json` reporting with a stable deployment ID, PreInstall context, top-level outcome and per-application status, exit code, duration, integrity and cache/update metadata. `Get-OSDAppDeploymentResult` reads the result.
+- Added atomic `%ProgramData%\OSDApps\Results\Latest.json` reporting with a stable deployment ID, PreInstall context, top-level outcome and per-app status, exit code, duration, integrity and cache/update metadata. `Get-OSDAppDeploymentResult` reads the result.
 - Added configurable `ResultPath`; it is persisted with the other standalone runtime settings.
 
 ### Validation
@@ -238,9 +238,9 @@
 
 ### Compatibility and scope
 
-- Windows PowerShell 5.1 remains the minimum supported version. The built-in application set, repository contract, cleanup policy and installer success-code handling are unchanged from 0.34.1.
+- Windows PowerShell 5.1 remains the minimum supported version. The built-in app set, repository contract, cleanup policy and installer success-code handling are unchanged from 0.34.1.
 - Preflight and cache validation are read-only. Result writing is best effort so a result-path problem does not change an otherwise successful installation into a failure; `Runtime.log` remains the authoritative fallback.
-- A successful result records installer/provisioning evidence. It does not prove licensing, user sign-in or later interactive application health.
+- A successful result records installer/provisioning evidence. It does not prove licensing, user sign-in or later interactive app health.
 
 ## 0.34.1
 
@@ -264,8 +264,8 @@
 
 ### Compatibility and scope
 
-- Windows PowerShell 5.1 remains the minimum supported version. Public command parameters, built-in applications, deployment defaults, signature policy and the standalone SetupComplete runtime are unchanged from 0.34.0.
-- Normal package build/publication is not transactional rollback. This maintenance release adds no new physical WinPE or application-installation validation; the hardware evidence recorded under 0.34.0 remains specific to that version.
+- Windows PowerShell 5.1 remains the minimum supported version. Public command parameters, built-in apps, deployment defaults, signature policy and the standalone SetupComplete runtime are unchanged from 0.34.0.
+- Normal package build/publication is not transactional rollback. This maintenance release adds no new physical WinPE or app-installation validation; the hardware evidence recorded under 0.34.0 remains specific to that version.
 
 ## 0.34.0
 
@@ -288,10 +288,10 @@
 - **Automated:** release-candidate CI passed **145/145 Pester tests** with Windows PowerShell 5.1 signer/publisher smoke tests, module build, and no blocking PSScriptAnalyzer findings (commit `201595501b75875cfa316a989385cedb23ec28e9`). Re-run CI after the version/documentation release-preparation changes.
 - **Viewer on real devices:** Windows 11 read-only UI, default built-in signature status and expected publishers, cache metadata/version inspection, and WinPE Viewer/staging on two x64 PCs validated. The Viewer never changed the USB cache or deployment manifest.
 - **Windows cache synchronization:** real Chrome Enterprise x64 warm-cache sync succeeded with `Updated=False`, after validating the cached signed package. Real cached MSI/EXE signatures from Microsoft, Google, Cisco and Mozilla passed with their expected organizations.
-- **Warm SetupComplete:** a four-app deployment installed Teams, Firefox, Notepad++ and Omnissa Horizon Client successfully (PreInstall **6.2 s**, Runner **83.5 s**, `ApplicationCount=4`, `CleanupMode=OnSuccess`).
+- **Warm SetupComplete:** a four-app deployment installed Teams, Firefox, Notepad++ and Omnissa Horizon Client successfully (PreInstall **6.2 s**, Runner **83.5 s**, `AppCount=4`, `CleanupMode=OnSuccess`).
 - **Cold online SetupComplete (PC 1, 11 October 2026):** empty OSDCloud USB cache; six built-ins newly acquired and two repository packages synced and SHA-256-validated in WinPE. Five signable built-in MSI/EXE payloads passed expected-publisher Authenticode gates. All **8/8** installations returned success (`PreInstallComplete` **551.9 s**; `InstallComplete` **366.7 s**; `CleanupMode=OnSuccess`). Microsoft 365 Apps reported build `16.0.20326.20142`, `VersionChanged=True`; the earlier cache had `16.0.20430.20146`. These are source/cache versions, not independently checked installed Office update-channel settings.
 - **Fully offline SetupComplete (PC 2, 11 October 2026):** LAN disconnected, populated OSDCloud USB cache attached. The runtime recorded `CacheVolumeFound` and `BuiltInRefreshSkipped` for **all six built-ins**, with no vendor refresh required. All **five** signable cached built-in installers passed Authenticode and expected-publisher validation. All **8/8** installations returned success (`PreInstallComplete` **5.4 s**; `InstallComplete` **394.2 s**; `CleanupMode=OnSuccess`).
-- **Limits:** installer/provisioning exit code `0` does not prove licensing, user sign-in, or every application's later interactive functionality. Adobe's outer ZIP, Teams MSIX and the Office data tree are outside the specific MSI/EXE signature scope; publisher signing is not full payload-chain verification. No malicious/invalid signed payload was intentionally deployed on test hardware.
+- **Limits:** installer/provisioning exit code `0` does not prove licensing, user sign-in, or every app's later interactive functionality. Adobe's outer ZIP, Teams MSIX and the Office data tree are outside the specific MSI/EXE signature scope; publisher signing is not full payload-chain verification. No malicious/invalid signed payload was intentionally deployed on test hardware.
 
 
 ## 0.33.0
@@ -300,7 +300,7 @@
 
 - Added `-SkipCacheRefresh` to the generic repository `Add-OSDApp` command for explicitly offline staging from an existing USB cache.
 - Added automatic, SHA-256-validated offline fallback when a configured repository cannot be synchronized. The fallback is allowed only when **all** requested repository packages are present and valid.
-- Introduced transactional multi-application repository synchronization: download and validate packages before committing them together, with catalog/package rollback on a failed commit.
+- Introduced transactional multi-app repository synchronization: download and validate packages before committing them together, with catalog/package rollback on a failed commit.
 
 ### Fixed
 
@@ -337,7 +337,7 @@
 
 ### Breaking changes
 
-- Renamed the built-in application ID `Teams` to `MicrosoftTeams` throughout the module, `DeviceManifest.json`, cache metadata, PreInstall, Runner, logs and the machine-readable built-in catalog.
+- Renamed the built-in app ID `Teams` to `MicrosoftTeams` throughout the module, `DeviceManifest.json`, cache metadata, PreInstall, Runner, logs and the machine-readable built-in catalog.
 - Replaced `Add-OSDAppTeams` / `Sync-OSDAppTeams` with `Add-OSDAppMicrosoftTeams` / `Sync-OSDAppMicrosoftTeams`. No compatibility aliases are shipped.
 - Moved the canonical Teams cache and staging directory from `BuiltIn/Teams` to `BuiltIn/MicrosoftTeams`. Previously populated USB caches are **not automatically migrated**; run `Sync-OSDAppMicrosoftTeams` on full Windows before using old media for a fully offline deployment.
 - Updated the built-in manifest type from `TeamsBootstrapper` to `MicrosoftTeamsBootstrapper`. Regenerate deployment manifests with 0.31.0.
@@ -345,7 +345,7 @@
 ### Changed
 
 - Updated cache discovery and clearing, WinPE staging, SetupComplete acquisition and installation, public examples, built-in JSON metadata and icon URL.
-- Updated the application-queue diagram and renamed the published Teams icon to `metadata/icons/microsoftteams.svg`.
+- Updated the app-queue diagram and renamed the published Teams icon to `metadata/icons/microsoftteams.svg`.
 
 ### Validation
 
@@ -363,7 +363,7 @@
 
 ### Validation
 
-- Added file-backed Pester regression tests for Adobe x64 and x86 staging, missing-cache staging intent, and exact cache-to-manifest staging paths for the other four built-in applications.
+- Added file-backed Pester regression tests for Adobe x64 and x86 staging, missing-cache staging intent, and exact cache-to-manifest staging paths for the other four built-in apps.
 - Documented the successful 0.30.0 warm-USB offline field test (test 5, six installations with exit code 0) and the Adobe restaging anomaly that exposed this bug.
 - The patched 0.30.1 staging path requires deployment verification; the prior 0.30.0 offline test remains successful.
 
@@ -389,7 +389,7 @@
 ### Post-release field validation (9 October 2026)
 
 - Completed four fresh OSDCloud v2 SetupComplete scenarios: no USB cache, cold USB cache, warm USB cache, and warm USB with changed Office configuration.
-- All six application queue items completed successfully in each run (24/24 successful installer/provisioning results).
+- All six app queue items completed successfully in each run (24/24 successful installer/provisioning results).
 - Word, Excel, Visio and Project executables were confirmed present following the modified Office installation.
 - Captured PreInstall/Runner measurements and remaining coverage limitations in [Validation matrix](docs/testing.md) and [Performance](docs/performance.md).
 - Office licensing activation and the effective installed update channel were not independently verified.
@@ -398,20 +398,20 @@
 
 ### Fixed
 
-- Fixed Microsoft 365 Apps PreInstall failure when no OSDCloud USB cache is attached: the local `configuration.xml` was copied onto itself, triggering a terminating PowerShell error before any applications could install.
+- Fixed Microsoft 365 Apps PreInstall failure when no OSDCloud USB cache is attached: the local `configuration.xml` was copied onto itself, triggering a terminating PowerShell error before any apps could install.
 - PreInstall now skips copying the Office configuration when the source and destination resolve to the same file, while still copying between distinct USB and local paths.
-- Prevents this specific failure from prematurely terminating `SetupComplete.cmd` before the OSDApps application runner starts.
+- Prevents this specific failure from prematurely terminating `SetupComplete.cmd` before the OSDApps app runner starts.
 
 ### Validation
 
 - Added regression tests for identical and distinct Office configuration paths, including actual file content checks.
-- Automated regression coverage includes both identical and distinct Office configuration paths. A full six-application end-to-end deployment without USB caching remains to be confirmed.
+- Automated regression coverage includes both identical and distinct Office configuration paths. A full six-app end-to-end deployment without USB caching remains to be confirmed.
 
 ## 0.29.2
 
 ### Fixed
 
-- Repository applications added with `Add-OSDApp` can now be downloaded and staged when the OSDCloud USB cache volume is no longer attached.
+- Repository apps added with `Add-OSDApp` can now be downloaded and staged when the OSDCloud USB cache volume is no longer attached.
 - When no OSDCloud cache volume is found, repository packages use `Windows\\Temp\\OSDApps\\RepositoryCache` on the offline Windows partition.
 - `Get-OSDAppCache` returns an empty result instead of throwing when the optional USB cache volume is absent.
 
@@ -438,7 +438,7 @@
 - Removed the remaining internal `BuiltInApps` staging path from built-in helpers; built-ins now write directly to the single ordered `Apps[]` manifest model.
 - Polished and simplified the README and maintained documentation, removed redundant legacy documentation/templates, and aligned cleanup/source terminology.
 - Updated GitHub Actions to `actions/checkout@v5`, made PSGallery publishing release-only, and included the MIT license in the distributable module.
-- Added a validated cold-cache versus warm-cache performance benchmark and visual, including PreInstall, Runner and per-application timing results.
+- Added a validated cold-cache versus warm-cache performance benchmark and visual, including PreInstall, Runner and per-app timing results.
 - Renamed the default standalone SetupComplete runtime log from `Install.log` to `Runtime.log`.
 - `Client.log` remains the module-side log for staging, synchronization, cache and repository operations.
 - Updated runtime fallback logging and documentation to use `%ProgramData%\OSDApps\Logs\Runtime.log`.
@@ -449,14 +449,14 @@
 
 - Added `Get-OSDAppCache` to inspect repository and built-in cache entries, including source, version, architecture, last sync time, size, validity, source policy and sync method.
 - Added explicit `PreInstallComplete` and runner duration logging.
-- Added generic per-application `ApplicationInstallComplete` timing events across repository and built-in applications.
+- Added generic per-app `AppInstallComplete` timing events across repository and built-in apps.
 - Added failure categories for PreInstall and Runner failures.
 - Extended repository validation with duplicate references, orphaned manifests, required success codes, archive definition validation, package size and repository free-space information.
 
 ### Changed
 
 - Built-in cache metadata now uses consistent `SourcePolicy`, `SyncMethod` and `Updated` fields.
-- Built-in refresh completion events include per-application refresh duration.
+- Built-in refresh completion events include per-app refresh duration.
 - Runner success and failure events include total runtime duration.
 
 ## 0.28.1
@@ -490,8 +490,8 @@
 ### Fixed
 
 - Selective repository synchronization now merges synchronized packages into the existing `CacheCatalog.json` instead of replacing the catalog with only the latest selection.
-- Existing cached repository applications remain registered when another application is synchronized later.
-- Re-synchronizing the same application replaces only that application's cache catalog entry.
+- Existing cached repository apps remain registered when another app is synchronized later.
+- Re-synchronizing the same app replaces only that app's cache catalog entry.
 - Synchronization logging now reports both the number of packages synchronized in the current operation and the total cached package count.
 
 ## 0.27.0
@@ -513,9 +513,9 @@
 ### Changed
 
 - Simplified `DeviceManifest.json` to one ordered `Apps` array.
-- `Apps` contains both repository and built-in applications with a `Source` field and all metadata required by PreInstall and the runner.
-- The position of an application in `Apps` is its installation order; no separate `Packages`, `BuiltInApps`, or `InstallOrder` collections are used.
-- Every `Add-*` operation appends or moves its complete application entry to the end of `Apps`.
+- `Apps` contains both repository and built-in apps with a `Source` field and all metadata required by PreInstall and the runner.
+- The position of an app in `Apps` is its installation order; no separate `Packages`, `BuiltInApps`, or `InstallOrder` collections are used.
+- Every `Add-*` operation appends or moves its complete app entry to the end of `Apps`.
 - PreInstall filters built-ins from `Apps` for acquisition/refresh while preserving queue order.
 - The runner executes `Apps` from top to bottom across both repository and built-in sources.
 
@@ -524,9 +524,9 @@
 ### Changed
 
 - Replaced fixed built-in priorities with a single global installation order.
-- Every `Add-*` call appends its application to `DeviceManifest.json` under `InstallOrder`.
-- Repository and built-in applications can now be interleaved in exactly the order they were added.
-- Re-adding an application moves it to the end of `InstallOrder` without duplicating it.
+- Every `Add-*` call appends its app to `DeviceManifest.json` under `InstallOrder`.
+- Repository and built-in apps can now be interleaved in exactly the order they were added.
+- Re-adding an app moves it to the end of `InstallOrder` without duplicating it.
 - The runner logs the resolved global order through the `InstallOrder` event.
 - Manifests without `InstallOrder` retain a compatibility fallback of repository apps first, then built-ins.
 
@@ -534,7 +534,7 @@
 
 ### Changed
 
-- Built-in applications now use an explicit installation priority independent of staging or manifest order.
+- Built-in apps now use an explicit installation priority independent of staging or manifest order.
 - Current built-in installation order:
   1. Microsoft 365 Apps
   2. Microsoft Teams
@@ -542,7 +542,7 @@
   4. Mozilla Firefox Enterprise
   5. Adobe Acrobat Unified
 - Unknown future built-ins use the default middle priority until an explicit position is assigned.
-- Repository applications continue to install before built-in applications.
+- Repository apps continue to install before built-in apps.
 - The runner logs the resolved built-in order through the `BuiltInInstallOrder` event.
 
 ## 0.24.2
@@ -550,19 +550,19 @@
 ### Changed
 
 - Built-in installation order is now deterministic.
-- Microsoft 365 Apps is installed before the other built-in applications.
+- Microsoft 365 Apps is installed before the other built-in apps.
 - Adobe Acrobat Unified is installed last.
-- Other built-in applications retain their relative order from `DeviceManifest.json`.
-- Repository applications continue to run before built-in applications.
+- Other built-in apps retain their relative order from `DeviceManifest.json`.
+- Repository apps continue to run before built-in apps.
 
 ## 0.24.1
 
 ### Fixed
 
 - Repository staging no longer replaces the entire `DeviceManifest.json`.
-- Existing `BuiltInApps` and `Runtime` metadata are preserved when `Add-OSDApp` stages repository applications.
+- Existing `BuiltInApps` and `Runtime` metadata are preserved when `Add-OSDApp` stages repository apps.
 - Existing repository package entries are merged by Id instead of being discarded.
-- This fixes deployments where built-in applications were staged first and then silently removed from the manifest by a later repository app stage.
+- This fixes deployments where built-in apps were staged first and then silently removed from the manifest by a later repository app stage.
 
 ## 0.24.0
 
@@ -578,7 +578,7 @@
 ### Changed
 
 - Simplified the repository contract again: every deployable package now keeps `manifest.json` directly beside `Package.zip`.
-- Root `catalog.json` points directly to package manifests per application and architecture.
+- Root `catalog.json` points directly to package manifests per app and architecture.
 - Package manifests contain all package metadata: Id, display name, version, architecture, success codes, archive filename, and SHA-256.
 - `Package.zip` is resolved relative to its sibling package manifest; no `SourcePath` field is required.
 - No migration or legacy repository compatibility is provided.
@@ -587,17 +587,17 @@
 
 ### Changed
 
-- Adopted a clean repository contract using root `catalog.json` plus one `Apps/<Id>/manifest.json` per application.
-- OSDAppClient resolves only the required application manifest(s), then flattens package metadata internally for the existing cache and runtime pipeline.
-- Package `SourcePath` is relative to the application manifest.
-- `Get-OSDAppCatalog` now reports application count instead of package count.
+- Adopted a clean repository contract using root `catalog.json` plus one `Apps/<Id>/manifest.json` per app.
+- OSDAppClient resolves only the required app manifest(s), then flattens package metadata internally for the existing cache and runtime pipeline.
+- Package `SourcePath` is relative to the app manifest.
+- `Get-OSDAppCatalog` now reports app count instead of package count.
 - No legacy single-manifest repository compatibility is provided.
 
 ## 0.21.5
 
 ### Changed
 
-- `Add-OSDApp` now automatically synchronizes only the requested repository application(s) when an online catalog is configured.
+- `Add-OSDApp` now automatically synchronizes only the requested repository app(s) when an online catalog is configured.
 - Normal repository deployment no longer requires a separate `Sync-OSDAppRepository` step.
 - `Sync-OSDAppRepository` remains available for explicit full or selective cache preloading/refresh.
 - If no online catalog is configured, `Add-OSDApp` can still use an existing valid repository cache.
@@ -679,7 +679,7 @@
 
 ### Added
 
-- Added `AdobeAcrobatUnified` as a third built-in application.
+- Added `AdobeAcrobatUnified` as a third built-in app.
 - Adobe Acrobat Unified now supports both x64 and x86 packages; x64 is the default and cache variants are stored separately.
 - Added `Sync-OSDAppAdobeAcrobatUnified` and `Add-OSDAppAdobeAcrobatUnified`.
 - Uses Adobe's official x64 Unified Acrobat/Reader ZIP as the vendor source.
@@ -694,8 +694,8 @@
 
 - Simplified the public command surface. Low-level cache validation, content staging, repository synchronization internals, and SetupComplete integration are now private helpers.
 - Renamed local repository cache metadata from `CacheManifest.json` to `CacheCatalog.json`.
-- `Get-OSDAppCatalog` now reports compact catalog status instead of listing applications.
-- `Get-OSDApp` is now the unified application discovery command for online repository state, USB cache state, and built-in applications.
+- `Get-OSDAppCatalog` now reports compact catalog status instead of listing apps.
+- `Get-OSDApp` is now the unified app discovery command for online repository state, USB cache state, and built-in apps.
 - `Add-OSDApp` remains repository-only; Microsoft 365 Apps and Teams use dedicated Add commands.
 - Built-in completion logging now distinguishes synchronization from an actual content/version change:
   - Microsoft 365 Apps: `CacheSynchronized`, `VersionChanged`

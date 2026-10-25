@@ -1,6 +1,6 @@
 # Repository apps and scripts
 
-<a id="repository-applications"></a>
+<a id="repository-apps"></a>
 
 ![OSDApps repository: catalog, package manifest, archive layout and static publishing](images/repository-contract.svg)
 
@@ -8,7 +8,7 @@ OSDApps repositories are static content. A separate repository service or PowerS
 
 OSDApps defines the repository contract, provides examples, and includes optional authoring helpers to create and validate the required folders and JSON.
 
-Application names used in examples, such as `OmnissaHorizonClient` and `NotepadPlusPlus`, represent packages from an organization's own repository. They are not built-in OSDApps applications and are not distributed or maintained by this project.
+App names used in examples, such as `OmnissaHorizonClient` and `NotepadPlusPlus`, represent packages from an organization's own repository. They are not built-in OSDApps apps and are not distributed or maintained by this project.
 
 Repository synchronization can be used on a **full-Windows preparation machine** to pre-cache media or in **WinPE** while staging a target. OSDApps resolves the requested repository package, refreshes or reuses the optional OSDCloud USB cache, validates the package, and stages it into the offline Windows installation before the first boot. SetupComplete then installs the staged local package; repository content is not refreshed again in full Windows.
 
@@ -35,7 +35,7 @@ any
 
 ## Root catalog
 
-`catalog.json` is an index. It points to the current package manifest for each application and architecture.
+`catalog.json` is an index. It points to the current package manifest for each app and architecture.
 
 Example:
 
@@ -43,7 +43,7 @@ Example:
 {
   "SchemaVersion": 1,
   "GeneratedAt": "2026-10-06T00:00:00Z",
-  "Applications": [
+  "Apps": [
     {
       "Id": "ExampleApp",
       "Aliases": [
@@ -61,7 +61,7 @@ Example:
 ```
 
 `Id` is the canonical identity. Optional `Aliases` are retired IDs that now
-resolve to that canonical application. IDs and aliases are compared
+resolve to that canonical app. IDs and aliases are compared
 case-insensitively, must be safe directory names, and cannot collide with any
 other canonical ID or alias. Aliases are identity metadata; they do not create
 another package or cache copy.
@@ -78,7 +78,7 @@ Each deployable package keeps its metadata directly beside `Package.zip`.
   "Vendor": "Example Software",
   "Version": "1.0.0",
   "Architecture": "x64",
-  "PackageType": "Application",
+  "PackageType": "App",
   "SuccessCodes": [
     0,
     3010
@@ -91,7 +91,7 @@ Each deployable package keeps its metadata directly beside `Package.zip`.
 ```
 
 The `Vendor` property is optional descriptive package metadata. It is set in
-each application's `manifest.json`, alongside `DisplayName`. If omitted,
+each app's `manifest.json`, alongside `DisplayName`. If omitted,
 existing repositories remain fully compatible and the GUI shows a dash for an
 unknown vendor. The value is carried into USB `CacheCatalog.json` and the
 staged `DeviceManifest.json`; the GUI remains read-only.
@@ -104,7 +104,7 @@ metadata. The existing cache archive is reused when its SHA-256 still matches.
 Previously staged `DeviceManifest.json` files are not silently rewritten.
 
 `PackageType` is optional classification metadata with two supported values:
-`Application` and `Script`. When it is absent, OSDApps uses `Application` for
+`App` and `Script`. When it is absent, OSDApps uses `App` for
 backward compatibility. Both types use the same `Package/Install.ps1` entry
 point, SHA-256 checks, cache and staging paths, ordered SetupComplete queue,
 timeouts, success codes and failure handling. The value does not enable a
@@ -112,7 +112,7 @@ different or less trusted execution path.
 
 When an existing package variant is republished, omitting `-PackageType`
 preserves its current classification. A newly published package defaults to
-`Application`.
+`App`.
 
 Use `Script` for machine-context configuration, debloat or remediation logic
 that must run once during SetupComplete. Such scripts run as SYSTEM, must not
@@ -159,7 +159,7 @@ First boot / SetupComplete
 → run Package/Install.ps1
 ```
 
-This makes repository applications deterministic at first boot: the package that was selected and cached in WinPE is the package that SetupComplete installs.
+This makes repository apps deterministic at first boot: the package that was selected and cached in WinPE is the package that SetupComplete installs.
 
 ## Preparing content for another architecture
 
@@ -288,7 +288,7 @@ Add-OSDAppPackage `
     -Vendor 'Example Software' `
     -Version 1.0.0 `
     -Architecture x64 `
-    -PackageType Application `
+    -PackageType App `
     -PackagePath C:\OSDApps\Build\ExampleApp\Package.zip `
     -RepositoryPath C:\OSDApps\Repository
 ```
@@ -303,7 +303,7 @@ The helper:
 6. validates and records optional retired aliases;
 7. adds or replaces the architecture reference in `catalog.json`.
 
-When updating an existing application, omitting `-Alias` preserves its aliases.
+When updating an existing app, omitting `-Alias` preserves its aliases.
 Supplying an explicitly empty alias array removes them.
 
 Publish a script package with the same authoring commands:
@@ -348,16 +348,16 @@ Repository validation checks:
 - SHA-256 matches;
 - archive contains `Package/Install.ps1`;
 - architecture is `x64`, `arm64`, or `any`;
-- package manifest Id matches the catalog application Id;
+- package manifest Id matches the catalog app Id;
 - success codes are present and numeric;
 - the archive definition uses `Package.zip` and contains a valid SHA-256;
-- duplicate application/architecture references are detected;
+- duplicate app/architecture references are detected;
 - orphaned package manifests that are not referenced by `catalog.json` are reported;
 - package size and repository free space are included in the validation output.
 
 ## Built-in or repository?
 
-Repository applications are not limited to niche or custom software. They can also be used for applications that OSDApps supports as built-ins when an organization prefers to own the package lifecycle itself.
+Repository apps are not limited to niche or custom software. They can also be used for apps that OSDApps supports as built-ins when an organization prefers to own the package lifecycle itself.
 
 For example, Microsoft 365 Apps can be deployed either way:
 
@@ -405,6 +405,6 @@ Set-OSDAppConfiguration -CatalogUri 'https://example.blob.core.windows.net/osdap
 
 ## Examples
 
-[Examples](../Examples/README.md) includes an empty catalog template and a package-layout placeholder. Supply your own unattended `Install.ps1` and payload; the placeholder does not install an application.
+[Examples](../Examples/README.md) includes an empty catalog template and a package-layout placeholder. Supply your own unattended `Install.ps1` and payload; the placeholder does not install an app.
 
 `Add-OSDAppPackage` writes a local repository. Uploading it to your hosting is a separate step. Publish package archives and manifests before updating `catalog.json`, so clients never discover references to files that are not yet available.

@@ -81,7 +81,7 @@ function Add-OSDAppMicrosoft365AppsInternal {
     if ($payloadProfile.Architecture) { $Architecture = $payloadProfile.Architecture }
     $compatibilityReasons = @()
     if ($cacheHasPayload) {
-        $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $cacheRoot -ConfigurationPath $configPath -AllowLegacyConfiguration
+        $compatibility = Test-OSDAppOfficeCacheCompatibility -OfficeRoot $cacheRoot -ConfigurationPath $configPath
         $cacheHasPayload = $compatibility.Compatible
         $compatibilityReasons = @($compatibility.Reasons)
         if ($cacheHasPayload) {
