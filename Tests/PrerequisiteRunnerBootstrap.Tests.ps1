@@ -60,18 +60,38 @@ Describe 'Standalone prerequisite runner bootstrap' {
             '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File'
             ('"{0}"' -f $script:runnerPath), '-StagedPath', ('"{0}"' -f $stage)
         )
-        $child = Start-Process -FilePath $script:enginePath -ArgumentList $arguments -PassThru `
-            -RedirectStandardOutput (Join-Path $root 'stdout.txt') `
-            -RedirectStandardError (Join-Path $root 'stderr.txt')
+        # Own the process handle until ExitCode has been read on both hosts.
+        # Drain both pipes concurrently so output cannot block the child process.
+        $startInfo = [Diagnostics.ProcessStartInfo]::new()
+        $startInfo.FileName = $script:enginePath
+        $startInfo.Arguments = $arguments -join ' '
+        $startInfo.UseShellExecute = $false
+        $startInfo.CreateNoWindow = $true
+        $startInfo.RedirectStandardOutput = $true
+        $startInfo.RedirectStandardError = $true
+        $child = [Diagnostics.Process]::new()
+        $child.StartInfo = $startInfo
+        $childStarted = $false
         try {
+            $childStarted = $child.Start()
+            if (-not $childStarted) { throw "Could not start standalone runner for $Id." }
+            $stdoutTask = $child.StandardOutput.ReadToEndAsync()
+            $stderrTask = $child.StandardError.ReadToEndAsync()
             if (-not $child.WaitForExit(30000)) {
-                Stop-Process -Id $child.Id -Force -ErrorAction SilentlyContinue
+                $child.Kill()
                 throw "Standalone runner timed out for $Id."
             }
-            $child.WaitForExit()
+            if (-not [Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]@($stdoutTask, $stderrTask), 5000)) {
+                throw "Standalone runner output did not close for $Id."
+            }
+            [IO.File]::WriteAllText((Join-Path $root 'stdout.txt'), $stdoutTask.Result, [Text.Encoding]::UTF8)
+            [IO.File]::WriteAllText((Join-Path $root 'stderr.txt'), $stderrTask.Result, [Text.Encoding]::UTF8)
             $child.ExitCode | Should -Be 1
         }
-        finally { $child.Dispose() }
+        finally {
+            if ($childStarted -and -not $child.HasExited) { $child.Kill() }
+            $child.Dispose()
+        }
 
         Test-Path -LiteralPath $resultPath -PathType Leaf | Should -BeTrue
         $result = Get-Content -LiteralPath $resultPath -Raw -Encoding UTF8 | ConvertFrom-Json
