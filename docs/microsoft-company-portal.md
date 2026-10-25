@@ -6,7 +6,6 @@ This optional integration provisions the official Microsoft Company Portal Prein
 
 Connect the OSDCloud USB device and run:
 
-
 ~~~powershell
 Import-Module OSDApps
 Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud
@@ -19,15 +18,13 @@ The automatic source is an official `download.microsoft.com` Preinstall Kit ZIP.
 
 An operator-supplied kit is also supported, with **no automatic download**:
 
-
 ~~~powershell
-Sync-OSDAppMicrosoftCompanyPortal -KitPath 'C:TempCompanyPortal-Universal-Production_x64_x86_ARM_ARM64.appxupload_Windows10_PreinstallKit.zip' -Architecture x64
+Sync-OSDAppMicrosoftCompanyPortal -KitPath 'C:\Temp\CompanyPortal-Universal-Production_x64_x86_ARM_ARM64.appxupload_Windows10_PreinstallKit.zip' -Architecture x64
 ~~~
 
 The tested Microsoft kit contained Company Portal **11.2.1495.0**. That is an observed bundle version, not a guarantee that the Microsoft download URL always serves the latest Microsoft Store version.
 
 ## WinPE after OSDCloud
-
 
 ~~~powershell
 Import-Module OSDApps
@@ -37,7 +34,6 @@ Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
 ~~~
 
 During first boot, SetupComplete uses `Add-AppxProvisionedPackage -Online` with the app bundle, offline license and five dependencies, using `-Regions all`. Company Portal is then available to provision for new user profiles. Check after Autopilot sign-in:
-
 
 ~~~powershell
 Get-AppxProvisionedPackage -Online | Where-Object DisplayName -eq 'Microsoft.CompanyPortal'

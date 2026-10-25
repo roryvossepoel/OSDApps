@@ -27,7 +27,7 @@ function Get-MarkdownAnchorSet {
     param([string]$Path)
     if ($anchorCache.ContainsKey($Path)) { return ,$anchorCache[$Path] }
     $text = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
-    $text = [regex]::Replace($text,'(?ms)^[ \t]*```[^\r\n]*\r?\n.*?^[ \t]*```[ \t]*\r?$','')
+    $text = [regex]::Replace($text,'(?ms)^[ \t]*(?<fence>`{3,}|~{3,})[^\r\n]*\r?\n.*?^[ \t]*\k<fence>[ \t]*\r?$','')
     $anchors = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $seen = @{}
     foreach ($heading in [regex]::Matches($text,'(?m)^#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*\r?$')) {
@@ -51,7 +51,7 @@ foreach ($file in $Files) {
     $fullPath = (Resolve-Path -LiteralPath $file).Path
     $relative = $fullPath.Substring($Root.Length).TrimStart('\','/').Replace('\','/')
     $text = Get-Content -LiteralPath $fullPath -Raw -Encoding UTF8
-    $blocks = [regex]::Matches($text,'(?ms)^[ \t]*```(?<lang>[A-Za-z0-9_-]*)[^\r\n]*\r?\n(?<code>.*?)^[ \t]*```[ \t]*\r?$')
+    $blocks = [regex]::Matches($text,'(?ms)^[ \t]*(?<fence>`{3,}|~{3,})(?<lang>[A-Za-z0-9_-]*)[^\r\n]*\r?\n(?<code>.*?)^[ \t]*\k<fence>[ \t]*\r?$')
     foreach ($block in $blocks) {
         if ($block.Groups['lang'].Value -notin @('powershell','ps1','pwsh')) { continue }
         $tokens = $null
@@ -74,7 +74,7 @@ foreach ($file in $Files) {
             }
         }
     }
-    $prose = [regex]::Replace($text,'(?ms)^[ \t]*```[^\r\n]*\r?\n.*?^[ \t]*```[ \t]*\r?$','')
+    $prose = [regex]::Replace($text,'(?ms)^[ \t]*(?<fence>`{3,}|~{3,})[^\r\n]*\r?\n.*?^[ \t]*\k<fence>[ \t]*\r?$','')
     foreach ($link in [regex]::Matches($prose,'!?\[[^\]\r\n]*\]\(([^\s)]+)(?:\s+"[^"]*")?\)')) {
         $target = $link.Groups[1].Value.Trim('<','>')
         if ($target -match '^[A-Za-z][A-Za-z0-9+.-]*:' -or $target.StartsWith('//')) { continue }

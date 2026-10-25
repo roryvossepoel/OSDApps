@@ -20,7 +20,7 @@ optional fields require no schema change.
 | --- | --- |
 | `Id`, `DisplayName`, `Vendor` | Stable key and human-readable label |
 | `Aliases` | Optional retired built-in cache identities that resolve to `Id`; never render them as additional applications or command names |
-| `Source`, `Acquisition`, `SyncPhase` | Distinguish built-in ownership and acquisition phase |
+| `Source`, `Acquisition`, `SyncPhase` | Distinguish built-in ownership and acquisition phase. For `MicrosoftCompanyPortal`, `Acquisition=MicrosoftPreinstallKit` covers the default automatic Microsoft download and optional `-KitPath` fallback; both prepare the USB cache on full Windows. |
 | `AddCommand`, `SyncCommand` | Show ready-to-copy PowerShell examples |
 | `Architectures`, `DefaultArchitecture` | Selectable architectures, not necessarily field-validated ones. DefaultArchitecture is null when an explicit selection is required. |
 | `ArchitectureRequired` | When true, the runtime Add/Sync commands require one explicit architecture. |
@@ -41,7 +41,7 @@ manifest identity and public command suffix.
 
 ## Example: Cisco Webex
 
-The public catalog includes seven built-in applications. This `CiscoWebex` entry illustrates the schema:
+The public catalog currently includes 14 built-in integrations. This `CiscoWebex` entry illustrates the schema:
 
 ```json
 {

@@ -80,7 +80,7 @@ This does not reintroduce the old `Add-OSDAppTeams` or `Sync-OSDAppTeams` comman
 
 ## Do built-in apps require an OSDCloud USB flash drive?
 
-No. With no cache volume, the Add cmdlets can stage intent and PreInstall can acquire built-ins directly to the local Windows runtime when online. Repository Add commands can use a temporary cache on the offline Windows disk when no USB cache is present.
+Not for most built-ins. Without a cache volume, supported Add cmdlets can stage intent and PreInstall can acquire their content directly to the local Windows runtime when online. **Microsoft Company Portal and CMTrace Open are exceptions:** both require a populated OSDCloud cache during WinPE staging and do not acquire content during SetupComplete. Company Portal's preparation command downloads the official kit automatically on full Windows; its `-KitPath` option is only a fallback for a locally supplied kit. Windows Inbox Cleanup uses a bundled script rather than a downloaded installer. Repository Add commands can use a temporary cache on the offline Windows disk when no USB cache is present.
 
 A volume with the configured label, `OSDCloud` by default, is automatically used as the cache when present. Keep module files and installer cache content conceptually separate: `\Modules` is a convenient module location; `\OSDApps` is the cache directory.
 

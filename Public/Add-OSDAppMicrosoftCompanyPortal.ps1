@@ -10,7 +10,7 @@ function Add-OSDAppMicrosoftCompanyPortal {
     $source = Join-Path $cachePath ('BuiltIn\MicrosoftCompanyPortal\' + $Architecture)
     $cacheInfoPath = Join-Path $source 'CacheInfo.json'
     if (-not (Test-Path -LiteralPath $cacheInfoPath -PathType Leaf)) {
-        throw ('Company Portal {0} is not cached. Run Sync-OSDAppMicrosoftCompanyPortal -KitPath on full Windows first.' -f $Architecture)
+        throw ('Company Portal {0} is not cached. Run Sync-OSDAppMicrosoftCompanyPortal on full Windows first (automatic Microsoft download; optional -KitPath fallback).' -f $Architecture)
     }
     $info = Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
     if ($info.Id -ne 'MicrosoftCompanyPortal' -or $info.Architecture -ne $Architecture -or

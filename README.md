@@ -48,10 +48,12 @@ That's the queue: **Microsoft 365 Apps → Adobe Acrobat Unified → Google Chro
 
 OSDApps discovers the offline Windows installation, prepares SetupComplete and removes temporary staging after success by default. Apps are installed during the first Windows boot, not in WinPE. Continue your normal deployment reboot after staging completes without errors.
 
-**The same commands work with or without a USB flash drive:**
+**For built-ins that support first-boot acquisition, the same commands work with or without a USB flash drive:**
 
 - **With an OSDCloud-labeled USB flash drive:** matching cached content is staged as fallback. SetupComplete checks for updates and can refresh the cache. Leave the USB flash drive connected until OOBE appears.
-- **Without a USB flash drive:** SetupComplete downloads built-in content directly to local staging. Keep the PC online until OOBE appears.
+- **Without a USB flash drive:** SetupComplete downloads supported built-in content directly to local staging. Keep the PC online until OOBE appears.
+
+**Exceptions:** Microsoft Company Portal and CMTrace Open require a prepared OSDCloud cache: run their `Sync-OSDApp*` commands on full Windows before WinPE staging. They are not downloaded by SetupComplete. The bundled Windows Inbox Cleanup script also requires no first-boot download.
 
 Keep networking available for either online route. No module copy on the USB flash drive is needed when loading from the Gallery. For a fully disconnected deployment, [prepare matching content and save the module first](Examples/WinPE-Offline.md).
 
@@ -71,6 +73,8 @@ The optional Windows Inbox Cleanup script is staged with `Add-OSDAppWindowsInbox
 | --- | --- |
 | Microsoft 365 Apps | `Add-OSDAppMicrosoft365Apps` |
 | Microsoft Teams | `Add-OSDAppMicrosoftTeams` |
+| Microsoft Company Portal (pre-cached) | `Add-OSDAppMicrosoftCompanyPortal` |
+| CMTrace Open (pre-cached) | `Add-OSDAppCMTraceOpen` |
 | Adobe Acrobat Unified | `Add-OSDAppAdobeAcrobatUnified` |
 | Google Chrome Enterprise | `Add-OSDAppGoogleChromeEnterprise` |
 | Mozilla Firefox Enterprise | `Add-OSDAppMozillaFirefoxEnterprise` |

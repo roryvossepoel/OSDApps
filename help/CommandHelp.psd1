@@ -48,12 +48,15 @@
             Link = 'docs/microsoft-company-portal.md'
         }
         'Sync-OSDAppMicrosoftCompanyPortal' = @{
-            Synopsis = 'Prepare Microsoft Company Portal from the official offline Preinstall Kit.'
-            Description = 'Consumes an operator-supplied official Microsoft ZIP, selects one appbundle, offline license and five architecture-specific dependencies, records SHA-256 hashes, and atomically updates the corresponding local USB cache variant. Does not download or redistribute Microsoft binaries.'
-            Environment = 'Full Windows preparation machine with the OSDCloud USB connected and access to the original Microsoft Preinstall Kit ZIP.'
+            Synopsis = 'Download and prepare the official Microsoft Company Portal Preinstall Kit for offline provisioning.'
+            Description = 'By default downloads the official Microsoft Preinstall Kit directly from Microsoft on a full-Windows preparation machine. Alternatively accepts a locally supplied Microsoft ZIP through -KitPath. Selects one appbundle, offline license and five architecture-specific dependencies, records SHA-256 hashes, and atomically updates the local USB cache. WinPE and SetupComplete do not download Company Portal.'
+            Environment = 'Full Windows preparation machine with the OSDCloud USB connected and network access to Microsoft, or a locally supplied official kit.'
             Output = 'Cache preparation record including selected architecture, bundle version and target cache path.'
-            Parameters = @{ KitPath = 'Full path to the original Microsoft Company Portal Preinstall Kit ZIP downloaded by the operator.' }
-            Examples = @(@{ Code = 'Sync-OSDAppMicrosoftCompanyPortal -KitPath ''C:\Downloads\CompanyPortal-PreinstallKit.zip'' -Architecture x64'; Remarks = 'Prepare the x64 bundle, license and dependency cache for offline WinPE deployment.' })
+            Parameters = @{ KitPath = 'Optional path to the official Microsoft Company Portal Preinstall Kit ZIP; omit to download automatically from Microsoft.' }
+            Examples = @(
+                @{ Code = 'Sync-OSDAppMicrosoftCompanyPortal -Architecture x64'; Remarks = 'Download the official kit from Microsoft and prepare the x64 offline cache.' }
+                @{ Code = 'Sync-OSDAppMicrosoftCompanyPortal -KitPath ''C:\Downloads\CompanyPortal-PreinstallKit.zip'' -Architecture x64'; Remarks = 'Optional fallback: use a previously downloaded official Microsoft ZIP without downloading again.' }
+            )
             Link = 'docs/microsoft-company-portal.md'
         }
         'Add-OSDAppCMTraceOpen' = @{

@@ -261,7 +261,7 @@
       "DisplayName": "Microsoft Company Portal",
       "Source": "BuiltIn",
       "Vendor": "Microsoft",
-      "Acquisition": "OperatorSuppliedMicrosoftPreinstallKit",
+      "Acquisition": "MicrosoftPreinstallKit",
       "SyncPhase": "FullWindowsPreInstall",
       "AddCommand": "Add-OSDAppMicrosoftCompanyPortal",
       "SyncCommand": "Sync-OSDAppMicrosoftCompanyPortal",
