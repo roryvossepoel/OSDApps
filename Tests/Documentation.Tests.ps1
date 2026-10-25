@@ -59,6 +59,79 @@ $x = (
         { & $script:validator -Root $folder } | Should -Throw '*PowerShell syntax*'
     }
 
+    It 'validates tilde-fenced PowerShell blocks and does not execute examples' {
+        $folder = Join-Path $TestDrive 'TildeDocs'
+        New-Item -ItemType Directory -Path $folder -Force | Out-Null
+        $path = Join-Path $folder 'README.md'
+        Set-Content -LiteralPath $path -Encoding UTF8 -Value @'
+# Examples
+~~~powershell
+throw 'This example must not execute.'
+~~~
+'@
+        $result = & $script:validator -Root $folder
+        $result.PowerShellBlocksParsed | Should -Be 1
+        $result.ExamplesExecuted | Should -BeFalse
+
+        Set-Content -LiteralPath $path -Encoding UTF8 -Value @'
+# Examples
+~~~powershell
+$x = (
+~~~
+'@
+        { & $script:validator -Root $folder } | Should -Throw '*PowerShell syntax*'
+    }
+
+    It 'keeps tilde-fenced headings out of Markdown anchor detection' {
+        $folder = Join-Path $TestDrive 'TildeHeading'
+        New-Item -ItemType Directory -Path $folder -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $folder 'README.md') -Encoding UTF8 -Value @'
+# Document
+[not a section](#fake-heading)
+~~~powershell
+# Fake heading
+Get-Date
+~~~
+'@
+        { & $script:validator -Root $folder } | Should -Throw '*missing section anchor*'
+    }
+
+    It 'does not close a longer tilde fence with a shorter or different fence' {
+        $folder = Join-Path $TestDrive 'MatchingFences'
+        New-Item -ItemType Directory -Path $folder -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $folder 'README.md') -Encoding UTF8 -Value @'
+# Document
+~~~~text
+~~~
+```
+# Not a section
+[not a prose link](missing.md)
+~~~~
+'@
+        $result = & $script:validator -Root $folder
+        $result.LocalLinksChecked | Should -Be 0
+        $result.PowerShellBlocksParsed | Should -Be 0
+        $result.ExamplesExecuted | Should -BeFalse
+    }
+
+    It 'keeps Company Portal help and Apps metadata aligned with automatic acquisition' {
+        $helpData = Import-PowerShellDataFile -Path (Join-Path $script:root 'help/CommandHelp.psd1')
+        $help = $helpData.Commands['Sync-OSDAppMicrosoftCompanyPortal']
+        $help.Description | Should -Match 'Downloads.*Microsoft Preinstall Kit by default'
+        $help.Description | Should -Match 'Optionally.*-KitPath'
+        $help.Parameters.KitPath | Should -Match '^Optional'
+        $help.Examples[0].Code | Should -Be 'Sync-OSDAppMicrosoftCompanyPortal -Architecture x64'
+        $catalog = Get-Content -LiteralPath (Join-Path $script:root 'metadata/builtins.json') -Raw | ConvertFrom-Json
+        $catalog.PSObject.Properties.Name | Should -Contain 'Apps'
+        $companyPortal = @($catalog.Apps | Where-Object Id -eq 'MicrosoftCompanyPortal')
+        $companyPortal.Count | Should -Be 1
+        $companyPortal[0].Acquisition | Should -Be 'MicrosoftPreinstallKit'
+        $companyPortal[0].SyncPhase | Should -Be 'FullWindowsPreparation'
+        $cmTrace = @($catalog.Apps | Where-Object Id -eq 'CMTraceOpen')
+        $cmTrace.Count | Should -Be 1
+        $cmTrace[0].SyncPhase | Should -Be 'FullWindowsPreparation'
+    }
+
     It 'does not treat PowerShell comments in code fences as document headings' {
         $folder = Join-Path $TestDrive 'NotAHeading'
         New-Item -ItemType Directory -Path $folder -Force | Out-Null

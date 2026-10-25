@@ -30,6 +30,8 @@ before adopting this branch; do not mix it with previously staged manifests.
 | `RepositoryAlternative` | Explain the organization-maintained alternative |
 | `IconUrl` | Repository-hosted SVG icon for the card; see the relevant attribution |
 
+For `MicrosoftCompanyPortal`, `Acquisition=MicrosoftPreinstallKit` covers the default automatic Microsoft download and the optional `-KitPath` local-kit fallback. Both prepare the cache on full Windows. Its `SyncPhase=FullWindowsPreparation` is intentional; it does not download during SetupComplete.
+
 Use `Id` as the card key rather than display name. Render optional fields only when available. Coordinate schema changes with external consumers; old field aliases are not provided.
 
 <a id="0320-cisco-webex"></a>
