@@ -28,7 +28,22 @@ Describe 'Microsoft Company Portal automatic Preinstall Kit download' {
 
             $kitRoot = Join-Path $TestDrive 'KitSource'
             New-Item -ItemType Directory -Path $kitRoot -Force | Out-Null
-            [IO.Compression.ZipFile]::CreateFromDirectory($bundleRoot, (Join-Path $kitRoot 'CompanyPortal.appxbundle'))
+            # .NET Framework (Windows PowerShell 5.1) may encode directory separators
+            # differently from .NET on PowerShell 7. Use the exact Appx ZIP entry.
+            $bundleZip = [IO.Compression.ZipFile]::Open(
+                (Join-Path $kitRoot 'CompanyPortal.appxbundle'),
+                [IO.Compression.ZipArchiveMode]::Create
+            )
+            try {
+                $entry = $bundleZip.CreateEntry('AppxMetadata/AppxBundleManifest.xml')
+                $entryStream = $entry.Open()
+                try {
+                    $manifestBytes = [IO.File]::ReadAllBytes((Join-Path $metadataRoot 'AppxBundleManifest.xml'))
+                    $entryStream.Write($manifestBytes, 0, $manifestBytes.Length)
+                }
+                finally { $entryStream.Dispose() }
+            }
+            finally { $bundleZip.Dispose() }
             'test fixture license' | Set-Content -LiteralPath (Join-Path $kitRoot 'CompanyPortal_License1.xml')
             foreach ($family in @(
                 'Microsoft.NET.Native.Framework.2.2_',
