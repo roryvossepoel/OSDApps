@@ -167,6 +167,9 @@ function Set-PreInstallAcquisitionResult {
     )
 
     $Result.Outcome = $Outcome
+    # Current primary-content acquisition, not a version comparison or an earlier cache sync.
+    # Helper-only downloads (for example the Teams bootstrapper) do not set this flag.
+    $Result.PackageUpdated = ($Outcome -eq 'Downloaded')
     if ($CacheDecisionReason) { $Result.CacheDecisionReason = $CacheDecisionReason }
     # Offline/fallback outcomes supersede any earlier reason for attempting a refresh.
     if ($Outcome -eq 'OfflineCacheUsed') {
@@ -629,7 +632,7 @@ try {
         $builtInStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         $appError = $null
         $appFailureType = $null
-        $acquisition = @{ Outcome = 'Failed'; CacheDecisionReason = $null; RefreshFailureType = $null; RefreshError = $null }
+        $acquisition = @{ Outcome = 'Failed'; PackageUpdated = $null; CacheDecisionReason = $null; RefreshFailureType = $null; RefreshError = $null }
         try {
             switch($app.Id){
             'Microsoft365Apps' {
@@ -991,6 +994,7 @@ try {
                 Status          = if ($appError) { 'Failed' } else { 'Succeeded' }
                 DurationSeconds = [math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)
                 CacheUsed       = [bool]$usbRoot
+                PackageUpdated  = if ($appError) { $null } else { $acquisition.PackageUpdated }
                 AcquisitionOutcome = if ($appError) { 'Failed' } else { $acquisition.Outcome }
                 CacheDecisionReason = if ($appError) { 'Acquisition failed. ' + $appError } else { $acquisition.CacheDecisionReason }
                 RefreshFailureType = $acquisition.RefreshFailureType
@@ -1004,6 +1008,8 @@ try {
                 Id = $app.Id
                 Status = $appResult.Status
                 AcquisitionOutcome = $appResult.AcquisitionOutcome
+                CacheUsed = $appResult.CacheUsed
+                PackageUpdated = $appResult.PackageUpdated
                 CacheDecisionReason = $appResult.CacheDecisionReason
                 RefreshFailureType = $appResult.RefreshFailureType
                 RefreshError = $appResult.RefreshError

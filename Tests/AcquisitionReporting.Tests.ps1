@@ -62,7 +62,8 @@ Describe 'Per-deployment acquisition reporting' {
         $script:preInstallStopwatch = [Diagnostics.Stopwatch]::StartNew()
         $script:preInstallStartedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
         $script:OfficeRefreshTimeoutMinutes = 1
-        $script:manifest = [pscustomobject]@{ DeploymentId = 'reporting-test' }
+        $script:manifest = [pscustomobject]@{ DeploymentId = [guid]::NewGuid().Guid }
+        $script:preInstallResult = $null
         $script:preInstallResultPath = Join-Path $StagedPath 'Results\PreInstall.json'
         $script:logPath = Join-Path $StagedPath 'Logs\Runtime.log'
         $script:logDirectory = Split-Path $logPath -Parent
@@ -143,6 +144,7 @@ Describe 'Per-deployment acquisition reporting' {
         }
         . $script:preparationLoop
         @($appResults | Where-Object AcquisitionOutcome -ne Downloaded).Count | Should -Be 0
+        foreach ($row in $appResults) { $row.PackageUpdated | Should -BeTrue }
         foreach ($app in $builtInApps) {
             $name = 'vendor-' + $app.Id + [IO.Path]::GetExtension($app.File)
             $cached = Join-Path (Join-Path $usbRoot $app.Relative) $name
@@ -159,6 +161,7 @@ Describe 'Per-deployment acquisition reporting' {
         }
         . $script:preparationLoop
         @($appResults | Where-Object AcquisitionOutcome -ne CacheReused).Count | Should -Be 0
+        foreach ($row in $appResults) { $row.PackageUpdated | Should -BeFalse }
     }
 
     It 'reports a fresh acquisition for all seven built-ins even when the Office version did not change' {
@@ -166,6 +169,7 @@ Describe 'Per-deployment acquisition reporting' {
         $appResults.Count | Should -Be 7
         @($appResults | Where-Object Status -ne Succeeded).Count | Should -Be 0
         @($appResults | Where-Object AcquisitionOutcome -ne Downloaded).Count | Should -Be 0
+        foreach ($row in $appResults) { $row.PackageUpdated | Should -BeTrue }
         (Get-Content (Join-Path $StagedPath 'BuiltIn\Microsoft365Apps\CacheInfo.json') -Raw | ConvertFrom-Json).Updated | Should -BeFalse
         @($appResults | Where-Object { $_.RefreshError }).Count | Should -Be 0
         ($appResults | Where-Object Id -eq Microsoft365Apps).CacheDecisionReason | Should -Match 'does not match.*build'
@@ -182,6 +186,7 @@ Describe 'Per-deployment acquisition reporting' {
         . $script:preparationLoop
         $appResults[0].Status | Should -Be Succeeded
         $appResults[0].AcquisitionOutcome | Should -Be CacheReused
+        $appResults[0].PackageUpdated | Should -BeFalse
         $appResults[0].RefreshError | Should -BeNullOrEmpty
         $appResults[0].CacheDecisionReason | Should -Match 'cached build matches'
         Should -Invoke Start-Process -Exactly 0
@@ -207,6 +212,7 @@ Describe 'Per-deployment acquisition reporting' {
         . $script:preparationLoop
         $appResults[0].Status | Should -Be Succeeded
         $appResults[0].AcquisitionOutcome | Should -Be CacheReused
+        $appResults[0].PackageUpdated | Should -BeFalse
         Should -Invoke Start-Process -Exactly 0
         Should -Invoke Save-PreInstallDownload -Exactly 0
         $after = @(Get-ChildItem $usbOffice -File -Recurse | Get-FileHash | Sort-Object Path | ForEach-Object { $_.Path + ':' + $_.Hash })
@@ -257,6 +263,7 @@ Describe 'Per-deployment acquisition reporting' {
         foreach ($result in $appResults) { $result.CacheDecisionReason | Should -Match 'matches the vendor HTTP metadata' }
         ($appResults | Where-Object Id -eq MicrosoftTeams).CacheDecisionReason | Should -Match 'bootstrapper is downloaded separately'
         @($appResults | Where-Object AcquisitionOutcome -ne CacheReused).Count | Should -Be 0
+        foreach ($row in $appResults) { $row.PackageUpdated | Should -BeFalse }
         Should -Invoke Save-PreInstallDownload -Exactly 1 -ParameterFilter { $Id -eq 'MicrosoftTeams' -and $Description -eq 'Microsoft Teams bootstrapper' }
         Should -Invoke Save-PreInstallDownload -Exactly 0 -ParameterFilter { $Description -ne 'Microsoft Teams bootstrapper' }
     }
@@ -265,6 +272,7 @@ Describe 'Per-deployment acquisition reporting' {
         $script:networkAvailable = $false
         . $script:preparationLoop
         @($appResults | Where-Object AcquisitionOutcome -ne OfflineCacheUsed).Count | Should -Be 0
+        foreach ($row in $appResults) { $row.PackageUpdated | Should -BeFalse }
         @($appResults | Where-Object { $_.RefreshError }).Count | Should -Be 0
         Should -Invoke Save-PreInstallDownload -Exactly 0
         Write-PreInstallResult -Status Succeeded
@@ -280,6 +288,7 @@ Describe 'Per-deployment acquisition reporting' {
         . $script:preparationLoop
         @($appResults | Where-Object Status -ne Succeeded).Count | Should -Be 0
         @($appResults | Where-Object AcquisitionOutcome -ne FallbackCacheUsed).Count | Should -Be 0
+        foreach ($row in $appResults) { $row.PackageUpdated | Should -BeFalse }
         @($appResults | Where-Object RefreshFailureType -ne Timeout).Count | Should -Be 0
         foreach ($result in $appResults) {
             $result.RefreshError | Should -Be 'HTTP download timeout in fixture.'
@@ -304,6 +313,7 @@ Describe 'Per-deployment acquisition reporting' {
         . $script:preparationLoop
         $appResults[0].Status | Should -Be Failed
         $appResults[0].AcquisitionOutcome | Should -Be Failed
+        $appResults[0].PackageUpdated | Should -BeNullOrEmpty
         $appResults[0].Error | Should -Match 'no staged fallback'
         $appResults[0].CacheDecisionReason | Should -Match '^Acquisition failed.*no staged fallback'
         $appResults[1].AcquisitionOutcome | Should -Be FallbackCacheUsed
@@ -316,6 +326,7 @@ Describe 'Per-deployment acquisition reporting' {
         { . $script:preparationLoop } | Should -Throw '*Publisher rejected*'
         $appResults[0].Status | Should -Be Failed
         $appResults[0].AcquisitionOutcome | Should -Be Failed
+        $appResults[0].PackageUpdated | Should -BeNullOrEmpty
         $appResults[0].FailureType | Should -Be TrustValidationFailed
         $appResults[0].CacheDecisionReason | Should -Match '^Acquisition failed.*Publisher rejected'
     }
@@ -328,11 +339,14 @@ Describe 'Per-deployment acquisition reporting' {
         $preInstallResult = Get-Content $preInstallResultPath -Raw | ConvertFrom-Json
         $success = New-RunnerAppResult -App $builtInApps[0] -Status Succeeded -Execution ([pscustomobject]@{ ExitCode=0; Integrity='PublisherValidatedByPreInstall' })
         $success.Status | Should -Be Succeeded
+        $success.PackageUpdated | Should -BeFalse
+        $success.CacheUsed | Should -BeFalse
         $success.AcquisitionOutcome | Should -Be FallbackCacheUsed
         $success.RefreshFailureType | Should -Be Timeout
         $failed = New-RunnerAppResult -App $builtInApps[0] -Status Failed -FailureType InstallerFailed -ErrorMessage 'Installer exit code 42.'
         $failed.AcquisitionOutcome | Should -Be FallbackCacheUsed
         $failed.FailureType | Should -Be InstallerFailed
+        $failed.PackageUpdated | Should -BeFalse
         $failed.RefreshError | Should -Be 'HTTP download timeout in fixture.'
         $failed.Error | Should -Be 'Installer exit code 42.'
         $failed.CacheDecisionReason | Should -Be $success.CacheDecisionReason
@@ -346,6 +360,8 @@ Describe 'Per-deployment acquisition reporting' {
         $latest.Status | Should -Be Succeeded
         $latest.PreInstall.FallbackAppCount | Should -Be 1
         $latest.Apps[0].AcquisitionOutcome | Should -Be FallbackCacheUsed
+        $latest.Apps[0].PackageUpdated | Should -BeFalse
+        $latest.PreInstall.Apps[0].PackageUpdated | Should -BeFalse
         $latest.Apps[0].CacheDecisionReason | Should -Be $success.CacheDecisionReason
     }
 
@@ -375,6 +391,7 @@ Describe 'Per-deployment acquisition reporting' {
         . $script:preparationLoop
         $appResults[0].Status | Should -Be Failed
         $appResults[0].AcquisitionOutcome | Should -Be Failed
+        $appResults[0].PackageUpdated | Should -BeNullOrEmpty
         Should -Invoke Save-PreInstallDownload -Times 0 -Exactly
         Test-Path -LiteralPath (Join-Path $root 'googlechromestandaloneenterprise64.msi') | Should -BeTrue
     }
@@ -390,6 +407,7 @@ Describe 'Per-deployment acquisition reporting' {
         Mock Get-RemoteMetadata { [pscustomobject]@{ ETag=$null; LastModified='2026-01-01'; ContentLength=100; FinalUri='https://example.test/package' } }
         . $script:preparationLoop
         $appResults[0].AcquisitionOutcome | Should -Be CacheReused
+        $appResults[0].PackageUpdated | Should -BeFalse
         $appResults[0].CacheDecisionReason | Should -Match 'matches the vendor HTTP metadata'
         $appResults.Clear()
         Mock Get-RemoteMetadata { [pscustomobject]@{ ETag=$null; LastModified='2026-01-02'; ContentLength=101; FinalUri='https://example.test/package' } }
