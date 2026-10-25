@@ -7,11 +7,11 @@ Describe 'Repository canonical Id and alias contract' {
         function global:New-AliasCatalogFixture {
             param(
                 [Parameter(Mandatory)][string]$Root,
-                [Parameter(Mandatory)][object[]]$App
+                [Parameter(Mandatory)][object[]]$Definitions
             )
 
             $apps = @()
-            foreach ($definition in $App) {
+            foreach ($definition in $Definitions) {
                 $id = [string]$definition.Id
                 $packageRoot = Join-Path $Root "Apps\$id\1.0.0\x64"
                 New-Item -ItemType Directory -Path $packageRoot -Force | Out-Null
@@ -42,7 +42,7 @@ Describe 'Repository canonical Id and alias contract' {
 
     It 'resolves a requested alias to one canonical package' {
         InModuleScope OSDApps {
-            $catalogPath = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'AliasCatalog') -App @(
+            $catalogPath = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'AliasCatalog') -Definitions @(
                 [pscustomobject]@{Id='NewApp';Aliases=@('OldApp')}
             )
 
@@ -56,14 +56,14 @@ Describe 'Repository canonical Id and alias contract' {
 
     It 'rejects aliases that collide with canonical Ids or have multiple owners' {
         InModuleScope OSDApps {
-            $canonicalConflict = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'CanonicalConflict') -App @(
+            $canonicalConflict = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'CanonicalConflict') -Definitions @(
                 [pscustomobject]@{Id='AppA';Aliases=@('AppB')},
                 [pscustomobject]@{Id='AppB'}
             )
             { Get-OSDAppCatalogPackages -CatalogPath $canonicalConflict } |
                 Should -Throw '*conflicts with a canonical app Id*'
 
-            $ownerConflict = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'OwnerConflict') -App @(
+            $ownerConflict = New-AliasCatalogFixture -Root (Join-Path $TestDrive 'OwnerConflict') -Definitions @(
                 [pscustomobject]@{Id='AppA';Aliases=@('OldApp')},
                 [pscustomobject]@{Id='AppB';Aliases=@('OldApp')}
             )
