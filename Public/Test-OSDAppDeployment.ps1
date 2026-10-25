@@ -273,6 +273,23 @@ function Test-OSDAppDeployment {
             $payloadReady = ($payloadReady -and $integrityValid)
             $detail = if ($payloadReady) { 'Repository archive is present and SHA-256 validated.' } else { 'Repository archive is missing, malformed, or failed SHA-256 validation.' }
         }
+        elseif ($source -eq 'BuiltIn' -and $id -eq 'CMTraceOpen') {
+            $expectedName = 'CMTrace-Open_{0}_{1}.msi' -f [string]$app.Version,[string]$app.Architecture
+            $expectedRelative = 'BuiltIn\CMTraceOpen\' + [string]$app.Architecture + '\' + $expectedName
+            $definitionValid = (
+                [string]$app.Version -match '^\d+\.\d+\.\d+$' -and
+                [string]$app.Type -eq 'VendorMsi' -and
+                [string]$app.Package -eq $expectedRelative -and
+                [string]$app.Architecture -in @('x64','arm64') -and
+                [string]$app.ExpectedSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $file = Join-Path $stageRoot $expectedRelative
+            $payloadReady = $definitionValid -and (Test-Path -LiteralPath $file -PathType Leaf)
+            $integrityValid = $payloadReady -and
+                ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -eq [string]$app.ExpectedSha256)
+            $payloadReady = $payloadReady -and $integrityValid
+            $detail = if ($payloadReady) { 'CMTrace Open MSI SHA-256 validated.' } else { 'CMTrace Open MSI missing or hash mismatch.' }
+        }
         elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'CompanyPortalAppxBundle') {
             $prefix = 'BuiltIn\MicrosoftCompanyPortal\' + [string]$app.Architecture + '\'
             $definitionValid = ($id -eq 'MicrosoftCompanyPortal' -and
@@ -345,7 +362,7 @@ function Test-OSDAppDeployment {
         }
 
         if (-not $payloadReady) { $allPayloadsReady = $false }
-        $applicationRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','CompanyPortalAppxBundle')) -or $payloadReady))
+        $applicationRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
         Add-DeploymentCheck -Name 'ApplicationDefinition' -ApplicationId $id -Passed $applicationRequiredStateValid -Required $true -Message "${id}: $detail"
         Add-DeploymentCheck -Name 'OfflinePayload' -ApplicationId $id -Passed $payloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
 

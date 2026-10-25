@@ -273,6 +273,24 @@
       "CachePath": "BuiltIn/MicrosoftCompanyPortal/<architecture>",
       "RepositoryAlternative": true,
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/companyportal.svg"
+    },
+    {
+      "Id": "CMTraceOpen",
+      "DisplayName": "CMTrace Open",
+      "Source": "BuiltIn",
+      "Vendor": "CMTrace Open",
+      "Acquisition": "GitHubReleaseMsi",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppCMTraceOpen",
+      "SyncCommand": "Sync-OSDAppCMTraceOpen",
+      "Architectures": [
+        "x64",
+        "arm64"
+      ],
+      "DefaultArchitecture": "x64",
+      "CachePath": "BuiltIn/CMTraceOpen/<architecture>",
+      "RepositoryAlternative": true,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/cmtraceopen.svg"
     }
   ]
 }

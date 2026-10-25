@@ -107,6 +107,7 @@ function Get-OSDApp {
     $dotNetCacheInfo = $null
     $sevenZipCacheInfo = $null
     $zoomCacheInfo = $null
+    $cmTraceInfo = $null
     $companyPortalInfo = $null
     $firefoxCacheInfo = $null
 
@@ -114,6 +115,7 @@ function Get-OSDApp {
         foreach ($definition in @(
             @{ Id='Microsoft365Apps'; Path=(Join-Path $cachePath 'BuiltIn\Microsoft365Apps\CacheInfo.json') },
             @{ Id='MicrosoftCompanyPortal'; Path=(Join-Path $cachePath 'BuiltIn\MicrosoftCompanyPortal\x64\CacheInfo.json') },
+        @{ Id='CMTraceOpen'; Path=(Join-Path $cachePath 'BuiltIn\CMTraceOpen\x64\CacheInfo.json') },
             @{ Id='MicrosoftTeams'; Path=(Join-Path $cachePath 'BuiltIn\MicrosoftTeams\CacheInfo.json') },
             @{ Id='AdobeAcrobatUnified'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $(if ($hostArchitecture -eq 'x86') { 'x86' } else { 'x64' }) 'CacheInfo.json'))) },
             @{ Id='GoogleChromeEnterprise'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\GoogleChromeEnterprise' (Join-Path $(if ($hostArchitecture -eq 'x86') { 'x86' } else { 'x64' }) 'CacheInfo.json'))) },
@@ -130,6 +132,7 @@ function Get-OSDApp {
                     switch ($definition.Id) {
                         'Microsoft365Apps' { $officeCacheInfo = $info }
                         'MicrosoftCompanyPortal' { $companyPortalInfo = $info }
+                        'CMTraceOpen' { $cmTraceInfo = $info }
                         'MicrosoftTeams' { $microsoftTeamsCacheInfo = $info }
                         'AdobeAcrobatUnified' { $adobeCacheInfo = $info }
                         'GoogleChromeEnterprise' { $chromeCacheInfo = $info }
@@ -170,6 +173,7 @@ function Get-OSDApp {
         @{ Id='WindowsInboxCleanup'; DisplayName='Windows Inbox App Cleanup'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='Microsoft365Apps'; DisplayName='Microsoft 365 Apps'; Info=$officeCacheInfo },
         @{ Id='MicrosoftCompanyPortal'; DisplayName='Microsoft Company Portal'; Info=$companyPortalInfo },
+        @{ Id='CMTraceOpen'; DisplayName='CMTrace Open'; Info=$cmTraceInfo },
         @{ Id='MicrosoftTeams'; DisplayName='Microsoft Teams'; Info=$microsoftTeamsCacheInfo },
         @{ Id='AdobeAcrobatUnified'; DisplayName='Adobe Acrobat Unified'; Info=$adobeCacheInfo },
         @{ Id='GoogleChromeEnterprise'; DisplayName='Google Chrome Enterprise'; Info=$chromeCacheInfo },
