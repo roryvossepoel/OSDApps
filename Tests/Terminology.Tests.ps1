@@ -13,7 +13,7 @@ Describe 'Canonical OSDApps terminology' {
             })
         $found = [System.Collections.Generic.List[string]]::new()
         foreach ($file in $paths) {
-            $relative = $file.FullName.Substring($script:repositoryRoot.Length).TrimStart('\\','/')
+            $relative = $file.FullName.Substring($script:repositoryRoot.Length).TrimStart('\','/')
             if ($relative -match $script:obsoletePattern) {
                 $found.Add("Filename: $relative")
             }
