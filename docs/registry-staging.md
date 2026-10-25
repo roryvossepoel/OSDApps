@@ -67,9 +67,39 @@ Automated tests cover staging without registry mutation, both host bitnesses,
 both explicit views, Default resolution, empty keys, read-back, repeated runs,
 updates, type conversion and invalid input. Real registry tests use only unique
 GUID-named subtrees under HKLM\SOFTWARE\OSDApps\Tests and remove those subtrees.
-A physical WinPE/SetupComplete test is still required for the new feature.
+CI #528 passed 569 tests on each of Windows PowerShell 5.1 and PowerShell 7 for
+commit `3194fcca69d894df009d6c4c8d1b8bf72bbc4d9f`, with no failures or skipped tests.
+
+### Physical x64 acceptance - 25 October 2026
+
+The maintainer completed the registry-only WinPE -> SetupComplete -> OOBE test
+using the USB module built from `3194fcc` and the normal launcher. The final
+runner result and registry result share deployment ID
+`88e3a849-2e4d-4ff5-abda-68f27c66294c`.
+
+- Runner: one Script entry succeeded, exit code 0, no failed or skipped entries,
+  and package SHA-256 checked before execution. Runner duration: 4.9 seconds.
+- Registry result: nine of nine operations succeeded, all with `Outcome=Created`:
+  three key-only operations and six String/DWord values.
+- Independent read-back: Registry64 contained `CreatedIn64BitView` and 64;
+  Registry32 contained `CreatedIn32BitView` and 32; both EmptyKey subkeys existed
+  without values. All missing levels of the deep HKLM test path were present.
+- With no switch, the separate Default subkey resolved to Registry64 in the
+  recorded 64-bit process; `HostDefault`, 0 and its empty subkey were verified.
+- PreInstall had no acquisition targets. No cache was used. Network availability
+  was not measured; this is not evidence of a disconnected-network test.
+
+This physical acceptance covers creation and read-back under HKLM on x64 Windows.
+It does not claim physical HKCR/HKU coverage, native 32-bit Windows or ARM
+coverage, a second physical idempotence run, or a combined apps-plus-registry run.
+Repeated execution and updating one view are covered by the automated tests.
+The separately successful 14-entry app deployment remains separate evidence.
 
 For a registry-only physical test use the supplied launcher example and an empty
 Windows deployment. Keep the existing working USB module under its old folder;
 place this candidate in `OSDApps-Registry` alongside it. Do not erase app caches
-or publish to the Gallery to test this feature.
+or publish to the Gallery to test this feature. The successful acceptance above
+does not require repeating the same deployment after documentation-only changes.
+
+See the [candidate review and release handoff](release-candidate-0.52.0.md) for
+breaking-contract requirements, known reporting limits and publication boundaries.
