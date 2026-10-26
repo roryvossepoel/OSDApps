@@ -12,6 +12,8 @@ function Add-OSDAppGoogleChromeEnterprise {
         [string]$WindowsPath
     )
 
+    Assert-OSDAppSourceEnabled -Source BuiltIn
+
     if (-not $PackageUri) {
         $PackageUri = switch ($Architecture) {
             'x64' { 'https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi' }

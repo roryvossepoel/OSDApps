@@ -7,6 +7,8 @@ function Add-OSDAppCMTraceOpen {
         [string]$WindowsPath
     )
 
+    Assert-OSDAppSourceEnabled -Source BuiltIn
+
     $target = Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
     $cache = Get-OSDAppCachePath
     $source = Join-Path $cache ('BuiltIn\CMTraceOpen\' + $Architecture)

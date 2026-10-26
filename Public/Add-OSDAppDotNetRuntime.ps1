@@ -7,6 +7,8 @@ function Add-OSDAppDotNetRuntime {
         [ValidateRange(1,120)][int]$InstallTimeoutMinutes = 10,
         [string]$WindowsPath
     )
+
+    Assert-OSDAppSourceEnabled -Source BuiltIn
     $target = Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
     $cachePath = $null
     try { $cachePath = Get-OSDAppCachePath } catch { Write-Verbose 'No USB cache; acquisition will use the OS disk.' }

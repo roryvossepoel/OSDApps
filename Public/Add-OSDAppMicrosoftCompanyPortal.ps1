@@ -5,6 +5,8 @@ function Add-OSDAppMicrosoftCompanyPortal {
         [string]$WindowsPath
     )
 
+    Assert-OSDAppSourceEnabled -Source BuiltIn
+
     $target = Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
     $cachePath = Get-OSDAppCachePath
     $source = Join-Path $cachePath ('BuiltIn\MicrosoftCompanyPortal\' + $Architecture)
