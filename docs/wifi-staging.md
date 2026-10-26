@@ -19,7 +19,7 @@ The runtime removes its credential-bearing config in its `finally` block after a
 ```powershell
 $usb = @(Get-Volume | Where-Object { $_.FileSystemLabel -eq 'OSDCloud' -and $_.DriveLetter })
 if ($usb.Count -ne 1) { throw 'Expected exactly one OSDCloud volume.' }
-$profile = Join-Path "$($usb[0].DriveLetter):\" 'OSDApps-TestData\WiFi\Wi-Fi-FSOCIETY.xml'
+$profile = Join-Path "$($usb[0].DriveLetter):\" 'OSDApps-TestData\WiFi\profile.xml'
 Add-OSDAppWiFiProfile -Path $profile
 Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
 ```
