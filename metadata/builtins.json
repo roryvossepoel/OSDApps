@@ -304,6 +304,24 @@
       "CachePath": "BuiltIn/CMTraceOpen/<architecture>",
       "RepositoryAlternative": true,
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/cmtraceopen.svg"
+    },
+    {
+      "Id": "WiFiProfiles",
+      "DisplayName": "Wi-Fi profiles",
+      "Source": "BuiltIn",
+      "PackageType": "Script",
+      "Vendor": "OSDApps",
+      "Acquisition": "BundledScript",
+      "SyncPhase": "None",
+      "AddCommand": "Add-OSDAppWiFiProfile",
+      "SyncCommand": null,
+      "Architectures": [
+        "any"
+      ],
+      "DefaultArchitecture": "any",
+      "CachePath": null,
+      "RepositoryAlternative": false,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
     }
   ]
 }

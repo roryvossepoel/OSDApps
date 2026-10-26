@@ -104,6 +104,23 @@
             Examples = @(@{ Code = 'Sync-OSDAppCMTraceOpen -Architecture x64'; Remarks = 'Download and integrity-verify the current stable x64 MSI from the official project release.' })
             Link = 'docs/cmtrace-open.md'
         }
+        'Add-OSDAppWiFiProfile' = @{
+            Synopsis = 'Stage Wi-Fi profiles from parameters or XML for all users during SetupComplete.'
+            Description = 'Accepts WPA2-Personal, WPA3-Personal and open WLAN XML exports. Repeated profile names replace prior staged definitions. Preserves connection mode and updates existing profiles. Credential-bearing staging is restricted to SYSTEM/Administrators and consumed after one runtime attempt, even with CleanupMode Never.'
+            Environment = 'WinPE after applying Windows; the runtime requires a working WLAN driver and service in full Windows.'
+            Output = 'A staged built-in Script summary containing profile names and operation count, without XML or shared keys.'
+            Parameters = @{
+                Path = 'One or more local WLAN XML exports. Personal profiles must be exported with key=clear. Never upload these credential-bearing files.'
+                SSID = 'Network name, encoded as 1 to 32 UTF-8 bytes. Mutually exclusive with Path; XML is generated internally.'
+                Security = 'Explicit network security: WPA2Personal (WPA2PSK/AES), WPA3Personal (WPA3SAE/AES), or Open (open/none).'
+                Password = 'Personal-network passphrase: 8 to 63 printable ASCII characters, as a plain string or SecureString. Required for personal networks and forbidden for Open. A hardcoded value remains readable in your script.'
+                ProfileName = 'Optional Windows profile name, defaulting to SSID. Repeated case-sensitive names replace previously staged definitions.'
+                ConnectionMode = 'Auto (default) or Manual. Controls the generated profile connection mode; staging does not initiate a connection.'
+                Hidden = 'Set nonBroadcast=true in the generated profile for a hidden network. Defaults to false.'
+            }
+            Examples = @(@{ Code = 'Add-OSDAppWiFiProfile -SSID ''DeploymentWiFi'' -Security WPA2Personal -Password ''ExampleOnly123!'''; Remarks = 'Generate a profile without prompts or an XML input file. The example password is fictitious.' }, @{ Code = 'Add-OSDAppWiFiProfile -Path ''E:\OSDApps-TestData\WiFi\profile.xml'''; Remarks = 'Stage a local profile export using automatic offline Windows discovery.' })
+            Link = 'docs/wifi-staging.md'
+        }
         'Add-OSDAppWindowsFeature' = @{
             Parameters = @{
                 Enable = 'Windows optional feature names to enable. Names are passed to Windows servicing without OSDApps autocomplete or a maintained feature catalog.'
