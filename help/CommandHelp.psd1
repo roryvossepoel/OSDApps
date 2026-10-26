@@ -368,8 +368,22 @@
             )
             Link = 'docs/viewer.md'
         }
+        'Add-OSDAppFont' = @{
+            Synopsis = 'Synchronize and stage repository Font packages for SetupComplete.'
+            Description = 'Resolves repository packages whose PackageType is Font, then delegates normal repository synchronization, SHA-256 validation, cache reuse and staging to Add-OSDApp. SetupComplete installs supported .ttf and .otf files machine-wide through the OSDApps Runner. It does not execute a package-supplied Install.ps1.'
+            Environment = 'Intended for WinPE after Windows image application and before first boot.'
+            Output = 'OSDApps.StagedApp objects for the staged repository Font package; not installation proof.'
+            Parameters = @{
+                Id = 'Exact canonical repository Font package Ids or declared aliases, with pipeline support.'
+                SkipCacheRefresh = 'Use existing repository cache only; requested archives must pass SHA-256.'
+            }
+            Examples = @(
+                @{ Code = 'Add-OSDAppFont -Id ''OrganisationFonts'' -WindowsPath ''C:\'''; Remarks = 'Stage a repository Font package for machine-wide installation during SetupComplete.' }
+            )
+            Link = 'docs/repository.md'
+        }
         'Add-OSDApp' = @{
-            Synopsis = 'Synchronize and stage repository apps for SetupComplete.'
+            Synopsis = 'Synchronize and stage repository packages for SetupComplete.'
             Description = 'Resolves exact Ids, validates SHA-256 and updates local payloads, ordered device manifest and OSDApps SetupComplete blocks. May fall back only when all requested cache entries are valid. Without USB, uses target-local repository cache. Built-ins require dedicated Add commands. Re-adding an Id moves it to the end without duplication.'
             Environment = 'Intended for WinPE after Windows image app and before first boot. Do not target the running preparation PC.'
             Output = 'OSDApps.StagedApp objects; not installation proof.'
@@ -568,11 +582,12 @@
         }
         'New-OSDAppPackage' = @{
             Synopsis = 'Build Package.zip from a local installer source folder.'
-            Description = 'Requires Install.ps1 at source root. After source validation, WhatIf or declined confirmation returns without destination changes or a package-success object. Normal execution wraps files under Package/ and replaces OutputPath/Package.zip. Temporary work is cleaned in finally; installer scripts are never executed. Use a disposable build output; publication/build failures are not transactional rollback.'
+            Description = 'App and Script packages require Install.ps1 at source root; Font packages require at least one .ttf or .otf file. After source validation, WhatIf or declined confirmation returns without destination changes or a package-success object. Normal execution wraps files under Package/ and replaces OutputPath/Package.zip. Temporary work is cleaned in finally; installer scripts are never executed. Use a disposable build output; publication/build failures are not transactional rollback.'
             Environment = 'Repository preparation machine with source and writable build/TEMP directories.'
             Output = 'OSDApps.Package with Id, Version, PackagePath and Sha256 after building; no package-success object when previewed or declined.'
             Parameters = @{
-                SourcePath = 'Existing folder containing Install.ps1 and payload.'
+                SourcePath = 'Existing package source folder. App/Script require Install.ps1; Font requires at least one .ttf or .otf file.'
+                PackageType = 'Package contract to build: App, Script or Font. Default App.'
                 OutputPath = 'Build directory; Package.zip may be replaced during normal execution. Do not use the only copy of an existing package.'
             }
             Examples = @(@{ Code = 'New-OSDAppPackage -Id ExampleApp -Version 1.0.0 -SourcePath ''C:\Work\ExampleApp'' -OutputPath ''C:\Work\Build\ExampleApp'''; Remarks = 'Provide your own unattended installer script and payload.' })
@@ -580,21 +595,21 @@
         }
         'Add-OSDAppPackage' = @{
             Synopsis = 'Publish an existing package into a local repository.'
-            Description = 'Validates input structure and the canonical Id/alias graph before asking for destination approval. Only after approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. PackageType classifies the shared Install.ps1 execution unit as App or Script without changing its runtime path. Omitting Alias on an update preserves existing aliases; an explicitly empty Alias removes them. WhatIf or declined confirmation leaves the destination unchanged. Older repository source folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
+            Description = 'Validates input structure and the canonical Id/alias graph before asking for destination approval. Only after approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. PackageType selects App, Script or Font. App/Script use Package/Install.ps1; Font is installed by the OSDApps Runner and does not require package code. Omitting Alias on an update preserves existing aliases; an explicitly empty Alias removes them. WhatIf or declined confirmation leaves the destination unchanged. Older repository source folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
             Environment = 'Repository preparation machine with writable local repository.'
             Output = 'OSDApps.RepositoryPackage with archive SHA-256 and manifest reference after publication; no package-success object when previewed or declined.'
             Parameters = @{
                 Alias = 'Optional retired Ids that resolve to this canonical Id and are eligible for renamed-cache detection. Values cannot collide with another Id or alias.'
-                PackageType = 'Optional App or Script classification. New packages default to App; republishing an existing variant preserves its current type when omitted. Classification does not change integrity checks, execution context or failure handling.'
+                PackageType = 'Optional App, Script or Font classification. New packages default to App; republishing an existing variant preserves its current type when omitted. Classification does not change integrity checks, execution context or failure handling.'
             }
             Examples = @(@{ Code = 'Add-OSDAppPackage -Id ConfigureWindows -DisplayName ''Configure Windows'' -Version 1.0.0 -Architecture x64 -PackageType Script -PackagePath ''C:\Work\Build\ConfigureWindows\Package.zip'' -RepositoryPath ''C:\Work\Repository'''; Remarks = 'Publish a script package using the same repository and SetupComplete runtime contract as an app.' })
             Link = 'docs/repository.md'
         }
         'Test-OSDAppPackage' = @{
             Synopsis = 'Validate repository archive structure and report SHA-256.'
-            Description = 'Extracts into owned temporary storage, checks Package/Install.ps1, computes hash and cleans temporary files. Local preview/confirmation preferences allow validation and its cleanup to finish without approving caller destination changes. Never executes Install.ps1. Valid is structural, not malware scanning or installation success.'
+            Description = 'Extracts into owned temporary storage, validates structure for the selected PackageType, computes hash and cleans temporary files. Local preview/confirmation preferences allow validation and its cleanup to finish without approving caller destination changes. Never executes Install.ps1. Valid is structural, not malware scanning or installation success.'
             Environment = 'Preparation machine or suitable PowerShell with archive support and writable TEMP.'
-            Output = 'OSDApps.PackageValidation with structure flags, Sha256 and Valid.'
+            Output = 'OSDApps.PackageValidation with PackageType, structure flags, FontFileCount, Sha256 and Valid.'
             Examples = @(@{ Code = 'Test-OSDAppPackage -PackagePath ''C:\Work\Build\ExampleApp\Package.zip'''; Remarks = 'Inspect an existing package before repository publication.' })
             Link = 'docs/repository.md'
         }
