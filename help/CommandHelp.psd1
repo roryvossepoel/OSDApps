@@ -103,6 +103,20 @@
             Examples = @(@{ Code = 'Sync-OSDAppCMTraceOpen -Architecture x64'; Remarks = 'Download and integrity-verify the current stable x64 MSI from the official project release.' })
             Link = 'docs/cmtrace-open.md'
         }
+        'Add-OSDAppWindowsFeature' = @{
+            Parameters = @{
+                Enable = 'Windows optional feature names to enable. Names are passed to Windows servicing without OSDApps autocomplete or a maintained feature catalog.'
+                Disable = 'Windows optional feature names to disable. A feature cannot appear in both Enable and Disable in the same call.'
+            }
+            Synopsis = 'Stage declarative Windows optional feature enable/disable operations.'
+            Description = 'Stages one OSDApps-owned built-in Script that applies Windows optional feature operations during SetupComplete. Operations are processed independently; invalid or unavailable feature names are reported as failures without preventing later operations from being attempted. Native Windows servicing runs with NoRestart. OSDApps records restart-needed state but never reboots the device. Re-adding a feature replaces its earlier desired state.'
+            Environment = 'WinPE after OSDCloud has applied Windows; execution happens later in full Windows under SYSTEM.'
+            Output = 'OSDApps.StagedApp with the combined operation count and desired enable/disable lists.'
+            Examples = @(
+                @{ Code = 'Add-OSDAppWindowsFeature -Enable @(''NetFx3'',''Microsoft-Windows-Subsystem-Linux'') -Disable ''Printing-XPSServices-Features'''; Remarks = 'Stage explicit desired Windows optional feature states.' }
+            )
+            Link = 'docs/built-in-apps.md'
+        }
         'Add-OSDAppWindowsInboxCleanup' = @{
             Parameters = @{
                 Remove = 'Exact Windows Appx DisplayName identifiers to remove; patterns and empty selections are rejected. Required unless using -Preset Tested13.'

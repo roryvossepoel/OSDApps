@@ -36,6 +36,7 @@
         'Add-OSDApp',
         'Add-OSDAppRegistryKey',
     'Add-OSDAppRegistryValue',
+    'Add-OSDAppWindowsFeature',
     'Add-OSDAppWindowsInboxCleanup',
         'Add-OSDAppCMTraceOpen',
         'Add-OSDAppMicrosoftCompanyPortal',

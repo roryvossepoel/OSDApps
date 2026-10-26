@@ -268,6 +268,40 @@ function Test-OSDAppDeployment {
             $payloadReady = $definitionValid -and $integrityValid
             $detail = if ($payloadReady) { 'Company Portal bundle, license and dependencies are SHA-256 validated.' } else { 'Company Portal package contents are missing or corrupt.' }
         }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WindowsFeatureScript') {
+            $definitionValid = (
+                $id -eq 'WindowsFeatures' -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\WindowsFeatures\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\WindowsFeatures\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\WindowsFeatures\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\WindowsFeatures\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $featureConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            $integrityValid = (
+                                [int]$featureConfig.SchemaVersion -eq 1 -and
+                                @($featureConfig.Operations).Count -gt 0
+                            )
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'Windows Features script and configuration are SHA-256 validated.' } else { 'Windows Features definition, content or hash validation failed.' }
+        }
         elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WindowsInboxCleanupScript') {
             $definitionValid = (
                 $id -eq 'WindowsInboxCleanup' -and
@@ -311,7 +345,7 @@ function Test-OSDAppDeployment {
         }
 
         if (-not $payloadReady) { $allPayloadsReady = $false }
-        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
+        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
         Add-DeploymentCheck -Name 'AppDefinition' -AppId $id -Passed $appRequiredStateValid -Required $true -Message "${id}: $detail"
         Add-DeploymentCheck -Name 'OfflinePayload' -AppId $id -Passed $payloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
 

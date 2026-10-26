@@ -252,6 +252,24 @@
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/inboxcleanup.svg"
     },
     {
+      "Id": "WindowsFeatures",
+      "DisplayName": "Windows optional features",
+      "Source": "BuiltIn",
+      "PackageType": "Script",
+      "Vendor": "OSDApps",
+      "Acquisition": "BundledScript",
+      "SyncPhase": "None",
+      "AddCommand": "Add-OSDAppWindowsFeature",
+      "SyncCommand": null,
+      "Architectures": [
+        "any"
+      ],
+      "DefaultArchitecture": "any",
+      "CachePath": null,
+      "RepositoryAlternative": false,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
+    },
+    {
       "Id": "MicrosoftCompanyPortal",
       "DisplayName": "Microsoft Company Portal",
       "Source": "BuiltIn",

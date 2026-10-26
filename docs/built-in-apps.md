@@ -18,7 +18,27 @@ App built-ins default to x64. Runtime prerequisite cmdlets require one explicit 
 | [Zoom Workplace](#zoom-workplace) | x64, arm64 | Architecture, desktop shortcut, SSO host and Zoom settings |
 | [Cisco Webex](#cisco-webex) | x64, arm64 | Architecture and supported MSI options |
 | [Windows Inbox Cleanup](#windows-inbox-cleanup) | any | Explicit app selection, tested preset, or diagnostic-only |
+| [Windows optional features](#windows-optional-features) | any | Explicit feature names to enable or disable |
 
+
+## Windows optional features
+
+`Add-OSDAppWindowsFeature` stages explicit Windows optional feature names and applies them once during SetupComplete under SYSTEM. OSDApps does not maintain a feature-name catalog, offer feature-name autocomplete, infer dependencies, or select source media. The operator is responsible for supplying feature names that exist on the target Windows build.
+
+```powershell
+Add-OSDAppWindowsFeature -Enable @(
+    'NetFx3',
+    'Microsoft-Windows-Subsystem-Linux'
+) -Disable @(
+    'Printing-XPSServices-Features'
+)
+```
+
+The staged `WindowsFeatures` built-in is a Script and requires no repository, USB cache, or network acquisition. Repeated Add calls build one operation set; the most recently staged desired state for a feature replaces its earlier state. Supplying the same feature to both `-Enable` and `-Disable` in one call is rejected.
+
+SetupComplete queries the current state before changing anything. Already enabled/disabled features succeed idempotently. Remaining operations are still attempted when one feature fails. The aggregate script returns failure when any operation failed. Windows servicing is always called with `-NoRestart`; OSDApps records `RestartNeeded` and may return the normal 3010 success code to Runner, but does not reboot the device.
+
+Results are written to `%ProgramData%\OSDApps\Results\WindowsFeatures-Result.json` by default. No DISM source/media management is included in this first implementation.
 
 ## Windows Inbox Cleanup
 
