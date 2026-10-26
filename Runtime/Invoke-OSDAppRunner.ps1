@@ -221,18 +221,33 @@ function New-RunnerAppResult {
     )
 
     $cacheInfo = Get-RunnerCacheInfo -App $App
-    # Freshness belongs to this deployment's PreInstall result, never to an older CacheInfo.json.
-    $acquisitionOutcome = if ([string]$App.Source -eq 'BuiltIn') { 'Unknown' } else { 'NotApplicable' }
+    # Only current, uniquely correlated PreInstall evidence may describe acquisition.
+    # CacheInfo.json still supplies content identity, never per-deployment flags.
+    $hasAcquisitionPhase = ([string]$App.Source -eq 'BuiltIn' -and
+        [string]$App.Type -notin @('WindowsInboxCleanupScript','CompanyPortalAppxBundle') -and
+        [string]$App.Id -ne 'CMTraceOpen')
+    $acquisitionOutcome = if ($hasAcquisitionPhase) { 'Unknown' } else { 'NotApplicable' }
+    $cacheUsed = $null
+    $packageUpdated = $null
     $cacheDecisionReason = $null
     $refreshFailureType = $null
     $refreshError = $null
-    if ([string]$App.Source -eq 'BuiltIn' -and $preInstallResult) {
-        $preparation = @($preInstallResult.Apps | Where-Object { [string]$_.Id -eq [string]$App.Id } | Select-Object -First 1)
-        if ($preparation.Count -gt 0 -and $preparation[0].PSObject.Properties.Name -contains 'AcquisitionOutcome') {
-            $acquisitionOutcome = [string]$preparation[0].AcquisitionOutcome
-            if ($preparation[0].PSObject.Properties.Name -contains 'CacheDecisionReason') { $cacheDecisionReason = $preparation[0].CacheDecisionReason }
-            if ($preparation[0].PSObject.Properties.Name -contains 'RefreshFailureType') { $refreshFailureType = $preparation[0].RefreshFailureType }
-            if ($preparation[0].PSObject.Properties.Name -contains 'RefreshError') { $refreshError = $preparation[0].RefreshError }
+    if ($hasAcquisitionPhase -and $preInstallResult -and $manifest -and
+        -not [string]::IsNullOrWhiteSpace([string]$manifest.DeploymentId) -and
+        -not [string]::IsNullOrWhiteSpace([string]$preInstallResult.DeploymentId) -and
+        [string]$preInstallResult.DeploymentId -eq [string]$manifest.DeploymentId) {
+        $preparation = @($preInstallResult.Apps | Where-Object { [string]$_.Id -eq [string]$App.Id })
+        # Ambiguous or incomplete records must not silently become the first match or false.
+        if ($preparation.Count -eq 1 -and [string]$preparation[0].AcquisitionOutcome -in
+            @('Downloaded','CacheReused','OfflineCacheUsed','FallbackCacheUsed','Failed')) {
+            $entry = $preparation[0]
+            $acquisitionOutcome = [string]$entry.AcquisitionOutcome
+            if ($entry.CacheUsed -is [bool]) { $cacheUsed = $entry.CacheUsed }
+            if ([string]$entry.Status -eq 'Succeeded' -and $acquisitionOutcome -ne 'Failed' -and
+                $entry.PackageUpdated -is [bool]) { $packageUpdated = $entry.PackageUpdated }
+            if ($entry.PSObject.Properties.Name -contains 'CacheDecisionReason') { $cacheDecisionReason = $entry.CacheDecisionReason }
+            if ($entry.PSObject.Properties.Name -contains 'RefreshFailureType') { $refreshFailureType = $entry.RefreshFailureType }
+            if ($entry.PSObject.Properties.Name -contains 'RefreshError') { $refreshError = $entry.RefreshError }
         }
     }
     [pscustomobject]@{
@@ -247,8 +262,8 @@ function New-RunnerAppResult {
         ExitCode        = if ($Execution -and $null -ne $Execution.ExitCode) { [int]$Execution.ExitCode } else { $null }
         DurationSeconds = [math]::Round($DurationSeconds, 1)
         Integrity       = if ($Execution -and $Execution.Integrity) { [string]$Execution.Integrity } else { $null }
-        CacheUsed       = if ($cacheInfo -and $null -ne $cacheInfo.Cached) { [bool]$cacheInfo.Cached } else { $null }
-        PackageUpdated  = if ($cacheInfo -and $null -ne $cacheInfo.Updated) { [bool]$cacheInfo.Updated } else { $null }
+        CacheUsed       = $cacheUsed
+        PackageUpdated  = $packageUpdated
         AcquisitionOutcome = $acquisitionOutcome
         CacheDecisionReason = $cacheDecisionReason
         RefreshFailureType = $refreshFailureType
@@ -380,9 +395,10 @@ try {
         try {
             $candidatePreInstallResult = Get-Content -LiteralPath $preInstallResultPath -Raw -Encoding UTF8 |
                 ConvertFrom-Json -ErrorAction Stop
-            if ($candidatePreInstallResult.DeploymentId -and $manifest.DeploymentId -and
+            if ([string]::IsNullOrWhiteSpace([string]$candidatePreInstallResult.DeploymentId) -or
+                [string]::IsNullOrWhiteSpace([string]$manifest.DeploymentId) -or
                 [string]$candidatePreInstallResult.DeploymentId -ne [string]$manifest.DeploymentId) {
-                Write-RunnerLog -LogPath $logPath -Event 'PreInstallResultIgnored' -Level Warning -Message 'PreInstall result belongs to another deployment.' -Data @{ Path=$preInstallResultPath; ExpectedDeploymentId=$manifest.DeploymentId; ActualDeploymentId=$candidatePreInstallResult.DeploymentId }
+                Write-RunnerLog -LogPath $logPath -Event 'PreInstallResultIgnored' -Level Warning -Message 'PreInstall result has no matching deployment identity.' -Data @{ Path=$preInstallResultPath; ExpectedDeploymentId=$manifest.DeploymentId; ActualDeploymentId=$candidatePreInstallResult.DeploymentId }
             }
             else {
                 $preInstallResult = $candidatePreInstallResult

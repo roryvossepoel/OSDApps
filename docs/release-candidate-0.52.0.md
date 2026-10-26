@@ -78,12 +78,16 @@ The registry feature's detailed evidence and usage are in
 
 ## Known limitations retained for review
 
-**Acquisition reporting:** issue #74 tracks `PackageUpdated` copied from stored
-CacheInfo.json, which can describe an earlier sync even when the current run
-correctly reports `AcquisitionOutcome=CacheReused`. Use the matching deployment's
-`AcquisitionOutcome`, `CacheDecisionReason` and PreInstall results for acquisition
-decisions. Do not treat `CacheUsed` or `PackageUpdated` alone as a current-download
-counter. This reporting issue has not been fixed by the successful installation.
+**Release blocker: issue #74.** Do not publish 0.52.0 until the current-deployment
+reporting fix is validated on Windows PowerShell 5.1 and PowerShell 7 and merged.
+The candidate fix records `PackageUpdated` in the current PreInstall phase and
+copies flags only from the matching deployment and unique app record. It does
+not use a previous cache-sync flag. Unknown/failed/non-applicable acquisition
+remains null; a separate Teams bootstrapper download is not a primary MSIX update.
+`CacheUsed` describes USB cache-root selection, not confirmed reuse. The original
+14/14 and registry acceptance logs are historical evidence, not proof of this
+reporting fix. See [runtime reporting](runtime.md#machine-readable-deployment-result)
+for the precise field meanings. No new physical run is claimed here.
 
 **Signature coverage:** successful cache/installer status is not proof that every
 file was checked for a digital signature. The observed preparation run had ten
