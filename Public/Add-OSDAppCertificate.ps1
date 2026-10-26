@@ -77,7 +77,7 @@ function Add-OSDAppCertificate {
         $scriptHash=(Get-FileHash -LiteralPath (Join-Path $transaction 'Install.ps1') -Algorithm SHA256).Hash
         $configHash=(Get-FileHash -LiteralPath (Join-Path $transaction 'config.json') -Algorithm SHA256).Hash
         $app=[pscustomobject]@{
-            Id='Certificates';DisplayName='Certificates';Vendor='OSDApps'
+            Id='Certificates';DisplayName='Public CA certificates';Vendor='OSDApps'
             Source='BuiltIn';PackageType='Script';Type='CertificateScript';Version='1.0.0';Architecture='any'
             Script='BuiltIn\Certificates\Install.ps1'
             Configuration='BuiltIn\Certificates\config.json'
