@@ -8,6 +8,19 @@ During SetupComplete the runtime starts WlanSvc if necessary, enumerates enabled
 
 No adapter, unavailable/disabled WLAN service, missing driver, unsupported security or any failed interface import produces a failed result in that same run. There is no retry task, reboot request or post-reboot verification. Independent profiles continue after individual import failures.
 
+## Configure with parameters
+
+```powershell
+Add-OSDAppWiFiProfile -SSID 'DeploymentWiFi' -Security WPA2Personal -Password 'ExampleOnly123!'
+Add-OSDAppWiFiProfile -SSID 'GuestWiFi' -Security Open -ConnectionMode Manual
+```
+
+`-SSID` and `-Security` replace `-Path`; the two parameter sets cannot be combined. Security accepts `WPA2Personal`, `WPA3Personal` or `Open`. Personal networks require an 8-63 character printable ASCII passphrase (plain string or SecureString); open networks reject the Password parameter. Raw 64-character PSKs, Enterprise/EAP, OWE and WPA3 transition-mode generation are outside this parameter interface.
+
+`-ProfileName` defaults to SSID. `-ConnectionMode` defaults to Auto and also accepts Manual. `-Hidden` sets nonBroadcast=true. SSIDs are UTF-8 encoded with a 32-byte limit; XML includes the hexadecimal bytes to preserve the network identity. XML escaping is handled by XmlWriter. Networks with arbitrary non-UTF-8 SSID bytes require a suitable XML export.
+
+Generated and file-based profiles use the same transaction, integrity validation and one-shot runtime. No intermediate XML file is written. A hardcoded password remains visible in the caller's script/history; SecureString input still becomes clear text in the restricted staging configuration required for deployment. OSDApps does not log the password or return generated XML from the public command.
+
 ## Credential handling
 
 Staging contains the profile XML in `BuiltIn\WiFiProfiles\config.json`. Before writing credentials, the staging directory receives a protected ACL granting only SYSTEM and Administrators full control. Script and configuration hashes are checked by the deployment validator and runner. Logs and reports contain profile names and numeric WLAN return/reason codes, never XML or shared keys.

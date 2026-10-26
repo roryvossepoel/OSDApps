@@ -1,7 +1,13 @@
 function Add-OSDAppWiFiProfile {
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(SupportsShouldProcess,DefaultParameterSetName='File')]
     param(
-        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string[]]$Path,
+        [Parameter(Mandatory,ParameterSetName='File')][ValidateNotNullOrEmpty()][string[]]$Path,
+        [Parameter(Mandatory,ParameterSetName='Settings')][ValidateNotNullOrEmpty()][string]$SSID,
+        [Parameter(Mandatory,ParameterSetName='Settings')][ValidateSet('WPA2Personal','WPA3Personal','Open')][string]$Security,
+        [Parameter(ParameterSetName='Settings')][object]$Password,
+        [Parameter(ParameterSetName='Settings')][string]$ProfileName,
+        [Parameter(ParameterSetName='Settings')][ValidateSet('Auto','Manual')][string]$ConnectionMode='Auto',
+        [Parameter(ParameterSetName='Settings')][switch]$Hidden,
         [string]$WindowsPath
     )
 
@@ -9,7 +15,15 @@ function Add-OSDAppWiFiProfile {
     if (-not (Test-OSDAppWinPE)) { throw 'Stage Wi-Fi profile changes in WinPE after OSDCloud, not on the preparation PC.' }
 
     # Read and validate every input before changing offline staging.
-    $newOperations=@(foreach($file in $Path) { Read-OSDAppWiFiProfile -LiteralPath $file })
+    if($PSCmdlet.ParameterSetName -eq 'File') {
+        $newOperations=@(foreach($file in $Path) { Read-OSDAppWiFiProfile -LiteralPath $file })
+    }
+    else {
+        $settings=@{SSID=$SSID;Security=$Security;ConnectionMode=$ConnectionMode;Hidden=$Hidden}
+        if($PSBoundParameters.ContainsKey('Password')){$settings.Password=$Password}
+        if($PSBoundParameters.ContainsKey('ProfileName')){$settings.ProfileName=$ProfileName}
+        $newOperations=@(New-OSDAppWiFiProfileDefinition @settings)
+    }
 
     $target=Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
     $stage=Join-Path $target 'Windows\Temp\OSDApps'
