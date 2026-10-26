@@ -105,6 +105,7 @@ function Get-OSDAppUIPackageType {
     param([Parameter(Mandatory)]$App)
 
     if ([string]$App.PackageType -eq 'Script') { return 'Script' }
+    if ([string]$App.PackageType -eq 'Font') { return 'Font' }
     return 'App'
 }
 
