@@ -98,7 +98,7 @@ jobs:
               $definitions = @(Get-OSDAppUIBuiltInMetadata)
               $expected = @{
                   Microsoft365Apps='Microsoft'; MicrosoftTeams='Microsoft'; MicrosoftCompanyPortal='Microsoft'; CMTraceOpen='CMTrace Open'
-                  WindowsInboxCleanup='OSDApps'
+                  WindowsInboxCleanup='OSDApps'; WindowsFeatures='OSDApps'
                   AdobeAcrobatUnified='Adobe'; GoogleChromeEnterprise='Google'
                   MozillaFirefoxEnterprise='Mozilla'; CiscoWebex='Cisco'; ZoomWorkplace='Zoom'; '7Zip'='Igor Pavlov'; VisualStudioCode='Microsoft'; VisualCRedist='Microsoft'; DotNetRuntime='Microsoft'
               }
