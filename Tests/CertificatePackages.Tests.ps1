@@ -24,16 +24,16 @@ Describe 'Repository certificate packages' {
     It 'requires an explicit machine store on publication and preserves it on updates' {
         $repo=Join-Path $TestDrive 'Repository'
         New-OSDAppRepository -Path $repo | Out-Null
-        $args=@{Id='TestRootCA';DisplayName='Test Root CA';Version='1.0.0';Architecture='any';PackageType='Certificate';PackagePath=$script:package.PackagePath;RepositoryPath=$repo}
-        {Add-OSDAppPackage @args} | Should -Throw '*require CertificateStore*'
-        Add-OSDAppPackage @args -CertificateStore Root | Out-Null
-        (Add-OSDAppPackage @args).CertificateStore | Should -Be Root
+        $publishParameters=@{Id='TestRootCA';DisplayName='Test Root CA';Version='1.0.0';Architecture='any';PackageType='Certificate';PackagePath=$script:package.PackagePath;RepositoryPath=$repo}
+        {Add-OSDAppPackage @publishParameters} | Should -Throw '*require CertificateStore*'
+        Add-OSDAppPackage @publishParameters -CertificateStore Root | Out-Null
+        (Add-OSDAppPackage @publishParameters).CertificateStore | Should -Be Root
         $manifest=Get-Content (Join-Path $repo 'Apps\TestRootCA\1.0.0\any\manifest.json') -Raw | ConvertFrom-Json
         $manifest.CertificateStore | Should -Be Root
         $manifest.PackageType | Should -Be Certificate
         @(Test-OSDAppRepository -RepositoryPath $repo)[0].Valid | Should -BeTrue
         $before=Get-Content (Join-Path $repo 'catalog.json') -Raw
-        Add-OSDAppPackage @args -CertificateStore CA -WhatIf
+        Add-OSDAppPackage @publishParameters -CertificateStore CA -WhatIf
         (Get-Content (Join-Path $repo 'catalog.json') -Raw) | Should -Be $before
         (Get-Content (Join-Path $repo 'Apps\TestRootCA\1.0.0\any\manifest.json') -Raw | ConvertFrom-Json).CertificateStore | Should -Be Root
         $manifest.CertificateStore='My'

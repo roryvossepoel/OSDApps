@@ -29,6 +29,7 @@ Describe 'Operational readiness and deployment results' {
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppVisualStudioCode.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppPrerequisite.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppFont.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppCertificate.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppBuiltInCacheTransaction.ps1') -Destination $stage
 
             $archive = Join-Path $packageDirectory 'Package.zip'
