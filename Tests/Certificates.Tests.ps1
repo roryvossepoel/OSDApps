@@ -7,7 +7,7 @@ Describe 'One-shot public certificate staging' {
         $script:intermediate=New-SelfSignedCertificate -Type Custom -Subject 'CN=OSDApps CI Intermediate' -Signer $script:ca -CertStoreLocation 'Cert:\CurrentUser\My' -KeyUsage CertSign,CRLSign -TextExtension @('2.5.29.19={critical}{text}ca=1') -NotAfter (Get-Date).AddHours(12)
         $script:file=Join-Path $TestDrive 'ca.cer'
         Export-Certificate -Cert $script:ca -FilePath $script:file | Out-Null
-        $runtime=Join-Path $script:root 'Runtime\Invoke-OSDAppCertificates.ps1'
+        $runtime=Join-Path $script:root 'Runtime\OSDAppCertificate.ps1'
         $tokens=$null;$errors=$null
         $ast=[Management.Automation.Language.Parser]::ParseFile($runtime,[ref]$tokens,[ref]$errors)
         if(@($errors).Count){throw 'Certificate runtime parser errors.'}

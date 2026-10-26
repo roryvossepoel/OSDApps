@@ -175,7 +175,7 @@ function Test-OSDAppDeployment {
         if ($queueValid) { "App queue contains $($apps.Count) unique valid entries." } else { 'App queue is empty, contains duplicate IDs, or contains an invalid ID.' }
     )
 
-    $runtimeFiles = @('Invoke-OSDAppPreInstall.ps1', 'Invoke-OSDAppRunner.ps1', 'Restore-OSDAppCacheGeneration.ps1', 'Assert-OSDAppTransactionSpace.ps1', 'Enter-OSDAppCacheLock.ps1', 'Test-OSDAppOfficeCacheCompatibility.ps1', 'OSDAppSleepPrevention.ps1', 'OSDAppPayloadFile.ps1','OSDApp7Zip.ps1','OSDAppVisualStudioCode.ps1','OSDAppPrerequisite.ps1','OSDAppFont.ps1', 'Invoke-OSDAppBuiltInCacheTransaction.ps1')
+    $runtimeFiles = @('Invoke-OSDAppPreInstall.ps1', 'Invoke-OSDAppRunner.ps1', 'Restore-OSDAppCacheGeneration.ps1', 'Assert-OSDAppTransactionSpace.ps1', 'Enter-OSDAppCacheLock.ps1', 'Test-OSDAppOfficeCacheCompatibility.ps1', 'OSDAppSleepPrevention.ps1', 'OSDAppPayloadFile.ps1','OSDApp7Zip.ps1','OSDAppVisualStudioCode.ps1','OSDAppPrerequisite.ps1','OSDAppFont.ps1','OSDAppCertificate.ps1', 'Invoke-OSDAppBuiltInCacheTransaction.ps1')
     $runtimeMissing = @($runtimeFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stageRoot $_) -PathType Leaf) })
     Add-DeploymentCheck -Name 'RuntimeScripts' -Passed ($runtimeMissing.Count -eq 0) -Required $true -Message $(
         if ($runtimeMissing.Count -eq 0) { 'Standalone runtime scripts and shared cache helpers are staged.' } else { "Missing runtime script(s): $($runtimeMissing -join ', ')." }
@@ -233,10 +233,14 @@ function Test-OSDAppDeployment {
         if ($source -eq 'Repository') {
             $archivePath = Join-Path $stageRoot (Join-Path 'Packages' (Join-Path $id 'Package.zip'))
             $definitionValid = ($app.Archive -and [string]$app.Archive.Sha256 -match '^[A-Fa-f0-9]{64}$')
+            if ([string]$app.PackageType -eq 'Certificate' -and [string]$app.CertificateStore -notin @('Root','CA')) { $definitionValid=$false }
             $payloadReady = Test-Path -LiteralPath $archivePath -PathType Leaf
             $integrityValid = $false
             if ($definitionValid -and $payloadReady) {
                 $integrityValid = Test-OSDAppFileHash -Path $archivePath -ExpectedSha256 ([string]$app.Archive.Sha256)
+            }
+            if ($integrityValid -and [string]$app.PackageType -eq 'Certificate') {
+                $integrityValid=(Test-OSDAppPackage -PackagePath $archivePath -PackageType Certificate -CertificateStore ([string]$app.CertificateStore)).Valid
             }
             $payloadReady = ($payloadReady -and $integrityValid)
             $detail = if ($payloadReady) { 'Repository archive is present and SHA-256 validated.' } else { 'Repository archive is missing, malformed, or failed SHA-256 validation.' }

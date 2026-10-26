@@ -9,6 +9,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'OSDAppPayloadFile.ps1')
 . (Join-Path $PSScriptRoot 'OSDAppPrerequisite.ps1')
 . (Join-Path $PSScriptRoot 'OSDAppFont.ps1')
+. (Join-Path $PSScriptRoot 'OSDAppCertificate.ps1')
 $sleepRequest = $null
 $sleepLog = $null
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
@@ -486,8 +487,12 @@ try {
         if ($source -eq 'BuiltIn' -and [string]$app.Type -notin $supportedBuiltInTypes) {
             throw (New-RunnerFailureException -Message "Unsupported built-in app type '$($app.Type)' for '$id'." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
         }
+        if ($source -eq 'Repository' -and [string]$app.PackageType -eq 'Certificate' -and
+            [string]$app.CertificateStore -notin @('Root','CA')) {
+            throw (New-RunnerFailureException -Message 'Certificate packages require CertificateStore Root or CA.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
+        }
         if ($source -eq 'Repository' -and
-            [string]$app.PackageType -notin @('App','Script','Font')) {
+            [string]$app.PackageType -notin @('App','Script','Font','Certificate')) {
             throw (New-RunnerFailureException -Message "Repository package '$id' has unsupported PackageType '$($app.PackageType)'." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
         }
         if ($source -eq 'Repository' -and
@@ -644,6 +649,16 @@ try {
         Expand-Archive -LiteralPath $archivePath -DestinationPath $packageWork -Force
 
         $payloadRoot = Join-Path $packageWork 'Package'
+
+        if ([string]$package.PackageType -eq 'Certificate') {
+            if (@(Get-ChildItem -LiteralPath $packageWork -Force).Count -ne 1) { throw 'Certificate ZIP must contain only the Package directory.' }
+            $certificateResultPath = Join-Path (Split-Path -Path $resultPath -Parent) ("Certificate-{0}-Result.json" -f [string]$package.Id)
+            Write-RunnerLog -LogPath $logPath -Event 'CertificatePackageInstallStart' -Message 'Importing machine-wide CA certificates.' -Data @{Id=$package.Id;Store=$package.CertificateStore}
+            $execution=Invoke-OSDAppCertificatePackage -PayloadRoot $payloadRoot -PackageId ([string]$package.Id) -Store ([string]$package.CertificateStore) -DeploymentId ([string]$manifest.DeploymentId) -ResultPath $certificateResultPath
+            if($execution.ExitCode -ne 0) { throw "Certificate package '$($package.Id)' failed; see $certificateResultPath." }
+            Write-RunnerLog -LogPath $logPath -Event 'CertificatePackageInstallComplete' -Message 'Machine-wide CA certificate import completed.' -Data @{Id=$package.Id;ResultPath=$certificateResultPath}
+            return $execution
+        }
 
         if ([string]$package.PackageType -eq 'Font') {
             $fontResultPath = Join-Path (Split-Path -Path $resultPath -Parent) ("Font-{0}-Result.json" -f [string]$package.Id)

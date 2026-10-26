@@ -1,4 +1,5 @@
 $moduleRoot = $PSScriptRoot
+. (Join-Path $moduleRoot 'Runtime\OSDAppCertificate.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDAppPayloadFile.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDApp7Zip.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDAppVisualStudioCode.ps1')

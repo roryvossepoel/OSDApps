@@ -1,3 +1,36 @@
+# Repository certificate packages
+
+Certificates can use the same repository, versioning, SHA-256 verification and USB cache as fonts. Publish a ZIP with `PackageType Certificate` and explicitly choose `CertificateStore Root` or `CA` in its manifest. Both destinations are **LocalMachine only**. The deployment command needs only the package Id.
+
+On the preparation machine, put only public CA `.cer` or `.crt` files in the source directory (subdirectories are allowed). Scripts, private keys, PFX files, bundles and support files are rejected. Root requires self-issued CA certificates; CA accepts intermediate CA certificates. Validation does not establish trustworthiness, verify the self-signature, or evaluate expiry/revocation/the full chain; the publisher must approve the certificates.
+
+```powershell
+$package = New-OSDAppPackage -Id CompanyRootCA -Version 1.0.0 `
+    -PackageType Certificate -SourcePath C:\Work\Certificates `
+    -OutputPath C:\Work\Build\CompanyRootCA
+
+Add-OSDAppPackage -Id CompanyRootCA -DisplayName 'Company Root CA' `
+    -Version 1.0.0 -Architecture any -PackageType Certificate `
+    -CertificateStore Root -PackagePath $package.PackagePath `
+    -RepositoryPath C:\Work\Repository
+```
+
+Upload the repository as usual and sync its configured catalog to the USB cache with `Sync-OSDAppRepository -Name CompanyRootCA`. Use the volume label `OSDCloud`; no fixed drive letter is required. Republishing an existing variant without CertificateStore preserves that variant's store. A new variant must specify its store explicitly.
+
+In WinPE, after applying Windows:
+
+```powershell
+Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud -CleanupMode Never
+Add-OSDAppCertificate -Id CompanyRootCA -SkipCacheRefresh
+Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
+```
+
+The existing repository runner imports the package once during SetupComplete, after SHA-256 verification and validation of every certificate. It never runs package scripts. Duplicate thumbprints within a package are imported once; certificates already in the destination are reported as `AlreadyPresent`. Import failures are reported and remaining valid operations are attempted. There is no reboot, scheduled retry, or later repair pass.
+
+`Certificate-CompanyRootCA-Result.json` records the deployment Id, subject, thumbprint, machine store and outcome, without certificate bytes. Public certificate files follow the configured cleanup policy, including retention with `Never`.
+
+The local-file interface remains available and uses the same import functions:
+
 # Public CA certificate staging
 
 In WinPE after OSDCloud applies Windows, stage public certificates for one SetupComplete import as SYSTEM:

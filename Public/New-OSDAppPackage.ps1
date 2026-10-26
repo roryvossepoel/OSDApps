@@ -6,14 +6,17 @@ function New-OSDAppPackage {
         [Parameter(Mandatory)][string]$SourcePath,
         [Parameter(Mandatory)][string]$OutputPath,
 
-        [ValidateSet('App','Script','Font')]
+        [ValidateSet('App','Script','Font','Certificate')]
         [string]$PackageType = 'App'
     )
 
     $resolvedSource = (Resolve-Path -LiteralPath $SourcePath -ErrorAction Stop).Path
     $installScript = Join-Path $resolvedSource 'Install.ps1'
 
-    if ($PackageType -eq 'Font') {
+    if ($PackageType -eq 'Certificate') {
+        Get-OSDAppCertificatePackageOperations -PayloadRoot $resolvedSource -Store CA | Out-Null
+    }
+    elseif ($PackageType -eq 'Font') {
         $fontFiles = @(
             Get-ChildItem -LiteralPath $resolvedSource -File -Recurse -ErrorAction Stop |
                 Where-Object { $_.Extension.ToLowerInvariant() -in @('.ttf','.otf') }

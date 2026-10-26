@@ -130,10 +130,14 @@ function Get-OSDAppCatalogPackages {
             else {
                 'App'
             }
-            if ($packageType -notin @('App','Script','Font')) {
-                throw "Package '$($app.Id)' has unsupported PackageType '$packageType'. Expected App, Script or Font."
+            if ($packageType -notin @('App','Script','Font','Certificate')) {
+                throw "Package '$($app.Id)' has unsupported PackageType '$packageType'. Expected App, Script, Font or Certificate."
             }
-            $packageType = if ($packageType -ieq 'Script') { 'Script' } elseif ($packageType -ieq 'Font') { 'Font' } else { 'App' }
+            $packageType = if ($packageType -ieq 'Script') { 'Script' } elseif ($packageType -ieq 'Font') { 'Font' } elseif ($packageType -ieq 'Certificate') { 'Certificate' } else { 'App' }
+
+            if ($packageType -eq 'Certificate' -and [string]$packageManifest.CertificateStore -notin @('Root','CA')) {
+                throw "Certificate package '$($app.Id)' requires CertificateStore Root or CA."
+            }
 
             if (-not $packageManifest.Archive -or
                 [string]$packageManifest.Archive.Sha256 -notmatch '^[A-Fa-f0-9]{64}$') {
@@ -169,6 +173,7 @@ function Get-OSDAppCatalogPackages {
                 Version      = [string]$packageManifest.Version
                 Architecture = [string]$packageManifest.Architecture
                 PackageType  = $packageType
+                CertificateStore = if($packageType -eq 'Certificate'){[string]$packageManifest.CertificateStore}else{$null}
                 SuccessCodes = @($packageManifest.SuccessCodes)
                 Archive      = [pscustomobject]$archive
             })

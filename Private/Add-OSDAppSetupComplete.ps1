@@ -44,7 +44,7 @@ function Add-OSDAppSetupComplete {
     if ($PSCmdlet.ShouldProcess($stagedRoot, 'Stage OSD Apps runtime scripts')) {
         New-Item -ItemType Directory -Path $scriptsPath -Force | Out-Null
         New-Item -ItemType Directory -Path $stagedRoot -Force | Out-Null
-        foreach ($helper in @('OSDAppPayloadFile.ps1','OSDApp7Zip.ps1','OSDAppVisualStudioCode.ps1','OSDAppPrerequisite.ps1','OSDAppFont.ps1','Invoke-OSDAppBuiltInCacheTransaction.ps1')) {
+        foreach ($helper in @('OSDAppPayloadFile.ps1','OSDApp7Zip.ps1','OSDAppVisualStudioCode.ps1','OSDAppPrerequisite.ps1','OSDAppFont.ps1','OSDAppCertificate.ps1','Invoke-OSDAppBuiltInCacheTransaction.ps1')) {
             Copy-Item -LiteralPath (Join-Path $moduleRoot (Join-Path 'Runtime' $helper)) -Destination (Join-Path $stagedRoot $helper) -Force
         }
         Copy-Item -LiteralPath $runnerSource -Destination (Join-Path $stagedRoot 'Invoke-OSDAppRunner.ps1') -Force

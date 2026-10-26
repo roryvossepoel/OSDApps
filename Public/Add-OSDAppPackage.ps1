@@ -11,8 +11,10 @@ function Add-OSDAppPackage {
         [ValidateSet('x64','arm64','any')]
         [string]$Architecture = 'x64',
 
-        [ValidateSet('App','Script','Font')]
+        [ValidateSet('App','Script','Font','Certificate')]
         [string]$PackageType,
+
+        [ValidateSet('Root','CA')][string]$CertificateStore,
 
         [int[]]$SuccessCodes = @(0,3010),
 
@@ -29,7 +31,7 @@ function Add-OSDAppPackage {
     $catalog = Get-OSDAppRepositoryManifest -RepositoryPath $RepositoryPath
     $existingApp = @($catalog.Apps | Where-Object { $_.Id -eq $Id } | Select-Object -First 1)
     if ($PSBoundParameters.ContainsKey('PackageType')) {
-        $PackageType = if ($PackageType -ieq 'Script') { 'Script' } elseif ($PackageType -ieq 'Font') { 'Font' } else { 'App' }
+        $PackageType = if ($PackageType -ieq 'Script') { 'Script' } elseif ($PackageType -ieq 'Font') { 'Font' } elseif ($PackageType -ieq 'Certificate') { 'Certificate' } else { 'App' }
     }
     elseif (Test-Path -LiteralPath $targetManifest -PathType Leaf) {
         $existingPackageManifest = Get-OSDAppManifest -Path $targetManifest
@@ -40,17 +42,29 @@ function Add-OSDAppPackage {
         else {
             'App'
         }
-        if ($existingPackageType -notin @('App','Script','Font')) {
+        if ($existingPackageType -notin @('App','Script','Font','Certificate')) {
             throw "Existing package '$Id' has unsupported PackageType '$existingPackageType'."
         }
-        $PackageType = if ($existingPackageType -ieq 'Script') { 'Script' } elseif ($existingPackageType -ieq 'Font') { 'Font' } else { 'App' }
+        $PackageType = if ($existingPackageType -ieq 'Script') { 'Script' } elseif ($existingPackageType -ieq 'Font') { 'Font' } elseif ($existingPackageType -ieq 'Certificate') { 'Certificate' } else { 'App' }
     }
     else {
         $PackageType = 'App'
     }
 
-    $packageTest = Test-OSDAppPackage -PackagePath $PackagePath -PackageType $PackageType
+    $testParameters=@{PackagePath=$PackagePath;PackageType=$PackageType}
+    if ($PackageType -eq 'Certificate') {
+        if (-not $PSBoundParameters.ContainsKey('CertificateStore') -and (Test-Path -LiteralPath $targetManifest -PathType Leaf)) {
+            $existingCertificateManifest=Get-OSDAppManifest -Path $targetManifest
+            if ([string]$existingCertificateManifest.PackageType -eq 'Certificate') { $CertificateStore=[string]$existingCertificateManifest.CertificateStore }
+        }
+        if ($CertificateStore -notin @('Root','CA')) { throw 'Certificate packages require CertificateStore Root or CA; no store is selected automatically.' }
+        $CertificateStore=if($CertificateStore -ieq 'Root'){'Root'}else{'CA'}
+        $testParameters.CertificateStore=$CertificateStore
+    }
+    elseif ($PSBoundParameters.ContainsKey('CertificateStore')) { throw 'CertificateStore is only valid for Certificate packages.' }
+    $packageTest = Test-OSDAppPackage @testParameters
     if (-not $packageTest.Valid) {
+        if ($PackageType -eq 'Certificate') { throw ('Certificate package validation failed: '+$packageTest.Error) }
         if ($PackageType -eq 'Font') {
             throw 'Font package validation failed. Package.zip must contain Package/ with at least one .ttf or .otf file.'
         }
@@ -126,6 +140,8 @@ function Add-OSDAppPackage {
         }
     }
 
+    if ($PackageType -eq 'Certificate') { $packageManifest['CertificateStore']=$CertificateStore }
+
     # Vendor is optional descriptive metadata, not an installer parameter.
     # Older repositories remain compatible when it is absent.
     if (-not [string]::IsNullOrWhiteSpace($Vendor)) {
@@ -178,6 +194,7 @@ function Add-OSDAppPackage {
         Version      = $Version
         Architecture = $Architecture
         PackageType  = $PackageType
+        CertificateStore = if($PackageType -eq 'Certificate'){$CertificateStore}else{$null}
         SuccessCodes = @($SuccessCodes)
         Aliases      = @($effectiveAliases)
         ManifestPath = $manifestRelativePath

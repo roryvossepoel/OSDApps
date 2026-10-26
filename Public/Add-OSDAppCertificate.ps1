@@ -1,10 +1,22 @@
 function Add-OSDAppCertificate {
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(SupportsShouldProcess,DefaultParameterSetName='File')]
     param(
-        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string[]]$Path,
-        [Parameter(Mandatory)][ValidateSet('Root','CA')][string]$Store,
+        [Parameter(Mandatory,ParameterSetName='File')][ValidateNotNullOrEmpty()][string[]]$Path,
+        [Parameter(Mandatory,ParameterSetName='File')][ValidateSet('Root','CA')][string]$Store,
+        [Parameter(Mandatory,ParameterSetName='Repository')][Alias('Name')][string]$Id,
+        [Parameter(ParameterSetName='Repository')][switch]$SkipCacheRefresh,
         [string]$WindowsPath
     )
+
+    if ($PSCmdlet.ParameterSetName -eq 'Repository') {
+        Assert-OSDAppSourceEnabled -Source Repository
+        $matches=@(Get-OSDApp -Name $Id | Where-Object { [string]$_.Source -eq 'Repository' -and [string]$_.Id -ieq $Id })
+        if ($matches.Count -ne 1) { throw "Repository certificate package '$Id' was not found uniquely in the configured catalog/cache." }
+        if ([string]$matches[0].PackageType -ne 'Certificate') { throw "Repository package '$Id' is not Certificate." }
+        if (-not $PSCmdlet.ShouldProcess($Id,'Stage repository certificate package for SetupComplete')) { return }
+        Add-OSDApp -Name $Id -WindowsPath $WindowsPath -SkipCacheRefresh:$SkipCacheRefresh -Confirm:$false
+        return
+    }
 
     Assert-OSDAppSourceEnabled -Source BuiltIn
     if (-not (Test-OSDAppWinPE)) { throw 'Stage certificates in WinPE after OSDCloud, not on the preparation PC.' }
@@ -71,7 +83,11 @@ function Add-OSDAppCertificate {
     $promoted=$false;$backedUp=$false;$committed=$false
     try {
         New-Item -ItemType Directory -Path $transaction -Force | Out-Null
-        Copy-Item -LiteralPath $scriptSource -Destination (Join-Path $transaction 'Install.ps1') -ErrorAction Stop
+        # Embed shared functions so the existing script hash covers the entire local importer.
+        $shared=Get-Content -LiteralPath (Join-Path $moduleRoot 'Runtime\OSDAppCertificate.ps1') -Raw -Encoding UTF8
+        $runtime=Get-Content -LiteralPath $scriptSource -Raw -Encoding UTF8
+        $runtime=$runtime.Replace('. (Join-Path $PSScriptRoot ''OSDAppCertificate.ps1'')',$shared)
+        $runtime | Set-Content -LiteralPath (Join-Path $transaction 'Install.ps1') -Encoding UTF8 -ErrorAction Stop
         $config | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $transaction 'config.json') -Encoding UTF8 -ErrorAction Stop
 
         $scriptHash=(Get-FileHash -LiteralPath (Join-Path $transaction 'Install.ps1') -Algorithm SHA256).Hash
