@@ -169,6 +169,7 @@ Describe 'Repository driver packages' {
         $result.Command | Should -Match '/add-driver "'
         $result.Command | Should -Not -Match '/reboot|/force|/install'
         ($result.StandardOutput+$result.StandardError).Length | Should -BeGreaterThan 0
+        ($result.StandardOutput+$result.StandardError) | Should -Not -Match ([string][char]0)
     }
     It 'routes a real driver ZIP through the runner and reports native failure without executing Install.ps1' {
         $source=Join-Path $TestDrive 'RuntimeSource'

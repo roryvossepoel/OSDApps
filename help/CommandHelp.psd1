@@ -33,10 +33,10 @@
         DisplayName = 'Human-readable repository app name for discovery and the Viewer.'
         Vendor = 'Optional descriptive publisher metadata, not a cryptographic result or installer argument.'
         Version = 'Repository package version written into authoring metadata and paths. Does not query installed apps.'
-        PackagePath = 'Existing Package.zip archive. App and Script packages require Package/Install.ps1; Font packages require at least one .ttf or .otf under Package/.'
-        PackageType = 'Repository package semantics: App, Script, Font, Certificate or Driver. App and Script execute Package/Install.ps1; Font is installed by the OSDApps runtime and does not require Install.ps1.'
+        PackagePath = 'Existing Package.zip archive. App and Script packages require Package/Install.ps1; Font packages require at least one .ttf or .otf under Package/. Driver packages require INFs and their complete vendor payload under Package/.'
+        PackageType = 'Repository package semantics: App, Script, Font, Certificate or Driver. App and Script execute Package/Install.ps1; Font, Certificate and Driver use dedicated OSDApps runtimes and do not require Install.ps1.'
         RepositoryPath = 'Local repository root containing catalog.json and Apps; not a remote URL or deployment target.'
-        SuccessCodes = 'Repository installer exit codes treated as success. Default accepts 0 and 3010.'
+        SuccessCodes = 'App/Script installer exit codes treated as success. Default accepts 0 and 3010. Dedicated Font, Certificate and Driver runtimes use fixed result semantics.'
     }
     Commands = @{
         'Add-OSDAppRegistryKey' = @{
