@@ -130,10 +130,10 @@ function Get-OSDAppCatalogPackages {
             else {
                 'App'
             }
-            if ($packageType -notin @('App','Script')) {
-                throw "Package '$($app.Id)' has unsupported PackageType '$packageType'. Expected App or Script."
+            if ($packageType -notin @('App','Script','Font')) {
+                throw "Package '$($app.Id)' has unsupported PackageType '$packageType'. Expected App, Script or Font."
             }
-            $packageType = if ($packageType -ieq 'Script') { 'Script' } else { 'App' }
+            $packageType = if ($packageType -ieq 'Script') { 'Script' } elseif ($packageType -ieq 'Font') { 'Font' } else { 'App' }
 
             if (-not $packageManifest.Archive -or
                 [string]$packageManifest.Archive.Sha256 -notmatch '^[A-Fa-f0-9]{64}$') {

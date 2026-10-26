@@ -1,16 +1,14 @@
 function Test-OSDAppPackage {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$PackagePath
+        [Parameter(Mandatory)][string]$PackagePath,
+
+        [ValidateSet('App','Script','Font')]
+        [string]$PackageType = 'App'
     )
 
     $resolved = (Resolve-Path -LiteralPath $PackagePath -ErrorAction Stop).Path
     $temp = Join-Path ([System.IO.Path]::GetTempPath()) ("OSDApps-" + [guid]::NewGuid().Guid)
-
-    # Validation reads the input and owns only this unique temporary directory.
-    # A caller's WhatIf/Confirm must not skip its cleanup or prompt for scratch
-    # operations. These preferences are local to this function: the caller still
-    # decides whether its destination changes are approved via ShouldProcess.
     $WhatIfPreference = $false
     $ConfirmPreference = 'None'
 
@@ -22,14 +20,28 @@ function Test-OSDAppPackage {
         $installScript = Join-Path $packageFolder 'Install.ps1'
         $packageFolderExists = Test-Path -LiteralPath $packageFolder -PathType Container
         $installScriptExists = Test-Path -LiteralPath $installScript -PathType Leaf
+        $fontFiles = @()
+        if ($packageFolderExists) {
+            $fontFiles = @(Get-ChildItem -LiteralPath $packageFolder -File -Recurse -ErrorAction SilentlyContinue |
+                Where-Object { $_.Extension.ToLowerInvariant() -in @('.ttf','.otf') })
+        }
+
+        $valid = if ($PackageType -eq 'Font') {
+            $packageFolderExists -and $fontFiles.Count -gt 0
+        }
+        else {
+            $packageFolderExists -and $installScriptExists
+        }
 
         [pscustomobject]@{
             PSTypeName          = 'OSDApps.PackageValidation'
             PackagePath         = $resolved
+            PackageType         = $PackageType
             PackageFolderExists = $packageFolderExists
             InstallPs1Exists    = $installScriptExists
+            FontFileCount       = $fontFiles.Count
             Sha256              = (Get-FileHash -LiteralPath $resolved -Algorithm SHA256).Hash
-            Valid               = ($packageFolderExists -and $installScriptExists)
+            Valid               = $valid
         }
     }
     finally {

@@ -46,6 +46,7 @@ Export-ModuleMember -Function @(
     'Sync-OSDAppMozillaFirefoxEnterprise',
     'Clear-OSDAppCache',
     'Add-OSDApp',
+    'Add-OSDAppFont',
     'Add-OSDAppRegistryKey',
     'Add-OSDAppRegistryValue',
     'Add-OSDAppWindowsFeature',

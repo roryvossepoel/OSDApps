@@ -91,7 +91,6 @@ function Test-OSDAppRepository {
                     $actualHash = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash
                     $hashValid = $actualHash.Equals([string]$manifest.Archive.Sha256, [System.StringComparison]::OrdinalIgnoreCase)
                 }
-                $packageValid = (Test-OSDAppPackage -PackagePath $packagePath).Valid
             }
 
             $architectureValid = (
@@ -109,9 +108,12 @@ function Test-OSDAppRepository {
                 [string]$manifest.PackageType
             }
             else { 'App' }
-            $packageTypeValid = $packageType -in @('App','Script')
+            $packageTypeValid = $packageType -in @('App','Script','Font')
             if ($packageTypeValid) {
-                $packageType = if ($packageType -ieq 'Script') { 'Script' } else { 'App' }
+                $packageType = if ($packageType -ieq 'Script') { 'Script' } elseif ($packageType -ieq 'Font') { 'Font' } else { 'App' }
+            }
+            if ($exists -and $packageTypeValid) {
+                $packageValid = (Test-OSDAppPackage -PackagePath $packagePath -PackageType $packageType).Valid
             }
 
             [pscustomobject]@{

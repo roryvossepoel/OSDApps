@@ -4,14 +4,25 @@ function New-OSDAppPackage {
         [Parameter(Mandatory)][string]$Id,
         [Parameter(Mandatory)][string]$Version,
         [Parameter(Mandatory)][string]$SourcePath,
-        [Parameter(Mandatory)][string]$OutputPath
+        [Parameter(Mandatory)][string]$OutputPath,
+
+        [ValidateSet('App','Script','Font')]
+        [string]$PackageType = 'App'
     )
 
     $resolvedSource = (Resolve-Path -LiteralPath $SourcePath -ErrorAction Stop).Path
     $installScript = Join-Path $resolvedSource 'Install.ps1'
-
-    if (-not (Test-Path -LiteralPath $installScript -PathType Leaf)) {
-        throw "Install.ps1 must exist at the root of the source folder: $resolvedSource"
+    if ($PackageType -in @('App','Script')) {
+        if (-not (Test-Path -LiteralPath $installScript -PathType Leaf)) {
+            throw "Install.ps1 must exist at the root of the source folder for $PackageType packages: $resolvedSource"
+        }
+    }
+    else {
+        $fontFiles = @(Get-ChildItem -LiteralPath $resolvedSource -File -Recurse -ErrorAction Stop |
+            Where-Object { $_.Extension.ToLowerInvariant() -in @('.ttf','.otf') })
+        if ($fontFiles.Count -eq 0) {
+            throw 'Font packages must contain at least one .ttf or .otf file.'
+        }
     }
 
     $packagePath = Join-Path $OutputPath 'Package.zip'
@@ -37,6 +48,7 @@ function New-OSDAppPackage {
             PSTypeName = 'OSDApps.Package'
             Id          = $Id
             Version     = $Version
+            PackageType = $PackageType
             PackagePath = $packagePath
             Sha256      = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash
         }
