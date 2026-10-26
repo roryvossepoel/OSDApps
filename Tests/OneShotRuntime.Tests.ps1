@@ -15,7 +15,7 @@ Describe 'One-shot fault-tolerant runtime' {
                 [Parameter(Mandatory)][string]$Stage,
                 [Parameter(Mandatory)][string]$Id,
                 [Parameter(Mandatory)][string]$InstallScript,
-                [ValidateSet('App','Script')][string]$PackageType = 'App'
+                [ValidateSet('App','Script','Font')][string]$PackageType = 'App'
             )
 
             $sourceRoot = Join-Path (Split-Path $Stage -Parent) ("Source-{0}-{1}" -f $Id, [guid]::NewGuid().ToString('N'))
