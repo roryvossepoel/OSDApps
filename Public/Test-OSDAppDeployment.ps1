@@ -232,7 +232,12 @@ function Test-OSDAppDeployment {
 
         if ($source -eq 'Repository') {
             $archivePath = Join-Path $stageRoot (Join-Path 'Packages' (Join-Path $id 'Package.zip'))
-            $definitionValid = ($app.Archive -and [string]$app.Archive.Sha256 -match '^[A-Fa-f0-9]{64}$')
+            $repositoryPackageType = if ($app.PackageType) { [string]$app.PackageType } else { 'App' }
+            $definitionValid = (
+                $repositoryPackageType -in @('App','Script','Font') -and
+                $app.Archive -and
+                [string]$app.Archive.Sha256 -match '^[A-Fa-f0-9]{64}$'
+            )
             $payloadReady = Test-Path -LiteralPath $archivePath -PathType Leaf
             $integrityValid = $false
             if ($definitionValid -and $payloadReady) {

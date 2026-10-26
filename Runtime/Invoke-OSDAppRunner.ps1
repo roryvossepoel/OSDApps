@@ -463,6 +463,9 @@ try {
         if ($source -eq 'BuiltIn' -and [string]$app.Type -notin $supportedBuiltInTypes) {
             throw (New-RunnerFailureException -Message "Unsupported built-in app type '$($app.Type)' for '$id'." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
         }
+        if ($source -eq 'Repository' -and [string]$app.PackageType -notin @('App','Script','Font')) {
+            throw (New-RunnerFailureException -Message "Repository package '$id' has unsupported PackageType '$($app.PackageType)'." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
+        }
         if ($source -eq 'Repository' -and
             (-not $app.Archive -or [string]$app.Archive.Sha256 -notmatch '^[A-Fa-f0-9]{64}$')) {
             throw (New-RunnerFailureException -Message "Repository package '$id' has no valid SHA-256 in the device manifest." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
@@ -559,6 +562,166 @@ try {
 
     New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
 
+
+    function Initialize-OSDAppFontNativeMethods {
+        if ('OSDAppsFontNative' -as [type]) { return }
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class OSDAppsFontNative {
+    [DllImport("gdi32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    public static extern int AddFontResourceW(string fileName);
+    [DllImport("gdi32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    public static extern bool RemoveFontResourceW(string fileName);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    public static extern IntPtr SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+}
+'@ -ErrorAction Stop
+    }
+
+    function Invoke-RepositoryFontPackage {
+        param(
+            [Parameter(Mandatory)]$Package,
+            [Parameter(Mandatory)][string]$PayloadRoot
+        )
+
+        $fontFiles = @(Get-ChildItem -LiteralPath $PayloadRoot -File -Recurse -ErrorAction Stop |
+            Where-Object { $_.Extension.ToLowerInvariant() -in @('.ttf','.otf') })
+        if ($fontFiles.Count -eq 0) {
+            throw "Font package '$($Package.Id)' contains no supported .ttf or .otf files."
+        }
+
+        Initialize-OSDAppFontNativeMethods
+        $fontDirectory = Join-Path $env:SystemRoot 'Fonts'
+        $registrySubKey = 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts'
+        $registryKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($registrySubKey,$true)
+        if ($null -eq $registryKey) {
+            throw 'Machine-wide Windows font registry key could not be opened for writing.'
+        }
+
+        $items = [System.Collections.Generic.List[object]]::new()
+        $duplicateNames = @(
+            $fontFiles |
+                Group-Object { $_.Name.ToLowerInvariant() } |
+                Where-Object Count -gt 1 |
+                Select-Object -ExpandProperty Name
+        )
+        $installedAny = $false
+
+        try {
+            foreach ($source in $fontFiles) {
+                $target = Join-Path $fontDirectory $source.Name
+                $format = if ($source.Extension -ieq '.otf') { 'OpenType' } else { 'TrueType' }
+                $registryName = '{0} ({1})' -f $source.BaseName,$format
+                $sourceHash = (Get-FileHash -LiteralPath $source.FullName -Algorithm SHA256).Hash
+                $status = 'Failed'
+                $outcome = 'Failed'
+                $errorMessage = $null
+
+                try {
+                    if ($source.Name.ToLowerInvariant() -in $duplicateNames) {
+                        throw "Duplicate font filename '$($source.Name)' exists in the package."
+                    }
+
+                    $registeredFile = $registryKey.GetValue($registryName,$null,[Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+                    if ($registeredFile -and -not [string]::Equals([string]$registeredFile,$source.Name,[StringComparison]::OrdinalIgnoreCase)) {
+                        throw "Font registration '$registryName' already points to '$registeredFile'."
+                    }
+
+                    if (Test-Path -LiteralPath $target -PathType Leaf) {
+                        $targetHash = (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash
+                        if ($targetHash -ne $sourceHash) {
+                            throw "Windows Fonts already contains '$($source.Name)' with different content."
+                        }
+                        if ($registeredFile -and [string]::Equals([string]$registeredFile,$source.Name,[StringComparison]::OrdinalIgnoreCase)) {
+                            $status = 'Succeeded'
+                            $outcome = 'AlreadyPresent'
+                        }
+                    }
+
+                    if ($status -ne 'Succeeded') {
+                        $copied = $false
+                        $fontLoaded = $false
+                        try {
+                            if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
+                                Copy-Item -LiteralPath $source.FullName -Destination $target -ErrorAction Stop
+                                $copied = $true
+                            }
+
+                            $loadedCount = [OSDAppsFontNative]::AddFontResourceW($target)
+                            if ($loadedCount -le 0) {
+                                throw "Windows rejected font resource '$($source.Name)'."
+                            }
+                            $fontLoaded = $true
+                            $registryKey.SetValue($registryName,$source.Name,[Microsoft.Win32.RegistryValueKind]::String)
+                            $installedAny = $true
+                            $status = 'Succeeded'
+                            $outcome = 'Installed'
+                        }
+                        catch {
+                            if ($fontLoaded) { [void][OSDAppsFontNative]::RemoveFontResourceW($target) }
+                            if ($copied -and (Test-Path -LiteralPath $target -PathType Leaf)) {
+                                Remove-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue
+                            }
+                            throw
+                        }
+                    }
+                }
+                catch {
+                    $errorMessage = $_.Exception.Message
+                }
+
+                $items.Add([pscustomobject]@{
+                    FileName = $source.Name
+                    Format = $format
+                    RegistryName = $registryName
+                    Sha256 = $sourceHash
+                    Status = $status
+                    Outcome = $outcome
+                    Error = $errorMessage
+                })
+            }
+        }
+        finally {
+            $registryKey.Dispose()
+        }
+
+        if ($installedAny) {
+            $HWND_BROADCAST = [IntPtr]0xffff
+            $WM_FONTCHANGE = 0x001D
+            [void][OSDAppsFontNative]::SendMessage($HWND_BROADCAST,$WM_FONTCHANGE,[IntPtr]::Zero,[IntPtr]::Zero)
+        }
+
+        $failedCount = @($items | Where-Object Status -eq 'Failed').Count
+        $ignoredCount = @(Get-ChildItem -LiteralPath $PayloadRoot -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Extension.ToLowerInvariant() -notin @('.ttf','.otf') }).Count
+        $fontResultPath = Join-Path (Split-Path $resultPath -Parent) ("Fonts-{0}.json" -f [string]$Package.Id)
+        $fontResult = [ordered]@{
+            SchemaVersion = 1
+            DeploymentId = [string]$manifest.DeploymentId
+            Id = [string]$Package.Id
+            Status = if ($failedCount -gt 0) { 'Failed' } else { 'Succeeded' }
+            FontCount = $items.Count
+            InstalledCount = @($items | Where-Object Outcome -eq 'Installed').Count
+            AlreadyPresentCount = @($items | Where-Object Outcome -eq 'AlreadyPresent').Count
+            FailedCount = $failedCount
+            IgnoredFileCount = $ignoredCount
+            Items = @($items)
+        }
+        New-Item -ItemType Directory -Path (Split-Path $fontResultPath -Parent) -Force | Out-Null
+        $fontResult | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $fontResultPath -Encoding UTF8
+
+        if ($failedCount -gt 0) {
+            throw "Font package '$($Package.Id)' failed for $failedCount font file(s)."
+        }
+
+        [pscustomobject]@{
+            ExitCode = 0
+            Integrity = 'Sha256Validated'
+            ResultPath = $fontResultPath
+        }
+    }
+
     function Invoke-RepositoryPackage {
         param([Parameter(Mandatory)]$package)
         $packageRoot = Join-Path $StagedPath (Join-Path 'Packages' $package.Id)
@@ -589,6 +752,13 @@ try {
         Expand-Archive -LiteralPath $archivePath -DestinationPath $packageWork -Force
 
         $payloadRoot = Join-Path $packageWork 'Package'
+        if ([string]$package.PackageType -eq 'Font') {
+            Write-RunnerLog -LogPath $logPath -Event 'FontPackageInstallStart' -Message 'Installing machine-wide repository font package.' -Data @{ Id=$package.Id; Version=$package.Version }
+            $fontExecution = Invoke-RepositoryFontPackage -Package $package -PayloadRoot $payloadRoot
+            Write-RunnerLog -LogPath $logPath -Event 'FontPackageInstallComplete' -Message 'Repository font package completed.' -Data @{ Id=$package.Id; Version=$package.Version; ResultPath=$fontExecution.ResultPath }
+            return $fontExecution
+        }
+
         $installScript = Join-Path $payloadRoot 'Install.ps1'
         if (-not (Test-Path -LiteralPath $installScript -PathType Leaf)) {
             throw "Package '$($package.Id)' does not contain Package\Install.ps1."
