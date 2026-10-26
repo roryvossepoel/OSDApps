@@ -14,6 +14,8 @@ function Add-OSDAppWindowsInboxCleanup {
         [string]$WindowsPath
     )
 
+    Assert-OSDAppSourceEnabled -Source BuiltIn
+
     # Explicit opt-in. No removals are selected simply by importing OSDApps.
     $selected = if ($PSCmdlet.ParameterSetName -eq 'Preset') {
         @(

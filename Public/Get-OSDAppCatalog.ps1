@@ -2,13 +2,27 @@ function Get-OSDAppCatalog {
     [CmdletBinding()]
     param()
 
-    $catalogUri = (Get-OSDAppConfiguration).CatalogUri
+    $configuration = Get-OSDAppConfiguration
+    $catalogUri = $configuration.CatalogUri
+
+    if (-not (Test-OSDAppSourceEnabled -Source Repository -Configuration $configuration)) {
+        return [pscustomobject]@{
+            PSTypeName    = 'OSDApps.CatalogStatus'
+            Uri           = $catalogUri
+            Scope         = 'Session'
+            Enabled       = $false
+            Available     = $false
+            AppCount      = 0
+            SchemaVersion = $null
+        }
+    }
 
     if (-not $catalogUri) {
         return [pscustomobject]@{
             PSTypeName       = 'OSDApps.CatalogStatus'
             Uri              = $null
             Scope            = 'Session'
+            Enabled          = $true
             Available        = $false
             AppCount = 0
             SchemaVersion    = $null
@@ -23,6 +37,7 @@ function Get-OSDAppCatalog {
             PSTypeName       = 'OSDApps.CatalogStatus'
             Uri              = $catalogUri
             Scope            = 'Session'
+            Enabled          = $true
             Available        = $true
             AppCount = @($catalog.Apps).Count
             SchemaVersion    = $catalog.SchemaVersion
@@ -33,6 +48,7 @@ function Get-OSDAppCatalog {
             PSTypeName       = 'OSDApps.CatalogStatus'
             Uri              = $catalogUri
             Scope            = 'Session'
+            Enabled          = $true
             Available        = $false
             AppCount = 0
             SchemaVersion    = $null

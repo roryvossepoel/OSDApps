@@ -14,6 +14,8 @@ function Add-OSDAppCiscoWebex {
         [string]$WindowsPath
     )
 
+    Assert-OSDAppSourceEnabled -Source BuiltIn
+
     if (-not $PackageUri) {
         $PackageUri = switch ($Architecture) {
             'x64' { 'https://binaries.webex.com/WebexOfclDesktop-Win-64-Gold/Webex_en.msi' }

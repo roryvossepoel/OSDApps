@@ -6,6 +6,8 @@ function Add-OSDAppRegistryKey {
         [switch]$Registry64,
         [string]$WindowsPath
     )
+
+    Assert-OSDAppSourceEnabled -Source BuiltIn
     $operation = New-OSDAppRegistryOperation -Action Key -Path $Path -Registry32:$Registry32 -Registry64:$Registry64
     if ($PSCmdlet.ShouldProcess($operation.Path, 'Stage a key-only change for SetupComplete')) {
         Save-OSDAppRegistryStaging -Operation $operation -WindowsPath $WindowsPath

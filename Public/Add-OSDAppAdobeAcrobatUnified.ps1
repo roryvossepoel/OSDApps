@@ -12,6 +12,8 @@ function Add-OSDAppAdobeAcrobatUnified {
         [string]$WindowsPath
     )
 
+    Assert-OSDAppSourceEnabled -Source BuiltIn
+
     if (-not $PackageUri) {
         $PackageUri = switch ($Architecture) {
             'x64' { 'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_x64_WWMUI.zip' }

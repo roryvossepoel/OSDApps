@@ -8,7 +8,10 @@ function Add-OSDApp {
         [switch]$SkipCacheRefresh
     )
 
-    begin { $requested=[System.Collections.Generic.List[string]]::new() }
+    begin {
+        Assert-OSDAppSourceEnabled -Source Repository
+        $requested=[System.Collections.Generic.List[string]]::new()
+    }
     process { foreach($item in $Name){ if(-not [string]::IsNullOrWhiteSpace($item)){ $requested.Add($item) } } }
     end {
         $apps=@($requested | Select-Object -Unique)

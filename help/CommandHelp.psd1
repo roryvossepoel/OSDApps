@@ -205,6 +205,8 @@
             Output = 'No output by default; PassThru returns OSDApps.Configuration.'
             Parameters = @{
                 CatalogUri = 'HTTP/HTTPS repository catalog.json URL; supply $null to clear it. Built-ins do not require a repository catalog.'
+                EnableBuiltIns = 'Enable or disable built-in apps and OSDApps-owned staging features for Add/discovery. Default is True.'
+                EnableRepository = 'Enable or disable repository/catalog packages for Add/discovery. Default is True.'
                 CleanupMode = 'OnSuccess schedules local staging cleanup after installation success; Never retains it. Failures retain source. Does not clear USB cache.'
                 CacheVolumeLabel = 'Label used to find the cache volume; default configuration is OSDCloud. Does not rename or format a volume.'
                 LogPath = 'Runtime log path recorded during staging. Default configuration is %ProgramData%\OSDApps\Logs\Runtime.log.'
@@ -213,13 +215,15 @@
             }
             Examples = @(
                 @{ Code = 'Set-OSDAppConfiguration -CleanupMode OnSuccess -CacheVolumeLabel ''OSDCloud'' -PassThru'; Remarks = 'Windows or WinPE: configure the session without staging.' },
-                @{ Code = 'Set-OSDAppConfiguration -CatalogUri ''https://example.org/osdapps/catalog.json'''; Remarks = 'Replace the URL with your own published repository.' }
+                @{ Code = 'Set-OSDAppConfiguration -CatalogUri ''https://example.org/osdapps/catalog.json'''; Remarks = 'Replace the URL with your own published repository.' },
+                @{ Code = 'Set-OSDAppConfiguration -EnableRepository $false'; Remarks = 'Use built-ins only for this module session.' },
+                @{ Code = 'Set-OSDAppConfiguration -EnableBuiltIns $false'; Remarks = 'Use repository/catalog packages only for this module session.' }
             )
             Link = 'docs/getting-started.md'
         }
         'Get-OSDAppConfiguration' = @{
             Synopsis = 'Read the effective session configuration.'
-            Description = 'Returns CatalogUri, CleanupMode, CacheVolumeLabel, LogPath, ResultPath and Scope. Initializes in-memory defaults when needed. Does not read a device manifest or persist configuration.'
+            Description = 'Returns CatalogUri, source enablement, CleanupMode, CacheVolumeLabel, LogPath, ResultPath and Scope. Initializes in-memory defaults when needed. Does not read a device manifest or persist configuration.'
             Environment = 'Full Windows or WinPE; current module session.'
             Output = 'OSDApps.Configuration with Scope=Session.'
             Examples = @(@{ Code = 'Get-OSDAppConfiguration | Format-List'; Remarks = 'Inspect effective settings before staging.' })
@@ -227,7 +231,7 @@
         }
         'Get-OSDAppCatalog' = @{
             Synopsis = 'Report availability of the configured repository catalog.'
-            Description = 'Reads catalog metadata over HTTP/HTTPS and reports app count and schema version. Does not download archives. No configured catalog or a read failure produces Available=False, not a detailed cause diagnosis.'
+            Description = 'Reads catalog metadata over HTTP/HTTPS and reports app count and schema version when Repository is enabled. Does not download archives. No configured catalog or a read failure produces Available=False, not a detailed cause diagnosis.'
             Environment = 'Full Windows or WinPE; online lookup when configured.'
             Output = 'OSDApps.CatalogStatus object.'
             Examples = @(@{ Code = 'Get-OSDAppCatalog | Format-List'; Remarks = 'Check catalog metadata, not installed apps.' })
