@@ -104,6 +104,17 @@
             Examples = @(@{ Code = 'Sync-OSDAppCMTraceOpen -Architecture x64'; Remarks = 'Download and integrity-verify the current stable x64 MSI from the official project release.' })
             Link = 'docs/cmtrace-open.md'
         }
+        'Add-OSDAppWiFiProfile' = @{
+            Synopsis = 'Stage Wi-Fi XML profiles for all users during SetupComplete.'
+            Description = 'Accepts WPA2-Personal, WPA3-Personal and open WLAN XML exports. Repeated profile names replace prior staged definitions. Preserves connection mode and updates existing profiles. Credential-bearing staging is restricted to SYSTEM/Administrators and consumed after one runtime attempt, even with CleanupMode Never.'
+            Environment = 'WinPE after applying Windows; the runtime requires a working WLAN driver and service in full Windows.'
+            Output = 'A staged built-in Script summary containing profile names and operation count, without XML or shared keys.'
+            Parameters = @{
+                Path = 'One or more local WLAN XML exports. Personal profiles must be exported with key=clear. Never upload these credential-bearing files.'
+            }
+            Examples = @(@{ Code = 'Add-OSDAppWiFiProfile -Path ''E:\OSDApps-TestData\WiFi\profile.xml'''; Remarks = 'Stage a local profile export using automatic offline Windows discovery.' })
+            Link = 'docs/wifi-staging.md'
+        }
         'Add-OSDAppWindowsFeature' = @{
             Parameters = @{
                 Enable = 'Windows optional feature names to enable. Names are passed to Windows servicing without OSDApps autocomplete or a maintained feature catalog.'
