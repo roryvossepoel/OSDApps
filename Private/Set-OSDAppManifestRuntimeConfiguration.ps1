@@ -7,8 +7,8 @@ function Set-OSDAppManifestRuntimeConfiguration {
     $configuration = Get-OSDAppConfiguration
 
     $runtime = [pscustomobject]@{
-        EnableBuiltIns   = [bool]$configuration.EnableBuiltIns
-        EnableRepository = [bool]$configuration.EnableRepository
+        EnableBuiltIns   = Test-OSDAppSourceEnabled -Source BuiltIn -Configuration $configuration
+        EnableRepository = Test-OSDAppSourceEnabled -Source Repository -Configuration $configuration
         CleanupMode      = $configuration.CleanupMode
         PreventSleep     = $configuration.PreventSleep
         CacheVolumeLabel = $configuration.CacheVolumeLabel

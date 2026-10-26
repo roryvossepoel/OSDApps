@@ -5,7 +5,7 @@ function Get-OSDAppCatalog {
     $configuration = Get-OSDAppConfiguration
     $catalogUri = $configuration.CatalogUri
 
-    if (-not $configuration.EnableRepository) {
+    if (-not (Test-OSDAppSourceEnabled -Source Repository -Configuration $configuration)) {
         return [pscustomobject]@{
             PSTypeName    = 'OSDApps.CatalogStatus'
             Uri           = $catalogUri

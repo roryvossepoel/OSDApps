@@ -71,7 +71,21 @@ With an OSDCloud-labeled USB flash drive connected, matching cache content is st
 
 **Pre-cached exceptions:** Microsoft Company Portal and CMTrace Open must first be synchronized on a full-Windows preparation machine and staged in WinPE from the populated OSDCloud cache. Neither is downloaded during SetupComplete. For Company Portal, `Sync-OSDAppMicrosoftCompanyPortal -Architecture x64` downloads the official Microsoft kit automatically; `-KitPath` is only an optional local-kit fallback. Use `Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure` before reboot for these entries.
 
-If you need different settings, `Set-OSDAppConfiguration` applies to the **current PowerShell session**. Set overrides before adding apps. Runtime settings are copied into the device manifest during staging; changing the session afterward does not rewrite an existing manifest by itself. If multiple Windows installations are found, specify `-WindowsPath` on the Add and preflight commands.
+If you need different settings, `Set-OSDAppConfiguration` applies to the **current PowerShell session**. Set overrides before adding apps.
+
+Both sources are enabled by default. Restrict one deployment session when needed:
+
+```powershell
+# Built-ins only
+Set-OSDAppConfiguration -EnableRepository $false
+
+# Repository/catalog packages only
+Set-OSDAppConfiguration -EnableBuiltIns $false
+```
+
+At least one source must remain enabled. Explicit Add commands fail clearly when their source is disabled, while `Get-OSDApp` and the Viewer omit disabled sources. Sync commands remain available for cache preparation: source selection controls deployment/discovery, not whether an operator may prepare cache content. Registry staging is an OSDApps-owned built-in feature and therefore follows `EnableBuiltIns`.
+
+Runtime settings, including source selection, are copied into the device manifest during staging; changing the session afterward does not rewrite an existing manifest by itself. If multiple Windows installations are found, specify `-WindowsPath` on the Add and preflight commands.
 
 New app IDs are appended to `DeviceManifest.json` in the order they are added. Re-adding an existing ID replaces its entry and moves it to the end; it does not create another entry. Sorting the Viewer table does not change that order.
 
