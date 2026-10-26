@@ -1,4 +1,4 @@
-# Repository apps and scripts
+# Repository apps, scripts and content packages
 
 <a id="repository-apps"></a>
 
@@ -103,12 +103,12 @@ development machine (or normal WinPE repository sync) to refresh its cached
 metadata. The existing cache archive is reused when its SHA-256 still matches.
 Previously staged `DeviceManifest.json` files are not silently rewritten.
 
-`PackageType` is optional classification metadata with two supported values:
-`App` and `Script`. When it is absent, OSDApps uses `App` for
-backward compatibility. Both types use the same `Package/Install.ps1` entry
-point, SHA-256 checks, cache and staging paths, ordered SetupComplete queue,
-timeouts, success codes and failure handling. The value does not enable a
-different or less trusted execution path.
+`PackageType` is optional classification metadata with three supported values:
+`App`, `Script` and `Font`. When it is absent, OSDApps uses `App` for
+backward compatibility. `App` and `Script` use the same `Package/Install.ps1`
+entry point. `Font` is installed by the OSDApps Runner itself and does not
+require or execute package-supplied code. All types retain the repository
+SHA-256, cache, staging and ordered SetupComplete queue contracts.
 
 When an existing package variant is republished, omitting `-PackageType`
 preserves its current classification. A newly published package defaults to
@@ -141,8 +141,54 @@ Package.zip
     └── <payload>
 ```
 
-`Install.ps1` must be unattended and suitable for execution during SetupComplete. The runner starts it with the extracted `Package` directory as its working directory.
+For `App` and `Script`, `Install.ps1` must be unattended and suitable for execution during SetupComplete. The runner starts it with the extracted `Package` directory as its working directory. `Font` packages do not require `Install.ps1`.
 
+## Font packages
+
+A repository `Font` package contains one or more `.ttf` or `.otf` files under `Package/`. `Install.ps1` is not required and is not executed for `PackageType=Font`. Other files are ignored by the font installer. `.ttc` is outside the initial contract.
+
+Recommended authoring source:
+
+```text
+OrganisationFonts/
+└── Fonts/
+    ├── Organisation-Regular.ttf
+    └── Organisation-Bold.otf
+```
+
+Build and publish it as architecture-neutral content:
+
+```powershell
+New-OSDAppPackage `
+    -Id OrganisationFonts `
+    -Version 1.0.0 `
+    -PackageType Font `
+    -SourcePath C:\OSDApps\Packages\OrganisationFonts `
+    -OutputPath C:\OSDApps\Build\OrganisationFonts
+
+Add-OSDAppPackage `
+    -Id OrganisationFonts `
+    -DisplayName 'Organisation Fonts' `
+    -Version 1.0.0 `
+    -Architecture any `
+    -PackageType Font `
+    -PackagePath C:\OSDApps\Build\OrganisationFonts\Package.zip `
+    -RepositoryPath C:\OSDApps\Repository
+```
+
+Stage it in WinPE with:
+
+```powershell
+Add-OSDAppFont -Id OrganisationFonts
+```
+
+During SetupComplete the Runner validates the repository archive SHA-256, extracts it, recursively selects only `.ttf` and `.otf`, and installs each font machine-wide. The file is copied to `%WINDIR%\Fonts`, registered under `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts`, loaded through the Windows font-resource API for the current session, and Windows is notified of the font change.
+
+Identical installed content is reported as `AlreadyPresent`. Duplicate filenames inside one package, conflicting registration, or a same-named installed font with different bytes are reported as `Failed` and are not overwritten. Other fonts in the same package are still attempted. A package with any failed font is unsuccessful overall. Detailed results are written to `%ProgramData%\OSDApps\Results\Fonts-<Id>.json`.
+
+The package author remains responsible for font licensing and applicability. OSDApps does not maintain a font catalog or infer which organization or device should receive a font.
+
+Microsoft documents `%WINDIR%\Fonts`, the machine Fonts registry key, the font-resource APIs, and `WM_FONTCHANGE` as the Windows mechanisms involved in persistent font installation and notification: [Font Installation and Deletion](https://learn.microsoft.com/windows/win32/gdi/font-installation-and-deletion) and [AddFontResourceW](https://learn.microsoft.com/windows/win32/api/wingdi/nf-wingdi-addfontresourcew).
 ## Deployment lifecycle
 
 ```text
@@ -295,7 +341,7 @@ Add-OSDAppPackage `
 
 The helper:
 
-1. validates the fixed `Package/Install.ps1` archive layout;
+1. validates the package layout for the selected `PackageType` (`Install.ps1` for App/Script, supported font files for Font);
 2. creates `Apps/<Id>/<Version>/<Architecture>`;
 3. copies `Package.zip`;
 4. calculates SHA-256;

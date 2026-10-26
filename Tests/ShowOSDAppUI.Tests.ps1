@@ -324,10 +324,12 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
         }
     }
 
-    It 'labels repository scripts separately without changing their execution source' {
+    It 'labels repository package types separately without changing their execution source' {
         InModuleScope OSDApps {
             (Get-OSDAppUIPackageType -App ([pscustomobject]@{Source='Repository';PackageType='Script'})) |
                 Should -Be 'Script'
+            (Get-OSDAppUIPackageType -App ([pscustomobject]@{Source='Repository';PackageType='Font'})) |
+                Should -Be 'Font'
             (Get-OSDAppUIPackageType -App ([pscustomobject]@{Source='Repository'})) |
                 Should -Be 'App'
             (Get-OSDAppUIPackageType -App ([pscustomobject]@{Source='BuiltIn'})) |
