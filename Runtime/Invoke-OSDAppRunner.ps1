@@ -8,6 +8,7 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'OSDAppPayloadFile.ps1')
 . (Join-Path $PSScriptRoot 'OSDAppPrerequisite.ps1')
+. (Join-Path $PSScriptRoot 'OSDAppFont.ps1')
 $sleepRequest = $null
 $sleepLog = $null
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
@@ -464,6 +465,10 @@ try {
             throw (New-RunnerFailureException -Message "Unsupported built-in app type '$($app.Type)' for '$id'." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
         }
         if ($source -eq 'Repository' -and
+            [string]$app.PackageType -notin @('App','Script','Font')) {
+            throw (New-RunnerFailureException -Message "Repository package '$id' has unsupported PackageType '$($app.PackageType)'." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
+        }
+        if ($source -eq 'Repository' -and
             (-not $app.Archive -or [string]$app.Archive.Sha256 -notmatch '^[A-Fa-f0-9]{64}$')) {
             throw (New-RunnerFailureException -Message "Repository package '$id' has no valid SHA-256 in the device manifest." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
         }
@@ -589,6 +594,18 @@ try {
         Expand-Archive -LiteralPath $archivePath -DestinationPath $packageWork -Force
 
         $payloadRoot = Join-Path $packageWork 'Package'
+
+        if ([string]$package.PackageType -eq 'Font') {
+            $fontResultPath = Join-Path (Split-Path -Path $resultPath -Parent) ("Font-{0}-Result.json" -f [string]$package.Id)
+            Write-RunnerLog -LogPath $logPath -Event 'FontPackageInstallStart' -Message 'Installing machine-wide font package.' -Data @{ Id=$package.Id; Version=$package.Version }
+            $fontExecution = Invoke-OSDAppFontPackage -PayloadRoot $payloadRoot -PackageId ([string]$package.Id) -DeploymentId ([string]$manifest.DeploymentId) -ResultPath $fontResultPath
+            if ($fontExecution.ExitCode -ne 0) {
+                throw "Font package '$($package.Id)' failed with exit code $($fontExecution.ExitCode)."
+            }
+            Write-RunnerLog -LogPath $logPath -Event 'FontPackageInstallComplete' -Message 'Machine-wide font package completed.' -Data @{ Id=$package.Id; ResultPath=$fontResultPath }
+            return $fontExecution
+        }
+
         $installScript = Join-Path $payloadRoot 'Install.ps1'
         if (-not (Test-Path -LiteralPath $installScript -PathType Leaf)) {
             throw "Package '$($package.Id)' does not contain Package\Install.ps1."
