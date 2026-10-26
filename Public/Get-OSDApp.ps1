@@ -6,6 +6,7 @@ function Get-OSDApp {
         [switch]$Offline
     )
 
+    $configuration = Get-OSDAppConfiguration
     $apps = [System.Collections.Generic.List[object]]::new()
     $cachePath = $null
 
@@ -26,7 +27,7 @@ function Get-OSDApp {
     }
 
     $onlinePackages = @()
-    $catalogUri = (Get-OSDAppConfiguration).CatalogUri
+    $catalogUri = if ($configuration.EnableRepository) { $configuration.CatalogUri } else { $null }
     if ($catalogUri -and -not $Offline) {
         try {
             $onlineCatalog = Get-OSDAppCatalogPackages -CatalogUri $catalogUri
@@ -201,7 +202,12 @@ function Get-OSDApp {
         })
     }
 
-    $result = @($apps)
+    $result = @(
+        $apps | Where-Object {
+            ($_.Source -eq 'BuiltIn' -and $configuration.EnableBuiltIns) -or
+            ($_.Source -eq 'Repository' -and $configuration.EnableRepository)
+        }
+    )
 
     if ($Name) {
         $result = @(

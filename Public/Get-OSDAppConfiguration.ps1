@@ -5,6 +5,8 @@ function Get-OSDAppConfiguration {
     if (-not $script:OSDAppConfiguration) {
         $script:OSDAppConfiguration = [pscustomobject]@{
             CatalogUri       = $null
+            EnableBuiltIns   = $true
+            EnableRepository = $true
             CleanupMode      = 'OnSuccess'
             PreventSleep     = $true
             CacheVolumeLabel = 'OSDCloud'
@@ -16,6 +18,8 @@ function Get-OSDAppConfiguration {
     [pscustomobject]@{
         PSTypeName       = 'OSDApps.Configuration'
         CatalogUri       = $script:OSDAppConfiguration.CatalogUri
+        EnableBuiltIns   = [bool]$script:OSDAppConfiguration.EnableBuiltIns
+        EnableRepository = [bool]$script:OSDAppConfiguration.EnableRepository
         CleanupMode      = $script:OSDAppConfiguration.CleanupMode
         PreventSleep     = $script:OSDAppConfiguration.PreventSleep
         CacheVolumeLabel = $script:OSDAppConfiguration.CacheVolumeLabel

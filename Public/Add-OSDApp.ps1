@@ -8,6 +8,8 @@ function Add-OSDApp {
         [switch]$SkipCacheRefresh
     )
 
+    Assert-OSDAppSourceEnabled -Source Repository
+
     begin { $requested=[System.Collections.Generic.List[string]]::new() }
     process { foreach($item in $Name){ if(-not [string]::IsNullOrWhiteSpace($item)){ $requested.Add($item) } } }
     end {

@@ -3,6 +3,10 @@ function Set-OSDAppConfiguration {
     param(
         [uri]$CatalogUri,
 
+        [bool]$EnableBuiltIns,
+
+        [bool]$EnableRepository,
+
         [ValidateSet('OnSuccess','Never')]
         [string]$CleanupMode,
 
@@ -29,6 +33,18 @@ function Set-OSDAppConfiguration {
         $current.CatalogUri = $CatalogUri
     }
 
+    if ($PSBoundParameters.ContainsKey('EnableBuiltIns')) {
+        $current.EnableBuiltIns = $EnableBuiltIns
+    }
+
+    if ($PSBoundParameters.ContainsKey('EnableRepository')) {
+        $current.EnableRepository = $EnableRepository
+    }
+
+    if (-not $current.EnableBuiltIns -and -not $current.EnableRepository) {
+        throw 'At least one app source must remain enabled.'
+    }
+
     if ($PSBoundParameters.ContainsKey('CleanupMode')) {
         $current.CleanupMode = $CleanupMode
     }
@@ -51,6 +67,8 @@ function Set-OSDAppConfiguration {
 
     $script:OSDAppConfiguration = [pscustomobject]@{
         CatalogUri       = $current.CatalogUri
+        EnableBuiltIns   = [bool]$current.EnableBuiltIns
+        EnableRepository = [bool]$current.EnableRepository
         CleanupMode      = $current.CleanupMode
         PreventSleep     = $current.PreventSleep
         CacheVolumeLabel = $current.CacheVolumeLabel
