@@ -103,8 +103,8 @@ development machine (or normal WinPE repository sync) to refresh its cached
 metadata. The existing cache archive is reused when its SHA-256 still matches.
 Previously staged `DeviceManifest.json` files are not silently rewritten.
 
-`PackageType` is optional classification/semantic metadata with three supported values:
-`App`, `Script` and `Font`. When it is absent, OSDApps uses `App` for
+`PackageType` is optional classification/semantic metadata with four supported values:
+`App`, `Script`, `Font` and `Certificate`. When it is absent, OSDApps uses `App` for
 backward compatibility. App and Script use the same `Package/Install.ps1` entry point, SHA-256 checks,
 cache and staging paths, ordered SetupComplete queue, success codes and failure
 handling. Font uses the same repository acquisition/integrity/staging pipeline,
@@ -446,3 +446,5 @@ Set-OSDAppConfiguration -CatalogUri 'https://example.blob.core.windows.net/osdap
 [Examples](../Examples/README.md) includes an empty catalog template and a package-layout placeholder. Supply your own unattended `Install.ps1` and payload; the placeholder does not install an app.
 
 `Add-OSDAppPackage` writes a local repository. Uploading it to your hosting is a separate step. Publish package archives and manifests before updating `catalog.json`, so clients never discover references to files that are not yet available.
+
+Certificate packages contain only public CA `.cer`/`.crt` files under `Package/`. Publish with `-PackageType Certificate -CertificateStore Root` (or `CA`); both stores are under LocalMachine. Stage with `Add-OSDAppCertificate -Id`. See [certificate packages](certificate-staging.md) for the complete workflow.

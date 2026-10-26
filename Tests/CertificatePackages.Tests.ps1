@@ -102,6 +102,30 @@ Describe 'Repository certificate packages' {
         $report.OperationCount | Should -Be 0
         $report.RestartNeeded | Should -BeFalse
     }
+    It 'runs a real repository ZIP through the one-shot runner into the machine CA store' {
+        $stage=Join-Path $TestDrive 'RuntimeStage'
+        $packageRoot=Join-Path $stage 'Packages\TestRootCA'
+        New-Item -ItemType Directory -Path $packageRoot -Force | Out-Null
+        Copy-Item $script:package.PackagePath (Join-Path $packageRoot 'Package.zip')
+        $resultPath=Join-Path $TestDrive 'RuntimeResults\Latest.json'
+        @{
+            SchemaVersion=1;DeploymentId=[guid]::NewGuid().Guid
+            Runtime=@{CleanupMode='Never';CacheVolumeLabel='OSDCloud';LogPath=(Join-Path $TestDrive 'Runtime.log');ResultPath=$resultPath}
+            Apps=@(@{Id='TestRootCA';DisplayName='Test Root CA';Source='Repository';Type='RepositoryPackage';PackageType='Certificate';CertificateStore='CA';Version='1.0.0';Architecture='any';Archive=@{Sha256=$script:package.Sha256};SuccessCodes=@(0)})
+        } | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $stage 'DeviceManifest.json') -Encoding UTF8
+        $target=[Security.Cryptography.X509Certificates.X509Store]::new('CA',[Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine)
+        try {
+            $target.Open([Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:root 'Runtime\Invoke-OSDAppRunner.ps1') -StagedPath $stage
+            $LASTEXITCODE | Should -Be 0
+            (Get-Content $resultPath -Raw | ConvertFrom-Json).Status | Should -Be Succeeded
+            $report=Get-Content (Join-Path $TestDrive 'RuntimeResults\Certificate-TestRootCA-Result.json') -Raw | ConvertFrom-Json
+            $report.Items[0].Outcome | Should -Be Imported
+            $report.Items[0].Store | Should -Be 'LocalMachine\CA'
+            $target.Certificates.Find([Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint,$script:ca.Thumbprint,$false).Count | Should -Be 1
+        }
+        finally { $target.Remove($script:ca);$target.Close();$target.Dispose() }
+    }
     It 'reports machine import outcomes without certificate content' {
         Mock Install-OSDAppPublicCertificate {'Imported'}
         $resultPath=Join-Path $TestDrive 'GoodResult.json'
