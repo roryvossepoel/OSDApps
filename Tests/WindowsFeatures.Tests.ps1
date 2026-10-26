@@ -14,6 +14,10 @@ Describe 'Built-in Windows Features staging' {
         }
     }
 
+    BeforeEach {
+        Set-OSDAppConfiguration -EnableBuiltIns $true -EnableRepository $true
+    }
+
     It 'exports one declarative cmdlet without feature-name validation catalogs' {
         $cmd=Get-Command Add-OSDAppWindowsFeature -Module OSDApps
         $cmd.Parameters.Keys | Should -Contain 'Enable'

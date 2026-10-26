@@ -115,7 +115,7 @@
             Examples = @(
                 @{ Code = 'Add-OSDAppWindowsFeature -Enable @(''NetFx3'',''Microsoft-Windows-Subsystem-Linux'') -Disable ''Printing-XPSServices-Features'''; Remarks = 'Stage explicit desired Windows optional feature states.' }
             )
-            Link = 'docs/built-in-apps.md#windows-optional-features'
+            Link = 'docs/built-in-apps.md'
         }
         'Add-OSDAppWindowsInboxCleanup' = @{
             Parameters = @{
