@@ -199,21 +199,25 @@ Describe 'Authoring acceptance coverage for issue #17' {
         (Get-AcceptanceTreeSnapshot -Path $script:sourcePath) | Should -Be $sourceBefore
     }
 
-    It 'removes partially extracted validation scratch after a simulated extraction failure' {
-        $package = New-OSDAppPackage -Id ExampleApp -Version 1.0.0 -SourcePath $script:sourcePath -OutputPath $script:buildPath -Confirm:$false
-        $before = (Get-FileHash -LiteralPath $package.PackagePath).Hash
-        Mock Expand-Archive {
-            param($LiteralPath,$DestinationPath)
-            [IO.File]::WriteAllText((Join-Path ([IO.Path]::GetTempPath()) 'extraction-observation.txt'), $DestinationPath)
-            [void][IO.Directory]::CreateDirectory($DestinationPath)
-            [IO.File]::WriteAllText((Join-Path $DestinationPath 'partial.txt'), 'Partially extracted test content')
-            throw 'Issue17 simulated extraction failure'
-        } -ModuleName OSDApps
-        { Test-OSDAppPackage -PackagePath $package.PackagePath -ErrorAction Stop } | Should -Throw '*Issue17 simulated extraction failure*'
-        Should -Invoke Expand-Archive -ModuleName OSDApps -Exactly 1
-        $observed = [IO.File]::ReadAllText((Join-Path $script:scratchPath 'extraction-observation.txt'))
-        $observed.StartsWith($script:scratchPath + '\', [StringComparison]::OrdinalIgnoreCase) | Should -BeTrue
-        Test-Path -LiteralPath $observed | Should -BeFalse
-        (Get-FileHash -LiteralPath $package.PackagePath).Hash | Should -Be $before
+    It 'removes partially extracted validation scratch after an actual duplicate-entry failure' {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $zipPath=Join-Path $script:caseRoot 'Duplicate.zip'
+        $archive=[IO.Compression.ZipFile]::Open($zipPath,[IO.Compression.ZipArchiveMode]::Create)
+        try {
+            foreach($value in @('first','duplicate')) {
+                $entry=$archive.CreateEntry('Package/partial.txt')
+                $writer=[IO.StreamWriter]::new($entry.Open())
+                try { $writer.Write($value) } finally { $writer.Dispose() }
+            }
+        }
+        finally { $archive.Dispose() }
+        $before=(Get-FileHash -LiteralPath $zipPath).Hash
+        # Verify this fixture actually fails after extracting the first file.
+        $control=Join-Path $script:caseRoot 'ControlExtraction'
+        {[IO.Compression.ZipFile]::ExtractToDirectory($zipPath,$control)} | Should -Throw
+        (Get-Content -LiteralPath (Join-Path $control 'Package\partial.txt') -Raw) | Should -Be 'first'
+        {Test-OSDAppPackage -PackagePath $zipPath -ErrorAction Stop} | Should -Throw
+        @(Get-ChildItem -LiteralPath $script:scratchPath -Force).Count | Should -Be 0
+        (Get-FileHash -LiteralPath $zipPath).Hash | Should -Be $before
     }
 }

@@ -31,16 +31,20 @@ Describe 'Repository certificate packages' {
     It 'rejects ZIP entries that escape the temporary validation directory' {
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         $zipPath=Join-Path $TestDrive 'Traversal.zip'
-        $outside=Join-Path $TestDrive 'must-not-be-written.cer'
+        $escapeName='OSDApps-escape-'+[guid]::NewGuid().ToString('N')+'.cer'
+        $outside=Join-Path ([IO.Path]::GetTempPath()) $escapeName
         $zip=[IO.Compression.ZipFile]::Open($zipPath,[IO.Compression.ZipArchiveMode]::Create)
         try {
-            $entry=$zip.CreateEntry($outside.Replace('\','/'))
+            $entry=$zip.CreateEntry('../'+$escapeName)
             $writer=[IO.StreamWriter]::new($entry.Open())
             try { $writer.Write('must not escape extraction') } finally { $writer.Dispose() }
         }
         finally { $zip.Dispose() }
-        {Test-OSDAppPackage -PackagePath $zipPath -PackageType Certificate -CertificateStore Root} | Should -Throw
-        Test-Path -LiteralPath $outside | Should -BeFalse
+        try {
+            {Test-OSDAppPackage -PackagePath $zipPath -PackageType Certificate -CertificateStore Root} | Should -Throw
+            Test-Path -LiteralPath $outside | Should -BeFalse
+        }
+        finally { if(Test-Path -LiteralPath $outside){Remove-Item -LiteralPath $outside -Force} }
     }
     It 'requires an explicit machine store on publication and preserves it on updates' {
         $repo=Join-Path $TestDrive 'Repository'
