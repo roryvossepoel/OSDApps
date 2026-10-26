@@ -21,7 +21,11 @@ function Test-OSDAppPackage {
 
     try {
         New-Item -ItemType Directory -Path $temp -Force | Out-Null
-        Expand-Archive -LiteralPath $resolved -DestinationPath $temp -Force
+        # WinPE may discover Microsoft.PowerShell.Archive without being able to
+        # load it. Use the .NET ZIP API already used by other WinPE cache helpers.
+        Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
+        Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+        [IO.Compression.ZipFile]::ExtractToDirectory($resolved, $temp)
 
         $packageFolder = Join-Path $temp 'Package'
         $installScript = Join-Path $packageFolder 'Install.ps1'

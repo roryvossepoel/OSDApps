@@ -21,6 +21,27 @@ Describe 'Repository certificate packages' {
         $check.InstallPs1Exists | Should -BeFalse
         (Test-OSDAppPackage -PackagePath $script:package.PackagePath -PackageType App).Valid | Should -BeFalse
     }
+    It 'validates the ZIP when the PowerShell Archive command cannot run in WinPE' {
+        Mock Expand-Archive -ModuleName OSDApps { throw 'Microsoft.PowerShell.Archive cannot load in this WinPE environment.' }
+        $check=Test-OSDAppPackage -PackagePath $script:package.PackagePath -PackageType Certificate -CertificateStore Root
+        $check.Valid | Should -BeTrue
+        $check.CertificateCount | Should -Be 1
+        Should -Invoke Expand-Archive -ModuleName OSDApps -Times 0 -Exactly
+    }
+    It 'rejects ZIP entries that escape the temporary validation directory' {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $zipPath=Join-Path $TestDrive 'Traversal.zip'
+        $outside=Join-Path $TestDrive 'must-not-be-written.cer'
+        $zip=[IO.Compression.ZipFile]::Open($zipPath,[IO.Compression.ZipArchiveMode]::Create)
+        try {
+            $entry=$zip.CreateEntry($outside.Replace('\','/'))
+            $writer=[IO.StreamWriter]::new($entry.Open())
+            try { $writer.Write('must not escape extraction') } finally { $writer.Dispose() }
+        }
+        finally { $zip.Dispose() }
+        {Test-OSDAppPackage -PackagePath $zipPath -PackageType Certificate -CertificateStore Root} | Should -Throw
+        Test-Path -LiteralPath $outside | Should -BeFalse
+    }
     It 'requires an explicit machine store on publication and preserves it on updates' {
         $repo=Join-Path $TestDrive 'Repository'
         New-OSDAppRepository -Path $repo | Out-Null
