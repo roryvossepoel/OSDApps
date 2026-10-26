@@ -269,24 +269,18 @@ function Test-OSDAppDeployment {
             $detail = if ($payloadReady) { 'Company Portal bundle, license and dependencies are SHA-256 validated.' } else { 'Company Portal package contents are missing or corrupt.' }
         }
         elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WindowsFeatureScript') {
-            $definitionValid=(
+            $definitionValid = (
                 $id -eq 'WindowsFeatures' -and
                 [string]$app.PackageType -eq 'Script' -and
                 [string]$app.Script -eq 'BuiltIn\WindowsFeatures\Install.ps1' -and
                 [string]$app.Configuration -eq 'BuiltIn\WindowsFeatures\config.json' -and
-                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}
-            $definitionValid = (
-                $id -eq 'WindowsInboxCleanup' -and
-                [string]$app.PackageType -eq 'Script' -and
-                [string]$app.Script -eq 'BuiltIn\WindowsInboxCleanup\Install.ps1' -and
-                [string]$app.Configuration -eq 'BuiltIn\WindowsInboxCleanup\config.json' -and
                 [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
                 [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
             )
             $integrityValid = $false
             if ($definitionValid) {
-                $scriptFile = Join-Path $stageRoot 'BuiltIn\WindowsInboxCleanup\Install.ps1'
-                $configFile = Join-Path $stageRoot 'BuiltIn\WindowsInboxCleanup\config.json'
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\WindowsFeatures\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\WindowsFeatures\config.json'
                 if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
                     (Test-Path -LiteralPath $configFile -PathType Leaf)) {
                     $integrityValid = (
@@ -295,169 +289,18 @@ function Test-OSDAppDeployment {
                     )
                     if ($integrityValid) {
                         try {
-                            $cleanupConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
-                            $integrityValid = ($cleanupConfig.Remove -is [array] -and @($cleanupConfig.Remove).Count -gt 0)
+                            $featureConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            $integrityValid = (
+                                [int]$featureConfig.SchemaVersion -eq 1 -and
+                                @($featureConfig.Operations).Count -gt 0
+                            )
                         }
                         catch { $integrityValid = $false }
                     }
                 }
             }
             $payloadReady = $definitionValid -and $integrityValid
-            $detail = if ($payloadReady) { 'Bundled script and configuration are SHA-256 validated.' } else { 'Bundled script definition, content or hash validation failed.' }
-        }
-        elseif ($source -eq 'BuiltIn') {
-            $state = Get-BuiltInPayloadState -App $app
-            $definitionValid = $state.DefinitionValid
-            $payloadReady = $state.PayloadReady
-            if ($definitionValid -and -not $payloadReady) { $networkRequired = $true }
-            $detail = if ($payloadReady) { 'Complete built-in payload is staged locally.' } elseif ($definitionValid) { "Built-in acquisition is required for: $($state.MissingPaths -join ', ')." } else { 'Built-in manifest paths or type are invalid.' }
-        }
-        else {
-            $detail = "Unsupported app source '$source'."
-        }
-
-        if (-not $payloadReady) { $allPayloadsReady = $false }
-        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
-        Add-DeploymentCheck -Name 'AppDefinition' -AppId $id -Passed $appRequiredStateValid -Required $true -Message "${id}: $detail"
-        Add-DeploymentCheck -Name 'OfflinePayload' -AppId $id -Passed $payloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
-
-        $appStates.Add([pscustomobject]@{
-            Id              = $id
-            Source          = $source
-            Type            = [string]$app.Type
-            Version         = if ($app.Version) { [string]$app.Version } else { $null }
-            Architecture    = if ($app.Architecture) { [string]$app.Architecture } else { $null }
-            DefinitionValid = $definitionValid
-            PayloadReady    = $payloadReady
-            IntegrityValid  = $integrityValid
-            Detail          = $detail
-        })
-    }
-
-    $freeSpaceGB = $null
-    try {
-        $driveRoot = [IO.Path]::GetPathRoot([IO.Path]::GetFullPath($target))
-        $drive = Get-PSDrive -Name $driveRoot.TrimEnd('\').TrimEnd(':') -ErrorAction Stop
-        $freeSpaceGB = [math]::Round([double]$drive.Free / 1GB, 2)
-        $freeSpaceValid = ($MinimumFreeSpaceGB -le 0 -or $freeSpaceGB -ge $MinimumFreeSpaceGB)
-        Add-DeploymentCheck -Name 'FreeSpace' -Passed $freeSpaceValid -Required ($MinimumFreeSpaceGB -gt 0) -Message $(
-            if ($freeSpaceValid) { "Offline Windows volume has $freeSpaceGB GB free." } else { "Offline Windows volume has $freeSpaceGB GB free; $MinimumFreeSpaceGB GB is required." }
-        )
-    }
-    catch {
-        Add-DeploymentCheck -Name 'FreeSpace' -Passed $false -Required ($MinimumFreeSpaceGB -gt 0) -Message "Free space could not be determined: $($_.Exception.Message)"
-    }
-
-    Complete-DeploymentValidation `
-        -Manifest $manifest `
-        -Apps @($appStates) `
-        -OfflineReady $allPayloadsReady `
-        -NetworkRequired $networkRequired `
-        -FreeSpaceGB $freeSpaceGB
-}
- -and
-                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}
-            $definitionValid = (
-                $id -eq 'WindowsInboxCleanup' -and
-                [string]$app.PackageType -eq 'Script' -and
-                [string]$app.Script -eq 'BuiltIn\WindowsInboxCleanup\Install.ps1' -and
-                [string]$app.Configuration -eq 'BuiltIn\WindowsInboxCleanup\config.json' -and
-                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
-                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
-            )
-            $integrityValid = $false
-            if ($definitionValid) {
-                $scriptFile = Join-Path $stageRoot 'BuiltIn\WindowsInboxCleanup\Install.ps1'
-                $configFile = Join-Path $stageRoot 'BuiltIn\WindowsInboxCleanup\config.json'
-                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
-                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
-                    $integrityValid = (
-                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
-                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
-                    )
-                    if ($integrityValid) {
-                        try {
-                            $cleanupConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
-                            $integrityValid = ($cleanupConfig.Remove -is [array] -and @($cleanupConfig.Remove).Count -gt 0)
-                        }
-                        catch { $integrityValid = $false }
-                    }
-                }
-            }
-            $payloadReady = $definitionValid -and $integrityValid
-            $detail = if ($payloadReady) { 'Bundled script and configuration are SHA-256 validated.' } else { 'Bundled script definition, content or hash validation failed.' }
-        }
-        elseif ($source -eq 'BuiltIn') {
-            $state = Get-BuiltInPayloadState -App $app
-            $definitionValid = $state.DefinitionValid
-            $payloadReady = $state.PayloadReady
-            if ($definitionValid -and -not $payloadReady) { $networkRequired = $true }
-            $detail = if ($payloadReady) { 'Complete built-in payload is staged locally.' } elseif ($definitionValid) { "Built-in acquisition is required for: $($state.MissingPaths -join ', ')." } else { 'Built-in manifest paths or type are invalid.' }
-        }
-        else {
-            $detail = "Unsupported app source '$source'."
-        }
-
-        if (-not $payloadReady) { $allPayloadsReady = $false }
-        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
-        Add-DeploymentCheck -Name 'AppDefinition' -AppId $id -Passed $appRequiredStateValid -Required $true -Message "${id}: $detail"
-        Add-DeploymentCheck -Name 'OfflinePayload' -AppId $id -Passed $payloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
-
-        $appStates.Add([pscustomobject]@{
-            Id              = $id
-            Source          = $source
-            Type            = [string]$app.Type
-            Version         = if ($app.Version) { [string]$app.Version } else { $null }
-            Architecture    = if ($app.Architecture) { [string]$app.Architecture } else { $null }
-            DefinitionValid = $definitionValid
-            PayloadReady    = $payloadReady
-            IntegrityValid  = $integrityValid
-            Detail          = $detail
-        })
-    }
-
-    $freeSpaceGB = $null
-    try {
-        $driveRoot = [IO.Path]::GetPathRoot([IO.Path]::GetFullPath($target))
-        $drive = Get-PSDrive -Name $driveRoot.TrimEnd('\').TrimEnd(':') -ErrorAction Stop
-        $freeSpaceGB = [math]::Round([double]$drive.Free / 1GB, 2)
-        $freeSpaceValid = ($MinimumFreeSpaceGB -le 0 -or $freeSpaceGB -ge $MinimumFreeSpaceGB)
-        Add-DeploymentCheck -Name 'FreeSpace' -Passed $freeSpaceValid -Required ($MinimumFreeSpaceGB -gt 0) -Message $(
-            if ($freeSpaceValid) { "Offline Windows volume has $freeSpaceGB GB free." } else { "Offline Windows volume has $freeSpaceGB GB free; $MinimumFreeSpaceGB GB is required." }
-        )
-    }
-    catch {
-        Add-DeploymentCheck -Name 'FreeSpace' -Passed $false -Required ($MinimumFreeSpaceGB -gt 0) -Message "Free space could not be determined: $($_.Exception.Message)"
-    }
-
-    Complete-DeploymentValidation `
-        -Manifest $manifest `
-        -Apps @($appStates) `
-        -OfflineReady $allPayloadsReady `
-        -NetworkRequired $networkRequired `
-        -FreeSpaceGB $freeSpaceGB
-}
-
-            )
-            $integrityValid=$false
-            if ($definitionValid) {
-                $scriptFile=Join-Path $stageRoot 'BuiltIn\WindowsFeatures\Install.ps1'
-                $configFile=Join-Path $stageRoot 'BuiltIn\WindowsFeatures\config.json'
-                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and (Test-Path -LiteralPath $configFile -PathType Leaf)) {
-                    $integrityValid=(
-                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
-                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
-                    )
-                    if ($integrityValid) {
-                        try {
-                            $featureConfig=Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
-                            $integrityValid=([int]$featureConfig.SchemaVersion -eq 1 -and @($featureConfig.Operations).Count -gt 0)
-                        } catch { $integrityValid=$false }
-                    }
-                }
-            }
-            $payloadReady=$definitionValid -and $integrityValid
-            $detail=if($payloadReady){'Windows Features script and configuration are SHA-256 validated.'}else{'Windows Features definition, content or hash validation failed.'}
+            $detail = if ($payloadReady) { 'Windows Features script and configuration are SHA-256 validated.' } else { 'Windows Features definition, content or hash validation failed.' }
         }
         elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WindowsInboxCleanupScript') {
             $definitionValid = (
@@ -502,7 +345,7 @@ function Test-OSDAppDeployment {
         }
 
         if (-not $payloadReady) { $allPayloadsReady = $false }
-        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
+        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
         Add-DeploymentCheck -Name 'AppDefinition' -AppId $id -Passed $appRequiredStateValid -Required $true -Message "${id}: $detail"
         Add-DeploymentCheck -Name 'OfflinePayload' -AppId $id -Passed $payloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
 
