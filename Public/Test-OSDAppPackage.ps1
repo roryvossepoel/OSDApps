@@ -3,8 +3,10 @@ function Test-OSDAppPackage {
     param(
         [Parameter(Mandatory)][string]$PackagePath,
 
-        [ValidateSet('App','Script','Font')]
-        [string]$PackageType = 'App'
+        [ValidateSet('App','Script','Font','Certificate')]
+        [string]$PackageType = 'App',
+
+        [ValidateSet('Root','CA')][string]$CertificateStore
     )
 
     $resolved = (Resolve-Path -LiteralPath $PackagePath -ErrorAction Stop).Path
@@ -19,7 +21,11 @@ function Test-OSDAppPackage {
 
     try {
         New-Item -ItemType Directory -Path $temp -Force | Out-Null
-        Expand-Archive -LiteralPath $resolved -DestinationPath $temp -Force
+        # WinPE may discover Microsoft.PowerShell.Archive without being able to
+        # load it. Use the .NET ZIP API already used by other WinPE cache helpers.
+        Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
+        Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+        [IO.Compression.ZipFile]::ExtractToDirectory($resolved, $temp)
 
         $packageFolder = Join-Path $temp 'Package'
         $installScript = Join-Path $packageFolder 'Install.ps1'
@@ -31,7 +37,19 @@ function Test-OSDAppPackage {
                     Where-Object { $_.Extension.ToLowerInvariant() -in @('.ttf','.otf') }
             }
         )
-        $valid = if ($PackageType -eq 'Font') {
+        $certificateCount=0
+        $validationError=$null
+        $valid = if ($PackageType -eq 'Certificate') {
+            try {
+                if (-not $packageFolderExists -or @(Get-ChildItem -LiteralPath $temp -Force).Count -ne 1) { throw 'Certificate ZIP must contain only the Package directory.' }
+                $store=if($CertificateStore){$CertificateStore}else{'CA'}
+                $operations=@(Get-OSDAppCertificatePackageOperations -PayloadRoot $packageFolder -Store $store)
+                $certificateCount=$operations.Count
+                $true
+            }
+            catch { $validationError=$_.Exception.Message;$false }
+        }
+        elseif ($PackageType -eq 'Font') {
             ($packageFolderExists -and $fontFiles.Count -gt 0)
         }
         else {
@@ -45,6 +63,8 @@ function Test-OSDAppPackage {
             PackageType         = $PackageType
             InstallPs1Exists    = $installScriptExists
             FontCount           = $fontFiles.Count
+            CertificateCount    = $certificateCount
+            Error               = $validationError
             Sha256              = (Get-FileHash -LiteralPath $resolved -Algorithm SHA256).Hash
             Valid               = $valid
         }

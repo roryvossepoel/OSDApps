@@ -9,6 +9,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'OSDAppPayloadFile.ps1')
 . (Join-Path $PSScriptRoot 'OSDAppPrerequisite.ps1')
 . (Join-Path $PSScriptRoot 'OSDAppFont.ps1')
+. (Join-Path $PSScriptRoot 'OSDAppCertificate.ps1')
 $sleepRequest = $null
 $sleepLog = $null
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
@@ -225,7 +226,7 @@ function New-RunnerAppResult {
     # Only current, uniquely correlated PreInstall evidence may describe acquisition.
     # CacheInfo.json still supplies content identity, never per-deployment flags.
     $hasAcquisitionPhase = ([string]$App.Source -eq 'BuiltIn' -and
-        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WiFiProfileScript','CompanyPortalAppxBundle') -and
+        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and
         [string]$App.Id -ne 'CMTraceOpen')
     $acquisitionOutcome = if ($hasAcquisitionPhase) { 'Unknown' } else { 'NotApplicable' }
     $cacheUsed = $null
@@ -427,7 +428,7 @@ try {
         throw (New-RunnerFailureException -Message 'Device manifest contains an invalid or duplicate app Id.' -FailureType 'ManifestInvalid' -Fatal)
     }
 
-    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','WindowsFeatureScript','WiFiProfileScript','CompanyPortalAppxBundle')
+    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','WindowsFeatureScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle')
     foreach ($app in $apps) {
         $id = [string]$app.Id
         $source = [string]$app.Source
@@ -468,6 +469,17 @@ try {
                 throw (New-RunnerFailureException -Message 'Invalid Wi-Fi profiles built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
             }
         }
+        if ($source -eq 'BuiltIn' -and
+            ([string]$app.Type -eq 'CertificateScript' -or $id -eq 'Certificates')) {
+            if ($id -ne 'Certificates' -or [string]$app.Type -ne 'CertificateScript' -or
+                [string]$app.PackageType -ne 'Script' -or
+                [string]$app.Script -ne 'BuiltIn\Certificates\Install.ps1' -or
+                [string]$app.Configuration -ne 'BuiltIn\Certificates\config.json' -or
+                [string]$app.ScriptSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
+                [string]$app.ConfigurationSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+                throw (New-RunnerFailureException -Message 'Invalid Certificates built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
+            }
+        }
         if ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'CompanyPortalAppxBundle' -and
             -not (Test-OSDAppCompanyPortalDefinition -App $app)) {
             throw (New-RunnerFailureException -Message 'Invalid Company Portal built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
@@ -475,8 +487,12 @@ try {
         if ($source -eq 'BuiltIn' -and [string]$app.Type -notin $supportedBuiltInTypes) {
             throw (New-RunnerFailureException -Message "Unsupported built-in app type '$($app.Type)' for '$id'." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
         }
+        if ($source -eq 'Repository' -and [string]$app.PackageType -eq 'Certificate' -and
+            [string]$app.CertificateStore -notin @('Root','CA')) {
+            throw (New-RunnerFailureException -Message 'Certificate packages require CertificateStore Root or CA.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
+        }
         if ($source -eq 'Repository' -and
-            [string]$app.PackageType -notin @('App','Script','Font')) {
+            [string]$app.PackageType -notin @('App','Script','Font','Certificate')) {
             throw (New-RunnerFailureException -Message "Repository package '$id' has unsupported PackageType '$($app.PackageType)'." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
         }
         if ($source -eq 'Repository' -and
@@ -559,6 +575,20 @@ try {
         Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Wi-Fi profiles script and configuration SHA-256 validated.' -Data @{ Id=$app.Id }
     }
 
+    foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'CertificateScript' })) {
+        foreach ($entry in @(
+            @{ Relative='BuiltIn\Certificates\Install.ps1'; Hash=[string]$app.ScriptSha256 },
+            @{ Relative='BuiltIn\Certificates\config.json'; Hash=[string]$app.ConfigurationSha256 }
+        )) {
+            $file = Join-Path $StagedPath $entry.Relative
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $entry.Hash) {
+                throw (New-RunnerFailureException -Message ('Certificates integrity failed for {0}.' -f $entry.Relative) -FailureType 'HashMismatch' -AppId ([string]$app.Id) -Fatal)
+            }
+        }
+        Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Certificates script and configuration SHA-256 validated.' -Data @{ Id=$app.Id }
+    }
+
     foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'CompanyPortalAppxBundle' })) {
         try { Assert-OSDAppCompanyPortalFiles -App $app -StagedPath $StagedPath }
         catch { throw (New-RunnerFailureException -Message $_.Exception.Message -FailureType 'HashMismatch' -AppId ([string]$app.Id) -Fatal) }
@@ -619,6 +649,16 @@ try {
         Expand-Archive -LiteralPath $archivePath -DestinationPath $packageWork -Force
 
         $payloadRoot = Join-Path $packageWork 'Package'
+
+        if ([string]$package.PackageType -eq 'Certificate') {
+            if (@(Get-ChildItem -LiteralPath $packageWork -Force).Count -ne 1) { throw 'Certificate ZIP must contain only the Package directory.' }
+            $certificateResultPath = Join-Path (Split-Path -Path $resultPath -Parent) ("Certificate-{0}-Result.json" -f [string]$package.Id)
+            Write-RunnerLog -LogPath $logPath -Event 'CertificatePackageInstallStart' -Message 'Importing machine-wide CA certificates.' -Data @{Id=$package.Id;Store=$package.CertificateStore}
+            $execution=Invoke-OSDAppCertificatePackage -PayloadRoot $payloadRoot -PackageId ([string]$package.Id) -Store ([string]$package.CertificateStore) -DeploymentId ([string]$manifest.DeploymentId) -ResultPath $certificateResultPath
+            if($execution.ExitCode -ne 0) { throw "Certificate package '$($package.Id)' failed; see $certificateResultPath." }
+            Write-RunnerLog -LogPath $logPath -Event 'CertificatePackageInstallComplete' -Message 'Machine-wide CA certificate import completed.' -Data @{Id=$package.Id;ResultPath=$certificateResultPath}
+            return $execution
+        }
 
         if ([string]$package.PackageType -eq 'Font') {
             $fontResultPath = Join-Path (Split-Path -Path $resultPath -Parent) ("Font-{0}-Result.json" -f [string]$package.Id)
@@ -701,6 +741,18 @@ try {
                     throw ('Wi-Fi profiles failed with exit code {0}.' -f $process.ExitCode)
                 }
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptComplete' -Message 'Wi-Fi profiles completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
+                [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='Sha256Validated' }
+            }
+            'CertificateScript' {
+                $root = Join-Path $StagedPath 'BuiltIn\Certificates'
+                $scriptFile = Join-Path $root 'Install.ps1'
+                $configFile = Join-Path $root 'config.json'
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptStart' -Message 'Applying Certificates.' -Data @{ Id=$app.Id }
+                $process = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',$scriptFile,'-ConfigPath',$configFile) -WorkingDirectory $root -Wait -PassThru
+                if ($process.ExitCode -ne 0) {
+                    throw ('Certificates failed with exit code {0}.' -f $process.ExitCode)
+                }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptComplete' -Message 'Certificates completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='Sha256Validated' }
             }
             'WindowsInboxCleanupScript' {

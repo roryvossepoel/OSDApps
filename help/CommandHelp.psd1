@@ -34,7 +34,7 @@
         Vendor = 'Optional descriptive publisher metadata, not a cryptographic result or installer argument.'
         Version = 'Repository package version written into authoring metadata and paths. Does not query installed apps.'
         PackagePath = 'Existing Package.zip archive. App and Script packages require Package/Install.ps1; Font packages require at least one .ttf or .otf under Package/.'
-        PackageType = 'Repository package semantics: App, Script or Font. App and Script execute Package/Install.ps1; Font is installed by the OSDApps runtime and does not require Install.ps1.'
+        PackageType = 'Repository package semantics: App, Script, Font or Certificate. App and Script execute Package/Install.ps1; Font is installed by the OSDApps runtime and does not require Install.ps1.'
         RepositoryPath = 'Local repository root containing catalog.json and Apps; not a remote URL or deployment target.'
         SuccessCodes = 'Repository installer exit codes treated as success. Default accepts 0 and 3010.'
     }
@@ -103,6 +103,20 @@
             Parameters = @{}
             Examples = @(@{ Code = 'Sync-OSDAppCMTraceOpen -Architecture x64'; Remarks = 'Download and integrity-verify the current stable x64 MSI from the official project release.' })
             Link = 'docs/cmtrace-open.md'
+        }
+        'Add-OSDAppCertificate' = @{
+            Synopsis = 'Stage public CA certificates for machine-wide import during SetupComplete.'
+            Description = 'Stages a repository Certificate package by Id, using its manifest destination, or accepts individual DER or PEM X.509 certificates in .cer or .crt files. Explicitly selects LocalMachine Root or CA. Duplicate thumbprint/store pairs are staged once; certificates already present are reported without replacement. Private keys and certificate bundles are rejected.'
+            Environment = 'WinPE after applying Windows; SetupComplete imports certificates once as SYSTEM.'
+            Output = 'A staged repository package summary, or a built-in Script summary with subjects, thumbprints, target stores and operation count.'
+            Parameters = @{
+                Path = 'One or more local .cer or .crt files, each containing one public CA certificate without a private key.'
+                Id = 'Canonical repository Certificate package Id. The destination comes from CertificateStore in its manifest.'
+                SkipCacheRefresh = 'Use the existing USB cache without refreshing it from the repository.'
+                Store = 'Required destination under LocalMachine: Root for trusted roots or CA for intermediate certification authorities. No automatic trust-store selection.'
+            }
+            Examples = @(@{ Code = 'Add-OSDAppCertificate -Path ''E:\OSDApps-TestData\Certificates\root.cer'' -Store Root'; Remarks = 'Stage an explicitly selected public root CA for machine-wide trust in the deployed Windows installation.' })
+            Link = 'docs/certificate-staging.md'
         }
         'Add-OSDAppWiFiProfile' = @{
             Synopsis = 'Stage Wi-Fi profiles from parameters or XML for all users during SetupComplete.'
@@ -601,35 +615,39 @@
         }
         'New-OSDAppPackage' = @{
             Synopsis = 'Build Package.zip from a local repository source folder.'
-            Description = 'App and Script packages require Install.ps1 at source root. Font packages require at least one TTF/OTF file and do not require Install.ps1. After source validation, normal execution wraps files under Package/ and replaces OutputPath/Package.zip; source content is never executed.'
+            Description = 'App and Script packages require Install.ps1 at source root. Font packages require at least one TTF/OTF file and do not require Install.ps1. Certificate packages accept only public CA .cer/.crt files. After source validation, normal execution wraps files under Package/ and replaces OutputPath/Package.zip; source content is never executed.'
             Environment = 'Repository preparation machine with source and writable build/TEMP directories.'
             Output = 'OSDApps.Package with Id, Version, PackagePath and Sha256 after building; no package-success object when previewed or declined.'
             Parameters = @{
                 SourcePath = 'Existing source folder. App/Script requires Install.ps1; Font requires one or more .ttf/.otf files.'
                 OutputPath = 'Build directory; Package.zip may be replaced during normal execution. Do not use the only copy of an existing package.'
-                PackageType = 'App, Script or Font. Defaults to App and controls structural validation only; package source is never executed during authoring.'
+                PackageType = 'App, Script, Font or Certificate. Defaults to App and controls structural validation only; package source is never executed during authoring.'
             }
             Examples = @(@{ Code = 'New-OSDAppPackage -Id ExampleApp -Version 1.0.0 -SourcePath ''C:\Work\ExampleApp'' -OutputPath ''C:\Work\Build\ExampleApp'''; Remarks = 'Provide your own unattended installer script and payload.' })
             Link = 'docs/repository.md'
         }
         'Add-OSDAppPackage' = @{
             Synopsis = 'Publish an existing package into a local repository.'
-            Description = 'Validates input structure and the canonical Id/alias graph before asking for destination approval. Only after approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. PackageType selects App, Script or Font semantics; Font packages use the OSDApps font runtime rather than Package/Install.ps1. Omitting Alias on an update preserves existing aliases; an explicitly empty Alias removes them. WhatIf or declined confirmation leaves the destination unchanged. Older repository source folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
+            Description = 'Validates input structure and the canonical Id/alias graph before asking for destination approval. Only after approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. PackageType selects App, Script, Font or Certificate semantics; Font packages use the OSDApps font runtime rather than Package/Install.ps1. Omitting Alias on an update preserves existing aliases; an explicitly empty Alias removes them. WhatIf or declined confirmation leaves the destination unchanged. Older repository source folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
             Environment = 'Repository preparation machine with writable local repository.'
             Output = 'OSDApps.RepositoryPackage with archive SHA-256 and manifest reference after publication; no package-success object when previewed or declined.'
             Parameters = @{
                 Alias = 'Optional retired Ids that resolve to this canonical Id and are eligible for renamed-cache detection. Values cannot collide with another Id or alias.'
-                PackageType = 'Optional App, Script or Font classification. New packages default to App; republishing an existing variant preserves its current type when omitted. Font uses the dedicated machine-wide font runtime.'
+                CertificateStore = 'Required for new Certificate packages: Root or CA under LocalMachine. Existing variants preserve their store when omitted. Invalid for other package types.'
+                PackageType = 'Optional App, Script, Font or Certificate classification. New packages default to App; republishing an existing variant preserves its current type when omitted. Font uses the dedicated machine-wide font runtime.'
             }
             Examples = @(@{ Code = 'Add-OSDAppPackage -Id ConfigureWindows -DisplayName ''Configure Windows'' -Version 1.0.0 -Architecture x64 -PackageType Script -PackagePath ''C:\Work\Build\ConfigureWindows\Package.zip'' -RepositoryPath ''C:\Work\Repository'''; Remarks = 'Publish a script package using the same repository and SetupComplete runtime contract as an app.' })
             Link = 'docs/repository.md'
         }
         'Test-OSDAppPackage' = @{
             Synopsis = 'Validate repository archive structure and report SHA-256.'
-            Description = 'Extracts into owned temporary storage and validates structure for the selected PackageType. App/Script require Package/Install.ps1; Font requires at least one TTF/OTF file. Validation never executes package content.'
+            Description = 'Extracts into owned temporary storage and validates structure for the selected PackageType. App/Script require Package/Install.ps1; Font requires at least one TTF/OTF file. Certificate requires only public CA .cer/.crt files under Package/; no scripts or private keys. Validation never executes package content.'
             Environment = 'Preparation machine or suitable PowerShell with archive support and writable TEMP.'
             Output = 'OSDApps.PackageValidation with PackageType, structure flags, FontCount, Sha256 and Valid.'
-            Parameters = @{ PackageType = 'Validate the archive as App, Script or Font. Defaults to App.' }
+            Parameters = @{
+                PackageType = 'Validate the archive as App, Script, Font or Certificate. Defaults to App.'
+                CertificateStore = 'Optional Root or CA destination for Certificate validation. Without a destination, validates public CA content; Root additionally requires self-issued certificates.'
+            }
             Examples = @(@{ Code = 'Test-OSDAppPackage -PackagePath ''C:\Work\Build\ExampleApp\Package.zip'' -PackageType App'; Remarks = 'Inspect an existing package using its intended semantic type.' })
             Link = 'docs/repository.md'
         }

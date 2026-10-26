@@ -176,6 +176,7 @@ function Get-OSDApp {
         @{ Id='WindowsInboxCleanup'; DisplayName='Windows Inbox App Cleanup'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='WindowsFeatures'; DisplayName='Windows optional features'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='WiFiProfiles'; DisplayName='Wi-Fi profiles'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
+        @{ Id='Certificates'; DisplayName='Public CA certificates'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='Microsoft365Apps'; DisplayName='Microsoft 365 Apps'; Info=$officeCacheInfo },
         @{ Id='MicrosoftCompanyPortal'; DisplayName='Microsoft Company Portal'; Info=$companyPortalInfo },
         @{ Id='CMTraceOpen'; DisplayName='CMTrace Open'; Info=$cmTraceInfo },

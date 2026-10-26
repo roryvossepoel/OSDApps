@@ -108,12 +108,17 @@ function Test-OSDAppRepository {
                 [string]$manifest.PackageType
             }
             else { 'App' }
-            $packageTypeValid = $packageType -in @('App','Script','Font')
+            $packageTypeValid = $packageType -in @('App','Script','Font','Certificate')
             if ($packageTypeValid) {
-                $packageType = if ($packageType -ieq 'Script') { 'Script' } elseif ($packageType -ieq 'Font') { 'Font' } else { 'App' }
+                $packageType = if ($packageType -ieq 'Script') { 'Script' } elseif ($packageType -ieq 'Font') { 'Font' } elseif ($packageType -ieq 'Certificate') { 'Certificate' } else { 'App' }
             }
             if ($exists -and $packageTypeValid) {
-                $packageValid = (Test-OSDAppPackage -PackagePath $packagePath -PackageType $packageType).Valid
+                $testParameters=@{PackagePath=$packagePath;PackageType=$packageType}
+                if($packageType -eq 'Certificate') {
+                    if([string]$manifest.CertificateStore -notin @('Root','CA')) { $packageTypeValid=$false }
+                    else { $testParameters.CertificateStore=[string]$manifest.CertificateStore }
+                }
+                if($packageTypeValid){$packageValid=(Test-OSDAppPackage @testParameters).Valid}
             }
 
             [pscustomobject]@{
