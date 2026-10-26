@@ -29,7 +29,7 @@ function Add-OSDAppPackage {
     $catalog = Get-OSDAppRepositoryManifest -RepositoryPath $RepositoryPath
     $existingApp = @($catalog.Apps | Where-Object { $_.Id -eq $Id } | Select-Object -First 1)
     if ($PSBoundParameters.ContainsKey('PackageType')) {
-        $PackageType = if ($PackageType -ieq 'Script') { 'Script' } else { 'App' }
+        $PackageType = if ($PackageType -ieq 'Script') { 'Script' } elseif ($PackageType -ieq 'Font') { 'Font' } else { 'App' }
     }
     elseif (Test-Path -LiteralPath $targetManifest -PathType Leaf) {
         $existingPackageManifest = Get-OSDAppManifest -Path $targetManifest

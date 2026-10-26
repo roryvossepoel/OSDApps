@@ -130,7 +130,7 @@ Describe 'Repository Font package contract' {
 
     It 'routes Font packages before requiring Package Install.ps1 and stages the font runtime helper' {
         $runner = Get-Content -LiteralPath (Join-Path $script:root 'Runtime\Invoke-OSDAppRunner.ps1') -Raw
-        $fontBranch = $runner.IndexOf("[string]$package.PackageType -eq 'Font'")
+        $fontBranch = $runner.IndexOf('[string]$package.PackageType -eq ''Font''')
         $installRequirement = $runner.IndexOf("does not contain Package\Install.ps1")
         $fontBranch | Should -BeGreaterThan -1
         $installRequirement | Should -BeGreaterThan $fontBranch
