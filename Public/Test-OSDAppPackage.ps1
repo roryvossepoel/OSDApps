@@ -1,7 +1,10 @@
 function Test-OSDAppPackage {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$PackagePath
+        [Parameter(Mandatory)][string]$PackagePath,
+
+        [ValidateSet('App','Script','Font')]
+        [string]$PackageType = 'App'
     )
 
     $resolved = (Resolve-Path -LiteralPath $PackagePath -ErrorAction Stop).Path
@@ -22,14 +25,28 @@ function Test-OSDAppPackage {
         $installScript = Join-Path $packageFolder 'Install.ps1'
         $packageFolderExists = Test-Path -LiteralPath $packageFolder -PathType Container
         $installScriptExists = Test-Path -LiteralPath $installScript -PathType Leaf
+        $fontFiles = @(
+            if ($packageFolderExists) {
+                Get-ChildItem -LiteralPath $packageFolder -File -Recurse -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Extension.ToLowerInvariant() -in @('.ttf','.otf') }
+            }
+        )
+        $valid = if ($PackageType -eq 'Font') {
+            ($packageFolderExists -and $fontFiles.Count -gt 0)
+        }
+        else {
+            ($packageFolderExists -and $installScriptExists)
+        }
 
         [pscustomobject]@{
             PSTypeName          = 'OSDApps.PackageValidation'
             PackagePath         = $resolved
             PackageFolderExists = $packageFolderExists
+            PackageType         = $PackageType
             InstallPs1Exists    = $installScriptExists
+            FontCount           = $fontFiles.Count
             Sha256              = (Get-FileHash -LiteralPath $resolved -Algorithm SHA256).Hash
-            Valid               = ($packageFolderExists -and $installScriptExists)
+            Valid               = $valid
         }
     }
     finally {

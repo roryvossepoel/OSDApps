@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add repository `PackageType=Font` with `Add-OSDAppFont`, Font-aware authoring/validation, machine-wide TTF/OTF installation, idempotent `AlreadyPresent` handling, conflict protection and per-font result reporting.
+
 ## 0.51.0
 
 - Add the opt-in Microsoft Company Portal built-in. `Sync-OSDAppMicrosoftCompanyPortal` now downloads the official Microsoft Preinstall Kit automatically on full Windows, while `-KitPath` remains available for a manual/offline source. Stage the architecture-matched bundle, offline license and dependencies in WinPE; provision Company Portal for future user profiles during SetupComplete.

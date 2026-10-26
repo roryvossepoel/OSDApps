@@ -11,7 +11,7 @@ function Add-OSDAppPackage {
         [ValidateSet('x64','arm64','any')]
         [string]$Architecture = 'x64',
 
-        [ValidateSet('App','Script')]
+        [ValidateSet('App','Script','Font')]
         [string]$PackageType,
 
         [int[]]$SuccessCodes = @(0,3010),
@@ -22,11 +22,6 @@ function Add-OSDAppPackage {
     if ($Id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $Id -match '\.\.') {
         throw "Invalid package Id '$Id'."
     }
-    $packageTest = Test-OSDAppPackage -PackagePath $PackagePath
-    if (-not $packageTest.Valid) {
-        throw 'Package validation failed. Package.zip must contain Package/Install.ps1.'
-    }
-
     $targetFolder = Join-Path $RepositoryPath (Join-Path 'Apps' (Join-Path $Id (Join-Path $Version $Architecture)))
     $targetPackage = Join-Path $targetFolder 'Package.zip'
     $targetManifest = Join-Path $targetFolder 'manifest.json'
@@ -34,7 +29,7 @@ function Add-OSDAppPackage {
     $catalog = Get-OSDAppRepositoryManifest -RepositoryPath $RepositoryPath
     $existingApp = @($catalog.Apps | Where-Object { $_.Id -eq $Id } | Select-Object -First 1)
     if ($PSBoundParameters.ContainsKey('PackageType')) {
-        $PackageType = if ($PackageType -ieq 'Script') { 'Script' } else { 'App' }
+        $PackageType = if ($PackageType -ieq 'Script') { 'Script' } elseif ($PackageType -ieq 'Font') { 'Font' } else { 'App' }
     }
     elseif (Test-Path -LiteralPath $targetManifest -PathType Leaf) {
         $existingPackageManifest = Get-OSDAppManifest -Path $targetManifest
@@ -45,14 +40,23 @@ function Add-OSDAppPackage {
         else {
             'App'
         }
-        if ($existingPackageType -notin @('App','Script')) {
+        if ($existingPackageType -notin @('App','Script','Font')) {
             throw "Existing package '$Id' has unsupported PackageType '$existingPackageType'."
         }
-        $PackageType = if ($existingPackageType -ieq 'Script') { 'Script' } else { 'App' }
+        $PackageType = if ($existingPackageType -ieq 'Script') { 'Script' } elseif ($existingPackageType -ieq 'Font') { 'Font' } else { 'App' }
     }
     else {
         $PackageType = 'App'
     }
+
+    $packageTest = Test-OSDAppPackage -PackagePath $PackagePath -PackageType $PackageType
+    if (-not $packageTest.Valid) {
+        if ($PackageType -eq 'Font') {
+            throw 'Font package validation failed. Package.zip must contain Package/ with at least one .ttf or .otf file.'
+        }
+        throw 'Package validation failed. Package.zip must contain Package/Install.ps1.'
+    }
+
     $effectiveAliases = if ($PSBoundParameters.ContainsKey('Alias')) {
         @($Alias | ForEach-Object { ([string]$_).Trim() } | Select-Object -Unique)
     }
