@@ -103,16 +103,29 @@ development machine (or normal WinPE repository sync) to refresh its cached
 metadata. The existing cache archive is reused when its SHA-256 still matches.
 Previously staged `DeviceManifest.json` files are not silently rewritten.
 
-`PackageType` is optional classification metadata with two supported values:
-`App` and `Script`. When it is absent, OSDApps uses `App` for
-backward compatibility. Both types use the same `Package/Install.ps1` entry
-point, SHA-256 checks, cache and staging paths, ordered SetupComplete queue,
-timeouts, success codes and failure handling. The value does not enable a
-different or less trusted execution path.
+`PackageType` is optional classification/semantic metadata with three supported values:
+`App`, `Script` and `Font`. When it is absent, OSDApps uses `App` for
+backward compatibility. App and Script use the same `Package/Install.ps1` entry point, SHA-256 checks,
+cache and staging paths, ordered SetupComplete queue, success codes and failure
+handling. Font uses the same repository acquisition/integrity/staging pipeline,
+but execution is owned by OSDApps and does not call package-supplied PowerShell.
 
 When an existing package variant is republished, omitting `-PackageType`
 preserves its current classification. A newly published package defaults to
 `App`.
+
+Use `Font` for machine-wide font collections. A Font package needs at least one
+`.ttf` or `.otf` file under `Package/`; `.ttc` is not supported in the initial
+contract. OSDApps recursively discovers supported font files, copies them into
+`%WINDIR%\Fonts`, writes the machine font registration under
+`HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts`, and notifies the
+running Windows session. Other files in the archive are ignored by the font
+installer. The package author remains responsible for font licensing.
+
+A font with the same destination filename and identical SHA-256 is
+`AlreadyPresent`. The same filename with different bytes is a conflict and fails
+that font without overwriting it; remaining fonts are still attempted. Font
+packages write a dedicated `Font-<Id>-Result.json` next to `Latest.json`.
 
 Use `Script` for machine-context configuration, debloat or remediation logic
 that must run once during SetupComplete. Such scripts run as SYSTEM, must not
@@ -124,7 +137,7 @@ The package URL is derived from the manifest location. A separate `SourcePath` p
 
 ## Package archive contract
 
-Authoring source:
+App/Script authoring source:
 
 ```text
 ExampleApp/
@@ -132,16 +145,18 @@ ExampleApp/
 └── <payload>
 ```
 
-Published archive:
+Font authoring source:
 
 ```text
-Package.zip
-└── Package/
-    ├── Install.ps1
-    └── <payload>
+CorporateFonts/
+├── Regular.ttf
+├── Bold.otf
+└── <optional supporting files>
 ```
 
-`Install.ps1` must be unattended and suitable for execution during SetupComplete. The runner starts it with the extracted `Package` directory as its working directory.
+Published archives always wrap source files under `Package/`. App/Script require
+`Package/Install.ps1`; Font does not. Font installation is performed by OSDApps,
+not by an archive-supplied script.
 
 ## Deployment lifecycle
 
@@ -156,7 +171,8 @@ WinPE
 First boot / SetupComplete
 → validate staged package again
 → extract Package.zip
-→ run Package/Install.ps1
+→ App/Script: run Package/Install.ps1
+→ Font: install supported TTF/OTF files through the OSDApps font runtime
 ```
 
 This makes repository apps deterministic at first boot: the package that was selected and cached in WinPE is the package that SetupComplete installs.
@@ -306,6 +322,28 @@ The helper:
 When updating an existing app, omitting `-Alias` preserves its aliases.
 Supplying an explicitly empty alias array removes them.
 
+Publish a font package without an Install.ps1:
+
+```powershell
+New-OSDAppPackage `
+    -Id CorporateFonts `
+    -Version 1.0.0 `
+    -PackageType Font `
+    -SourcePath C:\OSDApps\Packages\CorporateFonts `
+    -OutputPath C:\OSDApps\Build\CorporateFonts
+
+Add-OSDAppPackage `
+    -Id CorporateFonts `
+    -DisplayName 'Corporate Fonts' `
+    -Version 1.0.0 `
+    -Architecture any `
+    -PackageType Font `
+    -PackagePath C:\OSDApps\Build\CorporateFonts\Package.zip `
+    -RepositoryPath C:\OSDApps\Repository
+```
+
+Stage it in WinPE with `Add-OSDAppFont -Id CorporateFonts`.
+
 Publish a script package with the same authoring commands:
 
 ```powershell
@@ -346,7 +384,7 @@ Repository validation checks:
 - referenced package manifest exists;
 - `Package.zip` exists;
 - SHA-256 matches;
-- archive contains `Package/Install.ps1`;
+- App/Script archives contain `Package/Install.ps1`; Font archives contain at least one `.ttf` or `.otf`;
 - architecture is `x64`, `arm64`, or `any`;
 - package manifest Id matches the catalog app Id;
 - success codes are present and numeric;

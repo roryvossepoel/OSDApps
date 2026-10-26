@@ -40,17 +40,17 @@ Import-Module OSDApps -Force
 $Id = 'YourPackage'
 $Version = '1.0.0'
 $Architecture = 'x64'
-$PackageType = 'App' # Use Script for your configuration script.
+$PackageType = 'App' # App, Script or Font.
 $SourcePath = "C:\OSDApps\Source\$Id"
 $OutputPath = "C:\OSDApps\Build\$Id\$Version\$Architecture"
 $RepositoryPath = 'C:\OSDApps\Repository'
 
 New-OSDAppRepository -Path $RepositoryPath | Out-Host
 
-$package = New-OSDAppPackage -Id $Id -Version $Version `
+$package = New-OSDAppPackage -Id $Id -Version $Version -PackageType $PackageType `
     -SourcePath $SourcePath -OutputPath $OutputPath
 
-$packageCheck = Test-OSDAppPackage -PackagePath $package.PackagePath
+$packageCheck = Test-OSDAppPackage -PackagePath $package.PackagePath -PackageType $PackageType
 if (-not $packageCheck.Valid) {
     throw 'Package layout validation failed.'
 }
@@ -77,8 +77,13 @@ add `3010` if your installer uses it for successful completion with a pending
 reboot. Accepting that code does not authorize the script to restart Windows.
 
 For a script package, change `$PackageType` to `Script`. It still enters through
-`Install.ps1` and uses exactly the same archive, integrity checks and runner.
-No extra script-specific cmdlet is needed.
+`Install.ps1` and uses the normal repository runtime.
+
+For a font package, use `$PackageType = 'Font'`. The source folder does not need
+`Install.ps1`; place one or more `.ttf`/`.otf` files in it. Publish with
+`-Architecture any` when the font files are architecture-neutral, then stage in
+WinPE with `Add-OSDAppFont -Id <Id>`. OSDApps owns the machine-wide font
+installation and ignores unsupported files in the archive.
 
 The resulting files are:
 
