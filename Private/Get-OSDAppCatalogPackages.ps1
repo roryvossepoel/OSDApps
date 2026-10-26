@@ -130,10 +130,10 @@ function Get-OSDAppCatalogPackages {
             else {
                 'App'
             }
-            if ($packageType -notin @('App','Script','Font','Certificate')) {
-                throw "Package '$($app.Id)' has unsupported PackageType '$packageType'. Expected App, Script, Font or Certificate."
+            if ($packageType -notin @('App','Script','Font','Certificate','Driver')) {
+                throw "Package '$($app.Id)' has unsupported PackageType '$packageType'. Expected App, Script, Font, Certificate or Driver."
             }
-            $packageType = if ($packageType -ieq 'Script') { 'Script' } elseif ($packageType -ieq 'Font') { 'Font' } elseif ($packageType -ieq 'Certificate') { 'Certificate' } else { 'App' }
+            $packageType = if ($packageType -ieq 'Script') { 'Script' } elseif ($packageType -ieq 'Font') { 'Font' } elseif ($packageType -ieq 'Certificate') { 'Certificate' } elseif ($packageType -ieq 'Driver') { 'Driver' } else { 'App' }
 
             if ($packageType -eq 'Certificate' -and [string]$packageManifest.CertificateStore -notin @('Root','CA')) {
                 throw "Certificate package '$($app.Id)' requires CertificateStore Root or CA."

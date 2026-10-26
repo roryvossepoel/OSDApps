@@ -35,6 +35,7 @@
         'Clear-OSDAppCache',
         'Add-OSDApp',
         'Add-OSDAppFont',
+        'Add-OSDAppDriver',
         'Add-OSDAppRegistryKey',
     'Add-OSDAppRegistryValue',
     'Add-OSDAppWindowsFeature',

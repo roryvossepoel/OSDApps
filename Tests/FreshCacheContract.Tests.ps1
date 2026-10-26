@@ -71,13 +71,13 @@ Describe 'Fresh-cache-only vendor installer contract' {
         $source | Should -Match 'Package\.zip'
     }
 
-    It 'declares App, Script, Font and Certificate as the package type values' {
+    It 'declares App, Script, Font, Certificate and Driver as the package type values' {
         $module = Import-Module (Join-Path $script:root 'OSDApps.psd1') -Force -PassThru
         $cmd = Get-Command Add-OSDAppPackage -Module OSDApps -ErrorAction Stop
         $choices = @($cmd.Parameters['PackageType'].Attributes |
             Where-Object { $_ -is [Management.Automation.ValidateSetAttribute] } |
             ForEach-Object { $_.ValidValues })
-        @($choices | Sort-Object) | Should -Be @('App','Certificate','Font','Script')
+        @($choices | Sort-Object) | Should -Be @('App','Certificate','Driver','Font','Script')
         $meta = Get-Content -LiteralPath (Join-Path $script:root 'metadata/builtins.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         $meta.PSObject.Properties.Name | Should -Contain 'Apps'
         $meta.PSObject.Properties.Name | Should -Not -Contain ('Applic' + 'ations')

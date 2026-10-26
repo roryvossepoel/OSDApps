@@ -108,9 +108,9 @@ function Test-OSDAppRepository {
                 [string]$manifest.PackageType
             }
             else { 'App' }
-            $packageTypeValid = $packageType -in @('App','Script','Font','Certificate')
+            $packageTypeValid = $packageType -in @('App','Script','Font','Certificate','Driver')
             if ($packageTypeValid) {
-                $packageType = if ($packageType -ieq 'Script') { 'Script' } elseif ($packageType -ieq 'Font') { 'Font' } elseif ($packageType -ieq 'Certificate') { 'Certificate' } else { 'App' }
+                $packageType = if ($packageType -ieq 'Script') { 'Script' } elseif ($packageType -ieq 'Font') { 'Font' } elseif ($packageType -ieq 'Certificate') { 'Certificate' } elseif ($packageType -ieq 'Driver') { 'Driver' } else { 'App' }
             }
             if ($exists -and $packageTypeValid) {
                 $testParameters=@{PackagePath=$packagePath;PackageType=$packageType}

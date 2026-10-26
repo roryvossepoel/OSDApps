@@ -3,7 +3,7 @@ function Test-OSDAppPackage {
     param(
         [Parameter(Mandatory)][string]$PackagePath,
 
-        [ValidateSet('App','Script','Font','Certificate')]
+        [ValidateSet('App','Script','Font','Certificate','Driver')]
         [string]$PackageType = 'App',
 
         [ValidateSet('Root','CA')][string]$CertificateStore
@@ -37,9 +37,18 @@ function Test-OSDAppPackage {
                     Where-Object { $_.Extension.ToLowerInvariant() -in @('.ttf','.otf') }
             }
         )
+        $driverCount=0
         $certificateCount=0
         $validationError=$null
-        $valid = if ($PackageType -eq 'Certificate') {
+        $valid = if ($PackageType -eq 'Driver') {
+            try {
+                if (-not $packageFolderExists -or @(Get-ChildItem -LiteralPath $temp -Force).Count -ne 1) { throw 'Driver ZIP must contain only the Package directory.' }
+                $driverCount=@(Get-OSDAppDriverInfFiles -PayloadRoot $packageFolder).Count
+                $true
+            }
+            catch { $validationError=$_.Exception.Message; $false }
+        }
+        elseif ($PackageType -eq 'Certificate') {
             try {
                 if (-not $packageFolderExists -or @(Get-ChildItem -LiteralPath $temp -Force).Count -ne 1) { throw 'Certificate ZIP must contain only the Package directory.' }
                 $store=if($CertificateStore){$CertificateStore}else{'CA'}
@@ -64,6 +73,7 @@ function Test-OSDAppPackage {
             InstallPs1Exists    = $installScriptExists
             FontCount           = $fontFiles.Count
             CertificateCount    = $certificateCount
+            DriverInfCount      = $driverCount
             Error               = $validationError
             Sha256              = (Get-FileHash -LiteralPath $resolved -Algorithm SHA256).Hash
             Valid               = $valid

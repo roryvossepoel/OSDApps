@@ -11,7 +11,7 @@ function Add-OSDAppPackage {
         [ValidateSet('x64','arm64','any')]
         [string]$Architecture = 'x64',
 
-        [ValidateSet('App','Script','Font','Certificate')]
+        [ValidateSet('App','Script','Font','Certificate','Driver')]
         [string]$PackageType,
 
         [ValidateSet('Root','CA')][string]$CertificateStore,
@@ -31,7 +31,7 @@ function Add-OSDAppPackage {
     $catalog = Get-OSDAppRepositoryManifest -RepositoryPath $RepositoryPath
     $existingApp = @($catalog.Apps | Where-Object { $_.Id -eq $Id } | Select-Object -First 1)
     if ($PSBoundParameters.ContainsKey('PackageType')) {
-        $PackageType = if ($PackageType -ieq 'Script') { 'Script' } elseif ($PackageType -ieq 'Font') { 'Font' } elseif ($PackageType -ieq 'Certificate') { 'Certificate' } else { 'App' }
+        $PackageType = if ($PackageType -ieq 'Script') { 'Script' } elseif ($PackageType -ieq 'Font') { 'Font' } elseif ($PackageType -ieq 'Certificate') { 'Certificate' } elseif ($PackageType -ieq 'Driver') { 'Driver' } else { 'App' }
     }
     elseif (Test-Path -LiteralPath $targetManifest -PathType Leaf) {
         $existingPackageManifest = Get-OSDAppManifest -Path $targetManifest
@@ -42,10 +42,10 @@ function Add-OSDAppPackage {
         else {
             'App'
         }
-        if ($existingPackageType -notin @('App','Script','Font','Certificate')) {
+        if ($existingPackageType -notin @('App','Script','Font','Certificate','Driver')) {
             throw "Existing package '$Id' has unsupported PackageType '$existingPackageType'."
         }
-        $PackageType = if ($existingPackageType -ieq 'Script') { 'Script' } elseif ($existingPackageType -ieq 'Font') { 'Font' } elseif ($existingPackageType -ieq 'Certificate') { 'Certificate' } else { 'App' }
+        $PackageType = if ($existingPackageType -ieq 'Script') { 'Script' } elseif ($existingPackageType -ieq 'Font') { 'Font' } elseif ($existingPackageType -ieq 'Certificate') { 'Certificate' } elseif ($existingPackageType -ieq 'Driver') { 'Driver' } else { 'App' }
     }
     else {
         $PackageType = 'App'
@@ -64,6 +64,7 @@ function Add-OSDAppPackage {
     elseif ($PSBoundParameters.ContainsKey('CertificateStore')) { throw 'CertificateStore is only valid for Certificate packages.' }
     $packageTest = Test-OSDAppPackage @testParameters
     if (-not $packageTest.Valid) {
+        if ($PackageType -eq 'Driver') { throw ('Driver package validation failed: '+$packageTest.Error) }
         if ($PackageType -eq 'Certificate') { throw ('Certificate package validation failed: '+$packageTest.Error) }
         if ($PackageType -eq 'Font') {
             throw 'Font package validation failed. Package.zip must contain Package/ with at least one .ttf or .otf file.'

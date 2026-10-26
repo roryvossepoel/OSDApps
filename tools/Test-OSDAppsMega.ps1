@@ -50,7 +50,7 @@ if (-not [string]::IsNullOrWhiteSpace($DeploymentResultPath)) {
         [int]$deployment.ExpectedAppCount -eq [int]$deployment.SuccessfulAppCount -and
         [int]$deployment.FailedAppCount -eq 0 -and
         [int]$deployment.SkippedAppCount -eq 0 -and
-        @($entries | Where-Object { $_.Status -ne 'Succeeded' -or $_.PackageType -notin @('App','Script','Font','Certificate') }).Count -eq 0
+        @($entries | Where-Object { $_.Status -ne 'Succeeded' -or $_.PackageType -notin @('App','Script','Font','Certificate','Driver') }).Count -eq 0
     )
     $checks.Add([pscustomobject]@{Name='Physical deployment result';Status=$(if($passed){'Passed'}else{'Failed'});ResultPath=$DeploymentResultPath})
 }
