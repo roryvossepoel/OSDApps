@@ -11,6 +11,8 @@ function Add-OSDAppZoomWorkplace {
         [string]$WindowsPath
     )
 
+    Assert-OSDAppSourceEnabled -Source BuiltIn
+
     if (-not $PackageUri) {
         $PackageUri = switch ($Architecture) {
             'x64' { 'https://zoom.us/client/latest/ZoomInstallerFull.msi?archType=x64' }

@@ -9,6 +9,8 @@ function Add-OSDAppRegistryValue {
         [switch]$Registry64,
         [string]$WindowsPath
     )
+
+    Assert-OSDAppSourceEnabled -Source BuiltIn
     $operation = New-OSDAppRegistryOperation -Action Value -Path $Path -Name $Name -Type $Type -Value $Value -Registry32:$Registry32 -Registry64:$Registry64
     if ($PSCmdlet.ShouldProcess(($operation.Path + ' [' + $Name + ']'), 'Stage a registry value for SetupComplete')) {
         Save-OSDAppRegistryStaging -Operation $operation -WindowsPath $WindowsPath

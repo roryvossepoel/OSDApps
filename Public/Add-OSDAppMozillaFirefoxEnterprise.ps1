@@ -28,6 +28,8 @@ function Add-OSDAppMozillaFirefoxEnterprise {
         [string]$WindowsPath
     )
 
+    Assert-OSDAppSourceEnabled -Source BuiltIn
+
     if (-not $PackageUri) {
         $product = if ($Channel -eq 'ESR') { 'firefox-esr-msi-latest-ssl' } else { 'firefox-msi-latest-ssl' }
         $os = if ($Architecture -eq 'x64') { 'win64' } else { 'win' }
