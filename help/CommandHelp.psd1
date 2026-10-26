@@ -104,6 +104,18 @@
             Examples = @(@{ Code = 'Sync-OSDAppCMTraceOpen -Architecture x64'; Remarks = 'Download and integrity-verify the current stable x64 MSI from the official project release.' })
             Link = 'docs/cmtrace-open.md'
         }
+        'Add-OSDAppCertificate' = @{
+            Synopsis = 'Stage public CA certificates for machine-wide import during SetupComplete.'
+            Description = 'Accepts individual DER or PEM X.509 certificates in .cer or .crt files. Explicitly selects LocalMachine Root or CA. Duplicate thumbprint/store pairs are staged once; certificates already present are reported without replacement. Private keys and certificate bundles are rejected.'
+            Environment = 'WinPE after applying Windows; SetupComplete imports certificates once as SYSTEM.'
+            Output = 'A staged built-in Script summary with subjects, thumbprints, target stores and operation count.'
+            Parameters = @{
+                Path = 'One or more local .cer or .crt files, each containing one public CA certificate without a private key.'
+                Store = 'Required destination under LocalMachine: Root for trusted roots or CA for intermediate certification authorities. No automatic trust-store selection.'
+            }
+            Examples = @(@{ Code = 'Add-OSDAppCertificate -Path ''E:\OSDApps-TestData\Certificates\root.cer'' -Store Root'; Remarks = 'Stage an explicitly selected public root CA for machine-wide trust in the deployed Windows installation.' })
+            Link = 'docs/certificate-staging.md'
+        }
         'Add-OSDAppWiFiProfile' = @{
             Synopsis = 'Stage Wi-Fi profiles from parameters or XML for all users during SetupComplete.'
             Description = 'Accepts WPA2-Personal, WPA3-Personal and open WLAN XML exports. Repeated profile names replace prior staged definitions. Preserves connection mode and updates existing profiles. Credential-bearing staging is restricted to SYSTEM/Administrators and consumed after one runtime attempt, even with CleanupMode Never.'

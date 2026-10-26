@@ -39,6 +39,7 @@
     'Add-OSDAppRegistryValue',
     'Add-OSDAppWindowsFeature',
     'Add-OSDAppWiFiProfile',
+    'Add-OSDAppCertificate',
     'Add-OSDAppWindowsInboxCleanup',
         'Add-OSDAppCMTraceOpen',
         'Add-OSDAppMicrosoftCompanyPortal',
