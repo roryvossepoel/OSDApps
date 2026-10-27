@@ -66,12 +66,19 @@ function ConvertTo-OSDAppTaskbarXml {
         $writer.WriteAttributeString('PinListPlacement','Replace')
         $writer.WriteStartElement('defaultlayout','TaskbarLayout',$fullNs)
         $writer.WriteStartElement('taskbar','TaskbarPinList',$barNs)
+        if ($items.Count -eq 0) {
+            # Microsoft's empty replacement sentinel is internal, not a caller-supplied link.
+            $writer.WriteStartElement('taskbar','DesktopApp',$barNs)
+            $writer.WriteAttributeString('DesktopApplicationLinkPath','#leaveempty')
+            $writer.WriteEndElement()
+        }
         foreach ($pin in $items) {
             $name=@($pin.PSObject.Properties.Name)[0]
             $element=if ($name -eq 'packagedAppId') { 'UWA' } else { 'DesktopApp' }
             $attribute=@{packagedAppId='AppUserModelID';desktopAppId='DesktopApplicationID';desktopAppLink='DesktopApplicationLinkPath'}[$name]
             $writer.WriteStartElement('taskbar',$element,$barNs)
             $writer.WriteAttributeString($attribute,[string]$pin.$name)
+            $writer.WriteAttributeString('PinGeneration','1')
             $writer.WriteEndElement()
         }
         $writer.WriteEndElement();$writer.WriteEndElement();$writer.WriteEndElement();$writer.WriteEndElement()
@@ -105,6 +112,33 @@ function Get-OSDAppStartPinsPolicy {
         throw 'The target StartMenu.admx does not contain the supported Configure Start Pins file policy.'
     }
     [pscustomobject]@{Key='SOFTWARE\Policies\Microsoft\Windows\Explorer';EnabledName='ConfigureStartPins';FileName='ConfigureStartPinsJSON'}
+}
+
+function Assert-OSDAppTaskbarPinsPlatform {
+    param([int]$Build, [int]$Revision, [string]$InstallationType, [string]$EditionId)
+    # Use the same supported baseline as Start applyOnce; it includes the PinGeneration update.
+    if ($InstallationType -ne 'Client' -or $Build -lt 26100 -or ($Build -eq 26100 -and $Revision -lt 4770) -or
+        $EditionId -notmatch '^(Professional|Enterprise|Education|IoTEnterprise)') {
+        throw 'User-editable taskbar pins require Windows 11 Pro, Enterprise, Education or IoT Enterprise, build 26100.4770 or later.'
+    }
+}
+
+function Get-OSDAppTaskbarPinsPolicy {
+    param([Parameter(Mandatory)][string]$WindowsDirectory)
+    $path=Join-Path $WindowsDirectory 'PolicyDefinitions\StartMenu.admx'
+    $settings=[Xml.XmlReaderSettings]::new();$settings.DtdProcessing=[Xml.DtdProcessing]::Prohibit;$settings.XmlResolver=$null
+    $reader=[Xml.XmlReader]::Create($path,$settings)
+    try { $doc=[Xml.XmlDocument]::new();$doc.XmlResolver=$null;$doc.Load($reader) } finally { $reader.Dispose() }
+    $policy=$doc.SelectSingleNode("//*[local-name()='policy' and @name='LockedStartLayout']")
+    $text=if ($policy) { $policy.SelectSingleNode("./*[local-name()='elements']/*[local-name()='text' and @valueName='StartLayoutFile']") }
+    $enabled=if ($policy) { $policy.SelectSingleNode("./*[local-name()='enabledValue']/*[local-name()='decimal']") }
+    if (-not $policy -or $policy.GetAttribute('key') -ine 'Software\Policies\Microsoft\Windows\Explorer' -or
+        $policy.GetAttribute('valueName') -ne 'LockedStartLayout' -or $policy.GetAttribute('class') -ne 'Both' -or
+        -not $text -or -not $enabled -or $enabled.GetAttribute('value') -ne '1') {
+        throw 'The target StartMenu.admx does not contain the supported Start Layout file policy for taskbar pins.'
+    }
+    # Relative to the already-mounted SOFTWARE hive, never the host registry.
+    [pscustomobject]@{Key='Policies\Microsoft\Windows\Explorer';EnabledName='LockedStartLayout';FileName='StartLayoutFile'}
 }
 
 function Set-OSDAppStartPinsConfiguration {
@@ -166,7 +200,7 @@ function Invoke-OSDAppDesktopConfiguration {
             switch ([string]$operation.Kind) {
                 'TimeZone' { $item.Detail=Set-OSDAppTimeZoneConfiguration -Id $operation.Id }
                 'StartPins' { $item.Detail=Set-OSDAppStartPinsConfiguration -Pins @($operation.Pins) }
-                'TaskbarPins' { $item.Detail=[pscustomobject]@{Outcome='PreparedOffline';PinCount=@($operation.Pins).Count;Note='Taskbar layout was written in WinPE before specialize. This is not proof of the rendered user layout.'} }
+                'TaskbarPins' { $item.Detail=[pscustomobject]@{Outcome='PreparedOffline';PinCount=@($operation.Pins).Count;Mode='Replace';PinGeneration=1;Note='Taskbar file policy was prepared in WinPE for first sign-in. Windows retains the policy; PinGeneration permits user unpinning. This is not proof of the rendered user layout.'} }
             }
             $item.Status='Succeeded'
         }

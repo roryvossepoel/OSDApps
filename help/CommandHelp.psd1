@@ -62,8 +62,8 @@
         }
         'Add-OSDAppTaskbarPins' = @{
             Synopsis = 'Prepare an initial taskbar layout directly in a freshly applied offline Windows image.'
-            Description = 'Generates taskbar XML and sets LayoutXMLPath in the target SOFTWARE hive before specialize. No recurring policy or task. Foreign or modified layouts are refused. This changes the offline image immediately; discarding these changes requires reapplying Windows.'
-            Environment = 'WinPE immediately after OSDCloud has applied Windows, before the first boot into Windows Setup. Windows 11 client only.'
+            Description = 'Generates Replace taskbar XML and sets the native Start Layout file policy in the target SOFTWARE hive. PinGeneration=1 permits user unpinning. The native policy persists; no OSDApps logon script or correction task is added. Requires build 26100.4770 or later and a supported business edition. Foreign or modified layouts are refused. Reapply Windows to discard offline changes.'
+            Environment = 'WinPE immediately after OSDCloud has applied Windows, before the first boot into Windows Setup. Windows 11 business editions, build 26100.4770 or later.'
             Output = 'OSDApps.StagedApp. Runtime records PreparedOffline; it does not verify the rendered taskbar or reapply pins.'
             Parameters = @{ Pins = 'Ordered array using desktopAppId, packagedAppId or desktopAppLink. Empty array requests no app pins. Taskbar controls such as Start and Search are outside this setting.' }
             Examples = @(@{Code='Add-OSDAppTaskbarPins -Pins @(@{desktopAppId=''MSEdge''},@{desktopAppId=''Microsoft.Windows.Explorer''})';Remarks='Prepare Edge and Explorer app pins before Windows Setup.'})

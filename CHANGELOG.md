@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Add opt-in time zone, one-time Start pins and offline taskbar preparation through Add-OSDAppTimeZone, Add-OSDAppStartPins and Add-OSDAppTaskbarPins. Includes independent configuration, transactional staging, target compatibility checks, result reporting and a combined manual deployment example. Physical Windows 11/OOBE validation is pending.
+- Add opt-in time zone, one-time Start pins and offline taskbar preparation through Add-OSDAppTimeZone, Add-OSDAppStartPins and Add-OSDAppTaskbarPins. Includes independent configuration, transactional staging, target compatibility checks, result reporting and a combined manual deployment example. Start pins passed the first physical test. Taskbar preparation now uses the native file policy with Replace and PinGeneration=1 after the OEM method left extra default pins. Empty lists use the documented sentinel. The next physical test requires Settings/Explorer only and an actual change to Tokyo Standard Time; validation remains pending.
 
 - Add repository `PackageType=Font` with `Add-OSDAppFont`, Font-aware authoring/validation, machine-wide TTF/OTF installation, idempotent `AlreadyPresent` handling, conflict protection and per-font result reporting.
 

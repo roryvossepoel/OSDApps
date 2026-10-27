@@ -16,6 +16,8 @@
         [xml]$xml=ConvertTo-OSDAppTaskbarXml -Pins $pins
         $nodes=$xml.SelectNodes("//*[local-name()='TaskbarPinList']/*")
         $nodes.Count | Should -Be 3
+        $xml.SelectSingleNode("//*[local-name()='CustomTaskbarLayoutCollection']").GetAttribute('PinListPlacement') | Should -Be Replace
+        foreach ($node in $nodes) { $node.GetAttribute('PinGeneration') | Should -Be '1' }
         $nodes[0].GetAttribute('DesktopApplicationID') | Should -Be MSEdge
         $nodes[1].GetAttribute('AppUserModelID') | Should -Be 'Contoso_123!App'
         $nodes[2].GetAttribute('DesktopApplicationLinkPath') | Should -Be '%ProgramData%\Tools\Café & Tools.lnk'
@@ -24,7 +26,8 @@
         @(ConvertTo-OSDAppDesktopPins -Pins @()).Count | Should -Be 0
         [xml]$xml=ConvertTo-OSDAppTaskbarXml -Pins @()
         $xml.SelectSingleNode("//*[local-name()='CustomTaskbarLayoutCollection']").GetAttribute('PinListPlacement') | Should -Be Replace
-        $xml.SelectNodes("//*[local-name()='TaskbarPinList']/*").Count | Should -Be 0
+        $xml.SelectNodes("//*[local-name()='TaskbarPinList']/*").Count | Should -Be 1
+        $xml.SelectSingleNode("//*[local-name()='TaskbarPinList']/*").GetAttribute('DesktopApplicationLinkPath') | Should -Be '#leaveempty'
     }
     It 'rejects ambiguous, unsafe, unsupported and duplicate pin inputs' {
         foreach ($pins in @(
@@ -41,8 +44,12 @@
             @{Build=26100;Revision=4769;InstallationType='Client';EditionId='Professional'},
             @{Build=26100;Revision=5000;InstallationType='Server';EditionId='ServerStandard'},
             @{Build=26100;Revision=5000;InstallationType='Client';EditionId='Core'}
-        )) { { Assert-OSDAppStartPinsPlatform @platform } | Should -Throw }
+        )) {
+            { Assert-OSDAppStartPinsPlatform @platform } | Should -Throw
+            { Assert-OSDAppTaskbarPinsPlatform @platform } | Should -Throw
+        }
         { Assert-OSDAppStartPinsPlatform -Build 26100 -Revision 4770 -InstallationType Client -EditionId Professional } | Should -Not -Throw
+        { Assert-OSDAppTaskbarPinsPlatform -Build 26100 -Revision 4770 -InstallationType Client -EditionId Professional } | Should -Not -Throw
         { Assert-OSDAppStartPinsPlatform -Build 26200 -Revision 1 -InstallationType Client -EditionId Enterprise } | Should -Not -Throw
     }
     It 'requires the file-based native ADMX mapping and rejects DTD content' {
@@ -57,6 +64,28 @@
         { Get-OSDAppStartPinsPolicy -WindowsDirectory (Split-Path $dir -Parent) } | Should -Throw
         '<!DOCTYPE test [<!ENTITY x SYSTEM "file:///missing">]><test>&x;</test>' | Set-Content $file
         { Get-OSDAppStartPinsPolicy -WindowsDirectory (Split-Path $dir -Parent) } | Should -Throw
+    }
+    It 'verifies the native Start Layout ADMX mapping used for taskbar replacement' {
+        $dir=Join-Path $TestDrive 'TaskbarWindows\PolicyDefinitions'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        $file=Join-Path $dir 'StartMenu.admx'
+        $valid='<policyDefinitions><policies><policy name="LockedStartLayout" class="Both" key="Software\Policies\Microsoft\Windows\Explorer" valueName="LockedStartLayout"><enabledValue><decimal value="1" /></enabledValue><elements><text id="StartLayout_Name" valueName="StartLayoutFile" /></elements></policy></policies></policyDefinitions>'
+        $valid | Set-Content $file
+        $mapping=Get-OSDAppTaskbarPinsPolicy -WindowsDirectory (Split-Path $dir -Parent)
+        $mapping.Key | Should -Be 'Policies\Microsoft\Windows\Explorer'
+        $mapping.FileName | Should -Be StartLayoutFile
+        $mapping.EnabledName | Should -Be LockedStartLayout
+        foreach ($invalid in @($valid.Replace('StartLayoutFile','WrongFile'),$valid.Replace('value="1"','value="0"'),$valid.Replace('class="Both"','class="User"'),'<!DOCTYPE test [<!ENTITY x SYSTEM "file:///missing">]><test>&x;</test>')) {
+            $invalid | Set-Content $file
+            { Get-OSDAppTaskbarPinsPolicy -WindowsDirectory (Split-Path $dir -Parent) } | Should -Throw
+        }
+    }
+    It 'fails if a time zone change is not observed during the same invocation' {
+        Mock Test-Path { $true }
+        Mock Get-TimeZone { [pscustomobject]@{Id='UTC'} }
+        Mock Set-TimeZone { }
+        { Set-OSDAppTimeZoneConfiguration -Id 'Tokyo Standard Time' } | Should -Throw '*not observed*'
+        Should -Invoke Set-TimeZone -Exactly 1 -ParameterFilter { $Id -eq 'Tokyo Standard Time' }
     }
     It 'records each result independently without retrying failed settings' {
         Mock Set-OSDAppTimeZoneConfiguration { throw 'Unknown Windows time zone ID' }
@@ -136,30 +165,35 @@
             { Add-OSDAppTimeZone -Id UTC } | Should -Throw '*disabled*'
         }
     }
-    It 'runs the packaged time zone path without changing the CI machine time zone and rejects payload tampering' {
+    It 'changes the actual time zone through the packaged runner, restores it and rejects payload tampering' {
         InModuleScope OSDApps {
             Mock Test-OSDAppWinPE { $true }
             $target=Join-Path $TestDrive 'Runner Windows'
             New-Item -ItemType Directory -Path $target | Out-Null
             $results=Join-Path $TestDrive 'Results'
             Set-OSDAppConfiguration -LogPath (Join-Path $TestDrive 'Runtime.log') -ResultPath (Join-Path $results 'Latest.json') -PreventSleep $false
+            $zone=(Get-TimeZone).Id
+            $requested=if ($zone -ne 'Tokyo Standard Time') { 'Tokyo Standard Time' } else { 'UTC' }
             try {
-                $zone=(Get-TimeZone).Id
-                Add-OSDAppTimeZone -Id $zone -WindowsPath $target | Out-Null
+                Add-OSDAppTimeZone -Id $requested -WindowsPath $target | Out-Null
                 $stage=Join-Path $target 'Windows\Temp\OSDApps'
                 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $stage 'Invoke-OSDAppPreInstall.ps1') -StagedPath $stage
                 $LASTEXITCODE | Should -Be 0
                 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $stage 'Invoke-OSDAppRunner.ps1') -StagedPath $stage
                 $LASTEXITCODE | Should -Be 0
-                (Get-TimeZone).Id | Should -Be $zone
+                (Get-TimeZone).Id | Should -Be $requested
                 $report=Get-Content (Join-Path $results 'DesktopSettings-Result.json') -Raw | ConvertFrom-Json
                 $report.Status | Should -Be Succeeded
-                $report.Items[0].Detail.Outcome | Should -Be Unchanged
+                $report.Items[0].Detail.Outcome | Should -Be Applied
+                $report.Items[0].Detail.Before | Should -Be $zone
+                $report.Items[0].Detail.After | Should -Be $requested
                 Add-Content (Join-Path $stage 'BuiltIn\DesktopSettings\Install.ps1') '# tampered'
                 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $stage 'Invoke-OSDAppRunner.ps1') -StagedPath $stage
                 $LASTEXITCODE | Should -Not -Be 0
             }
-            finally { Set-OSDAppConfiguration -LogPath '%ProgramData%\OSDApps\Logs\Runtime.log' -ResultPath '%ProgramData%\OSDApps\Results\Latest.json' -PreventSleep $true }
+            finally {
+                Set-TimeZone -Id $zone -ErrorAction Stop
+                Set-OSDAppConfiguration -LogPath '%ProgramData%\OSDApps\Logs\Runtime.log' -ResultPath '%ProgramData%\OSDApps\Results\Latest.json' -PreventSleep $true }
         }
     }
 }
@@ -231,14 +265,34 @@ Describe 'Desktop settings native registry and transaction boundaries' {
                 $LASTEXITCODE | Should -Be 0
             }
             finally { $key.Dispose();[Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($fixture,$false) }
+            $admxDir=Join-Path $target 'Windows\PolicyDefinitions'
+            New-Item -ItemType Directory -Path $admxDir -Force | Out-Null
+            '<policyDefinitions><policies><policy name="LockedStartLayout" class="Both" key="Software\Policies\Microsoft\Windows\Explorer" valueName="LockedStartLayout"><enabledValue><decimal value="1" /></enabledValue><elements><text id="StartLayout_Name" valueName="StartLayoutFile" /></elements></policy></policies></policyDefinitions>' | Set-Content (Join-Path $admxDir 'StartMenu.admx')
             $pins=@(@{desktopAppId='MSEdge'},@{desktopAppId='Microsoft.Windows.Explorer'})
+            # Initial failure must remove both policy values and the file.
+            { Set-OSDAppOfflineTaskbar -WindowsPath $target -Pins $pins -Commit { throw 'first commit failed' } } | Should -Throw '*first commit failed*'
+            Invoke-OSDAppOfflineSoftware -WindowsPath $target -Action {
+                param($Software)
+                $key=$Software.OpenSubKey('Policies\Microsoft\Windows\Explorer')
+                try {
+                    $key.GetValue('StartLayoutFile') | Should -BeNullOrEmpty
+                    $key.GetValue('LockedStartLayout') | Should -BeNullOrEmpty
+                } finally { $key.Dispose() }
+            }
+            Test-Path (Join-Path $target 'Windows\OEM\OSDApps\TaskbarLayoutModification.xml') | Should -BeFalse
             Set-OSDAppOfflineTaskbar -WindowsPath $target -Pins $pins -Commit { }
             $file=Join-Path $target 'Windows\OEM\OSDApps\TaskbarLayoutModification.xml'
             [IO.File]::ReadAllText($file) | Should -Be (ConvertTo-OSDAppTaskbarXml -Pins $pins)
             Invoke-OSDAppOfflineSoftware -WindowsPath $target -Action {
                 param($Software)
-                $key=$Software.OpenSubKey('Microsoft\Windows\CurrentVersion\Explorer')
-                try { $key.GetValue('LayoutXMLPath') | Should -Be 'C:\Windows\OEM\OSDApps\TaskbarLayoutModification.xml' } finally { $key.Dispose() }
+                $key=$Software.OpenSubKey('Policies\Microsoft\Windows\Explorer')
+                try {
+                    $key.GetValue('StartLayoutFile') | Should -Be 'C:\Windows\OEM\OSDApps\TaskbarLayoutModification.xml'
+                    $key.GetValueKind('StartLayoutFile').ToString() | Should -Be String
+                    $key.GetValue('LockedStartLayout') | Should -Be 1
+                    $key.GetValueKind('LockedStartLayout').ToString() | Should -Be DWord
+                } finally { $key.Dispose() }
+                $Software.OpenSubKey('Microsoft\Windows\CurrentVersion\Explorer') | Should -BeNullOrEmpty
             }
             $hash=(Get-FileHash $file).Hash
             { Set-OSDAppOfflineTaskbar -WindowsPath $target -Pins @() -Commit { throw 'commit failed fixture' } } | Should -Throw '*commit failed fixture*'
@@ -247,6 +301,26 @@ Describe 'Desktop settings native registry and transaction boundaries' {
                 param($Software)
                 $key=$Software.OpenSubKey('OSDApps\DesktopSettings')
                 try { $key.GetValue('TaskbarSha256') | Should -Be $hash } finally { $key.Dispose() }
+            }
+            # Foreign policy is refused without touching layout, ownership or unrelated Start policy.
+            Invoke-OSDAppOfflineSoftware -WindowsPath $target -Action {
+                param($Software)
+                $key=$Software.OpenSubKey('Policies\Microsoft\Windows\Explorer',$true)
+                try {
+                    $key.SetValue('StartLayoutFile','C:\Other\Layout.xml')
+                    $key.SetValue('ConfigureStartPins',1,[Microsoft.Win32.RegistryValueKind]::DWord)
+                } finally { $key.Dispose() }
+            }
+            { Set-OSDAppOfflineTaskbar -WindowsPath $target -Pins @() -Commit { } } | Should -Throw '*not an intact*'
+            (Get-FileHash $file).Hash | Should -Be $hash
+            Invoke-OSDAppOfflineSoftware -WindowsPath $target -Action {
+                param($Software)
+                $key=$Software.OpenSubKey('Policies\Microsoft\Windows\Explorer',$true)
+                try {
+                    $key.GetValue('StartLayoutFile') | Should -Be 'C:\Other\Layout.xml'
+                    $key.GetValue('ConfigureStartPins') | Should -Be 1
+                    $key.SetValue('StartLayoutFile','C:\Windows\OEM\OSDApps\TaskbarLayoutModification.xml')
+                } finally { $key.Dispose() }
             }
             Add-Content $file 'foreign edit'
             { Set-OSDAppOfflineTaskbar -WindowsPath $target -Pins @() -Commit { } } | Should -Throw '*not an intact*'
