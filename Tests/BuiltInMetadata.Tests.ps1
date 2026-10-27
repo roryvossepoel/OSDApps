@@ -79,6 +79,7 @@ Describe 'Built-in metadata' {
         $exported = @(Get-Command -Module OSDApps -CommandType Function | Select-Object -ExpandProperty Name)
         foreach ($app in @($script:metadata.Apps)) {
             $app.AddCommand | Should -BeIn $exported
+            foreach ($command in @($app.AdditionalAddCommands | Where-Object { $_ })) { $command | Should -BeIn $exported }
             if ($app.SyncCommand) { $app.SyncCommand | Should -BeIn $exported }
         }
     }
@@ -93,7 +94,7 @@ Describe 'Built-in metadata' {
                 Sort-Object
         )
 
-        $metadataCommands = @($script:metadata.Apps.AddCommand | Sort-Object)
+        $metadataCommands = @(foreach ($app in $script:metadata.Apps) { $app.AddCommand; $app.AdditionalAddCommands }) | Where-Object { $_ } | Sort-Object
 
         Compare-Object -ReferenceObject $exportedBuiltIns -DifferenceObject $metadataCommands |
             Should -BeNullOrEmpty

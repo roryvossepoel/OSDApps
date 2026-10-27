@@ -177,6 +177,7 @@ function Get-OSDApp {
         @{ Id='WindowsFeatures'; DisplayName='Windows optional features'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='EnvironmentVariables'; DisplayName='Machine environment variables'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='Services'; DisplayName='Windows services'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
+        @{ Id='DesktopSettings'; DisplayName='Windows desktop settings'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='WiFiProfiles'; DisplayName='Wi-Fi profiles'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='Certificates'; DisplayName='Public CA certificates'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='Microsoft365Apps'; DisplayName='Microsoft 365 Apps'; Info=$officeCacheInfo },

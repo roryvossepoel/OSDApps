@@ -39,6 +39,27 @@
         SuccessCodes = 'App/Script installer exit codes treated as success. Default accepts 0 and 3010. Dedicated Font, Certificate and Driver runtimes use fixed result semantics.'
     }
     Commands = @{
+        'Add-OSDAppStartPins' = @{
+            Synopsis = 'Stage a user-editable initial Start pinned list.'
+            Description = 'Accepts ordered pin objects or exported Start JSON. Always uses applyOnce=true. Replaces default pins; does not install apps. Requires Windows 11 build 26100.4770 or later, a supported business edition and the Configure Start Pins ADMX. SetupComplete writes the file-based machine policy and durable JSON for future sign-ins.'
+            Environment = 'WinPE after OSDCloud. Validates the offline target; configuration is installed during SetupComplete.'
+            Output = 'OSDApps.StagedApp. ConfiguredForFirstSignIn at runtime is not proof of the rendered Start menu.'
+            Parameters = @{
+                Pins = 'Ordered array with exactly one desktopAppId, packagedAppId or desktopAppLink property per object. Empty array requests no pins. IDs identify Windows apps, not repository packages. Local .lnk paths can contain literal target environment variables.'
+                JsonPath = 'UTF-8 Start JSON with pinnedList and optional applyOnce=true. Normalized into staging. applyOnce=false and unsupported keys are rejected.'
+            }
+            Examples = @(@{Code='Add-OSDAppStartPins -Pins @(@{desktopAppId=''MSEdge''},@{desktopAppId=''Microsoft.Windows.Explorer''})';Remarks='Use language-independent app IDs in the desired order.'})
+            Link = 'docs/desktop-settings.md'
+        }
+        'Add-OSDAppTaskbarPins' = @{
+            Synopsis = 'Prepare an initial taskbar layout directly in a freshly applied offline Windows image.'
+            Description = 'Generates Replace taskbar XML and sets the native Start Layout file policy in the target SOFTWARE hive. PinGeneration=1 permits user unpinning. The native policy persists; no OSDApps logon script or correction task is added. Requires build 26100.4770 or later and a supported business edition. Foreign or modified layouts are refused. Reapply Windows to discard offline changes.'
+            Environment = 'WinPE immediately after OSDCloud has applied Windows, before the first boot into Windows Setup. Windows 11 business editions, build 26100.4770 or later.'
+            Output = 'OSDApps.StagedApp. Runtime records PreparedOffline; it does not verify the rendered taskbar or reapply pins.'
+            Parameters = @{ Pins = 'Ordered array using desktopAppId, packagedAppId or desktopAppLink. Empty array requests no app pins. Taskbar controls such as Start and Search are outside this setting.' }
+            Examples = @(@{Code='Add-OSDAppTaskbarPins -Pins @(@{desktopAppId=''MSEdge''},@{desktopAppId=''Microsoft.Windows.Explorer''})';Remarks='Prepare Edge and Explorer app pins before Windows Setup.'})
+            Link = 'docs/desktop-settings.md'
+        }
         'Add-OSDAppRegistryKey' = @{
             Synopsis = 'Stage a registry key change without writing to the preparation PC or WinPE registry.'
             Description = 'Adds or replaces an operation in one local RegistrySettings Script package. SetupComplete creates missing keys, preserves unrelated values and verifies every change by read-back. No view switch means the runtime host default. No external repository, download, registry ACL changes or profile loading is required.'

@@ -41,6 +41,8 @@
     'Add-OSDAppWindowsFeature',
     'Add-OSDAppEnvironmentVariable',
     'Add-OSDAppService',
+    'Add-OSDAppStartPins',
+    'Add-OSDAppTaskbarPins',
     'Add-OSDAppWiFiProfile',
     'Add-OSDAppCertificate',
     'Add-OSDAppWindowsInboxCleanup',

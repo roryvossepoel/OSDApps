@@ -376,6 +376,27 @@
       "CachePath": null,
       "RepositoryAlternative": false,
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
+    },
+    {
+      "Id": "DesktopSettings",
+      "DisplayName": "Windows desktop settings",
+      "Source": "BuiltIn",
+      "PackageType": "Script",
+      "Vendor": "OSDApps",
+      "Acquisition": "BundledScript",
+      "SyncPhase": "None",
+      "AddCommand": "Add-OSDAppStartPins",
+      "SyncCommand": null,
+      "Architectures": [
+        "any"
+      ],
+      "DefaultArchitecture": "any",
+      "CachePath": null,
+      "RepositoryAlternative": false,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg",
+      "AdditionalAddCommands": [
+        "Add-OSDAppTaskbarPins"
+      ]
     }
   ]
 }

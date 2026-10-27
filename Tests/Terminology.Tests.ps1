@@ -24,6 +24,8 @@ Describe 'Canonical OSDApps terminology' {
             $source = $source -replace ('Notify(Begin|End)' + $script:obsoleteTerm), ''
             # The Add-Type compiler output kind is a mandatory external API enum.
             $source = $source -replace ('\bConsole' + $script:obsoleteTerm + '\b'), ''
+            # Windows taskbar XML uses these externally defined attribute names.
+            $source = $source -replace ('Desktop' + $script:obsoleteTerm + '(ID|LinkPath)'), ''
             if ($source -match $script:obsoletePattern) {
                 $found.Add("Content: $relative")
             }
