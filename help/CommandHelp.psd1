@@ -44,6 +44,7 @@
             Description = @('Run in WinPE after applying Windows. Without Enforce, uses Windows Setup answer-file settings to establish a changeable default. With Enforce, SetupComplete calls Personalization CSP through the WMI Bridge under SYSTEM and prevents user image changes. Images remain under Windows OEM OSDApps Branding after temporary staging cleanup. No follow-up task or forced reboot is created.','Lock screen and enforced images require Windows 11 Enterprise/Education; default wallpaper also supports Pro. Physical rendering and editability require validation on the target build. Select one package per background per fresh deployment.')
             Environment = 'WinPE after OSDCloud has applied Windows, before its first boot. The one-shot runtime runs under SYSTEM in SetupComplete.'
             Output = 'OSDApps.StagedApp in the shared DesktopSettings queue. Staging and provider status do not prove the rendered image or user editability.'
+            Link = 'docs/wallpaper-lockscreen-design.md'
             Parameters = @{
                 Id = 'Repository Image package identifier or alias. Package.zip must contain exactly one JPG, JPEG or PNG directly under Package, and use Architecture any.'
                 Enforce = 'Prevent user image changes through Personalization CSP. Omit for a changeable default using a different Windows mechanism. Does not bypass conflicting policy checks.'
@@ -59,6 +60,7 @@
             Description = @('Run in WinPE after applying Windows. Without Enforce, uses the native default lock screen policy to establish a changeable default. With Enforce, SetupComplete calls Personalization CSP through the WMI Bridge under SYSTEM and prevents user image changes. Images remain under Windows OEM OSDApps Branding after temporary staging cleanup. No follow-up task or forced reboot is created.','Lock screen and enforced images require Windows 11 Enterprise/Education; default wallpaper also supports Pro. Physical rendering and editability require validation on the target build. Select one package per background per fresh deployment.')
             Environment = 'WinPE after OSDCloud has applied Windows, before its first boot. The one-shot runtime runs under SYSTEM in SetupComplete.'
             Output = 'OSDApps.StagedApp in the shared DesktopSettings queue. Staging and provider status do not prove the rendered image or user editability.'
+            Link = 'docs/wallpaper-lockscreen-design.md'
             Parameters = @{
                 Id = 'Repository Image package identifier or alias. Package.zip must contain exactly one JPG, JPEG or PNG directly under Package, and use Architecture any.'
                 Enforce = 'Prevent user image changes through Personalization CSP. Omit for a changeable default using a different Windows mechanism. Does not bypass conflicting policy checks.'
