@@ -394,6 +394,9 @@ function Test-OSDAppDeployment {
                             $featureConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
                             Assert-OSDAppDesktopConfiguration -Configuration $featureConfig
                             $integrityValid = ([string]$featureConfig.DeploymentId -eq [string]$manifest.DeploymentId)
+                            foreach ($op in @($featureConfig.Operations | Where-Object { $_.Kind -in @('Wallpaper','LockScreen') })) {
+                                Assert-OSDAppBackgroundFile -Operation $op -WindowsDirectory (Join-Path $target 'Windows')
+                            }
                             foreach ($op in @($featureConfig.Operations | Where-Object Kind -eq 'TaskbarPins')) {
                                 $layoutFile=Join-Path $target 'Windows\OEM\OSDApps\TaskbarLayoutModification.xml'
                                 if (-not (Test-Path -LiteralPath $layoutFile -PathType Leaf) -or

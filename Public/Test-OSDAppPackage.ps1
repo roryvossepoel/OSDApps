@@ -3,7 +3,7 @@ function Test-OSDAppPackage {
     param(
         [Parameter(Mandatory)][string]$PackagePath,
 
-        [ValidateSet('App','Script','Font','Certificate','Driver')]
+        [ValidateSet('App','Script','Font','Certificate','Driver','Image')]
         [string]$PackageType = 'App',
 
         [ValidateSet('Root','CA')][string]$CertificateStore
@@ -25,6 +25,7 @@ function Test-OSDAppPackage {
         # load it. Use the .NET ZIP API already used by other WinPE cache helpers.
         Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
         Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+        if ($PackageType -eq 'Image') { Assert-OSDAppImageArchive -Path $resolved }
         [IO.Compression.ZipFile]::ExtractToDirectory($resolved, $temp)
 
         $packageFolder = Join-Path $temp 'Package'
@@ -40,7 +41,15 @@ function Test-OSDAppPackage {
         $driverCount=0
         $certificateCount=0
         $validationError=$null
-        $valid = if ($PackageType -eq 'Driver') {
+        $valid = if ($PackageType -eq 'Image') {
+            try {
+                if (-not $packageFolderExists -or @(Get-ChildItem -LiteralPath $temp -Force).Count -ne 1) { throw 'Image ZIP must contain only the Package directory.' }
+                Get-OSDAppImageFile -PayloadRoot $packageFolder | Out-Null
+                $true
+            }
+            catch { $validationError=$_.Exception.Message; $false }
+        }
+        elseif ($PackageType -eq 'Driver') {
             try {
                 if (-not $packageFolderExists -or @(Get-ChildItem -LiteralPath $temp -Force).Count -ne 1) { throw 'Driver ZIP must contain only the Package directory.' }
                 $driverCount=@(Get-OSDAppDriverInfFiles -PayloadRoot $packageFolder).Count

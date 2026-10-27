@@ -85,8 +85,8 @@ function Remove-OSDAppStaging {
         $desktopConfig=Join-Path $stageRoot 'BuiltIn\DesktopSettings\config.json'
         if (Test-Path -LiteralPath $desktopConfig) {
             $desktop=Get-Content -LiteralPath $desktopConfig -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
-            if (@($desktop.Operations | Where-Object Kind -eq 'TaskbarPins').Count -gt 0) {
-                throw 'Taskbar pins are already prepared in the offline image. Reapply a clean Windows image to discard them; removing only the queue would leave the taskbar configuration behind.'
+            if (@($desktop.Operations | Where-Object { $_.Kind -in @('TaskbarPins','Wallpaper','LockScreen') }).Count -gt 0) {
+                throw 'Desktop files or settings are already prepared in the offline image. Reapply a clean Windows image to discard them; removing only the queue would leave the taskbar configuration behind.'
             }
         }
     }

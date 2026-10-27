@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param([string]$ConfigPath = (Join-Path $PSScriptRoot 'config.json'))
 
+. (Join-Path $PSScriptRoot 'OSDAppBackground.ps1')
+
 function ConvertTo-OSDAppDesktopPins {
     param([Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Pins)
     $seen = @{}
@@ -29,6 +31,7 @@ function Assert-OSDAppDesktopOperation {
             if ($null -eq $Operation.Pins -or $Operation.Pins -isnot [System.Collections.IList]) { throw 'Pins must be an array, which may be empty.' }
             $null = @(ConvertTo-OSDAppDesktopPins -Pins @($Operation.Pins))
         }
+        { $_ -in @('Wallpaper','LockScreen') } { Assert-OSDAppBackgroundOperation -Operation $Operation }
         default { throw 'Unsupported desktop setting.' }
     }
 }
@@ -186,6 +189,7 @@ function Invoke-OSDAppDesktopConfiguration {
         $item=[ordered]@{Kind=[string]$operation.Kind;Status='Failed';Detail=$null;Error=$null}
         try {
             switch ([string]$operation.Kind) {
+                { $_ -in @('Wallpaper','LockScreen') } { $item.Detail=Set-OSDAppBackgroundConfiguration -Operation $operation }
                 'StartPins' { $item.Detail=Set-OSDAppStartPinsConfiguration -Pins @($operation.Pins) }
                 'TaskbarPins' { $item.Detail=[pscustomobject]@{Outcome='PreparedOffline';PinCount=@($operation.Pins).Count;Mode='Replace';PinGeneration=1;Note='Taskbar file policy was prepared in WinPE for first sign-in. Windows retains the policy; PinGeneration permits user unpinning. This is not proof of the rendered user layout.'} }
             }

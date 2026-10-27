@@ -17,6 +17,10 @@ function Test-OSDAppRepositoryCache {
         $archivePath = Join-Path $CachePath (Join-Path 'Packages' (Join-Path $package.Id 'Package.zip'))
         $valid = Test-OSDAppFileHash -Path $archivePath -ExpectedSha256 $package.Archive.Sha256
 
+        if ($valid -and [string]$package.PackageType -eq 'Image') {
+            $valid=([string]$package.Architecture -eq 'any' -and (Test-OSDAppPackage -PackagePath $archivePath -PackageType Image).Valid)
+        }
+
         if ($valid -and [string]$package.PackageType -eq 'Certificate') {
             if ([string]$package.CertificateStore -notin @('Root','CA')) { $valid=$false }
             else { $valid=(Test-OSDAppPackage -PackagePath $archivePath -PackageType Certificate -CertificateStore ([string]$package.CertificateStore)).Valid }

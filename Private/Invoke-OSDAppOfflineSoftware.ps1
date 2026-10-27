@@ -1,8 +1,8 @@
 function Invoke-OSDAppOfflineSoftware {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$WindowsPath,[Parameter(Mandatory)][scriptblock]$Action)
+    param([Parameter(Mandatory)][string]$WindowsPath,[Parameter(Mandatory)][scriptblock]$Action,[ValidateSet('SOFTWARE','SYSTEM')][string]$HiveName='SOFTWARE')
     if (-not (Test-OSDAppWinPE)) { throw 'Offline desktop preparation requires WinPE.' }
-    $hive=Join-Path $WindowsPath 'Windows\System32\Config\SOFTWARE'
+    $hive=Join-Path $WindowsPath ('Windows\System32\Config\' + $HiveName)
     if (-not (Test-Path -LiteralPath $hive -PathType Leaf)) { throw 'The target Windows SOFTWARE hive is missing.' }
     $mount='OSDAppsDesktop_' + [guid]::NewGuid().ToString('N')
     $native=Join-Path $env:SystemRoot 'System32\reg.exe'

@@ -33,12 +33,38 @@
         DisplayName = 'Human-readable repository app name for discovery and the Viewer.'
         Vendor = 'Optional descriptive publisher metadata, not a cryptographic result or installer argument.'
         Version = 'Repository package version written into authoring metadata and paths. Does not query installed apps.'
-        PackagePath = 'Existing Package.zip archive. App and Script packages require Package/Install.ps1; Font packages require at least one .ttf or .otf under Package/. Driver packages require INFs and their complete vendor payload under Package/.'
-        PackageType = 'Repository package semantics: App, Script, Font, Certificate or Driver. App and Script execute Package/Install.ps1; Font, Certificate and Driver use dedicated OSDApps runtimes and do not require Install.ps1.'
+        PackagePath = 'Existing Package.zip archive. App and Script packages require Package/Install.ps1; Font packages require at least one .ttf or .otf under Package/. Image packages require exactly one JPG, JPEG or PNG directly under Package/. Driver packages require INFs and their complete vendor payload under Package/.'
+        PackageType = 'Repository package semantics: App, Script, Font, Certificate, Driver or Image. App and Script execute Package/Install.ps1; Font, Certificate and Driver use dedicated OSDApps runtimes and do not require Install.ps1.'
         RepositoryPath = 'Local repository root containing catalog.json and Apps; not a remote URL or deployment target.'
         SuccessCodes = 'App/Script installer exit codes treated as success. Default accepts 0 and 3010. Dedicated Font, Certificate and Driver runtimes use fixed result semantics.'
     }
     Commands = @{
+        'Add-OSDAppWallpaper' = @{
+            Synopsis = 'Stage a repository image as the Windows desktop wallpaper.'
+            Description = @('Run in WinPE after applying Windows. Without Enforce, uses Windows Setup answer-file settings to establish a changeable default. With Enforce, SetupComplete calls Personalization CSP through the WMI Bridge under SYSTEM and prevents user image changes. Images remain under Windows OEM OSDApps Branding after temporary staging cleanup. No follow-up task or forced reboot is created.','Lock screen and enforced images require Windows 11 Enterprise/Education; default wallpaper also supports Pro. Physical rendering and editability require validation on the target build. Select one package per background per fresh deployment.')
+            Parameters = @{
+                Id = 'Repository Image package identifier or alias. Package.zip must contain exactly one JPG, JPEG or PNG directly under Package, and use Architecture any.'
+                Enforce = 'Prevent user image changes through Personalization CSP. Omit for a changeable default using a different Windows mechanism. Does not bypass conflicting policy checks.'
+                SkipCacheRefresh = 'Use the SHA-256 validated cached image package without contacting the repository.'
+            }
+            Examples = @(
+                @{Code='Add-OSDAppWallpaper -Id ''FinanceWallpaper'' -SkipCacheRefresh';Remarks='Set the initial department image; the user may change it.'},
+                @{Code='Add-OSDAppWallpaper -Id ''FinanceWallpaper'' -Enforce -SkipCacheRefresh';Remarks='Stage an enforced image on a supported edition.'}
+            )
+        }
+        'Add-OSDAppLockScreen' = @{
+            Synopsis = 'Stage a repository image as the Windows lock screen and sign-in image.'
+            Description = @('Run in WinPE after applying Windows. Without Enforce, uses the native default lock screen policy to establish a changeable default. With Enforce, SetupComplete calls Personalization CSP through the WMI Bridge under SYSTEM and prevents user image changes. Images remain under Windows OEM OSDApps Branding after temporary staging cleanup. No follow-up task or forced reboot is created.','Lock screen and enforced images require Windows 11 Enterprise/Education; default wallpaper also supports Pro. Physical rendering and editability require validation on the target build. Select one package per background per fresh deployment.')
+            Parameters = @{
+                Id = 'Repository Image package identifier or alias. Package.zip must contain exactly one JPG, JPEG or PNG directly under Package, and use Architecture any.'
+                Enforce = 'Prevent user image changes through Personalization CSP. Omit for a changeable default using a different Windows mechanism. Does not bypass conflicting policy checks.'
+                SkipCacheRefresh = 'Use the SHA-256 validated cached image package without contacting the repository.'
+            }
+            Examples = @(
+                @{Code='Add-OSDAppLockScreen -Id ''FinanceLockScreen'' -SkipCacheRefresh';Remarks='Set the initial department image; the user may change it.'},
+                @{Code='Add-OSDAppLockScreen -Id ''FinanceLockScreen'' -Enforce -SkipCacheRefresh';Remarks='Stage an enforced image on a supported edition.'}
+            )
+        }
         'Add-OSDAppStartPins' = @{
             Synopsis = 'Stage a user-editable initial Start pinned list.'
             Description = 'Accepts ordered pin objects or exported Start JSON. Always uses applyOnce=true. Replaces default pins; does not install apps. Requires Windows 11 build 26100.4770 or later, a supported business edition and the Configure Start Pins ADMX. SetupComplete writes the file-based machine policy and durable JSON for future sign-ins.'
@@ -696,20 +722,20 @@
             Parameters = @{
                 SourcePath = 'Existing source folder. App/Script requires Install.ps1; Font requires one or more .ttf/.otf files. Driver requires at least one INF and its complete vendor payload.'
                 OutputPath = 'Build directory; Package.zip may be replaced during normal execution. Do not use the only copy of an existing package.'
-                PackageType = 'App, Script, Font, Certificate or Driver. Defaults to App and controls structural validation only; package source is never executed during authoring.'
+                PackageType = 'App, Script, Font, Certificate, Driver or Image. Defaults to App and controls structural validation only; package source is never executed during authoring.'
             }
             Examples = @(@{ Code = 'New-OSDAppPackage -Id ExampleApp -Version 1.0.0 -SourcePath ''C:\Work\ExampleApp'' -OutputPath ''C:\Work\Build\ExampleApp'''; Remarks = 'Provide your own unattended installer script and payload.' })
             Link = 'docs/repository.md'
         }
         'Add-OSDAppPackage' = @{
             Synopsis = 'Publish an existing package into a local repository.'
-            Description = 'Validates input structure and the canonical Id/alias graph before asking for destination approval. Only after approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. PackageType selects App, Script, Font, Certificate or Driver semantics; Font packages use the OSDApps font runtime rather than Package/Install.ps1. Omitting Alias on an update preserves existing aliases; an explicitly empty Alias removes them. WhatIf or declined confirmation leaves the destination unchanged. Older repository source folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
+            Description = 'Validates input structure and the canonical Id/alias graph before asking for destination approval. Only after approval does it copy the archive, write its manifest and update the Id/architecture catalog reference. PackageType selects App, Script, Font, Certificate, Driver or Image semantics; Font packages use the OSDApps font runtime rather than Package/Install.ps1. Omitting Alias on an update preserves existing aliases; an explicitly empty Alias removes them. WhatIf or declined confirmation leaves the destination unchanged. Older repository source folders may remain. Does not upload or execute installers; normal publication is not transactional rollback.'
             Environment = 'Repository preparation machine with writable local repository.'
             Output = 'OSDApps.RepositoryPackage with archive SHA-256 and manifest reference after publication; no package-success object when previewed or declined.'
             Parameters = @{
                 Alias = 'Optional retired Ids that resolve to this canonical Id and are eligible for renamed-cache detection. Values cannot collide with another Id or alias.'
                 CertificateStore = 'Required for new Certificate packages: Root or CA under LocalMachine. Existing variants preserve their store when omitted. Invalid for other package types.'
-                PackageType = 'Optional App, Script, Font, Certificate or Driver classification. New packages default to App; republishing an existing variant preserves its current type when omitted. Font uses the dedicated machine-wide font runtime.'
+                PackageType = 'Optional App, Script, Font, Certificate, Driver or Image classification. New packages default to App; republishing an existing variant preserves its current type when omitted. Font uses the dedicated machine-wide font runtime.'
             }
             Examples = @(@{ Code = 'Add-OSDAppPackage -Id ConfigureWindows -DisplayName ''Configure Windows'' -Version 1.0.0 -Architecture x64 -PackageType Script -PackagePath ''C:\Work\Build\ConfigureWindows\Package.zip'' -RepositoryPath ''C:\Work\Repository'''; Remarks = 'Publish a script package using the same repository and SetupComplete runtime contract as an app.' })
             Link = 'docs/repository.md'
@@ -720,7 +746,7 @@
             Environment = 'Preparation machine or suitable PowerShell with archive support and writable TEMP.'
             Output = 'OSDApps.PackageValidation with PackageType, structure flags, FontCount, DriverInfCount, CertificateCount, Sha256 and Valid.'
             Parameters = @{
-                PackageType = 'Validate the archive as App, Script, Font, Certificate or Driver. Defaults to App.'
+                PackageType = 'Validate the archive as App, Script, Font, Certificate, Driver or Image. Defaults to App.'
                 CertificateStore = 'Optional Root or CA destination for Certificate validation. Without a destination, validates public CA content; Root additionally requires self-issued certificates.'
             }
             Examples = @(@{ Code = 'Test-OSDAppPackage -PackagePath ''C:\Work\Build\ExampleApp\Package.zip'' -PackageType App'; Remarks = 'Inspect an existing package using its intended semantic type.' })

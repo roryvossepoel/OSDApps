@@ -395,7 +395,9 @@
       "RepositoryAlternative": false,
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg",
       "AdditionalAddCommands": [
-        "Add-OSDAppTaskbarPins"
+        "Add-OSDAppTaskbarPins",
+        "Add-OSDAppWallpaper",
+        "Add-OSDAppLockScreen"
       ]
     }
   ]

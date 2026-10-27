@@ -6,14 +6,17 @@ function New-OSDAppPackage {
         [Parameter(Mandatory)][string]$SourcePath,
         [Parameter(Mandatory)][string]$OutputPath,
 
-        [ValidateSet('App','Script','Font','Certificate','Driver')]
+        [ValidateSet('App','Script','Font','Certificate','Driver','Image')]
         [string]$PackageType = 'App'
     )
 
     $resolvedSource = (Resolve-Path -LiteralPath $SourcePath -ErrorAction Stop).Path
     $installScript = Join-Path $resolvedSource 'Install.ps1'
 
-    if ($PackageType -eq 'Driver') {
+    if ($PackageType -eq 'Image') {
+        Get-OSDAppImageFile -PayloadRoot $resolvedSource | Out-Null
+    }
+    elseif ($PackageType -eq 'Driver') {
         Get-OSDAppDriverInfFiles -PayloadRoot $resolvedSource | Out-Null
     }
     elseif ($PackageType -eq 'Certificate') {
@@ -49,7 +52,7 @@ function New-OSDAppPackage {
         New-Item -ItemType Directory -Path $tempPackage -Force | Out-Null
         Copy-Item -Path (Join-Path $resolvedSource '*') -Destination $tempPackage -Recurse -Force
 
-        if ($PackageType -eq 'Driver') {
+        if ($PackageType -in @('Driver','Image')) {
             # Compress-Archive skips hidden files. Driver payloads must preserve
             # every vendor support file, including hidden siblings.
             Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop

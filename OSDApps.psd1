@@ -41,6 +41,8 @@
     'Add-OSDAppWindowsFeature',
     'Add-OSDAppEnvironmentVariable',
     'Add-OSDAppService',
+    'Add-OSDAppWallpaper',
+    'Add-OSDAppLockScreen',
     'Add-OSDAppStartPins',
     'Add-OSDAppTaskbarPins',
     'Add-OSDAppWiFiProfile',

@@ -1,6 +1,6 @@
 function Save-OSDAppDesktopStaging {
     [CmdletBinding(SupportsShouldProcess)]
-    param([Parameter(Mandatory)]$Operation, [string]$WindowsPath)
+    param([Parameter(Mandatory)]$Operation, [string]$WindowsPath,[string]$BackgroundSourcePath)
 
     $ErrorActionPreference='Stop'
     Assert-OSDAppSourceEnabled -Source BuiltIn
@@ -48,6 +48,8 @@ function Save-OSDAppDesktopStaging {
         throw 'Unowned DesktopSettings staging directory exists. Nothing was replaced.'
     }
 
+    if ($Operation.Kind -in @('Wallpaper','LockScreen') -and @($operations | Where-Object Kind -eq $Operation.Kind).Count) { throw 'This background is already staged. Select one package per setting on a fresh image.' }
+
     $operations = @($operations | Where-Object { [string]$_.Kind -ne [string]$Operation.Kind }) + @($Operation)
 
     $resultDirectory=Split-Path ([string]$manifest.Runtime.ResultPath) -Parent
@@ -72,7 +74,9 @@ function Save-OSDAppDesktopStaging {
     $committed=$false
     try {
         New-Item -ItemType Directory -Path $transaction -Force | Out-Null
-        Copy-Item -LiteralPath $scriptSource -Destination (Join-Path $transaction 'Install.ps1') -ErrorAction Stop
+        $runtime=Get-Content -LiteralPath $scriptSource -Raw -Encoding UTF8
+        $shared=Get-Content -LiteralPath (Join-Path $moduleRoot 'Runtime\OSDAppBackground.ps1') -Raw -Encoding UTF8
+        $runtime.Replace('. (Join-Path $PSScriptRoot ''OSDAppBackground.ps1'')',$shared) | Set-Content -LiteralPath (Join-Path $transaction 'Install.ps1') -Encoding UTF8 -ErrorAction Stop
         $config | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $transaction 'config.json') -Encoding UTF8 -ErrorAction Stop
 
         $scriptHash=(Get-FileHash -LiteralPath (Join-Path $transaction 'Install.ps1') -Algorithm SHA256).Hash
@@ -104,6 +108,9 @@ function Save-OSDAppDesktopStaging {
         }
         if ($Operation.Kind -eq 'TaskbarPins') {
             Set-OSDAppOfflineTaskbar -WindowsPath $target -Pins @($Operation.Pins) -Commit $commitFiles
+        }
+        elseif ($Operation.Kind -in @('Wallpaper','LockScreen')) {
+            Set-OSDAppOfflineBackground -WindowsPath $target -Operation $Operation -SourcePath $BackgroundSourcePath -Commit $commitFiles
         }
         else { & $commitFiles }
         $committed=$true

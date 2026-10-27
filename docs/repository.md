@@ -450,3 +450,7 @@ Set-OSDAppConfiguration -CatalogUri 'https://example.blob.core.windows.net/osdap
 Certificate packages contain only public CA `.cer`/`.crt` files under `Package/`. Publish with `-PackageType Certificate -CertificateStore Root` (or `CA`); both stores are under LocalMachine. Stage with `Add-OSDAppCertificate -Id`. See [certificate packages](certificate-staging.md) for the complete workflow.
 
 Driver packages use the same `Package.zip`, manifest, version and cache pipeline. Use `-PackageType Driver` and stage with `Add-OSDAppDriver -Id`. See [driver packages](driver-packages.md) for complete payload requirements and native import reporting.
+
+## Background image packages
+
+`PackageType Image` with `Architecture any` contains one image and no installer. Use the dedicated [wallpaper and lock screen commands](wallpaper-lockscreen-design.md), not direct `Add-OSDApp`. The same repository cache and SHA-256 validation apply.
