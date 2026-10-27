@@ -22,11 +22,17 @@ Describe 'Canonical OSDApps terminology' {
             $source = $source -replace ('(?i)' + $script:obsoleteTerm + '/vnd\.github\+json'), ''
             # These are mandatory PSHost API overrides, not OSDApps-owned terminology.
             $source = $source -replace ('Notify(Begin|End)' + $script:obsoleteTerm), ''
+            # The Add-Type compiler output kind is a mandatory external API enum.
+            $source = $source -replace ('\bConsole' + $script:obsoleteTerm + '\b'), ''
             if ($source -match $script:obsoletePattern) {
                 $found.Add("Content: $relative")
             }
         }
         @($found).Count | Should -Be 0 -Because (@($found) -join '; ')
+    }
+    It 'keeps the native compiler output kind intact' {
+        $source = Get-Content (Join-Path $script:repositoryRoot 'Tests\Services.Tests.ps1') -Raw
+        $source | Should -Match ('-OutputType Console' + $script:obsoleteTerm)
     }
     It 'keeps the vendor-mandated GitHub media type intact' {
         $expected = ('applic' + 'ation/vnd.github+json')
