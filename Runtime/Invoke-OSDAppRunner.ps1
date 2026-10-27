@@ -227,7 +227,7 @@ function New-RunnerAppResult {
     # Only current, uniquely correlated PreInstall evidence may describe acquisition.
     # CacheInfo.json still supplies content identity, never per-deployment flags.
     $hasAcquisitionPhase = ([string]$App.Source -eq 'BuiltIn' -and
-        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and
+        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','EnvironmentVariableScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and
         [string]$App.Id -ne 'CMTraceOpen')
     $acquisitionOutcome = if ($hasAcquisitionPhase) { 'Unknown' } else { 'NotApplicable' }
     $cacheUsed = $null
@@ -429,7 +429,7 @@ try {
         throw (New-RunnerFailureException -Message 'Device manifest contains an invalid or duplicate app Id.' -FailureType 'ManifestInvalid' -Fatal)
     }
 
-    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','WindowsFeatureScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle')
+    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','WindowsFeatureScript','EnvironmentVariableScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle')
     foreach ($app in $apps) {
         $id = [string]$app.Id
         $source = [string]$app.Source
@@ -457,6 +457,17 @@ try {
                 [string]$app.ScriptSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
                 [string]$app.ConfigurationSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
                 throw (New-RunnerFailureException -Message 'Invalid Windows Features built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
+            }
+        }
+        if ($source -eq 'BuiltIn' -and
+            ([string]$app.Type -eq 'EnvironmentVariableScript' -or $id -eq 'EnvironmentVariables')) {
+            if ($id -ne 'EnvironmentVariables' -or [string]$app.Type -ne 'EnvironmentVariableScript' -or
+                [string]$app.PackageType -ne 'Script' -or
+                [string]$app.Script -ne 'BuiltIn\EnvironmentVariables\Install.ps1' -or
+                [string]$app.Configuration -ne 'BuiltIn\EnvironmentVariables\config.json' -or
+                [string]$app.ScriptSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
+                [string]$app.ConfigurationSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+                throw (New-RunnerFailureException -Message 'Invalid Environment Variables built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
             }
         }
         if ($source -eq 'BuiltIn' -and
@@ -560,6 +571,20 @@ try {
             }
         }
         Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Windows Features script and configuration SHA-256 validated.' -Data @{ Id=$app.Id }
+    }
+
+    foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'EnvironmentVariableScript' })) {
+        foreach ($entry in @(
+            @{ Relative='BuiltIn\EnvironmentVariables\Install.ps1'; Hash=[string]$app.ScriptSha256 },
+            @{ Relative='BuiltIn\EnvironmentVariables\config.json'; Hash=[string]$app.ConfigurationSha256 }
+        )) {
+            $file = Join-Path $StagedPath $entry.Relative
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $entry.Hash) {
+                throw (New-RunnerFailureException -Message ('Environment Variables integrity failed for {0}.' -f $entry.Relative) -FailureType 'HashMismatch' -AppId ([string]$app.Id) -Fatal)
+            }
+        }
+        Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Environment Variables script and configuration SHA-256 validated.' -Data @{ Id=$app.Id }
     }
 
     foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'WiFiProfileScript' })) {
@@ -740,6 +765,18 @@ try {
                     throw ('Windows Features failed with exit code {0}.' -f $process.ExitCode)
                 }
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptComplete' -Message 'Windows optional feature configuration completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
+                [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='Sha256Validated' }
+            }
+            'EnvironmentVariableScript' {
+                $root = Join-Path $StagedPath 'BuiltIn\EnvironmentVariables'
+                $scriptFile = Join-Path $root 'Install.ps1'
+                $configFile = Join-Path $root 'config.json'
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptStart' -Message 'Applying machine environment variable configuration.' -Data @{ Id=$app.Id }
+                $process = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"{0}"' -f $scriptFile),'-ConfigPath',('"{0}"' -f $configFile)) -WorkingDirectory $root -Wait -PassThru
+                if ($process.ExitCode -ne 0) {
+                    throw ('Environment Variables failed with exit code {0}.' -f $process.ExitCode)
+                }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptComplete' -Message 'machine environment variable configuration completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='Sha256Validated' }
             }
             'WiFiProfileScript' {
