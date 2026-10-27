@@ -6,7 +6,7 @@ function ConvertTo-OSDAppDesktopPins {
     $seen = @{}
     foreach ($pin in $Pins) {
         if ($null -eq $pin -or ($pin -isnot [System.Collections.IDictionary] -and $pin -isnot [pscustomobject])) { throw 'Each pin must be an object with exactly one app ID or link.' }
-        $names = if ($pin -is [System.Collections.IDictionary]) { @($pin.Keys) } else { @($pin.PSObject.Properties.Name) }
+        $names = @(if ($pin -is [System.Collections.IDictionary]) { $pin.Keys } else { $pin.PSObject.Properties.Name })
         if ($names.Count -ne 1 -or $names[0] -cnotin @('desktopAppId','packagedAppId','desktopAppLink')) { throw 'Use exactly one of desktopAppId, packagedAppId or desktopAppLink per pin.' }
         $name = [string]$names[0]
         $value = $pin.$name
