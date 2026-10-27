@@ -233,6 +233,7 @@ function Test-OSDAppDeployment {
         if ($source -eq 'Repository') {
             $archivePath = Join-Path $stageRoot (Join-Path 'Packages' (Join-Path $id 'Package.zip'))
             $definitionValid = ($app.Archive -and [string]$app.Archive.Sha256 -match '^[A-Fa-f0-9]{64}$')
+            if ([string]$app.PackageType -eq 'Image') { $definitionValid=$false }
             if ([string]$app.PackageType -eq 'Certificate' -and [string]$app.CertificateStore -notin @('Root','CA')) { $definitionValid=$false }
             $payloadReady = Test-Path -LiteralPath $archivePath -PathType Leaf
             $integrityValid = $false
@@ -395,7 +396,7 @@ function Test-OSDAppDeployment {
                             Assert-OSDAppDesktopConfiguration -Configuration $featureConfig
                             $integrityValid = ([string]$featureConfig.DeploymentId -eq [string]$manifest.DeploymentId)
                             foreach ($op in @($featureConfig.Operations | Where-Object { $_.Kind -in @('Wallpaper','LockScreen') })) {
-                                Assert-OSDAppBackgroundFile -Operation $op -WindowsDirectory (Join-Path $target 'Windows')
+                                Assert-OSDAppBackgroundFile -Operation $op -WindowsDirectory (Join-Path $target 'Windows') -CheckAnswerFile
                             }
                             foreach ($op in @($featureConfig.Operations | Where-Object Kind -eq 'TaskbarPins')) {
                                 $layoutFile=Join-Path $target 'Windows\OEM\OSDApps\TaskbarLayoutModification.xml'

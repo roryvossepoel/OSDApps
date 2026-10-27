@@ -34,7 +34,7 @@
         Vendor = 'Optional descriptive publisher metadata, not a cryptographic result or installer argument.'
         Version = 'Repository package version written into authoring metadata and paths. Does not query installed apps.'
         PackagePath = 'Existing Package.zip archive. App and Script packages require Package/Install.ps1; Font packages require at least one .ttf or .otf under Package/. Image packages require exactly one JPG, JPEG or PNG directly under Package/. Driver packages require INFs and their complete vendor payload under Package/.'
-        PackageType = 'Repository package semantics: App, Script, Font, Certificate, Driver or Image. App and Script execute Package/Install.ps1; Font, Certificate and Driver use dedicated OSDApps runtimes and do not require Install.ps1.'
+        PackageType = 'Repository package semantics: App, Script, Font, Certificate, Driver or Image. App and Script execute Package/Install.ps1; Font, Certificate and Driver use dedicated OSDApps runtimes and do not require Install.ps1. Image contains one JPG/JPEG/PNG and is selected through the wallpaper or lock screen command.'
         RepositoryPath = 'Local repository root containing catalog.json and Apps; not a remote URL or deployment target.'
         SuccessCodes = 'App/Script installer exit codes treated as success. Default accepts 0 and 3010. Dedicated Font, Certificate and Driver runtimes use fixed result semantics.'
     }
@@ -42,6 +42,8 @@
         'Add-OSDAppWallpaper' = @{
             Synopsis = 'Stage a repository image as the Windows desktop wallpaper.'
             Description = @('Run in WinPE after applying Windows. Without Enforce, uses Windows Setup answer-file settings to establish a changeable default. With Enforce, SetupComplete calls Personalization CSP through the WMI Bridge under SYSTEM and prevents user image changes. Images remain under Windows OEM OSDApps Branding after temporary staging cleanup. No follow-up task or forced reboot is created.','Lock screen and enforced images require Windows 11 Enterprise/Education; default wallpaper also supports Pro. Physical rendering and editability require validation on the target build. Select one package per background per fresh deployment.')
+            Environment = 'WinPE after OSDCloud has applied Windows, before its first boot. The one-shot runtime runs under SYSTEM in SetupComplete.'
+            Output = 'OSDApps.StagedApp in the shared DesktopSettings queue. Staging and provider status do not prove the rendered image or user editability.'
             Parameters = @{
                 Id = 'Repository Image package identifier or alias. Package.zip must contain exactly one JPG, JPEG or PNG directly under Package, and use Architecture any.'
                 Enforce = 'Prevent user image changes through Personalization CSP. Omit for a changeable default using a different Windows mechanism. Does not bypass conflicting policy checks.'
@@ -55,6 +57,8 @@
         'Add-OSDAppLockScreen' = @{
             Synopsis = 'Stage a repository image as the Windows lock screen and sign-in image.'
             Description = @('Run in WinPE after applying Windows. Without Enforce, uses the native default lock screen policy to establish a changeable default. With Enforce, SetupComplete calls Personalization CSP through the WMI Bridge under SYSTEM and prevents user image changes. Images remain under Windows OEM OSDApps Branding after temporary staging cleanup. No follow-up task or forced reboot is created.','Lock screen and enforced images require Windows 11 Enterprise/Education; default wallpaper also supports Pro. Physical rendering and editability require validation on the target build. Select one package per background per fresh deployment.')
+            Environment = 'WinPE after OSDCloud has applied Windows, before its first boot. The one-shot runtime runs under SYSTEM in SetupComplete.'
+            Output = 'OSDApps.StagedApp in the shared DesktopSettings queue. Staging and provider status do not prove the rendered image or user editability.'
             Parameters = @{
                 Id = 'Repository Image package identifier or alias. Package.zip must contain exactly one JPG, JPEG or PNG directly under Package, and use Architecture any.'
                 Enforce = 'Prevent user image changes through Personalization CSP. Omit for a changeable default using a different Windows mechanism. Does not bypass conflicting policy checks.'
@@ -716,7 +720,7 @@
         }
         'New-OSDAppPackage' = @{
             Synopsis = 'Build Package.zip from a local repository source folder.'
-            Description = 'App and Script packages require Install.ps1 at source root. Font packages require at least one TTF/OTF file and do not require Install.ps1. Certificate packages accept only public CA .cer/.crt files. Driver packages require an INF and preserve all vendor files, including hidden files; INF applicability and signatures are checked later by Windows. After source validation, normal execution wraps files under Package/ and replaces OutputPath/Package.zip; source content is never executed.'
+            Description = 'Image packages require one JPG/JPEG/PNG at source root, with no scripts or subdirectories. App and Script packages require Install.ps1 at source root. Font packages require at least one TTF/OTF file and do not require Install.ps1. Certificate packages accept only public CA .cer/.crt files. Driver packages require an INF and preserve all vendor files, including hidden files; INF applicability and signatures are checked later by Windows. After source validation, normal execution wraps files under Package/ and replaces OutputPath/Package.zip; source content is never executed.'
             Environment = 'Repository preparation machine with source and writable build/TEMP directories.'
             Output = 'OSDApps.Package with Id, Version, PackagePath and Sha256 after building; no package-success object when previewed or declined.'
             Parameters = @{
@@ -742,7 +746,7 @@
         }
         'Test-OSDAppPackage' = @{
             Synopsis = 'Validate repository archive structure and report SHA-256.'
-            Description = 'Extracts into owned temporary storage and validates structure for the selected PackageType. App/Script require Package/Install.ps1; Font requires at least one TTF/OTF file. Certificate requires only public CA .cer/.crt files under Package/; no scripts or private keys. Driver checks are structural only: at least one INF, complete Package directory layout and no reparse points. Windows validates INF content and signatures during import. Validation never executes package content.'
+            Description = 'Extracts into owned temporary storage and validates structure for the selected PackageType. App/Script require Package/Install.ps1; Font requires at least one TTF/OTF file. Certificate requires only public CA .cer/.crt files under Package/; no scripts or private keys. Driver checks are structural only: at least one INF, complete Package directory layout and no reparse points. Windows validates INF content and signatures during import. Image checks restrict archive entries, size and file signatures; they do not decode every image pixel. Validation never executes package content.'
             Environment = 'Preparation machine or suitable PowerShell with archive support and writable TEMP.'
             Output = 'OSDApps.PackageValidation with PackageType, structure flags, FontCount, DriverInfCount, CertificateCount, Sha256 and Valid.'
             Parameters = @{

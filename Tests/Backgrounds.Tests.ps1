@@ -105,7 +105,7 @@ Describe 'Repository images and Windows background modes' {
             Mock Get-OSDAppBackgroundAnswerFile {$answer}
             Mock Get-OSDAppBackgroundArchitecture {'amd64'}
             $sourceFile=Join-Path $Source 'background.png';$hash=(Get-FileHash $sourceFile).Hash
-            $op=[pscustomobject]@{Kind='Wallpaper';Id='Test';Enforce=$false;ImageSha256=$hash;Extension='.png';ImageRelativePath=('OEM\OSDApps\Branding\Test\'+$hash+'.png')}
+            $op=[pscustomobject]@{Kind='Wallpaper';Id='Test';FutureSystemRoot='C:\Windows';Enforce=$false;ImageSha256=$hash;Extension='.png';ImageRelativePath=('OEM\OSDApps\Branding\Test\'+$hash+'.png')}
             {Set-OSDAppOfflineBackground -WindowsPath $target -Operation $op -SourcePath $sourceFile -Commit {throw 'simulated manifest failure'}} | Should -Throw '*simulated manifest failure*'
             [Convert]::ToBase64String([IO.File]::ReadAllBytes($answer)) | Should -Be $bytes
             Test-Path (Join-Path (Join-Path $target 'Windows') $op.ImageRelativePath) | Should -BeFalse
@@ -133,9 +133,12 @@ Describe 'Repository images and Windows background modes' {
     }
     It 'changes only the requested CSP property and reads status instead of writing success' {
         InModuleScope OSDApps {
-            $script:csp=[pscustomobject]@{DesktopImageUrl='';LockScreenImageUrl='file:///C:/keep.png';DesktopImageStatus=1}
+            $script:csp=[Microsoft.Management.Infrastructure.CimInstance]::new('MDM_Personalization')
+            $script:csp.CimInstanceProperties.Add([Microsoft.Management.Infrastructure.CimProperty]::Create('DesktopImageUrl','',[Microsoft.Management.Infrastructure.CimType]::String,[Microsoft.Management.Infrastructure.CimFlags]::None))
+            $script:csp.CimInstanceProperties.Add([Microsoft.Management.Infrastructure.CimProperty]::Create('DesktopImageStatus',[int]1,[Microsoft.Management.Infrastructure.CimType]::SInt32,[Microsoft.Management.Infrastructure.CimFlags]::None))
+            $script:csp.CimInstanceProperties.Add([Microsoft.Management.Infrastructure.CimProperty]::Create('LockScreenImageUrl','file:///C:/keep.png',[Microsoft.Management.Infrastructure.CimType]::String,[Microsoft.Management.Infrastructure.CimFlags]::None))
             Mock Get-CimInstance {$script:csp}
-            Mock Set-CimInstance {param($Property) $script:csp.DesktopImageUrl=$Property.DesktopImageUrl}
+            Mock Set-CimInstance {param($Property) $script:csp.CimInstanceProperties['DesktopImageUrl'].Value=$Property.DesktopImageUrl}
             Mock New-CimInstance {throw 'must preserve existing instance'}
             $result=Set-OSDAppBackgroundCsp -Operation @{Kind='Wallpaper'} -ImagePath 'C:\Windows\OEM\OSDApps\Branding\wall.png'
             $result.Outcome | Should -Be Applied
@@ -153,9 +156,11 @@ Describe 'Repository images and Windows background modes' {
     }
     It 'rolls back a failed CSP image without retrying' {
         InModuleScope OSDApps {
-            $script:csp=[pscustomobject]@{DesktopImageUrl='';DesktopImageStatus=3}
+            $script:csp=[Microsoft.Management.Infrastructure.CimInstance]::new('MDM_Personalization')
+            $script:csp.CimInstanceProperties.Add([Microsoft.Management.Infrastructure.CimProperty]::Create('DesktopImageUrl','',[Microsoft.Management.Infrastructure.CimType]::String,[Microsoft.Management.Infrastructure.CimFlags]::None))
+            $script:csp.CimInstanceProperties.Add([Microsoft.Management.Infrastructure.CimProperty]::Create('DesktopImageStatus',[int]3,[Microsoft.Management.Infrastructure.CimType]::SInt32,[Microsoft.Management.Infrastructure.CimFlags]::None))
             Mock Get-CimInstance {$script:csp}
-            Mock Set-CimInstance {param($Property) $script:csp.DesktopImageUrl=$Property.DesktopImageUrl}
+            Mock Set-CimInstance {param($Property) $script:csp.CimInstanceProperties['DesktopImageUrl'].Value=$Property.DesktopImageUrl}
             {Set-OSDAppBackgroundCsp -Operation @{Kind='Wallpaper'} -ImagePath 'C:\new.png'} | Should -Throw '*status*'
             $script:csp.DesktopImageUrl | Should -Be ''
             Should -Invoke Set-CimInstance -Times 2 -Exactly
@@ -163,9 +168,11 @@ Describe 'Repository images and Windows background modes' {
     }
     It 'reports a provider copy in progress without claiming a rendered image' {
         InModuleScope OSDApps {
-            $script:csp=[pscustomobject]@{DesktopImageUrl='';DesktopImageStatus=2}
+            $script:csp=[Microsoft.Management.Infrastructure.CimInstance]::new('MDM_Personalization')
+            $script:csp.CimInstanceProperties.Add([Microsoft.Management.Infrastructure.CimProperty]::Create('DesktopImageUrl','',[Microsoft.Management.Infrastructure.CimType]::String,[Microsoft.Management.Infrastructure.CimFlags]::None))
+            $script:csp.CimInstanceProperties.Add([Microsoft.Management.Infrastructure.CimProperty]::Create('DesktopImageStatus',[int]2,[Microsoft.Management.Infrastructure.CimType]::SInt32,[Microsoft.Management.Infrastructure.CimFlags]::None))
             Mock Get-CimInstance {$script:csp}
-            Mock Set-CimInstance {param($Property) $script:csp.DesktopImageUrl=$Property.DesktopImageUrl}
+            Mock Set-CimInstance {param($Property) $script:csp.CimInstanceProperties['DesktopImageUrl'].Value=$Property.DesktopImageUrl}
             (Set-OSDAppBackgroundCsp -Operation @{Kind='Wallpaper'} -ImagePath 'C:\new.png').Outcome | Should -Be Submitted
         }
     }
@@ -176,10 +183,11 @@ Describe 'Repository images and Windows background modes' {
             New-OSDAppRepository -Path $repo | Out-Null
             Add-OSDAppPackage -Id TestImage -DisplayName 'Test image' -Version 1.0.0 -PackageType Image -Architecture any -PackagePath $PackagePath -RepositoryPath $repo | Out-Null
             Sync-OSDAppCache -CatalogPath (Join-Path $repo 'catalog.json') -CachePath $cache -Confirm:$false | Out-Null
-            Mock Test-OSDAppWinPE {$true};Mock Get-OSDAppCachePath {$cache}
+            $script:backgroundCache=$cache;$script:backgroundTarget=$target
+            Mock Test-OSDAppWinPE {$true};Mock Get-OSDAppCachePath {$script:backgroundCache}
             Mock Get-OSDAppBackgroundTarget {[pscustomobject]@{SystemRoot='C:\Windows'}}
             Mock Get-OSDAppLockScreenPolicy {[pscustomobject]@{Key='Policies\Microsoft\Windows\Personalization';Name='LockScreenImage'}}
-            Mock Get-OSDAppBackgroundAnswerFile {Join-Path $target 'Windows\Panther\unattend.xml'}
+            Mock Get-OSDAppBackgroundAnswerFile {Join-Path $script:backgroundTarget 'Windows\Panther\unattend.xml'}
             Mock Get-OSDAppBackgroundArchitecture {'amd64'}
             New-Item -ItemType Directory -Path $target | Out-Null
             Set-OSDAppConfiguration -EnableBuiltIns $true -EnableRepository $true -CleanupMode Never
@@ -198,5 +206,12 @@ Describe 'Repository images and Windows background modes' {
             Add-Content $image 'tampered'
             {Test-OSDAppDeployment -WindowsPath $target -RequireOfflineReady -ThrowOnFailure} | Should -Throw
         }
+    }
+}
+
+Describe 'Background documentation' {
+    It 'validates links and public command examples' {
+        $root=Split-Path $PSScriptRoot -Parent
+        & (Join-Path $root 'build\Test-Documentation.ps1') -Root $root -Files @((Join-Path $root 'docs\wallpaper-lockscreen-design.md'))
     }
 }

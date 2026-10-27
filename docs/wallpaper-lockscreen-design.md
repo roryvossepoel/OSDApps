@@ -16,7 +16,7 @@ Add-OSDAppWallpaper -Id 'FinanceWallpaper' -Enforce
 Add-OSDAppLockScreen -Id 'FinanceLockScreen' -Enforce
 ```
 
-`-Id` identifies a repository package, not a department, URL or Windows app ID. Each package uses `package.zip` and the existing repository cache and integrity checks. Use `PackageType Image` and `Architecture any`. `Package.zip` must contain exactly one JPG, JPEG or PNG file directly inside `Package/`, no scripts or nested directories. The image is limited to 20 MiB and the ZIP to 21 MiB. Existing App or Script packages are not reinterpreted as images.
+`-Id` identifies a repository package, not a department, URL or Windows app ID. Each package uses `package.zip` and the existing repository cache and integrity checks. Use `PackageType Image` and `Architecture any`. `Package.zip` must contain exactly one JPG, JPEG or PNG file directly inside `Package/`, no scripts or nested directories. The image is limited to 20 MiB and the ZIP to 21 MiB. Use a simple ASCII filename; validation checks signatures and structure, not full pixel decoding. Existing App or Script packages are not reinterpreted as images.
 
 Omitting a command leaves that background unconfigured by OSDApps. Omitting `-Enforce` requests a changeable initial image; it does not remove another administrator's policy. `-Enforce` controls user editability, not overwrite permission, cache refresh, approval bypass or repeated execution.
 

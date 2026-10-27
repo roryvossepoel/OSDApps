@@ -1,7 +1,7 @@
 # Shared validation and native Windows background processing. No entry-point side effects.
 function Assert-OSDAppBackgroundOperation {
     param([Parameter(Mandatory)]$Operation)
-    if ($Operation.Kind -cnotin @('Wallpaper','LockScreen') -or $Operation.Enforce -isnot [bool] -or
+    if ([string]$Operation.FutureSystemRoot -notmatch '^[A-Za-z]:\\Windows$' -or $Operation.Kind -cnotin @('Wallpaper','LockScreen') -or $Operation.Enforce -isnot [bool] -or
         [string]$Operation.Id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or [string]$Operation.Id -match '\.\.' -or
         [string]$Operation.ImageSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or [string]$Operation.Extension -cnotin @('.jpg','.jpeg','.png')) {
         throw 'Invalid background operation.'
@@ -33,11 +33,19 @@ function Assert-OSDAppBackgroundPath {
 }
 
 function Assert-OSDAppBackgroundFile {
-    param([Parameter(Mandatory)]$Operation,[string]$WindowsDirectory=$env:SystemRoot)
+    param([Parameter(Mandatory)]$Operation,[string]$WindowsDirectory=$env:SystemRoot,[switch]$CheckAnswerFile)
     Assert-OSDAppBackgroundOperation -Operation $Operation
     $path=Join-Path $WindowsDirectory $Operation.ImageRelativePath
     Assert-OSDAppBackgroundPath -Path $path
     if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $Operation.ImageSha256) { throw 'Persistent background image is missing or its SHA-256 does not match staging.' }
+    if ($CheckAnswerFile -and $Operation.Kind -eq 'Wallpaper' -and -not $Operation.Enforce) {
+        $answer=Join-Path $WindowsDirectory 'Panther\unattend.xml'
+        Assert-OSDAppBackgroundPath -Path $answer
+        $doc=[xml]::new();$doc.XmlResolver=$null;$doc.Load($answer)
+        $ns=[Xml.XmlNamespaceManager]::new($doc.NameTable);$ns.AddNamespace('u','urn:schemas-microsoft-com:unattend')
+        $nodes=@($doc.SelectNodes('/u:unattend/u:settings[@pass="oobeSystem"]/u:component[@name="Microsoft-Windows-Shell-Setup"]/u:Themes/u:DesktopBackground',$ns))
+        if ($nodes.Count -ne 1 -or $nodes[0].InnerText -ine ($Operation.FutureSystemRoot+'\'+$Operation.ImageRelativePath)) { throw 'The staged wallpaper answer-file setting is missing or modified.' }
+    }
 }
 
 function Assert-OSDAppBackgroundPolicyState {
@@ -120,6 +128,8 @@ function Set-OSDAppBackgroundCsp {
 function Set-OSDAppBackgroundConfiguration {
     param([Parameter(Mandatory)]$Operation)
     Assert-OSDAppBackgroundFile -Operation $Operation
+    if ($env:SystemRoot -ine $Operation.FutureSystemRoot) { throw 'The running Windows directory differs from the staged target.' }
+    if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -ne 'S-1-5-18') { throw 'Background runtime requires SYSTEM.' }
     $software=[Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SOFTWARE',$true)
     try {
         $cv=$software.OpenSubKey('Microsoft\Windows NT\CurrentVersion')

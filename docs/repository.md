@@ -104,7 +104,7 @@ metadata. The existing cache archive is reused when its SHA-256 still matches.
 Previously staged `DeviceManifest.json` files are not silently rewritten.
 
 `PackageType` is optional classification/semantic metadata with five supported values:
-`App`, `Script`, `Font`, `Certificate` and `Driver`. When it is absent, OSDApps uses `App` for
+`App`, `Script`, `Font`, `Certificate`, `Driver` and `Image`. When it is absent, OSDApps uses `App` for
 backward compatibility. App and Script use the same `Package/Install.ps1` entry point, SHA-256 checks,
 cache and staging paths, ordered SetupComplete queue, success codes and failure
 handling. Font uses the same repository acquisition/integrity/staging pipeline,

@@ -9,7 +9,7 @@ function Save-OSDAppBackground {
     $target=Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
     # Check edition before downloading or changing the target.
     $request=[pscustomobject]@{Kind=$Kind;Enforce=[bool]$Enforce}
-    Get-OSDAppBackgroundTarget -WindowsPath $target -Operation $request | Out-Null
+    $targetInfo=Get-OSDAppBackgroundTarget -WindowsPath $target -Operation $request
     $cache=$null
     try { $cache=Get-OSDAppCachePath } catch { Write-Verbose 'Using a temporary repository cache on the Windows target.' }
     if (-not $cache) { $cache=Join-Path $target 'Windows\Temp\OSDApps\RepositoryCache' }
@@ -21,6 +21,8 @@ function Save-OSDAppBackground {
             Write-Warning ('Repository refresh failed; attempting validated cached image: ' + $_.Exception.Message)
         }
     }
+    $cacheLock=Enter-OSDAppCacheLock -CachePath $cache -Operation 'read image package for staging'
+    try {
     $ids=@(Resolve-OSDAppCachedPackageId -CachePath $cache -Name @($Id))
     if ($ids.Count -ne 1) { throw 'Image package was not resolved uniquely.' }
     $canonical=$ids[0]
@@ -37,8 +39,10 @@ function Save-OSDAppBackground {
         $file=Get-OSDAppImageFile -PayloadRoot (Join-Path $temporary 'Package')
         $hash=(Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
         $extension=$file.Extension.ToLowerInvariant()
-        $operation=[pscustomobject]@{Kind=$Kind;Id=$canonical;Enforce=[bool]$Enforce;ImageSha256=$hash;Extension=$extension;ImageRelativePath=('OEM\OSDApps\Branding\'+$canonical+'\'+$hash+$extension)}
+        $operation=[pscustomobject]@{Kind=$Kind;Id=$canonical;FutureSystemRoot=$targetInfo.SystemRoot;Enforce=[bool]$Enforce;ImageSha256=$hash;Extension=$extension;ImageRelativePath=('OEM\OSDApps\Branding\'+$canonical+'\'+$hash+$extension)}
         Save-OSDAppDesktopStaging -Operation $operation -WindowsPath $target -BackgroundSourcePath $file.FullName -Confirm:$false
     }
     finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Recurse -Force } }
+    }
+    finally { $cacheLock.Dispose() }
 }

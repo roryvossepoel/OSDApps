@@ -26,7 +26,6 @@ try {
     }
     New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
     Copy-Item -LiteralPath $source -Destination $destination -Recurse -ErrorAction Stop
-    $promoted=$true
     $Revision | Set-Content -LiteralPath (Join-Path $destination 'TestRevision.txt') -Encoding ASCII
     Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
     Import-Module (Join-Path $destination 'OSDApps.psd1') -Force -Global
@@ -61,6 +60,7 @@ try {
     $module=Get-Module OSDApps
     & $module { param($Catalog,$Cache) Sync-OSDAppCache -CatalogPath $Catalog -CachePath $Cache -Name @('OSDAppsTestWallpaper','OSDAppsTestLockScreen') -Confirm:$false | Out-Null } (Join-Path $repo 'catalog.json') $cache
     & $module { param($Cache) $checks=@(Test-OSDAppRepositoryCache -CachePath $Cache -Name @('OSDAppsTestWallpaper','OSDAppsTestLockScreen'));if ($checks.Count -ne 2 -or @($checks | Where-Object { -not $_.Valid }).Count) { throw 'Test image cache validation failed.' } } $cache
+    $promoted=$true
     [pscustomobject]@{Revision=$Revision;ModulePath=(Join-Path $destination 'OSDApps.psd1');ExamplePath=(Join-Path $destination 'Examples\Stage-OSDAppsBackgroundTest.ps1')}
 }
 catch {
