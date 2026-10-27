@@ -75,8 +75,9 @@ Describe 'Repository images and Windows background modes' {
     }
     It 'merges default wallpaper without changing existing OOBE language or color settings' {
         InModuleScope OSDApps {
-            $old='<unattend xmlns="urn:schemas-microsoft-com:unattend"><settings pass="oobeSystem"><component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64"><OOBE><HideEULAPage>true</HideEULAPage></OOBE><Themes><ThemeName>Existing name</ThemeName><WindowColor>Automatic</WindowColor></Themes></component><component name="Microsoft-Windows-International-Core" processorArchitecture="amd64"><UILanguage>nl-NL</UILanguage></component></settings></unattend>'
+            $old='<?xml version="1.0" encoding="utf-16"?><unattend xmlns="urn:schemas-microsoft-com:unattend"><settings pass="oobeSystem"><component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64"><OOBE><HideEULAPage>true</HideEULAPage></OOBE><Themes><ThemeName>Existing name</ThemeName><WindowColor>Automatic</WindowColor></Themes></component><component name="Microsoft-Windows-International-Core" processorArchitecture="amd64"><UILanguage>nl-NL</UILanguage></component></settings></unattend>'
             [xml]$new=ConvertTo-OSDAppWallpaperAnswerFile -ExistingXml $old -ImagePath 'C:\Windows\OEM\OSDApps\Branding\Finance\image.png' -Architecture amd64
+            $new.FirstChild.Encoding | Should -Be 'utf-8'
             $new.OuterXml | Should -Match 'HideEULAPage>true'
             $new.OuterXml | Should -Match 'UILanguage>nl-NL'
             $new.OuterXml | Should -Match 'ThemeName>Existing name'

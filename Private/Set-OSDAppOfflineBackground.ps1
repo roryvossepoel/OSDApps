@@ -71,6 +71,8 @@ function ConvertTo-OSDAppWallpaperAnswerFile {
     if ($themes.Count) { $theme=$themes[0] } else { $theme=$doc.CreateElement('Themes',$namespace);$null=$component.AppendChild($theme) }
     if (-not $theme.SelectSingleNode('u:ThemeName',$ns)) { $name=$doc.CreateElement('ThemeName',$namespace);$name.InnerText='OSDApps';$null=$theme.AppendChild($name) }
     $background=$doc.CreateElement('DesktopBackground',$namespace);$background.InnerText=$ImagePath;$null=$theme.AppendChild($background)
+    # The commit writes UTF-8; preserve content without retaining a conflicting declaration.
+    if ($doc.FirstChild -is [Xml.XmlDeclaration]) { $doc.FirstChild.Encoding='utf-8' }
     $doc.OuterXml
 }
 
