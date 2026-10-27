@@ -131,14 +131,17 @@ function Get-OSDAppTaskbarPinsPolicy {
     try { $doc=[Xml.XmlDocument]::new();$doc.XmlResolver=$null;$doc.Load($reader) } finally { $reader.Dispose() }
     $policy=$doc.SelectSingleNode("//*[local-name()='policy' and @name='LockedStartLayout']")
     $text=if ($policy) { $policy.SelectSingleNode("./*[local-name()='elements']/*[local-name()='text' and @valueName='StartLayoutFile']") }
+    $enabledNode=if ($policy) { $policy.SelectSingleNode("./*[local-name()='enabledValue']") }
     $enabled=if ($policy) { $policy.SelectSingleNode("./*[local-name()='enabledValue']/*[local-name()='decimal']") }
     if (-not $policy -or $policy.GetAttribute('key') -ine 'Software\Policies\Microsoft\Windows\Explorer' -or
         $policy.GetAttribute('valueName') -ne 'LockedStartLayout' -or $policy.GetAttribute('class') -ne 'Both' -or
-        -not $text -or -not $enabled -or $enabled.GetAttribute('value') -ne '1') {
+        -not $text -or ($enabledNode -and (-not $enabled -or $enabled.GetAttribute('value') -ne '1'))) {
         throw 'The target StartMenu.admx does not contain the supported Start Layout file policy for taskbar pins.'
     }
+    # Windows omits enabledValue here; the named policy uses the implicit DWORD 1.
+    $fileKind=if ($text.GetAttribute('expandable') -in @('true','1')) { [Microsoft.Win32.RegistryValueKind]::ExpandString } else { [Microsoft.Win32.RegistryValueKind]::String }
     # Relative to the already-mounted SOFTWARE hive, never the host registry.
-    [pscustomobject]@{Key='Policies\Microsoft\Windows\Explorer';EnabledName='LockedStartLayout';FileName='StartLayoutFile'}
+    [pscustomobject]@{Key='Policies\Microsoft\Windows\Explorer';EnabledName='LockedStartLayout';FileName='StartLayoutFile';FileKind=$fileKind}
 }
 
 function Set-OSDAppStartPinsConfiguration {

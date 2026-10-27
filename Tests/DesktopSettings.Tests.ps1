@@ -69,12 +69,15 @@
         $dir=Join-Path $TestDrive 'TaskbarWindows\PolicyDefinitions'
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
         $file=Join-Path $dir 'StartMenu.admx'
-        $valid='<policyDefinitions><policies><policy name="LockedStartLayout" class="Both" key="Software\Policies\Microsoft\Windows\Explorer" valueName="LockedStartLayout"><enabledValue><decimal value="1" /></enabledValue><elements><text id="StartLayout_Name" valueName="StartLayoutFile" /></elements></policy></policies></policyDefinitions>'
+        $valid='<policyDefinitions><policies><policy name="LockedStartLayout" class="Both" key="Software\Policies\Microsoft\Windows\Explorer" valueName="LockedStartLayout"><enabledValue><decimal value="1" /></enabledValue><elements><text id="StartLayout_Name" valueName="StartLayoutFile" expandable="true" /></elements></policy></policies></policyDefinitions>'
         $valid | Set-Content $file
         $mapping=Get-OSDAppTaskbarPinsPolicy -WindowsDirectory (Split-Path $dir -Parent)
         $mapping.Key | Should -Be 'Policies\Microsoft\Windows\Explorer'
         $mapping.FileName | Should -Be StartLayoutFile
         $mapping.EnabledName | Should -Be LockedStartLayout
+        $mapping.FileKind | Should -Be ([Microsoft.Win32.RegistryValueKind]::ExpandString)
+        $valid.Replace('<enabledValue><decimal value="1" /></enabledValue>','') | Set-Content $file
+        (Get-OSDAppTaskbarPinsPolicy -WindowsDirectory (Split-Path $dir -Parent)).FileKind | Should -Be ([Microsoft.Win32.RegistryValueKind]::ExpandString)
         foreach ($invalid in @($valid.Replace('StartLayoutFile','WrongFile'),$valid.Replace('value="1"','value="0"'),$valid.Replace('class="Both"','class="User"'),'<!DOCTYPE test [<!ENTITY x SYSTEM "file:///missing">]><test>&x;</test>')) {
             $invalid | Set-Content $file
             { Get-OSDAppTaskbarPinsPolicy -WindowsDirectory (Split-Path $dir -Parent) } | Should -Throw
@@ -84,6 +87,7 @@
         $mapping=Get-OSDAppTaskbarPinsPolicy -WindowsDirectory $env:SystemRoot
         $mapping.EnabledName | Should -Be LockedStartLayout
         $mapping.FileName | Should -Be StartLayoutFile
+        $mapping.FileKind | Should -Be ([Microsoft.Win32.RegistryValueKind]::ExpandString)
     }
     It 'fails if a time zone change is not observed during the same invocation' {
         Mock Test-Path { $true }
@@ -273,7 +277,7 @@ Describe 'Desktop settings native registry and transaction boundaries' {
             finally { $key.Dispose();[Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($fixture,$false) }
             $admxDir=Join-Path $target 'Windows\PolicyDefinitions'
             New-Item -ItemType Directory -Path $admxDir -Force | Out-Null
-            '<policyDefinitions><policies><policy name="LockedStartLayout" class="Both" key="Software\Policies\Microsoft\Windows\Explorer" valueName="LockedStartLayout"><enabledValue><decimal value="1" /></enabledValue><elements><text id="StartLayout_Name" valueName="StartLayoutFile" /></elements></policy></policies></policyDefinitions>' | Set-Content (Join-Path $admxDir 'StartMenu.admx')
+            '<policyDefinitions><policies><policy name="LockedStartLayout" class="Both" key="Software\Policies\Microsoft\Windows\Explorer" valueName="LockedStartLayout"><enabledValue><decimal value="1" /></enabledValue><elements><text id="StartLayout_Name" valueName="StartLayoutFile" expandable="true" /></elements></policy></policies></policyDefinitions>' | Set-Content (Join-Path $admxDir 'StartMenu.admx')
             $pins=@(@{desktopAppId='MSEdge'},@{desktopAppId='Microsoft.Windows.Explorer'})
             # Initial failure must remove both policy values and the file.
             { Set-OSDAppOfflineTaskbar -WindowsPath $target -Pins $pins -Commit { throw 'first commit failed' } } | Should -Throw '*first commit failed*'
@@ -294,7 +298,7 @@ Describe 'Desktop settings native registry and transaction boundaries' {
                 $key=$Software.OpenSubKey('Policies\Microsoft\Windows\Explorer')
                 try {
                     $key.GetValue('StartLayoutFile') | Should -Be 'C:\Windows\OEM\OSDApps\TaskbarLayoutModification.xml'
-                    $key.GetValueKind('StartLayoutFile').ToString() | Should -Be String
+                    $key.GetValueKind('StartLayoutFile').ToString() | Should -Be ExpandString
                     $key.GetValue('LockedStartLayout') | Should -Be 1
                     $key.GetValueKind('LockedStartLayout').ToString() | Should -Be DWord
                 } finally { $key.Dispose() }
@@ -325,7 +329,7 @@ Describe 'Desktop settings native registry and transaction boundaries' {
                 try {
                     $key.GetValue('StartLayoutFile') | Should -Be 'C:\Other\Layout.xml'
                     $key.GetValue('ConfigureStartPins') | Should -Be 1
-                    $key.SetValue('StartLayoutFile','C:\Windows\OEM\OSDApps\TaskbarLayoutModification.xml')
+                    $key.SetValue('StartLayoutFile','C:\Windows\OEM\OSDApps\TaskbarLayoutModification.xml',[Microsoft.Win32.RegistryValueKind]::ExpandString)
                 } finally { $key.Dispose() }
             }
             Add-Content $file 'foreign edit'

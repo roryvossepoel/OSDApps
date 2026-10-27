@@ -19,6 +19,7 @@ function Set-OSDAppOfflineTaskbar {
         $old=$null;$oldKind=$null;$oldEnabled=$null;$oldEnabledKind=$null;$oldHash=$null;$oldBytes=$null;$written=$false
         try {
             $key=$Software.CreateSubKey($mapping.Key)
+            if ($key.GetValue('ReapplyStartLayoutEveryLogon',0) -ne 0) { throw 'An existing policy forces the layout to apply again at every logon. Nothing was replaced.' }
             $owner=$Software.CreateSubKey('OSDApps\DesktopSettings')
             $old=$key.GetValue($mapping.FileName,$null,[Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
             if ($null -ne $old) { $oldKind=$key.GetValueKind($mapping.FileName) }
@@ -26,13 +27,13 @@ function Set-OSDAppOfflineTaskbar {
             if ($null -ne $oldEnabled) { $oldEnabledKind=$key.GetValueKind($mapping.EnabledName) }
             $oldHash=$owner.GetValue('TaskbarSha256')
             if ($null -ne $old -or $null -ne $oldEnabled -or (Test-Path -LiteralPath $path) -or $oldHash) {
-                if ($old -ne $futurePath -or $oldEnabled -ne 1 -or $oldKind -ne [Microsoft.Win32.RegistryValueKind]::String -or $oldEnabledKind -ne [Microsoft.Win32.RegistryValueKind]::DWord -or -not $oldHash -or -not (Test-Path -LiteralPath $path -PathType Leaf) -or
+                if ($old -ne $futurePath -or $oldEnabled -ne 1 -or $oldKind -ne $mapping.FileKind -or $oldEnabledKind -ne [Microsoft.Win32.RegistryValueKind]::DWord -or -not $oldHash -or -not (Test-Path -LiteralPath $path -PathType Leaf) -or
                     (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $oldHash) { throw 'Existing taskbar configuration is not an intact OSDApps-owned layout. Nothing was replaced.' }
                 $oldBytes=[IO.File]::ReadAllBytes($path)
             }
             New-Item -ItemType Directory -Path (Split-Path $path -Parent) -Force -ErrorAction Stop | Out-Null
             $written=$true;[IO.File]::WriteAllText($path,$xml,[Text.UTF8Encoding]::new($false))
-            $key.SetValue($mapping.FileName,$futurePath,[Microsoft.Win32.RegistryValueKind]::String)
+            $key.SetValue($mapping.FileName,$futurePath,$mapping.FileKind)
             $key.SetValue($mapping.EnabledName,1,[Microsoft.Win32.RegistryValueKind]::DWord)
             $owner.SetValue('TaskbarSha256',(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash,[Microsoft.Win32.RegistryValueKind]::String)
             & $Commit
