@@ -1,4 +1,6 @@
 $moduleRoot = $PSScriptRoot
+. (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppServices.ps1')
+. (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppEnvironmentVariables.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDAppDriver.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDAppCertificate.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDAppPayloadFile.ps1')
@@ -53,6 +55,8 @@ Export-ModuleMember -Function @(
     'Add-OSDAppRegistryKey',
     'Add-OSDAppRegistryValue',
     'Add-OSDAppWindowsFeature',
+    'Add-OSDAppEnvironmentVariable',
+    'Add-OSDAppService',
     'Add-OSDAppWiFiProfile',
     'Add-OSDAppCertificate',
     'Add-OSDAppWindowsInboxCleanup',

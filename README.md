@@ -157,3 +157,7 @@ Reading a packaged copy? The full guides and images are in the [online documenta
 OSDApps is licensed under the [MIT License](LICENSE).
 
 Repository [driver packages](docs/driver-packages.md) preserve complete vendor INF payloads in `Package.zip` and use the existing USB cache with `Add-OSDAppDriver -Id`.
+
+Machine environment variables: [staging, PATH and runtime behavior](docs/environment-variables.md).
+
+Windows services: [one-shot startup and state configuration](docs/services.md).

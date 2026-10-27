@@ -135,6 +135,44 @@
             Examples = @(@{ Code = 'Add-OSDAppWiFiProfile -SSID ''DeploymentWiFi'' -Security WPA2Personal -Password ''ExampleOnly123!'''; Remarks = 'Generate a profile without prompts or an XML input file. The example password is fictitious.' }, @{ Code = 'Add-OSDAppWiFiProfile -Path ''E:\OSDApps-TestData\WiFi\profile.xml'''; Remarks = 'Stage a local profile export using automatic offline Windows discovery.' })
             Link = 'docs/wifi-staging.md'
         }
+        'Add-OSDAppService' = @{
+            Synopsis = 'Stage one-shot Windows service startup and state changes.'
+            Description = 'Stages exact local service names for SetupComplete. Supports Automatic, AutomaticDelayedStart, Manual and Disabled startup, independently of Running or Stopped state. Explicit fields merge across calls for the same service. Uses native service control, records command output and before/after snapshots, continues after failures, and waits with a finite timeout. Does not create services, modify accounts or dependencies, stop dependent services, retry later, or force a reboot. Starting a service may start prerequisites through Windows SCM.'
+            Environment = 'WinPE after Windows has been applied; executes once in full Windows as SYSTEM.'
+            Output = 'OSDApps.StagedApp with combined service operation count and names.'
+            Parameters = @{
+                Name = 'Exact service name, not its display name or a wildcard. The service must exist when SetupComplete executes.'
+                StartupType = 'Optional Automatic, AutomaticDelayedStart, Manual or Disabled. Does not implicitly start or stop the service.'
+                State = 'Optional Running or Stopped. Disabled plus Running is rejected.'
+                TimeoutSeconds = 'Maximum wait per native control command and per requested state transition, 1 to 300 seconds; default 30. No retries are scheduled.'
+            }
+            Examples = @(
+                @{ Code = 'Add-OSDAppService -Name Spooler -StartupType Disabled -State Stopped'; Remarks = 'Disable and stop the print spooler on a device that does not need printing.' },
+                @{ Code = 'Add-OSDAppService -Name VendorService -StartupType AutomaticDelayedStart'; Remarks = 'Configure an existing service without changing its current running state.' },
+                @{ Code = 'Add-OSDAppService -Name VendorService -State Running -TimeoutSeconds 60'; Remarks = 'Request Running and wait at most 60 seconds for the transition.' }
+            )
+            Link = 'docs/services.md'
+        }
+        'Add-OSDAppEnvironmentVariable' = @{
+            Synopsis = 'Stage machine environment variables and PATH additions for SetupComplete.'
+            Description = 'Stages one bundled Script for machine-scope Set, Remove or AppendPath operations. Ordinary values use REG_SZ; ExpandString uses REG_EXPAND_SZ without resolving percent references. PATH additions preserve existing content and type and skip lexical duplicates. Explicit Set/Remove supersedes earlier intent for the same name. No preparation-PC environment changes, user scope, forced reboot or later remediation. Values are omitted from runtime logs/results but remain readable in staging config; this is not secret storage. Existing processes, including the parent runner, keep their environment snapshots.'
+            Environment = 'WinPE after OSDCloud has applied Windows; executes once under SYSTEM in full Windows.'
+            Output = 'OSDApps.StagedApp with operation count and variable names; no values.'
+            Parameters = @{
+                Name = 'Machine variable name; required for Set and Remove, not for AppendPath.'
+                Value = 'Literal string to persist. An empty string creates an empty value; use Remove to delete.'
+                ExpandString = 'Store as REG_EXPAND_SZ, preserving references such as %ProgramData% for Windows to expand later.'
+                Remove = 'Delete the named machine variable if present. Does not delete a same-named user variable.'
+                AppendPath = 'Absolute paths or percent-variable references to append to the machine PATH. Case, slash direction, outer quotes on existing entries and trailing separators are normalized for comparison only. Existing duplicates are preserved.'
+            }
+            Examples = @(
+                @{ Code = 'Add-OSDAppEnvironmentVariable -Name DeploymentRing -Value ''Pilot'''; Remarks = 'Stage a literal machine variable.' },
+                @{ Code = 'Add-OSDAppEnvironmentVariable -Name ToolsRoot -Value ''%ProgramData%\Tools'' -ExpandString'; Remarks = 'Preserve a Windows expandable reference.' },
+                @{ Code = 'Add-OSDAppEnvironmentVariable -AppendPath @(''C:\Tools'',''%ProgramData%\Tools\bin'')'; Remarks = 'Append without overwriting existing machine PATH entries.' },
+                @{ Code = 'Add-OSDAppEnvironmentVariable -Name LegacySetting -Remove'; Remarks = 'Explicitly remove a machine variable.' }
+            )
+            Link = 'docs/environment-variables.md'
+        }
         'Add-OSDAppWindowsFeature' = @{
             Parameters = @{
                 Enable = 'Windows optional feature names to enable. Names are passed to Windows servicing without OSDApps autocomplete or a maintained feature catalog.'
