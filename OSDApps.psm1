@@ -1,4 +1,5 @@
 $moduleRoot = $PSScriptRoot
+. (Join-Path $moduleRoot 'Runtime\OSDAppDriver.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDAppCertificate.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDAppPayloadFile.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDApp7Zip.ps1')
@@ -48,6 +49,7 @@ Export-ModuleMember -Function @(
     'Clear-OSDAppCache',
     'Add-OSDApp',
     'Add-OSDAppFont',
+        'Add-OSDAppDriver',
     'Add-OSDAppRegistryKey',
     'Add-OSDAppRegistryValue',
     'Add-OSDAppWindowsFeature',

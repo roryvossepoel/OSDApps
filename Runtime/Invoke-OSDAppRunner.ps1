@@ -10,6 +10,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'OSDAppPrerequisite.ps1')
 . (Join-Path $PSScriptRoot 'OSDAppFont.ps1')
 . (Join-Path $PSScriptRoot 'OSDAppCertificate.ps1')
+. (Join-Path $PSScriptRoot 'OSDAppDriver.ps1')
 $sleepRequest = $null
 $sleepLog = $null
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
@@ -492,7 +493,7 @@ try {
             throw (New-RunnerFailureException -Message 'Certificate packages require CertificateStore Root or CA.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
         }
         if ($source -eq 'Repository' -and
-            [string]$app.PackageType -notin @('App','Script','Font','Certificate')) {
+            [string]$app.PackageType -notin @('App','Script','Font','Certificate','Driver')) {
             throw (New-RunnerFailureException -Message "Repository package '$id' has unsupported PackageType '$($app.PackageType)'." -FailureType 'ManifestInvalid' -AppId $id -Fatal)
         }
         if ($source -eq 'Repository' -and
@@ -649,6 +650,16 @@ try {
         Expand-Archive -LiteralPath $archivePath -DestinationPath $packageWork -Force
 
         $payloadRoot = Join-Path $packageWork 'Package'
+
+        if ([string]$package.PackageType -eq 'Driver') {
+            if (@(Get-ChildItem -LiteralPath $packageWork -Force).Count -ne 1) { throw 'Driver ZIP must contain only the Package directory.' }
+            $driverResultPath = Join-Path (Split-Path -Path $resultPath -Parent) ("Driver-{0}-Result.json" -f [string]$package.Id)
+            Write-RunnerLog -LogPath $logPath -Event 'DriverPackageInstallStart' -Message 'Importing repository driver INFs through PnPUtil.' -Data @{Id=$package.Id}
+            $driverExecution=Invoke-OSDAppDriverPackage -PayloadRoot $payloadRoot -PackageId ([string]$package.Id) -DeploymentId ([string]$manifest.DeploymentId) -ResultPath $driverResultPath
+            if ($driverExecution.ExitCode -notin @(0,3010)) { throw "Driver package '$($package.Id)' failed with exit code $($driverExecution.ExitCode); see $driverResultPath." }
+            Write-RunnerLog -LogPath $logPath -Event 'DriverPackageInstallComplete' -Message 'Driver package processed without requesting a reboot.' -Data @{Id=$package.Id;ResultPath=$driverResultPath;RestartNeeded=$driverExecution.RestartNeeded}
+            return $driverExecution
+        }
 
         if ([string]$package.PackageType -eq 'Certificate') {
             if (@(Get-ChildItem -LiteralPath $packageWork -Force).Count -ne 1) { throw 'Certificate ZIP must contain only the Package directory.' }

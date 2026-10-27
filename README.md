@@ -155,3 +155,5 @@ See [results and troubleshooting](docs/getting-started.md#5-check-the-outcome) f
 Reading a packaged copy? The full guides and images are in the [online documentation](https://github.com/roryvossepoel/OSDApps/blob/main/docs/README.md).
 
 OSDApps is licensed under the [MIT License](LICENSE).
+
+Repository [driver packages](docs/driver-packages.md) preserve complete vendor INF payloads in `Package.zip` and use the existing USB cache with `Add-OSDAppDriver -Id`.

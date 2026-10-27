@@ -6,14 +6,17 @@ function New-OSDAppPackage {
         [Parameter(Mandatory)][string]$SourcePath,
         [Parameter(Mandatory)][string]$OutputPath,
 
-        [ValidateSet('App','Script','Font','Certificate')]
+        [ValidateSet('App','Script','Font','Certificate','Driver')]
         [string]$PackageType = 'App'
     )
 
     $resolvedSource = (Resolve-Path -LiteralPath $SourcePath -ErrorAction Stop).Path
     $installScript = Join-Path $resolvedSource 'Install.ps1'
 
-    if ($PackageType -eq 'Certificate') {
+    if ($PackageType -eq 'Driver') {
+        Get-OSDAppDriverInfFiles -PayloadRoot $resolvedSource | Out-Null
+    }
+    elseif ($PackageType -eq 'Certificate') {
         Get-OSDAppCertificatePackageOperations -PayloadRoot $resolvedSource -Store CA | Out-Null
     }
     elseif ($PackageType -eq 'Font') {
@@ -46,7 +49,16 @@ function New-OSDAppPackage {
         New-Item -ItemType Directory -Path $tempPackage -Force | Out-Null
         Copy-Item -Path (Join-Path $resolvedSource '*') -Destination $tempPackage -Recurse -Force
 
-        Compress-Archive -Path $tempPackage -DestinationPath $packagePath -CompressionLevel Optimal
+        if ($PackageType -eq 'Driver') {
+            # Compress-Archive skips hidden files. Driver payloads must preserve
+            # every vendor support file, including hidden siblings.
+            Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
+            Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+            [IO.Compression.ZipFile]::CreateFromDirectory($tempPackage, $packagePath, [IO.Compression.CompressionLevel]::Optimal, $true)
+        }
+        else {
+            Compress-Archive -Path $tempPackage -DestinationPath $packagePath -CompressionLevel Optimal
+        }
 
         [pscustomobject]@{
             PSTypeName = 'OSDApps.Package'
