@@ -80,6 +80,11 @@
             { Get-OSDAppTaskbarPinsPolicy -WindowsDirectory (Split-Path $dir -Parent) } | Should -Throw
         }
     }
+    It 'accepts the Start Layout mapping from the installed Windows ADMX' {
+        $mapping=Get-OSDAppTaskbarPinsPolicy -WindowsDirectory $env:SystemRoot
+        $mapping.EnabledName | Should -Be LockedStartLayout
+        $mapping.FileName | Should -Be StartLayoutFile
+    }
     It 'fails if a time zone change is not observed during the same invocation' {
         Mock Test-Path { $true }
         Mock Get-TimeZone { [pscustomobject]@{Id='UTC'} }
@@ -181,6 +186,7 @@
                 $LASTEXITCODE | Should -Be 0
                 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $stage 'Invoke-OSDAppRunner.ps1') -StagedPath $stage
                 $LASTEXITCODE | Should -Be 0
+                [TimeZoneInfo]::ClearCachedData()
                 (Get-TimeZone).Id | Should -Be $requested
                 $report=Get-Content (Join-Path $results 'DesktopSettings-Result.json') -Raw | ConvertFrom-Json
                 $report.Status | Should -Be Succeeded

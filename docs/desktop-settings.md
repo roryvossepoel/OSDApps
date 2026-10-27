@@ -39,7 +39,7 @@ SetupComplete writes `%ProgramData%\OSDApps\Configuration\StartPins.json` with `
 
 Windows applies the list when the user signs in. Users can then change their pins. A later Intune/GPO Start policy can supersede this initial configuration. Apps must be installed and registered for their pins to appear; OSDApps does not install a missing app simply because it appears in this list. No automatic verification or correction occurs after sign-in.
 
-## Taskbar application and ownership
+## Taskbar processing and ownership
 
 Taskbar configuration requires the same Windows 11 business-edition baseline as Start pins: **26100.4770 or later**. This includes support for `PinGeneration`. OSDApps validates the target build and the `LockedStartLayout` / `StartLayoutFile` mapping in the target StartMenu.admx. Unsupported targets are refused rather than receiving a layout that restores user-unpinned apps.
 
