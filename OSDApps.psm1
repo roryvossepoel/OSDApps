@@ -58,7 +58,6 @@ Export-ModuleMember -Function @(
     'Add-OSDAppWindowsFeature',
     'Add-OSDAppEnvironmentVariable',
     'Add-OSDAppService',
-    'Add-OSDAppTimeZone',
     'Add-OSDAppStartPins',
     'Add-OSDAppTaskbarPins',
     'Add-OSDAppWiFiProfile',

@@ -21,7 +21,7 @@ try {
     $manifest=Join-Path $source 'OSDApps.psd1'
     if (-not (Test-Path -LiteralPath $manifest -PathType Leaf)) { throw 'The pinned source archive does not contain the expected module.' }
     $info=Test-ModuleManifest -Path $manifest -ErrorAction Stop
-    foreach ($command in @('Add-OSDAppTimeZone','Add-OSDAppStartPins','Add-OSDAppTaskbarPins')) {
+    foreach ($command in @('Add-OSDAppStartPins','Add-OSDAppTaskbarPins')) {
         if (-not $info.ExportedFunctions.ContainsKey($command)) { throw ('Missing command: ' + $command) }
     }
     New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null

@@ -25,9 +25,6 @@ function ConvertTo-OSDAppDesktopPins {
 function Assert-OSDAppDesktopOperation {
     param([Parameter(Mandatory)]$Operation)
     switch ([string]$Operation.Kind) {
-        'TimeZone' {
-            if ([string]::IsNullOrWhiteSpace([string]$Operation.Id) -or [string]$Operation.Id -notmatch '^[A-Za-z0-9 +()._-]{1,128}$' -or [string]$Operation.Id -ne ([string]$Operation.Id).Trim()) { throw 'Specify a Windows time zone ID, for example W. Europe Standard Time.' }
-        }
         { $_ -in @('StartPins','TaskbarPins') } {
             if ($null -eq $Operation.Pins -or $Operation.Pins -isnot [System.Collections.IList]) { throw 'Pins must be an array, which may be empty.' }
             $null = @(ConvertTo-OSDAppDesktopPins -Pins @($Operation.Pins))
@@ -182,18 +179,6 @@ function Set-OSDAppStartPinsConfiguration {
     finally { if ($key) { $key.Dispose() };$base.Dispose() }
 }
 
-function Set-OSDAppTimeZoneConfiguration {
-    param([Parameter(Mandatory)][string]$Id)
-    # Validate against the installed Windows catalogue, not the WinPE host or localized names.
-    $zoneKey=Join-Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Time Zones' $Id
-    if (-not (Test-Path -LiteralPath $zoneKey)) { throw ('Unknown Windows time zone ID: ' + $Id) }
-    $before=(Get-TimeZone -ErrorAction Stop).Id
-    if ($before -ine $Id) { Set-TimeZone -Id $Id -ErrorAction Stop }
-    $after=(Get-TimeZone -ErrorAction Stop).Id
-    if ($after -ine $Id) { throw 'The requested time zone was not observed during this run.' }
-    [pscustomobject]@{Outcome=if ($before -ieq $after) {'Unchanged'} else {'Applied'};Before=$before;After=$after}
-}
-
 function Invoke-OSDAppDesktopConfiguration {
     param([Parameter(Mandatory)]$Configuration)
     Assert-OSDAppDesktopConfiguration -Configuration $Configuration
@@ -201,7 +186,6 @@ function Invoke-OSDAppDesktopConfiguration {
         $item=[ordered]@{Kind=[string]$operation.Kind;Status='Failed';Detail=$null;Error=$null}
         try {
             switch ([string]$operation.Kind) {
-                'TimeZone' { $item.Detail=Set-OSDAppTimeZoneConfiguration -Id $operation.Id }
                 'StartPins' { $item.Detail=Set-OSDAppStartPinsConfiguration -Pins @($operation.Pins) }
                 'TaskbarPins' { $item.Detail=[pscustomobject]@{Outcome='PreparedOffline';PinCount=@($operation.Pins).Count;Mode='Replace';PinGeneration=1;Note='Taskbar file policy was prepared in WinPE for first sign-in. Windows retains the policy; PinGeneration permits user unpinning. This is not proof of the rendered user layout.'} }
             }

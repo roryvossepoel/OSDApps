@@ -89,28 +89,19 @@
         $mapping.FileName | Should -Be StartLayoutFile
         $mapping.FileKind | Should -Be ([Microsoft.Win32.RegistryValueKind]::ExpandString)
     }
-    It 'fails if a time zone change is not observed during the same invocation' {
-        Mock Test-Path { $true }
-        Mock Get-TimeZone { [pscustomobject]@{Id='UTC'} }
-        Mock Set-TimeZone { }
-        { Set-OSDAppTimeZoneConfiguration -Id 'Tokyo Standard Time' } | Should -Throw '*not observed*'
-        Should -Invoke Set-TimeZone -Exactly 1 -ParameterFilter { $Id -eq 'Tokyo Standard Time' }
-    }
     It 'records each result independently without retrying failed settings' {
-        Mock Set-OSDAppTimeZoneConfiguration { throw 'Unknown Windows time zone ID' }
-        Mock Set-OSDAppStartPinsConfiguration { [pscustomobject]@{Outcome='ConfiguredForFirstSignIn';ApplyOnce=$true} }
+        Mock Set-OSDAppStartPinsConfiguration { throw 'Start policy failure fixture' }
         $config=[pscustomobject]@{SchemaVersion=1;DeploymentId=[guid]::NewGuid().Guid;ResultPath='C:\result.json';Operations=@(
-            [pscustomobject]@{Kind='TimeZone';Id='Invalid Zone'},[pscustomobject]@{Kind='StartPins';Pins=@()},[pscustomobject]@{Kind='TaskbarPins';Pins=@()}
+            [pscustomobject]@{Kind='StartPins';Pins=@()},[pscustomobject]@{Kind='TaskbarPins';Pins=@()}
         )}
         $result=Invoke-OSDAppDesktopConfiguration -Configuration $config
         $result.Status | Should -Be Failed
-        $result.SuccessfulOperationCount | Should -Be 2
-        $result.Items[2].Detail.Outcome | Should -Be PreparedOffline
+        $result.SuccessfulOperationCount | Should -Be 1
+        $result.Items[1].Detail.Outcome | Should -Be PreparedOffline
         $result.RebootRequested | Should -BeFalse
-        Should -Invoke Set-OSDAppTimeZoneConfiguration -Exactly 1
         Should -Invoke Set-OSDAppStartPinsConfiguration -Exactly 1
     }
-    It 'stages all three settings as one offline-ready queue entry and replaces only the requested list' {
+    It 'stages both pin settings as one offline-ready queue entry and replaces only the requested list' {
         InModuleScope OSDApps {
             Mock Test-OSDAppWinPE { $true }
             Mock Assert-OSDAppOfflineStartPins { }
@@ -126,7 +117,6 @@
             Add-OSDAppStartPins -Pins @(@{desktopAppId='MSEdge'}) -WindowsPath $target -WhatIf
             Test-Path (Join-Path $target 'Windows\Temp\OSDApps') | Should -BeFalse
             Should -Invoke Assert-OSDAppOfflineStartPins -Exactly 0
-            Add-OSDAppTimeZone -Id 'W. Europe Standard Time' -WindowsPath $target | Out-Null
             Add-OSDAppStartPins -Pins @(@{desktopAppId='MSEdge'}) -WindowsPath $target | Out-Null
             Add-OSDAppTaskbarPins -Pins @(@{desktopAppId='Microsoft.Windows.Explorer'}) -WindowsPath $target | Out-Null
             Add-OSDAppStartPins -Pins @(@{packagedAppId='windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel'}) -WindowsPath $target | Out-Null
@@ -136,17 +126,16 @@
             $ready.NetworkRequired | Should -BeFalse
             $configPath=Join-Path $target 'Windows\Temp\OSDApps\BuiltIn\DesktopSettings\config.json'
             $config=Get-Content $configPath -Raw | ConvertFrom-Json
-            $config.Operations.Count | Should -Be 3
+            $config.Operations.Count | Should -Be 2
             ($config.Operations | Where-Object Kind -eq 'StartPins').Pins.Count | Should -Be 1
-            ($config.Operations | Where-Object Kind -eq 'TimeZone').Id | Should -Be 'W. Europe Standard Time'
             { Remove-OSDAppStaging -Name DesktopSettings -WindowsPath $target -Confirm:$false } | Should -Throw '*already prepared*'
             $hash=(Get-FileHash $configPath).Hash
             Mock Add-OSDAppSetupComplete { throw 'fixture staging failure' }
-            { Add-OSDAppTimeZone -Id UTC -WindowsPath $target } | Should -Throw '*fixture*'
+            { Add-OSDAppStartPins -Pins @() -WindowsPath $target } | Should -Throw '*fixture*'
             (Get-FileHash $configPath).Hash | Should -Be $hash
             Add-Content $configPath 'tampered'
             { Test-OSDAppDeployment -WindowsPath $target -RequireOfflineReady -ThrowOnFailure } | Should -Throw
-            { Add-OSDAppTimeZone -Id UTC -WindowsPath $target } | Should -Throw '*not an intact*'
+            { Add-OSDAppStartPins -Pins @() -WindowsPath $target } | Should -Throw '*not an intact*'
         }
     }
     It 'imports supported Start JSON, normalizes applyOnce, and rejects recurring configuration' {
@@ -167,42 +156,45 @@
     It 'rejects the preparation PC and disabled built-ins' {
         InModuleScope OSDApps {
             Mock Test-OSDAppWinPE { $false }
-            { Add-OSDAppTimeZone -Id UTC } | Should -Throw '*WinPE*'
             { Add-OSDAppStartPins -Pins @() } | Should -Throw '*WinPE*'
             { Add-OSDAppTaskbarPins -Pins @() } | Should -Throw '*WinPE*'
+            Mock Test-OSDAppWinPE { $true }
             Set-OSDAppConfiguration -EnableBuiltIns $false
-            { Add-OSDAppTimeZone -Id UTC } | Should -Throw '*disabled*'
+            { Add-OSDAppStartPins -Pins @() } | Should -Throw '*disabled*'
         }
     }
-    It 'changes the actual time zone through the packaged runner, restores it and rejects payload tampering' {
+    It 'runs the staged taskbar entry through preinstall and the packaged runner and rejects payload tampering' {
         InModuleScope OSDApps {
             Mock Test-OSDAppWinPE { $true }
             $target=Join-Path $TestDrive 'Runner Windows'
             New-Item -ItemType Directory -Path $target | Out-Null
             $results=Join-Path $TestDrive 'Results'
             Set-OSDAppConfiguration -LogPath (Join-Path $TestDrive 'Runtime.log') -ResultPath (Join-Path $results 'Latest.json') -PreventSleep $false
-            $zone=(Get-TimeZone).Id
-            $requested=if ($zone -ne 'Tokyo Standard Time') { 'Tokyo Standard Time' } else { 'UTC' }
+            # Native offline policy writes are covered separately with a disposable hive.
+            Mock Set-OSDAppOfflineTaskbar {
+                param($WindowsPath,$Pins,$Commit)
+                $file=Join-Path $WindowsPath 'Windows\OEM\OSDApps\TaskbarLayoutModification.xml'
+                New-Item -ItemType Directory -Path (Split-Path $file -Parent) -Force | Out-Null
+                [IO.File]::WriteAllText($file,(ConvertTo-OSDAppTaskbarXml -Pins $Pins))
+                & $Commit
+            }
             try {
-                Add-OSDAppTimeZone -Id $requested -WindowsPath $target | Out-Null
+                Add-OSDAppTaskbarPins -Pins @(@{desktopAppId='Microsoft.Windows.Explorer'}) -WindowsPath $target | Out-Null
                 $stage=Join-Path $target 'Windows\Temp\OSDApps'
                 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $stage 'Invoke-OSDAppPreInstall.ps1') -StagedPath $stage
                 $LASTEXITCODE | Should -Be 0
                 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $stage 'Invoke-OSDAppRunner.ps1') -StagedPath $stage
                 $LASTEXITCODE | Should -Be 0
-                [TimeZoneInfo]::ClearCachedData()
-                (Get-TimeZone).Id | Should -Be $requested
                 $report=Get-Content (Join-Path $results 'DesktopSettings-Result.json') -Raw | ConvertFrom-Json
                 $report.Status | Should -Be Succeeded
-                $report.Items[0].Detail.Outcome | Should -Be Applied
-                $report.Items[0].Detail.Before | Should -Be $zone
-                $report.Items[0].Detail.After | Should -Be $requested
+                $report.Items[0].Detail.Outcome | Should -Be PreparedOffline
+                $report.OperationCount | Should -Be 1
+                $report.Items[0].Detail.PinCount | Should -Be 1
                 Add-Content (Join-Path $stage 'BuiltIn\DesktopSettings\Install.ps1') '# tampered'
                 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $stage 'Invoke-OSDAppRunner.ps1') -StagedPath $stage
                 $LASTEXITCODE | Should -Not -Be 0
             }
             finally {
-                Set-TimeZone -Id $zone -ErrorAction Stop
                 Set-OSDAppConfiguration -LogPath '%ProgramData%\OSDApps\Logs\Runtime.log' -ResultPath '%ProgramData%\OSDApps\Results\Latest.json' -PreventSleep $true }
         }
     }

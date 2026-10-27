@@ -39,15 +39,6 @@
         SuccessCodes = 'App/Script installer exit codes treated as success. Default accepts 0 and 3010. Dedicated Font, Certificate and Driver runtimes use fixed result semantics.'
     }
     Commands = @{
-        'Add-OSDAppTimeZone' = @{
-            Synopsis = 'Stage an explicit Windows time zone for one-time SetupComplete execution.'
-            Description = 'Adds or replaces TimeZone in one integrity-checked DesktopSettings queue entry. No location lookup, region changes, service changes, restart or recurring task. The installed Windows catalogue validates the ID at execution.'
-            Environment = 'WinPE after OSDCloud. Execution happens in native 64-bit Windows PowerShell during SetupComplete.'
-            Output = 'OSDApps.StagedApp with configured setting names. Staging is not execution proof.'
-            Parameters = @{ Id = 'Windows time zone ID, such as UTC, W. Europe Standard Time or Tokyo Standard Time. No default zone is imposed.' }
-            Examples = @(@{Code='Add-OSDAppTimeZone -Id ''W. Europe Standard Time''';Remarks='Set an initial time zone. Windows or later management can change it.'})
-            Link = 'docs/desktop-settings.md'
-        }
         'Add-OSDAppStartPins' = @{
             Synopsis = 'Stage a user-editable initial Start pinned list.'
             Description = 'Accepts ordered pin objects or exported Start JSON. Always uses applyOnce=true. Replaces default pins; does not install apps. Requires Windows 11 build 26100.4770 or later, a supported business edition and the Configure Start Pins ADMX. SetupComplete writes the file-based machine policy and durable JSON for future sign-ins.'

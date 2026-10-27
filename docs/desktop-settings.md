@@ -1,9 +1,8 @@
-# Time zone and initial Start/taskbar pins
+# Initial Start and taskbar pins
 
-All three commands are opt-in. The module has no hardcoded region or default pin list. Configure in WinPE after OSDCloud has applied Windows and **before the first boot** into that image. See [the combined example](../Examples/Stage-OSDAppsDesktopTest.ps1).
+Both commands are opt-in. The module has no default pin list. Configure in WinPE after OSDCloud has applied Windows and **before the first boot** into that image. See [the combined example](../Examples/Stage-OSDAppsDesktopTest.ps1).
 
 ```powershell
-Add-OSDAppTimeZone -Id 'W. Europe Standard Time'
 Add-OSDAppStartPins -Pins @(
     @{desktopAppId='MSEdge'}
     @{desktopAppId='Microsoft.Windows.Explorer'}
@@ -20,16 +19,15 @@ Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
 
 On a full Windows preparation PC, run `tools/Prepare-OSDAppsDesktopTest.ps1 -Revision <40-character commit SHA>`. It discovers exactly one volume labeled OSDCloud, downloads that immutable revision and copies it into a new `TestModules/OSDApps-Desktop-<short SHA>` folder. It does not replace the normal module or reset the cache. Existing test folders are not overwritten. ZIP extraction uses .NET ZipFile.
 
-In WinPE, import `OSDApps.psd1` from that exact test folder and run its `Examples/Stage-OSDAppsDesktopTest.ps1` after deployment completes. The example requests `Tokyo Standard Time` as deliberately different test input; the public command requires an explicit ID for every deployment.
+In WinPE, import `OSDApps.psd1` from that exact test folder and run its `Examples/Stage-OSDAppsDesktopTest.ps1` after deployment completes.
 
 ## Configuration contract
 
-- `Add-OSDAppTimeZone -Id` stages a literal Windows time zone ID. Runtime validates against the target catalogue, applies it once and reads it back during that same invocation. It does not disable automatic time zone updates or impose a policy. Subsequent OOBE location detection or management can change the zone. Use Intune or other management if a lasting enforced zone is required.
 - `Add-OSDAppStartPins -Pins` accepts ordered objects with exactly one `desktopAppId`, `packagedAppId` or `desktopAppLink`. IDs identify installed Windows apps, not OSDApps repository packages. Prefer IDs for international deployments. Literal local .lnk paths with supported Windows environment variables are also accepted. No new shortcuts are created.
 - `Add-OSDAppStartPins -JsonPath` accepts an existing exported JSON containing `pinnedList` and optionally `applyOnce: true`. `applyOnce: false`, unknown keys and website secondary tiles are rejected in this first version. The staged data is normalized, so the source file is not needed at execution.
 - `Add-OSDAppTaskbarPins -Pins` uses the same pin objects and order. XML is generated with the Windows namespaces and `PinListPlacement="Replace"`. Only the requested app pins should appear at first sign-in; extra Windows defaults are a failed acceptance test. Each actual pin has `PinGeneration="1"` so supported Windows versions remember user unpinning. An empty list uses Microsoft's internal `#leaveempty` sentinel. Start, Search, Widgets and other taskbar controls are not app pins and are not changed.
 - An explicit empty array requests an empty app pin list. Omission means no change.
-- Calling a command again replaces that entire setting, preserving the other desktop settings. All three share one `DesktopSettings` bundled Script queue entry, with SHA-256-validated script and configuration. No repository, cache synchronization, download or `Expand-Archive` is used.
+- Calling a command again replaces that entire setting, preserving the other desktop settings. Both share one `DesktopSettings` bundled Script queue entry, with SHA-256-validated script and configuration. No repository, cache synchronization, download or `Expand-Archive` is used.
 
 ## Start execution and support
 
@@ -53,11 +51,15 @@ A hash ownership marker protects replacements. Existing foreign or modified poli
 
 ## Results and validation
 
-`DesktopSettings-Result.json` is written alongside the configured runtime result file. It includes DeploymentId, separate setting outcomes, errors and success/failure counts. TimeZone reports Applied/Unchanged. StartPins reports ConfiguredForFirstSignIn. TaskbarPins reports PreparedOffline, not a claim that Windows rendered the expected pins.
+`DesktopSettings-Result.json` is written alongside the configured runtime result file. It includes DeploymentId, separate setting outcomes, errors and success/failure counts. StartPins reports ConfiguredForFirstSignIn. TaskbarPins reports PreparedOffline, not a claim that Windows rendered the expected pins.
 
 The existing deployment preflight validates script/configuration integrity and the generated taskbar XML. SetupComplete runs once; no restart is forced and no follow-up correction is scheduled.
 
-Automated coverage uses disposable files/registry hives and mocks for unavailable Windows 11 shell behavior. The end-to-end runner test deliberately selects a different time zone, checks `Applied` plus before/after values, and restores the original CI host zone in `finally`. **Physical Windows 11/OOBE validation is still required**, including the exact Edge/Explorer/Settings Start order, **Settings/Explorer only** on the taskbar (no Edge, Store or Outlook), and successful opening of each app. Confirm that pins in both Start and taskbar can still be changed. The time zone result must report `Applied`, different before/after IDs, and `After: Tokyo Standard Time`; `Unchanged` does not validate changing a time zone. OOBE may subsequently change the time zone; record that separately rather than masking it with a correction task. Normal first sign-in is sufficient for the initial visual test; no extra reboot is required.
+Automated coverage uses disposable files/registry hives and mocks for unavailable Windows 11 shell behavior. The end-to-end test executes a prepared taskbar entry through preinstall and the packaged runner, then verifies that tampered payloads are rejected. Native policy writes and rollback are covered separately using disposable registry hives.
+
+Physical tests on 2026-10-27 confirmed the Edge/Explorer/Settings Start pins and the requested Settings/Explorer taskbar pins. Outlook also appeared as an extra taskbar pin; Store and Edge were no longer reported as extra pins. **Exact exclusion of all extra taskbar pins is not yet proven.** The available logs cannot establish whether Outlook was pinned by Windows, an app, or management. Pin editability remains to be confirmed. No post-sign-in cleanup or correction is performed.
+
+The example requests Settings/Explorer only on the taskbar, making unexpected pins visible. Normal first sign-in is sufficient for the initial visual test; no extra reboot is required.
 
 ## Microsoft references
 
