@@ -1,4 +1,5 @@
 $moduleRoot = $PSScriptRoot
+. (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppDesktopSettings.ps1')
 . (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppServices.ps1')
 . (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppEnvironmentVariables.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDAppDriver.ps1')
@@ -57,6 +58,9 @@ Export-ModuleMember -Function @(
     'Add-OSDAppWindowsFeature',
     'Add-OSDAppEnvironmentVariable',
     'Add-OSDAppService',
+    'Add-OSDAppTimeZone',
+    'Add-OSDAppStartPins',
+    'Add-OSDAppTaskbarPins',
     'Add-OSDAppWiFiProfile',
     'Add-OSDAppCertificate',
     'Add-OSDAppWindowsInboxCleanup',

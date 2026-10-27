@@ -39,6 +39,36 @@
         SuccessCodes = 'App/Script installer exit codes treated as success. Default accepts 0 and 3010. Dedicated Font, Certificate and Driver runtimes use fixed result semantics.'
     }
     Commands = @{
+        'Add-OSDAppTimeZone' = @{
+            Synopsis = 'Stage an explicit Windows time zone for one-time SetupComplete execution.'
+            Description = 'Adds or replaces TimeZone in one integrity-checked DesktopSettings queue entry. No location lookup, region changes, service changes, restart or recurring task. The installed Windows catalogue validates the ID at execution.'
+            Environment = 'WinPE after OSDCloud. Execution happens in native 64-bit Windows PowerShell during SetupComplete.'
+            Output = 'OSDApps.StagedApp with configured setting names. Staging is not execution proof.'
+            Parameters = @{ Id = 'Windows time zone ID, such as UTC, W. Europe Standard Time or Tokyo Standard Time. No default zone is imposed.' }
+            Examples = @(@{Code='Add-OSDAppTimeZone -Id ''W. Europe Standard Time''';Remarks='Set an initial time zone. Windows or later management can change it.'})
+            Link = 'docs/desktop-settings.md'
+        }
+        'Add-OSDAppStartPins' = @{
+            Synopsis = 'Stage a user-editable initial Start pinned list.'
+            Description = 'Accepts ordered pin objects or exported Start JSON. Always uses applyOnce=true. Replaces default pins; does not install apps. Requires Windows 11 build 26100.4770 or later, a supported business edition and the Configure Start Pins ADMX. SetupComplete writes the file-based machine policy and durable JSON for future sign-ins.'
+            Environment = 'WinPE after OSDCloud. Validates the offline target; configuration is installed during SetupComplete.'
+            Output = 'OSDApps.StagedApp. ConfiguredForFirstSignIn at runtime is not proof of the rendered Start menu.'
+            Parameters = @{
+                Pins = 'Ordered array with exactly one desktopAppId, packagedAppId or desktopAppLink property per object. Empty array requests no pins. IDs identify Windows apps, not repository packages. Local .lnk paths can contain literal target environment variables.'
+                JsonPath = 'UTF-8 Start JSON with pinnedList and optional applyOnce=true. Normalized into staging. applyOnce=false and unsupported keys are rejected.'
+            }
+            Examples = @(@{Code='Add-OSDAppStartPins -Pins @(@{desktopAppId=''MSEdge''},@{desktopAppId=''Microsoft.Windows.Explorer''})';Remarks='Use language-independent app IDs in the desired order.'})
+            Link = 'docs/desktop-settings.md'
+        }
+        'Add-OSDAppTaskbarPins' = @{
+            Synopsis = 'Prepare an initial taskbar layout directly in a freshly applied offline Windows image.'
+            Description = 'Generates taskbar XML and sets LayoutXMLPath in the target SOFTWARE hive before specialize. No recurring policy or task. Foreign or modified layouts are refused. This changes the offline image immediately; discarding these changes requires reapplying Windows.'
+            Environment = 'WinPE immediately after OSDCloud has applied Windows, before the first boot into Windows Setup. Windows 11 client only.'
+            Output = 'OSDApps.StagedApp. Runtime records PreparedOffline; it does not verify the rendered taskbar or reapply pins.'
+            Parameters = @{ Pins = 'Ordered array using desktopAppId, packagedAppId or desktopAppLink. Empty array requests no app pins. Taskbar controls such as Start and Search are outside this setting.' }
+            Examples = @(@{Code='Add-OSDAppTaskbarPins -Pins @(@{desktopAppId=''MSEdge''},@{desktopAppId=''Microsoft.Windows.Explorer''})';Remarks='Prepare Edge and Explorer app pins before Windows Setup.'})
+            Link = 'docs/desktop-settings.md'
+        }
         'Add-OSDAppRegistryKey' = @{
             Synopsis = 'Stage a registry key change without writing to the preparation PC or WinPE registry.'
             Description = 'Adds or replaces an operation in one local RegistrySettings Script package. SetupComplete creates missing keys, preserves unrelated values and verifies every change by read-back. No view switch means the runtime host default. No external repository, download, registry ACL changes or profile loading is required.'

@@ -161,3 +161,5 @@ Repository [driver packages](docs/driver-packages.md) preserve complete vendor I
 Machine environment variables: [staging, PATH and runtime behavior](docs/environment-variables.md).
 
 Windows services: [one-shot startup and state configuration](docs/services.md).
+
+Time zone and Start/taskbar pins: [first-use desktop configuration](docs/desktop-settings.md).

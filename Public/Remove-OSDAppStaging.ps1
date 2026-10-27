@@ -81,6 +81,16 @@ function Remove-OSDAppStaging {
         }
     }
 
+    if (@($toRemove | Where-Object Id -eq 'DesktopSettings').Count -gt 0) {
+        $desktopConfig=Join-Path $stageRoot 'BuiltIn\DesktopSettings\config.json'
+        if (Test-Path -LiteralPath $desktopConfig) {
+            $desktop=Get-Content -LiteralPath $desktopConfig -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+            if (@($desktop.Operations | Where-Object Kind -eq 'TaskbarPins').Count -gt 0) {
+                throw 'Taskbar pins are already prepared in the offline image. Reapply a clean Windows image to discard them; removing only the queue would leave the taskbar configuration behind.'
+            }
+        }
+    }
+
     $remaining = @($staged | Where-Object { [string]$_.Id -notin $requested })
     if ($remaining.Count -eq 0) {
         # Preflight validation of the existing OSDApps SetupComplete blocks.
