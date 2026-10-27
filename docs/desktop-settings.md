@@ -16,6 +16,12 @@ Add-OSDAppTaskbarPins -Pins @(
 Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
 ```
 
+## Preparing the USB test module
+
+On a full Windows preparation PC, run `tools/Prepare-OSDAppsDesktopTest.ps1 -Revision <40-character commit SHA>`. It discovers exactly one volume labeled OSDCloud, downloads that immutable revision and copies it into a new `TestModules/OSDApps-Desktop-<short SHA>` folder. It does not replace the normal module or reset the cache. Existing test folders are not overwritten. ZIP extraction uses .NET ZipFile.
+
+In WinPE, import `OSDApps.psd1` from that exact test folder and run its `Examples/Stage-OSDAppsDesktopTest.ps1` after deployment completes. The example uses a Dutch time zone only as test input; the public command requires an explicit ID for every deployment.
+
 ## Configuration contract
 
 - `Add-OSDAppTimeZone -Id` stages a literal Windows time zone ID. Runtime validates against the target catalogue, applies it once and reads it back during that same invocation. It does not disable automatic time zone updates or impose a policy. Subsequent OOBE location detection or management can change the zone. Use Intune or other management if a lasting enforced zone is required.

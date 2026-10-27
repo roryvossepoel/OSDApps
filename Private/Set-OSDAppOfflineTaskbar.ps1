@@ -13,10 +13,11 @@ function Set-OSDAppOfflineTaskbar {
         finally { if ($cv) { $cv.Dispose() } }
         if ($systemRoot -notmatch '^[A-Za-z]:\\Windows$') { throw 'Cannot resolve the future Windows directory from the target SOFTWARE hive.' }
         $futurePath=$systemRoot + '\OEM\OSDApps\TaskbarLayoutModification.xml'
-        $key=$Software.CreateSubKey('Microsoft\Windows\CurrentVersion\Explorer')
-        $owner=$Software.CreateSubKey('OSDApps\DesktopSettings')
+        $key=$null;$owner=$null
         $old=$null;$oldKind=$null;$oldHash=$null;$oldBytes=$null;$written=$false
         try {
+            $key=$Software.CreateSubKey('Microsoft\Windows\CurrentVersion\Explorer')
+            $owner=$Software.CreateSubKey('OSDApps\DesktopSettings')
             $old=$key.GetValue('LayoutXMLPath',$null,[Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
             if ($null -ne $old) { $oldKind=$key.GetValueKind('LayoutXMLPath') }
             $oldHash=$owner.GetValue('TaskbarSha256')
@@ -39,6 +40,6 @@ function Set-OSDAppOfflineTaskbar {
             }
             throw
         }
-        finally { $owner.Dispose();$key.Dispose() }
+        finally { if ($owner) { $owner.Dispose() };if ($key) { $key.Dispose() } }
     }
 }
