@@ -40,6 +40,7 @@
     'Add-OSDAppRegistryValue',
     'Add-OSDAppWindowsFeature',
     'Add-OSDAppEnvironmentVariable',
+    'Add-OSDAppService',
     'Add-OSDAppWiFiProfile',
     'Add-OSDAppCertificate',
     'Add-OSDAppWindowsInboxCleanup',
