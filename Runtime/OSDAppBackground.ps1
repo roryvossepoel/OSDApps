@@ -17,7 +17,7 @@ function Assert-OSDAppBackgroundPlatform {
     if ($EditionId -notmatch '^(Professional|Enterprise|Education|IoTEnterprise)') { throw 'Background configuration requires a Windows 11 business edition.' }
     if ($EditionId -match '^Professional' -and ($Operation.Enforce -or $Operation.Kind -eq 'LockScreen')) {
         $technique=if ($Operation.Enforce) { 'Personalization CSP' } else { 'native default lock screen policy (not Personalization CSP)' }
-        Write-Warning ("Current edition '$EditionId': $technique may not take effect until a supported Enterprise/Education edition is active. Configuration will continue; a later subscription upgrade and image application are not verified. No retry or post-sign-in task is added.")
+        Write-Warning ("Current edition '$EditionId': $technique may not take effect until a supported Enterprise/Education edition is active. Configuration will continue; a later subscription upgrade and the displayed image are not verified. No retry or post-sign-in task is added.")
     }
 }
 
