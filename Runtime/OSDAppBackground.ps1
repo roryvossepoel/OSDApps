@@ -1,7 +1,8 @@
 # Shared validation and native Windows background processing. No entry-point side effects.
 function Assert-OSDAppBackgroundOperation {
     param([Parameter(Mandatory)]$Operation)
-    if ([string]$Operation.FutureSystemRoot -notmatch '^[A-Za-z]:\\Windows$' -or $Operation.Kind -cnotin @('Wallpaper','LockScreen') -or $Operation.Enforce -isnot [bool] -or
+    if ([string]$Operation.FutureSystemRoot -cne '%WINDIR%') { throw 'Obsolete or invalid background Windows root. Restage backgrounds on a fresh Windows image.' }
+    if ($Operation.Kind -cnotin @('Wallpaper','LockScreen') -or $Operation.Enforce -isnot [bool] -or
         [string]$Operation.Id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or [string]$Operation.Id -match '\.\.' -or
         [string]$Operation.ImageSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or [string]$Operation.Extension -cnotin @('.jpg','.jpeg','.png')) {
         throw 'Invalid background operation.'
@@ -127,27 +128,30 @@ function Set-OSDAppBackgroundCsp {
     }
 }
 
+function Set-OSDAppBackgroundConfigurationCore {
+    param([Parameter(Mandatory)]$Operation,[Parameter(Mandatory)][Microsoft.Win32.RegistryKey]$Software,[Parameter(Mandatory)][string]$WindowsDirectory)
+    Assert-OSDAppBackgroundFile -Operation $Operation -WindowsDirectory $WindowsDirectory
+    $cv=$Software.OpenSubKey('Microsoft\Windows NT\CurrentVersion')
+    try { Assert-OSDAppBackgroundPlatform -Operation $Operation -Build ([int]$cv.GetValue('CurrentBuildNumber')) -EditionId ([string]$cv.GetValue('EditionID')) -InstallationType ([string]$cv.GetValue('InstallationType')) }
+    finally { if ($cv) { $cv.Dispose() } }
+    Assert-OSDAppBackgroundPolicyState -Software $Software -Operation $Operation
+    $path=Join-Path $WindowsDirectory $Operation.ImageRelativePath
+    if ($Operation.Enforce) { return Set-OSDAppBackgroundCsp -Operation $Operation -ImagePath $path }
+    if ($Operation.Kind -eq 'Wallpaper') {
+        return [pscustomobject]@{Outcome='PreparedOffline';Technique='WindowsSetup/Themes';ImagePath=$path;Enforced=$false;Note='Answer file was prepared before first boot using literal %WINDIR%; visual first-sign-in behavior requires acceptance testing.'}
+    }
+    $mapping=Get-OSDAppLockScreenPolicy -WindowsDirectory $WindowsDirectory
+    $key=$Software.CreateSubKey($mapping.Key)
+    try { $key.SetValue($mapping.Name,$path,[Microsoft.Win32.RegistryValueKind]::String) }
+    finally { if ($key) { $key.Dispose() } }
+    [pscustomobject]@{Outcome='ConfiguredDefault';Technique='NativeDefaultLockScreenPolicy';ImagePath=$path;Enforced=$false;Note='Default also applies to the sign-in screen. No prevent-changing policy is enabled.'}
+}
+
 function Set-OSDAppBackgroundConfiguration {
     param([Parameter(Mandatory)]$Operation)
-    Assert-OSDAppBackgroundFile -Operation $Operation
-    if ($env:SystemRoot -ine $Operation.FutureSystemRoot) { throw 'The running Windows directory differs from the staged target.' }
+    if (Test-Path -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\MiniNT') { throw 'Background runtime requires full Windows.' }
     if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -ne 'S-1-5-18') { throw 'Background runtime requires SYSTEM.' }
     $software=[Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SOFTWARE',$true)
-    try {
-        $cv=$software.OpenSubKey('Microsoft\Windows NT\CurrentVersion')
-        try { Assert-OSDAppBackgroundPlatform -Operation $Operation -Build ([int]$cv.GetValue('CurrentBuildNumber')) -EditionId ([string]$cv.GetValue('EditionID')) -InstallationType ([string]$cv.GetValue('InstallationType')) }
-        finally { if ($cv) { $cv.Dispose() } }
-        Assert-OSDAppBackgroundPolicyState -Software $software -Operation $Operation
-        $path=Join-Path $env:SystemRoot $Operation.ImageRelativePath
-        if ($Operation.Enforce) { return Set-OSDAppBackgroundCsp -Operation $Operation -ImagePath $path }
-        if ($Operation.Kind -eq 'Wallpaper') {
-            return [pscustomobject]@{Outcome='PreparedOffline';Technique='WindowsSetup/Themes';ImagePath=$path;Enforced=$false;Note='Answer file was prepared before first boot; visual first-sign-in behavior requires acceptance testing.'}
-        }
-        $mapping=Get-OSDAppLockScreenPolicy
-        $key=$software.CreateSubKey($mapping.Key)
-        try { $key.SetValue($mapping.Name,$path,[Microsoft.Win32.RegistryValueKind]::String) }
-        finally { if ($key) { $key.Dispose() } }
-        [pscustomobject]@{Outcome='ConfiguredDefault';Technique='NativeDefaultLockScreenPolicy';ImagePath=$path;Enforced=$false;Note='Default also applies to the sign-in screen. No prevent-changing policy is enabled.'}
-    }
+    try { Set-OSDAppBackgroundConfigurationCore -Operation $Operation -Software $software -WindowsDirectory $env:SystemRoot }
     finally { if ($software) { $software.Dispose() } }
 }

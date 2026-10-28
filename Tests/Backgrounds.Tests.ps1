@@ -123,14 +123,94 @@ Describe 'Repository images and Windows background modes' {
             $original='<unattend xmlns="urn:schemas-microsoft-com:unattend" />'
             [IO.File]::WriteAllText($answer,$original,[Text.UnicodeEncoding]::new($false,$true))
             $bytes=[Convert]::ToBase64String([IO.File]::ReadAllBytes($answer))
-            Mock Get-OSDAppBackgroundTarget {[pscustomobject]@{SystemRoot='C:\Windows'}}
+            Mock Get-OSDAppBackgroundTarget {[pscustomobject]@{SystemRoot='X:\Windows'}}
             Mock Get-OSDAppBackgroundAnswerFile {$answer}
             Mock Get-OSDAppBackgroundArchitecture {'amd64'}
             $sourceFile=Join-Path $Source 'background.png';$hash=(Get-FileHash $sourceFile).Hash
-            $op=[pscustomobject]@{Kind='Wallpaper';Id='Test';FutureSystemRoot='C:\Windows';Enforce=$false;ImageSha256=$hash;Extension='.png';ImageRelativePath=('OEM\OSDApps\Branding\Test\'+$hash+'.png')}
+            $op=[pscustomobject]@{Kind='Wallpaper';Id='Test';FutureSystemRoot='%WINDIR%';Enforce=$false;ImageSha256=$hash;Extension='.png';ImageRelativePath=('OEM\OSDApps\Branding\Test\'+$hash+'.png')}
             {Set-OSDAppOfflineBackground -WindowsPath $target -Operation $op -SourcePath $sourceFile -Commit {throw 'simulated manifest failure'}} | Should -Throw '*simulated manifest failure*'
             [Convert]::ToBase64String([IO.File]::ReadAllBytes($answer)) | Should -Be $bytes
             Test-Path (Join-Path (Join-Path $target 'Windows') $op.ImageRelativePath) | Should -BeFalse
+        }
+    }
+    It 'does not derive future Windows paths from offline registry values or the host environment' {
+        InModuleScope OSDApps {
+            $name='Software\OSDAppsBackgroundPaths_'+[guid]::NewGuid().ToString('N')
+            $script:backgroundPlatformHive=[Microsoft.Win32.Registry]::CurrentUser.CreateSubKey($name)
+            Mock Invoke-OSDAppOfflineSoftware {param($Action) & $Action $script:backgroundPlatformHive}
+            try {
+                $cv=$script:backgroundPlatformHive.CreateSubKey('Microsoft\Windows NT\CurrentVersion')
+                try {
+                    $cv.SetValue('CurrentBuildNumber','26100');$cv.SetValue('InstallationType','Client');$cv.SetValue('EditionID','Enterprise')
+                    foreach ($root in @('X:\Windows','D:\Windows','%SystemRoot%')) {
+                        $cv.SetValue('SystemRoot',$root,[Microsoft.Win32.RegistryValueKind]::ExpandString)
+                        $platform=Get-OSDAppBackgroundTarget -WindowsPath $TestDrive -Operation @{Kind='Wallpaper';Enforce=$false}
+                        $platform.EditionId | Should -Be Enterprise
+                        @($platform.PSObject.Properties.Name) | Should -Not -Contain SystemRoot
+                    }
+                }
+                finally { $cv.Dispose() }
+                $setup=$script:backgroundPlatformHive.CreateSubKey('Setup')
+                try {
+                    foreach ($selected in @('','%WINDIR%\Panther\unattend.xml','%SystemRoot%\Panther\unattend.xml')) {
+                        $setup.SetValue('UnattendFile',$selected,[Microsoft.Win32.RegistryValueKind]::ExpandString)
+                        Get-OSDAppBackgroundAnswerFile -WindowsPath $TestDrive | Should -Be (Join-Path $TestDrive 'Windows\Panther\unattend.xml')
+                    }
+                    foreach ($selected in @('X:\Windows\Panther\unattend.xml','C:\Windows\Panther\unattend.xml','%WINDIR%\Other.xml')) {
+                        $setup.SetValue('UnattendFile',$selected,[Microsoft.Win32.RegistryValueKind]::ExpandString)
+                        {Get-OSDAppBackgroundAnswerFile -WindowsPath $TestDrive} | Should -Throw '*override*'
+                    }
+                }
+                finally { $setup.Dispose() }
+            }
+            finally { $script:backgroundPlatformHive.Dispose();[Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($name,$false) }
+        }
+    }
+    It 'uses the actual runtime Windows directory for changeable and enforced images' {
+        InModuleScope OSDApps -Parameters @{Source=$script:source} {
+            param($Source)
+            $name='Software\OSDAppsBackgroundRuntime_'+[guid]::NewGuid().ToString('N')
+            $software=[Microsoft.Win32.Registry]::CurrentUser.CreateSubKey($name)
+            $windows=Join-Path $TestDrive 'InstalledWindows'
+            $sourceFile=Join-Path $Source 'background.png';$hash=(Get-FileHash $sourceFile).Hash
+            $op=[pscustomobject]@{Kind='Wallpaper';Id='Test';FutureSystemRoot='%WINDIR%';Enforce=$false;ImageSha256=$hash;Extension='.png';ImageRelativePath=('OEM\OSDApps\Branding\Test\'+$hash+'.png')}
+            $image=Join-Path $windows $op.ImageRelativePath
+            New-Item -ItemType Directory -Path (Split-Path $image -Parent) -Force | Out-Null
+            Copy-Item -LiteralPath $sourceFile -Destination $image
+            $policyDefinitions=Join-Path $windows 'PolicyDefinitions'
+            New-Item -ItemType Directory -Path $policyDefinitions -Force | Out-Null
+            Copy-Item -LiteralPath (Join-Path $env:SystemRoot 'PolicyDefinitions\ControlPanelDisplay.admx') -Destination $policyDefinitions
+            Mock Set-OSDAppBackgroundCsp {param($Operation,$ImagePath) [pscustomobject]@{Outcome='Applied';Technique='MockCSP';ImagePath=$ImagePath}}
+            try {
+                $cv=$software.CreateSubKey('Microsoft\Windows NT\CurrentVersion')
+                try { $cv.SetValue('CurrentBuildNumber','26100');$cv.SetValue('InstallationType','Client');$cv.SetValue('EditionID','Professional');$cv.SetValue('SystemRoot','X:\Windows') }
+                finally { $cv.Dispose() }
+                $wallpaper=Set-OSDAppBackgroundConfigurationCore -Operation $op -Software $software -WindowsDirectory $windows
+                $wallpaper.Outcome | Should -Be PreparedOffline
+                $wallpaper.ImagePath | Should -Be $image
+                $op.Kind='LockScreen'
+                $lock=Set-OSDAppBackgroundConfigurationCore -Operation $op -Software $software -WindowsDirectory $windows 3>$null
+                $lock.Outcome | Should -Be ConfiguredDefault
+                $key=$software.OpenSubKey('Policies\Microsoft\Windows\Personalization')
+                try {
+                    $key.GetValue('LockScreenImage') | Should -Be $image
+                    $key.GetValue('NoChangingLockScreen') | Should -BeNullOrEmpty
+                }
+                finally { $key.Dispose() }
+                Should -Invoke Set-OSDAppBackgroundCsp -Times 0 -Exactly
+                # The test owns this isolated hive. Clear its default policy before testing CSP modes.
+                $software.DeleteSubKeyTree('Policies',$false)
+                $op.Enforce=$true
+                foreach ($kind in @('Wallpaper','LockScreen')) {
+                    $op.Kind=$kind
+                    $result=Set-OSDAppBackgroundConfigurationCore -Operation $op -Software $software -WindowsDirectory $windows 3>$null
+                    $result.ImagePath | Should -Be $image
+                }
+                Should -Invoke Set-OSDAppBackgroundCsp -Times 2 -Exactly -ParameterFilter {$ImagePath -eq $image}
+                Add-Content -LiteralPath $image 'tampered'
+                {Set-OSDAppBackgroundConfigurationCore -Operation $op -Software $software -WindowsDirectory $windows} | Should -Throw '*SHA-256*'
+            }
+            finally { $software.Dispose();[Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($name,$false) }
         }
     }
     It 'uses native installed ADMX for the default lock screen mapping' {
@@ -207,7 +287,7 @@ Describe 'Repository images and Windows background modes' {
             Sync-OSDAppCache -CatalogPath (Join-Path $repo 'catalog.json') -CachePath $cache -Confirm:$false | Out-Null
             $script:backgroundCache=$cache;$script:backgroundTarget=$target
             Mock Test-OSDAppWinPE {$true};Mock Get-OSDAppCachePath {$script:backgroundCache}
-            Mock Get-OSDAppBackgroundTarget {[pscustomobject]@{SystemRoot='C:\Windows'}}
+            Mock Get-OSDAppBackgroundTarget {[pscustomobject]@{SystemRoot='X:\Windows'}}
             Mock Get-OSDAppLockScreenPolicy {[pscustomobject]@{Key='Policies\Microsoft\Windows\Personalization';Name='LockScreenImage'}}
             Mock Get-OSDAppBackgroundAnswerFile {Join-Path $script:backgroundTarget 'Windows\Panther\unattend.xml'}
             Mock Get-OSDAppBackgroundArchitecture {'amd64'}
@@ -223,6 +303,13 @@ Describe 'Repository images and Windows background modes' {
             $config.Operations.Count | Should -Be 2
             $config.Operations[0].Enforce | Should -BeFalse
             $config.Operations[1].Enforce | Should -BeTrue
+            @($config.Operations.FutureSystemRoot | Select-Object -Unique) | Should -Be @('%WINDIR%')
+            $answer=[xml](Get-Content (Join-Path $target 'Windows\Panther\unattend.xml') -Raw)
+            $answer.SelectSingleNode("//*[local-name()='DesktopBackground']").InnerText | Should -Be ('%WINDIR%\'+$config.Operations[0].ImageRelativePath)
+            $answer.OuterXml | Should -Not -Match '[A-Za-z]:\\Windows'
+            $legacy=$config.Operations[0] | ConvertTo-Json | ConvertFrom-Json
+            $legacy.FutureSystemRoot='X:\Windows'
+            {Assert-OSDAppBackgroundOperation -Operation $legacy} | Should -Throw '*Restage*'
             {Add-OSDAppWallpaper -Id TestImage -WindowsPath $target -SkipCacheRefresh} | Should -Throw '*already staged*'
             $image=Join-Path (Join-Path $target 'Windows') $config.Operations[0].ImageRelativePath
             Add-Content $image 'tampered'

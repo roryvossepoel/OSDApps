@@ -31,7 +31,7 @@ The same command interface does not imply the same Windows implementation. The i
 | Wallpaper | Windows Setup `Microsoft-Windows-Shell-Setup\Themes`: merge `DesktopBackground` and the required `ThemeName` into the target answer file before first boot. Set an initial background; users may change it. | Personalization CSP `DesktopImageUrl`, called through the documented WMI Bridge in the installed Windows system under SYSTEM. Users cannot change the managed image. |
 | Lock screen | Native machine policy `Force a specific default lock screen and logon image`, without enabling `Prevent changing lock screen and logon image`. Establish the default image; users may choose another. | Personalization CSP `LockScreenImageUrl`, called through the documented WMI Bridge under SYSTEM. Users cannot change the managed image. |
 
-The required internal `ThemeName` for the wallpaper Setup route does not introduce a public theme-setting feature. Existing color, mode and other answer-file settings must be preserved. The command merges the oobeSystem pass in `Windows\Panther\unattend.xml`, or creates that file when absent. Alternative answer files, conflicting background definitions, processed passes and a conflicting SYSTEM Setup UnattendFile selection are refused. The target kernel determines amd64 versus arm64. OSDCloud compatibility still requires a physical test.
+The required internal `ThemeName` for the wallpaper Setup route does not introduce a public theme-setting feature. Existing color, mode and other answer-file settings must be preserved. The command merges the oobeSystem pass in `Windows\Panther\unattend.xml`, or creates that file when absent. Alternative answer files, conflicting background definitions, processed passes and a conflicting SYSTEM Setup UnattendFile selection are refused. An explicit selection is accepted only as literal `%WINDIR%\Panther\unattend.xml` or `%SystemRoot%\Panther\unattend.xml`; absolute overrides are refused because their future drive mapping cannot be inferred safely in WinPE. The target kernel determines amd64 versus arm64. OSDCloud compatibility still requires a physical test.
 
 The default lock screen route itself uses persistent native policy: "changeable default" does not mean "no policy exists." Microsoft documents that the separate prevent-changing policy is needed to always force that default image. The default policy also affects the logon image when nobody is signed in. This behavior and continued user editability require physical validation.
 
@@ -47,7 +47,7 @@ Default wallpaper supports Windows 11 Pro, Enterprise, Education and IoT Enterpr
 
 ## Storage and lifecycle
 
-Persistent images are stored under `%SystemRoot%\OEM\OSDApps\Branding\<RepositoryId>\<SHA256>.<extension>`. Resolve the offline target and its eventual Windows path separately; do not persist a temporary WinPE drive letter. Discover USB cache volumes by their configured label, never by a fixed drive letter.
+Persistent images are stored under `%SystemRoot%\OEM\OSDApps\Branding\<RepositoryId>\<SHA256>.<extension>`. New staging stores the literal `%WINDIR%` token in `FutureSystemRoot` and in the wallpaper answer-file value; Windows Setup expands that token in the installed system. The runtime resolves the relative image path against its current Windows directory. It never predicts that directory from an offline registry value, expands that value in WinPE or compares a stored WinPE drive letter with the running system. Absolute roots from earlier test modules are rejected: restage on a fresh Windows image. Discover USB cache volumes by their configured label, never by a fixed drive letter.
 
 The existing cache supplies validated content. Temporary deployment staging may be cleaned up after success, but active background files remain. ZIP extraction must use the existing WinPE-compatible extraction path, not `Expand-Archive`. System-owned Windows wallpaper files and their permissions are not replaced.
 
@@ -92,6 +92,8 @@ Select each background once per fresh image. A second call for the same backgrou
 
 ## Physical test preparation
 
+The earlier physical test exposed a WinPE-expanded `X:\Windows` value in the wallpaper answer file and runtime root comparison. The path fix requires a **fresh image** and restaging both images with the updated test module. Updating the module on an already installed device does not replay Windows Setup or update an existing user profile. No post-sign-in repair or runtime retry is introduced.
+
 Run `tools/Prepare-OSDAppsBackgroundTest.ps1 -Revision <full commit SHA>` on your full Windows preparation PC with the OSDCloud USB connected. It copies a pinned test module to a new folder, generates two distinctly labeled test PNGs, builds Image packages and synchronizes only those test IDs into the existing cache. It does not change your configured production catalog or reset the cache. Optional WallpaperPath and LockScreenPath parameters use your own images instead.
 
 In WinPE, after OSDCloud applies **Windows 11 Pro, Enterprise or Education**, import that exact test module and run `Examples/Stage-OSDAppsBackgroundTest.ps1`. The default test sets both images as changeable defaults. On Pro, expect an edition warning for the lock screen and continued staging; its visible effect before or after subscription activation still requires observation. On a separate fresh deployment, add `-EnforceWallpaper -EnforceLockScreen` to test both enforced variants; switches can also be selected independently. Use the normal installation reboot only. Do not add checks or correction scripts to the deployed system.
@@ -110,6 +112,8 @@ At first sign-in, visually check the labeled wallpaper. Lock the session to chec
 - Include the actual Windows mechanism, edition support, persistence and user editability in command help and the released user guide.
 
 ## Microsoft references
+
+- [DesktopBackground: documented literal WINDIR example](https://learn.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-shell-setup-themes-desktopbackground)
 
 - [Subscription activation and edition changes at user sign-in](https://learn.microsoft.com/en-us/windows/deployment/windows-subscription-activation)
 

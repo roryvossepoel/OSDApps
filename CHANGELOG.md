@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix background staging persisting a WinPE-expanded Windows root: wallpaper uses literal `%WINDIR%` in the answer file and runtime images resolve against the installed Windows directory. Earlier absolute-root background staging requires a fresh image and restaging.
+
 - Add separate repository-image wallpaper and lock screen commands with changeable defaults or explicit `-Enforce`, persistent images, one-shot SetupComplete processing and documented edition limits. Pro-family edition checks warn and continue during staging and SetupComplete to allow later subscription activation; actual provider failures remain errors.
 
 - Add opt-in initial Start and taskbar pins through Add-OSDAppStartPins and Add-OSDAppTaskbarPins. Includes independent configuration, transactional staging, target compatibility checks, result reporting and a combined manual deployment example. Start uses applyOnce; taskbar uses the native file policy with Replace and PinGeneration=1. Empty lists use the documented sentinel. Physical testing confirmed the requested pins, with an additional Outlook pin whose source remains unconfirmed.

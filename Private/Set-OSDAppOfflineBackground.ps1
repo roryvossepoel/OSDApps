@@ -7,18 +7,18 @@ function Get-OSDAppBackgroundTarget {
         try {
             if (-not $cv) { throw 'Target Windows version is missing.' }
             Assert-OSDAppBackgroundPlatform -Operation $Operation -Build ([int]$cv.GetValue('CurrentBuildNumber')) -InstallationType ([string]$cv.GetValue('InstallationType')) -EditionId ([string]$cv.GetValue('EditionID'))
-            $future=[string]$cv.GetValue('SystemRoot')
+            $platform=[pscustomobject]@{Build=[int]$cv.GetValue('CurrentBuildNumber');EditionId=[string]$cv.GetValue('EditionID');InstallationType=[string]$cv.GetValue('InstallationType')}
         }
         finally { if ($cv) { $cv.Dispose() } }
-        if ($future -notmatch '^[A-Za-z]:\\Windows$') { throw 'Cannot resolve the future Windows directory.' }
         Assert-OSDAppBackgroundPolicyState -Software $Software -Operation $Operation
-        [pscustomobject]@{SystemRoot=$future}
+        # Never expand an offline SystemRoot using the WinPE process environment.
+        $platform
     }
 }
 
 function Get-OSDAppBackgroundAnswerFile {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$WindowsPath,[Parameter(Mandatory)][string]$FutureSystemRoot)
+    param([Parameter(Mandatory)][string]$WindowsPath)
     $path=Join-Path $WindowsPath 'Windows\Panther\unattend.xml'
     Assert-OSDAppBackgroundPath -Path $path
     # Never silently compete with another answer-file selection.
@@ -30,7 +30,7 @@ function Get-OSDAppBackgroundAnswerFile {
         $setup=$System.OpenSubKey('Setup')
         try {
             $selected=if ($setup) { [string]$setup.GetValue('UnattendFile',$null,[Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames) } else { '' }
-            if ($selected -and $selected -ine ($FutureSystemRoot+'\Panther\unattend.xml')) { throw 'The target SYSTEM hive selects a different answer file. Nothing was replaced.' }
+            if ($selected -and $selected -inotmatch '^%(WINDIR|SystemRoot)%\\Panther\\unattend\.xml$') { throw 'The target SYSTEM hive selects an absolute or different answer file. Resolve this override before staging; its future drive letter cannot be inferred in WinPE.' }
         }
         finally { if ($setup) { $setup.Dispose() } }
     }
@@ -97,7 +97,7 @@ function Set-OSDAppOfflineBackground {
     param([Parameter(Mandatory)][string]$WindowsPath,[Parameter(Mandatory)]$Operation,[Parameter(Mandatory)][string]$SourcePath,[Parameter(Mandatory)][scriptblock]$Commit)
     $ErrorActionPreference='Stop'
     Assert-OSDAppBackgroundOperation -Operation $Operation
-    $target=Get-OSDAppBackgroundTarget -WindowsPath $WindowsPath -Operation $Operation
+    Get-OSDAppBackgroundTarget -WindowsPath $WindowsPath -Operation $Operation | Out-Null
     $path=Join-Path (Join-Path $WindowsPath 'Windows') $Operation.ImageRelativePath
     Assert-OSDAppBackgroundPath -Path $path
     if ((Get-FileHash -LiteralPath $SourcePath -Algorithm SHA256).Hash -ne $Operation.ImageSha256) { throw 'Image changed before commit.' }
@@ -105,9 +105,9 @@ function Set-OSDAppOfflineBackground {
     if ($exists -and (-not (Test-Path -LiteralPath $path -PathType Leaf) -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $Operation.ImageSha256)) { throw 'An unowned or modified background file occupies the destination.' }
     $answerPath=$null;$answerBytes=$null;$answerXml=$null
     if (-not $Operation.Enforce -and $Operation.Kind -eq 'Wallpaper') {
-        $answerPath=Get-OSDAppBackgroundAnswerFile -WindowsPath $WindowsPath -FutureSystemRoot $target.SystemRoot
+        $answerPath=Get-OSDAppBackgroundAnswerFile -WindowsPath $WindowsPath
         if (Test-Path -LiteralPath $answerPath -PathType Leaf) { $answerBytes=[IO.File]::ReadAllBytes($answerPath);$existing=[IO.File]::ReadAllText($answerPath) } else { $existing=$null }
-        $answerXml=ConvertTo-OSDAppWallpaperAnswerFile -ExistingXml $existing -ImagePath ($target.SystemRoot+'\'+$Operation.ImageRelativePath) -Architecture (Get-OSDAppBackgroundArchitecture -WindowsPath $WindowsPath)
+        $answerXml=ConvertTo-OSDAppWallpaperAnswerFile -ExistingXml $existing -ImagePath ($Operation.FutureSystemRoot+'\'+$Operation.ImageRelativePath) -Architecture (Get-OSDAppBackgroundArchitecture -WindowsPath $WindowsPath)
     }
     if (-not $Operation.Enforce -and $Operation.Kind -eq 'LockScreen') { Get-OSDAppLockScreenPolicy -WindowsDirectory (Join-Path $WindowsPath 'Windows') | Out-Null }
     $imageWritten=$false;$answerWritten=$false
