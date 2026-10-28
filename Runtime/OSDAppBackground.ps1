@@ -11,12 +11,14 @@ function Assert-OSDAppBackgroundOperation {
 }
 
 function Assert-OSDAppBackgroundPlatform {
+    [CmdletBinding()]
     param([int]$Build,[string]$InstallationType,[string]$EditionId,[Parameter(Mandatory)]$Operation)
     if ($Build -lt 22000 -or $InstallationType -ne 'Client') { throw 'Background configuration requires Windows 11 client.' }
-    if ($Operation.Enforce -or $Operation.Kind -eq 'LockScreen') {
-        if ($EditionId -notmatch '^(Enterprise|Education|IoTEnterprise)') { throw 'Lock screen and enforced backgrounds require Windows 11 Enterprise/Education in this release; ordinary Pro is not supported for these modes.' }
+    if ($EditionId -notmatch '^(Professional|Enterprise|Education|IoTEnterprise)') { throw 'Background configuration requires a Windows 11 business edition.' }
+    if ($EditionId -match '^Professional' -and ($Operation.Enforce -or $Operation.Kind -eq 'LockScreen')) {
+        $technique=if ($Operation.Enforce) { 'Personalization CSP' } else { 'native default lock screen policy (not Personalization CSP)' }
+        Write-Warning ("Current edition '$EditionId': $technique may not take effect until a supported Enterprise/Education edition is active. Configuration will continue; a later subscription upgrade and image application are not verified. No retry or post-sign-in task is added.")
     }
-    elseif ($EditionId -notmatch '^(Professional|Enterprise|Education|IoTEnterprise)') { throw 'Default wallpaper requires a Windows 11 business edition.' }
 }
 
 function Assert-OSDAppBackgroundPath {

@@ -63,14 +63,35 @@ Describe 'Repository images and Windows background modes' {
             Should -Invoke Save-OSDAppBackground -Times 1 -Exactly -ParameterFilter {$Kind -eq 'LockScreen' -and $Enforce}
         }
     }
-    It 'keeps Pro support limited to default wallpaper' {
+    It 'warns and continues on Pro for edition-dependent backgrounds, including Pro Education' {
         InModuleScope OSDApps {
-            Assert-OSDAppBackgroundPlatform -Build 26100 -InstallationType Client -EditionId Professional -Operation @{Kind='Wallpaper';Enforce=$false}
-            foreach ($op in @(@{Kind='Wallpaper';Enforce=$true},@{Kind='LockScreen';Enforce=$false},@{Kind='LockScreen';Enforce=$true})) {
-                {Assert-OSDAppBackgroundPlatform -Build 26100 -InstallationType Client -EditionId Professional -Operation $op} | Should -Throw '*Enterprise/Education*'
-                Assert-OSDAppBackgroundPlatform -Build 26100 -InstallationType Client -EditionId Enterprise -Operation $op
+            foreach ($edition in @('Professional','ProfessionalN','ProfessionalEducation','ProfessionalWorkstation')) {
+                $warnings=@()
+                @(Assert-OSDAppBackgroundPlatform -Build 26100 -InstallationType Client -EditionId $edition -Operation @{Kind='Wallpaper';Enforce=$false} -WarningVariable warnings -WarningAction SilentlyContinue -ErrorAction Stop).Count | Should -Be 0
+                @($warnings).Count | Should -Be 0
+                foreach ($op in @(@{Kind='Wallpaper';Enforce=$true},@{Kind='LockScreen';Enforce=$false},@{Kind='LockScreen';Enforce=$true})) {
+                    $warnings=@()
+                    @(Assert-OSDAppBackgroundPlatform -Build 26100 -InstallationType Client -EditionId $edition -Operation $op -WarningVariable warnings -WarningAction SilentlyContinue -ErrorAction Stop).Count | Should -Be 0
+                    @($warnings).Count | Should -Be 1
+                    [string]$warnings[0] | Should -Match 'Configuration will continue'
+                    [string]$warnings[0] | Should -Match 'not verified'
+                    if (-not $op.Enforce) { [string]$warnings[0] | Should -Match 'native default lock screen policy' }
+                    foreach ($supported in @('Enterprise','Education','IoTEnterprise')) {
+                        $warnings=@()
+                        Assert-OSDAppBackgroundPlatform -Build 26100 -InstallationType Client -EditionId $supported -Operation $op -WarningVariable warnings -WarningAction SilentlyContinue
+                        @($warnings).Count | Should -Be 0
+                    }
+                }
             }
-            {Assert-OSDAppBackgroundPlatform -Build 20348 -InstallationType Server -EditionId ServerStandard -Operation @{Kind='Wallpaper';Enforce=$false}} | Should -Throw '*Windows 11 client*'
+        }
+    }
+    It 'still rejects Home, Server and pre-Windows-11 targets in every background mode' {
+        InModuleScope OSDApps {
+            foreach ($op in @(@{Kind='Wallpaper';Enforce=$false},@{Kind='Wallpaper';Enforce=$true},@{Kind='LockScreen';Enforce=$false},@{Kind='LockScreen';Enforce=$true})) {
+                {Assert-OSDAppBackgroundPlatform -Build 26100 -InstallationType Client -EditionId Core -Operation $op} | Should -Throw '*business edition*'
+                {Assert-OSDAppBackgroundPlatform -Build 26100 -InstallationType Server -EditionId ServerStandard -Operation $op} | Should -Throw '*Windows 11 client*'
+                {Assert-OSDAppBackgroundPlatform -Build 19045 -InstallationType Client -EditionId Professional -Operation $op} | Should -Throw '*Windows 11 client*'
+            }
         }
     }
     It 'merges default wallpaper without changing existing OOBE language or color settings' {

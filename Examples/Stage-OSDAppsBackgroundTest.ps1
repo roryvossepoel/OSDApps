@@ -1,4 +1,4 @@
-# Run in WinPE after OSDCloud applies a fresh Enterprise/Education image.
+# Run in WinPE after OSDCloud applies a fresh Windows 11 Pro/Enterprise/Education image. Pro lock screen support is advisory.
 [CmdletBinding()]
 param([string]$WindowsPath,[switch]$EnforceWallpaper,[switch]$EnforceLockScreen)
 $ErrorActionPreference='Stop'

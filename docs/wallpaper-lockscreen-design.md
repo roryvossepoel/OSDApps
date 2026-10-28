@@ -39,11 +39,11 @@ The CSP route uses `MDM_Personalization` in `root\cimv2\mdm\dmmap`. Its URLs poi
 
 ## Edition and policy boundaries
 
-The initial supported target for the lock screen default route is Windows 11 Enterprise/Education or IoT Enterprise, build 22000 or later, subject to physical validation. Microsoft's policy description explicitly limits that setting to Enterprise, Education and Server editions; this module design does not add Server support.
+The documented effective target for the lock screen default route is Windows 11 Enterprise/Education or IoT Enterprise, build 22000 or later, subject to physical validation. Microsoft's policy description explicitly limits that setting to Enterprise, Education and Server editions; this module design does not add Server support.
 
 Personalization CSP documentation is inconsistent about ordinary Pro support: its reference describes Enterprise/Education support and conditional Pro support, while the background configuration guide lists Pro as supported. Do not advertise unconditional Pro support for the CSP routes until this discrepancy and the target behavior are resolved. Do not enable Shared PC or education policies as a workaround.
 
-Default wallpaper supports Windows 11 Pro, Enterprise, Education and IoT Enterprise. Lock screen in either mode and enforced wallpaper support Enterprise, Education and IoT Enterprise. All routes require build 22000 or later; Home and Server are refused. Unsupported editions are rejected before image acquisition. Existing local background policy and answer-file conflicts are refused. This cannot predict policy that a future Intune enrollment will deliver. A later management policy can supersede these settings; OSDApps must not fight it.
+Default wallpaper supports Windows 11 Pro, Enterprise, Education and IoT Enterprise. For lock screen in either mode and enforced wallpaper, Pro-family editions now produce an advisory warning instead of a terminating edition error. Both WinPE staging and the one-shot SetupComplete runtime continue, because subscription activation may step up Pro to Enterprise, or Pro Education to Education, at user sign-in. This does not guarantee that Windows honors the setting on Pro or automatically applies it after an edition change. The native default lock screen policy and image remain available; there is no retry or post-sign-in task. With Enforce, actual CSP/provider failures still fail normally and roll back; a possible future upgrade is not treated as successful application. All routes require Windows 11 client build 22000 or later; Home and Server are still refused before image acquisition. Existing local background policy and answer-file conflicts are refused. This cannot predict policy that a future Intune enrollment will deliver. A later management policy can supersede these settings; OSDApps must not fight it.
 
 ## Storage and lifecycle
 
@@ -94,7 +94,7 @@ Select each background once per fresh image. A second call for the same backgrou
 
 Run `tools/Prepare-OSDAppsBackgroundTest.ps1 -Revision <full commit SHA>` on your full Windows preparation PC with the OSDCloud USB connected. It copies a pinned test module to a new folder, generates two distinctly labeled test PNGs, builds Image packages and synchronizes only those test IDs into the existing cache. It does not change your configured production catalog or reset the cache. Optional WallpaperPath and LockScreenPath parameters use your own images instead.
 
-In WinPE, after OSDCloud applies **Windows 11 Enterprise/Education**, import that exact test module and run `Examples/Stage-OSDAppsBackgroundTest.ps1`. The default test sets both images as changeable defaults. On a separate fresh deployment, add `-EnforceWallpaper -EnforceLockScreen` to test both enforced variants; switches can also be selected independently. Use the normal installation reboot only. Do not add checks or correction scripts to the deployed system.
+In WinPE, after OSDCloud applies **Windows 11 Pro, Enterprise or Education**, import that exact test module and run `Examples/Stage-OSDAppsBackgroundTest.ps1`. The default test sets both images as changeable defaults. On Pro, expect an edition warning for the lock screen and continued staging; its visible effect before or after subscription activation still requires observation. On a separate fresh deployment, add `-EnforceWallpaper -EnforceLockScreen` to test both enforced variants; switches can also be selected independently. Use the normal installation reboot only. Do not add checks or correction scripts to the deployed system.
 
 At first sign-in, visually check the labeled wallpaper. Lock the session to check the lock screen. In Settings, manually test changing the images: allowed without Enforce, blocked with Enforce. These are acceptance observations, not deployment automation. The CSP may report `Submitted` with status 2 while Windows is copying; this is not reported as proof that the image was applied. No retry loop is added.
 
@@ -110,6 +110,8 @@ At first sign-in, visually check the labeled wallpaper. Lock the session to chec
 - Include the actual Windows mechanism, edition support, persistence and user editability in command help and the released user guide.
 
 ## Microsoft references
+
+- [Subscription activation and edition changes at user sign-in](https://learn.microsoft.com/en-us/windows/deployment/windows-subscription-activation)
 
 - [Themes settings and required default-theme elements](https://learn.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-shell-setup-themes)
 - [Default lock screen and prevent-changing policies](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-controlpaneldisplay#cpl_personalization_forcedefaultlockscreen)
