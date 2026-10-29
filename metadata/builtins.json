@@ -397,6 +397,25 @@
       "AdditionalAddCommands": [
         "Add-OSDAppTaskbarPins"
       ]
+    },
+    {
+      "Id": "DefaultAssociations",
+      "DisplayName": "Initial default apps",
+      "Source": "BuiltIn",
+      "PackageType": "Script",
+      "Vendor": "OSDApps",
+      "Acquisition": "BundledScript",
+      "SyncPhase": "None",
+      "AddCommand": "Add-OSDAppDefaultAssociation",
+      "SyncCommand": null,
+      "Architectures": [
+        "x64",
+        "arm64"
+      ],
+      "DefaultArchitecture": "x64",
+      "CachePath": null,
+      "RepositoryAlternative": false,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
     }
   ]
 }

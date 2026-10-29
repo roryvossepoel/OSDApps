@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add experimental initial file/protocol associations through Add-OSDAppDefaultAssociation, with parameter or XML input, merged staging, SHA-256 validation and one-shot DISM baseline export/merge/import during SetupComplete. No policy enforcement, forced reboot or post-sign-in correction. Physical first-user acceptance remains required.
+
 - Add opt-in initial Start and taskbar pins through Add-OSDAppStartPins and Add-OSDAppTaskbarPins. Includes independent configuration, transactional staging, target compatibility checks, result reporting and a combined manual deployment example. Start uses applyOnce; taskbar uses the native file policy with Replace and PinGeneration=1. Empty lists use the documented sentinel. Physical testing confirmed the requested pins, with an additional Outlook pin whose source remains unconfirmed.
 
 - Add repository `PackageType=Font` with `Add-OSDAppFont`, Font-aware authoring/validation, machine-wide TTF/OTF installation, idempotent `AlreadyPresent` handling, conflict protection and per-font result reporting.
