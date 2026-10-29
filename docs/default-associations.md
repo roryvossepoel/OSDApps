@@ -18,6 +18,8 @@ Add-OSDAppDefaultAssociation -Identifier @('.htm','.html','http','https') -ProgI
 a colon. `ProgId` is the registered Windows handler ID, not a repository ID,
 executable path, package name or friendly name. `AppName` is display text; it
 does not install or locate an app. No built-in app-to-handler lookup is guessed.
+Handler IDs are retained as literal registry names, including relative subkeys;
+validation checks their shape, not whether the intended app registered them.
 
 Alternatively, select an existing DISM export:
 

@@ -11,7 +11,12 @@ function ConvertTo-OSDAppDefaultAssociations {
         if ($id -isnot [string] -or $id -notmatch '^(?:\.[\p{L}\p{N}][\p{L}\p{N}._+-]{0,253}|[A-Za-z][A-Za-z0-9+.-]{0,254})$') {
             throw 'Identifier must be a file extension including its dot, or a URI scheme without a colon.'
         }
-        if ($progId -isnot [string] -or $progId -notmatch '^[A-Za-z0-9][A-Za-z0-9._+-]{0,511}$') { throw 'ProgId must be a literal registered Windows handler ID, not an executable path or command.' }
+        # Handler IDs are opaque registry names, sometimes containing relative subkeys.
+        # They are XML data only: never execute them or resolve them as filesystem paths.
+        if ($progId -isnot [string] -or [string]::IsNullOrWhiteSpace($progId) -or $progId.Length -gt 512 -or
+            $progId -ne $progId.Trim() -or $progId -match '[\x00-\x1F"<>|:/*?]' -or
+            @($progId -split '\\' | Where-Object { $_ -in @('','.','..') }).Count) { throw 'ProgId must be a nonempty literal handler ID, without drive paths, quotes, wildcards or control characters.' }
+        $null=[Xml.XmlConvert]::VerifyXmlChars($progId)
         if ($name -isnot [string] -or [string]::IsNullOrWhiteSpace($name) -or $name.Length -gt 512 -or $name -ne $name.Trim() -or $name -match '[\x00-\x1F]') { throw 'AppName must be nonempty display text of at most 512 characters without control characters.' }
         $null=[Xml.XmlConvert]::VerifyXmlChars($name)
         if ($seen.ContainsKey($id)) { throw ('Duplicate association identifier: ' + $id) }

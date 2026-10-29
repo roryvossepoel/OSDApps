@@ -15,7 +15,7 @@ Describe 'Initial file and protocol associations' {
 
     It 'round-trips escaped names and normalizes extension and protocol identities' {
         $name='Reader & Tools <test> "edition" ' + [char]0x00e9
-        $items=@((New-AssociationFixture -Id '.PDF' -Name $name),(New-AssociationFixture -Id 'HTTPS' -ProgId 'Browser.HTML'))
+        $items=@((New-AssociationFixture -Id '.PDF' -Name $name),(New-AssociationFixture -Id 'HTTPS' -ProgId 'Vendor\Browser Handler'))
         $xml=ConvertTo-OSDAppDefaultAssociationsXml -Associations $items
         $path=Join-Path $TestDrive 'input.xml'
         [IO.File]::WriteAllText($path,$xml,[Text.UTF8Encoding]::new($false))
@@ -24,6 +24,7 @@ Describe 'Initial file and protocol associations' {
         $read[0].Identifier | Should -BeExactly '.pdf'
         $read[0].AppName | Should -BeExactly $name
         $read[1].Identifier | Should -BeExactly 'https'
+        $read[1].ProgId | Should -BeExactly 'Vendor\Browser Handler'
         $xml | Should -Not -Match 'utf-16'
         $xml | Should -Match '&amp;'
     }
@@ -51,7 +52,7 @@ Describe 'Initial file and protocol associations' {
         foreach ($id in @('https:','*.pdf','.',' .pdf','.p df','C:\x','')) {
             { ConvertTo-OSDAppDefaultAssociations -Associations @(New-AssociationFixture -Id $id) } | Should -Throw
         }
-        foreach ($progId in @('C:\reader.exe','cmd /c test','Example"Injected','')) {
+        foreach ($progId in @('C:\reader.exe','cmd /c test','Example"Injected','Vendor\..\Handler','\Root','')) {
             { ConvertTo-OSDAppDefaultAssociations -Associations @(New-AssociationFixture -ProgId $progId) } | Should -Throw
         }
         { ConvertTo-OSDAppDefaultAssociations -Associations @() } | Should -Throw
