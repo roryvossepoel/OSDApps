@@ -409,10 +409,9 @@
       "AddCommand": "Add-OSDAppDefaultAssociation",
       "SyncCommand": null,
       "Architectures": [
-        "x64",
-        "arm64"
+        "any"
       ],
-      "DefaultArchitecture": "x64",
+      "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
