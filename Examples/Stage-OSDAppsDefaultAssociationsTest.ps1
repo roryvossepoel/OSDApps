@@ -11,7 +11,7 @@ Add-OSDAppGoogleChromeEnterprise -Architecture x64 | Out-Null
 if ($XmlPath) {
     Add-OSDAppDefaultAssociation -XmlPath $XmlPath | Out-Null
 } else {
-    Add-OSDAppDefaultAssociation -Identifier '.pdf' -ProgId 'AcroExch.Document.DC' -AppName 'Adobe Acrobat' | Out-Null
+    Add-OSDAppDefaultAssociation -Identifier '.pdf' -ProgId 'Acrobat.Document.DC' -AppName 'Adobe Acrobat' | Out-Null
     Add-OSDAppDefaultAssociation -Identifier @('.htm','.html','http','https') -ProgId 'ChromeHTML' -AppName 'Google Chrome' | Out-Null
 }
 Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure |

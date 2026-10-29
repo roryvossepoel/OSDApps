@@ -168,7 +168,7 @@
                 XmlPath = 'Path to an existing DefaultAssociations XML. Alias Path. Mutually exclusive with Identifier, ProgId and AppName in one call. Source content is copied during staging; policy attributes and duplicate identifiers are refused.'
             }
             Examples = @(
-                @{ Code = 'Add-OSDAppDefaultAssociation -Identifier ''.pdf'' -ProgId ''AcroExch.Document.DC'' -AppName ''Adobe Acrobat'''; Remarks = 'Example PDF handler; verify its registration and stage the app first.' },
+                @{ Code = 'Add-OSDAppDefaultAssociation -Identifier ''.pdf'' -ProgId ''Acrobat.Document.DC'' -AppName ''Adobe Acrobat'''; Remarks = 'Adobe Acrobat Unified PDF handler; verify its registration and stage the app first.' },
                 @{ Code = 'Add-OSDAppDefaultAssociation -Identifier @(''http'',''https'') -ProgId ''ChromeHTML'' -AppName ''Google Chrome'''; Remarks = 'Stage two protocol handlers using one parameter call.' },
                 @{ Code = 'Add-OSDAppDefaultAssociation -XmlPath ''C:\DeploymentData\DefaultAssociations.xml'''; Remarks = 'Select a reference XML using the actual path available in WinPE.' }
             )

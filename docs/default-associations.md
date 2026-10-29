@@ -10,7 +10,7 @@ until the physical acceptance test below passes.
 
 ```powershell
 # Example handler IDs: verify them against your installed app versions first.
-Add-OSDAppDefaultAssociation -Identifier '.pdf' -ProgId 'AcroExch.Document.DC' -AppName 'Adobe Acrobat'
+Add-OSDAppDefaultAssociation -Identifier '.pdf' -ProgId 'Acrobat.Document.DC' -AppName 'Adobe Acrobat'
 Add-OSDAppDefaultAssociation -Identifier @('.htm','.html','http','https') -ProgId 'ChromeHTML' -AppName 'Google Chrome'
 ```
 
@@ -20,6 +20,12 @@ executable path, package name or friendly name. `AppName` is display text; it
 does not install or locate an app. No built-in app-to-handler lookup is guessed.
 Handler IDs are retained as literal registry names, including relative subkeys;
 validation checks their shape, not whether the intended app registered them.
+
+The Adobe example targets Acrobat Unified: the tested x64 version 26.002.22031
+registers `Acrobat.Document.DC`. Do not substitute the standalone Reader handler
+`AcroExch.Document.DC` unless that handler exists on the target. A successful DISM
+import can still leave a user pointing at an unregistered handler; the import
+result alone does not validate the mapping.
 
 Alternatively, select an existing DISM export:
 
@@ -46,7 +52,7 @@ The accepted XML shape is:
 
 ```xml
 <DefaultAssociations>
-  <Association Identifier=".pdf" ProgId="AcroExch.Document.DC" ApplicationName="Adobe Acrobat" />
+  <Association Identifier=".pdf" ProgId="Acrobat.Document.DC" ApplicationName="Adobe Acrobat" />
   <Association Identifier="https" ProgId="ChromeHTML" ApplicationName="Google Chrome" />
 </DefaultAssociations>
 ```
