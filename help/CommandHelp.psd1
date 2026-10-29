@@ -158,18 +158,18 @@
         }
         'Add-OSDAppDefaultAssociation' = @{
             Synopsis = 'Stage initial file and protocol defaults from parameters or XML.'
-            Description = 'Combines requested identifiers into one integrity-checked Script entry. Later calls override the same identifier; unrelated selections remain. During SetupComplete, DISM exports the target baseline, the runtime merges requested defaults and imports one XML for first sign-in. No user-choice hash edits, permanent policy, forced reboot or later correction. Stage after the selected app installers. Success reports import acceptance, not user-visible verification. Physical acceptance of this candidate remains required.'
+            Description = 'Explicitly selects initial defaults independently of app installation. App installers do not automatically queue OSDApps associations; without this command Windows and vendor registration determine defaults. Only supplied identifiers override the exported baseline. Later calls override the same identifier; unrelated selections remain. During SetupComplete, DISM exports the target baseline, merges requested defaults and imports one XML for each new user first sign-in. Users can change defaults afterward; there is no enforce mode, permanent policy, forced reboot or later correction. Stage after all selected app installers. Success reports import acceptance, not user-visible verification. Physical acceptance of this candidate remains required.'
             Environment = 'WinPE after applying fresh Windows 11; executes once under SYSTEM in native 64-bit Windows PowerShell during SetupComplete.'
             Output = 'OSDApps.StagedApp with the combined association count and identifiers.'
             Parameters = @{
                 Identifier = 'One or more file extensions including the dot, or URI schemes without a colon. All receive the supplied ProgId and AppName.'
                 ProgId = 'Registered Windows handler ID, not a repository ID, executable path or display name. Verify it against the actual installed app version.'
                 AppName = 'App display name to place in the association XML. Does not install or locate the app.'
-                XmlPath = 'Path to an existing DefaultAssociations XML. Alias Path. Mutually exclusive with Identifier, ProgId and AppName in one call. Source content is copied during staging; policy attributes and duplicate identifiers are refused.'
+                XmlPath = 'Path to an existing DefaultAssociations XML. Every identifier in the file is explicitly selected, including all entries of a full export. Alias Path. Mutually exclusive with Identifier, ProgId and AppName in one call. Source content is copied during staging; policy attributes and duplicate identifiers are refused.'
             }
             Examples = @(
                 @{ Code = 'Add-OSDAppDefaultAssociation -Identifier ''.pdf'' -ProgId ''Acrobat.Document.DC'' -AppName ''Adobe Acrobat'''; Remarks = 'Adobe Acrobat Unified PDF handler; verify its registration and stage the app first.' },
-                @{ Code = 'Add-OSDAppDefaultAssociation -Identifier @(''http'',''https'') -ProgId ''ChromeHTML'' -AppName ''Google Chrome'''; Remarks = 'Stage two protocol handlers using one parameter call.' },
+                @{ Code = 'Add-OSDAppDefaultAssociation -Identifier @(''http'',''https'',''.htm'',''.html'') -ProgId ''ChromeHTML'' -AppName ''Google Chrome'''; Remarks = 'Explicitly choose Chrome for web protocols and HTML files, even when multiple browsers are installed. PDF remains a separate choice. Stage all browser installers first.' },
                 @{ Code = 'Add-OSDAppDefaultAssociation -XmlPath ''C:\DeploymentData\DefaultAssociations.xml'''; Remarks = 'Select a reference XML using the actual path available in WinPE.' }
             )
             Link = 'docs/default-associations.md'

@@ -82,6 +82,39 @@ Describe 'Initial file and protocol associations' {
             { Add-OSDAppDefaultAssociation -Identifier '.pdf' -ProgId Example.Pdf -AppName Example } | Should -Throw '*disabled*'
         }
     }
+    It 'keeps app staging separate from explicit browser and PDF selections' {
+        InModuleScope OSDApps {
+            Mock Test-OSDAppWinPE { $true }
+            Mock Get-OSDAppCachePath { throw 'No USB cache in this fixture' }
+            $target=Join-Path $TestDrive 'Explicit defaults'
+            New-Item -ItemType Directory -Path $target | Out-Null
+            Add-OSDAppGoogleChromeEnterprise -Architecture x64 -WindowsPath $target | Out-Null
+            Add-OSDAppMozillaFirefoxEnterprise -Architecture x64 -WindowsPath $target | Out-Null
+            Add-OSDAppAdobeAcrobatUnified -Architecture x64 -WindowsPath $target | Out-Null
+            $stage=Join-Path $target 'Windows\Temp\OSDApps'
+            $manifestPath=Join-Path $stage 'DeviceManifest.json'
+            $manifest=Get-Content $manifestPath -Raw | ConvertFrom-Json
+            $manifest.Apps.Count | Should -Be 3
+            @($manifest.Apps | Where-Object Id -eq DefaultAssociations).Count | Should -Be 0
+            Test-Path (Join-Path $stage 'BuiltIn\DefaultAssociations') | Should -BeFalse
+
+            Add-OSDAppDefaultAssociation -Identifier @('http','https','.htm','.html') -ProgId ChromeHTML -AppName 'Google Chrome' -WindowsPath $target | Out-Null
+            $configPath=Join-Path $stage 'BuiltIn\DefaultAssociations\config.json'
+            $config=Get-Content $configPath -Raw | ConvertFrom-Json
+            $config.Associations.Count | Should -Be 4
+            @($config.Associations | Where-Object Identifier -eq '.pdf').Count | Should -Be 0
+            @($config.Associations | Where-Object ProgId -ne ChromeHTML).Count | Should -Be 0
+
+            Add-OSDAppDefaultAssociation -Identifier '.pdf' -ProgId Acrobat.Document.DC -AppName 'Adobe Acrobat' -WindowsPath $target | Out-Null
+            $config=Get-Content $configPath -Raw | ConvertFrom-Json
+            $config.Associations.Count | Should -Be 5
+            ($config.Associations | Where-Object Identifier -eq '.pdf').ProgId | Should -Be Acrobat.Document.DC
+            @($config.Associations | Where-Object Identifier -in @('.fdf','.pdx','.bpdx')).Count | Should -Be 0
+            $manifest=Get-Content $manifestPath -Raw | ConvertFrom-Json
+            $manifest.Apps[-1].Id | Should -Be DefaultAssociations
+            $manifest.Apps.Count | Should -Be 4
+        }
+    }
     It 'stages both inputs in one ordered entry, survives source deletion, and rejects tampering' {
         InModuleScope OSDApps {
             Mock Test-OSDAppWinPE { $true }

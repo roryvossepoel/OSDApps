@@ -6,6 +6,47 @@ installers that provide the selected handlers. This candidate supports Windows
 11 client with native 64-bit PowerShell during SetupComplete. It is experimental
 until the physical acceptance test below passes.
 
+## Explicit initial defaults only
+
+Installing an app and choosing its defaults are separate operations. OSDApps
+does not infer association selections from installed apps, their capabilities or
+installation order. Without an `Add-OSDAppDefaultAssociation` call, no association
+entry or DISM association import is added. Windows and the vendor installers
+retain their normal behavior; OSDApps does not suppress their app registration.
+
+Only identifiers supplied through parameters or the selected XML are explicit
+overrides. A full XML export selects every association in that file, so use a
+smaller selection when you only intend to choose a browser or PDF reader. The
+runtime preserves the exported baseline for other identifiers. It does not claim
+all supported extensions of the selected app.
+
+These are initial defaults for each new user's first sign-in. There is no enforce
+mode, recurring policy or correction task. Users can change their defaults later.
+
+## Multiple browsers and a separate PDF choice
+
+Stage all desired apps first, then explicitly choose a handler for the web
+protocols and HTML files. Installing another browser does not make OSDApps select
+it as the default. For example, in WinPE:
+
+```powershell
+Add-OSDAppGoogleChromeEnterprise -Architecture x64
+Add-OSDAppMozillaFirefoxEnterprise -Architecture x64
+Add-OSDAppAdobeAcrobatUnified -Architecture x64
+
+# Explicit initial browser choice; PDF is independent.
+Add-OSDAppDefaultAssociation -Identifier @('http','https','.htm','.html') -ProgId 'ChromeHTML' -AppName 'Google Chrome'
+
+# Explicit PDF choice; other Adobe file types are not selected here.
+Add-OSDAppDefaultAssociation -Identifier '.pdf' -ProgId 'Acrobat.Document.DC' -AppName 'Adobe Acrobat'
+```
+
+Omit either association call to leave those identifiers without an OSDApps
+override. Omit both to install the apps without staging association settings.
+To choose a different browser, supply that installed version's registered handler
+ID; there is no guessed browser-to-ProgId lookup. Later calls for the same
+identifier replace earlier explicit selections, independently of app order.
+
 ## Parameters or XML
 
 ```powershell
