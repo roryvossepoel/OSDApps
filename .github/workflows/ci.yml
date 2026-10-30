@@ -100,7 +100,7 @@ jobs:
               $definitions = @(Get-OSDAppUIBuiltInMetadata)
               $expected = @{
                   Microsoft365Apps='Microsoft'; MicrosoftTeams='Microsoft'; MicrosoftCompanyPortal='Microsoft'; CMTraceOpen='CMTrace Open'
-                  WindowsInboxCleanup='OSDApps'; WindowsFeatures='OSDApps'; EnvironmentVariables='OSDApps'; Services='OSDApps'; DesktopSettings='OSDApps'; WiFiProfiles='OSDApps'; Certificates='OSDApps'
+                  WindowsInboxCleanup='OSDApps'; WindowsFeatures='OSDApps'; DefaultAssociations='OSDApps'; EnvironmentVariables='OSDApps'; Services='OSDApps'; DesktopSettings='OSDApps'; WiFiProfiles='OSDApps'; Certificates='OSDApps'
                   AdobeAcrobatUnified='Adobe'; GoogleChromeEnterprise='Google'
                   MozillaFirefoxEnterprise='Mozilla'; CiscoWebex='Cisco'; ZoomWorkplace='Zoom'; '7Zip'='Igor Pavlov'; VisualStudioCode='Microsoft'; VisualCRedist='Microsoft'; DotNetRuntime='Microsoft'
               }
