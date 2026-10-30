@@ -524,6 +524,10 @@ function Sync-PreInstallVendorMsi {
         Write-PreInstallLog -Event 'BuiltInCacheRestaged' -Message "$DisplayName USB payload staged locally." -Data @{Id=$id;PayloadFileName=(Split-Path $path -Leaf)}
     }
     if (-not $networkAvailable) {
+        if (-not (Test-OSDAppBuiltInPayload -Root $localRoot -ExpectedExtension $ExpectedExtension)) {
+            $Acquisition.CacheDecisionReason = 'The cached payload is missing or its metadata is unsupported; a new download is required.'
+            throw "$DisplayName requires a download, but no network and no supported staged cache are available."
+        }
         Assert-SelectedPayload -Root $localRoot | Out-Null
         Set-PreInstallAcquisitionResult -Result $Acquisition -Outcome OfflineCacheUsed
         Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level Warning -Message "No network; validated $DisplayName payload will be used." -Data @{Id=$id}
@@ -531,9 +535,15 @@ function Sync-PreInstallVendorMsi {
     }
     try {
         $previous = $null; $path = $null
+        $refreshRequired = $false
         if (Test-OSDAppBuiltInPayload -Root $acquireRoot -ExpectedExtension $ExpectedExtension) {
             $path = Assert-SelectedPayload -Root $acquireRoot
             $previous = Get-Content -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        }
+        elseif (Test-Path -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json')) {
+            $refreshRequired = $true
+            $Acquisition.CacheDecisionReason = 'The primary payload is missing, or the cache has unsupported metadata; a new validated generation is required.'
+            Write-PreInstallLog -Event 'BuiltInCacheRefreshRequired' -Level Warning -Message $Acquisition.CacheDecisionReason -Data @{Id=$id;Path=$acquireRoot}
         }
         $remote = Get-RemoteMetadata -Uri $PackageUri
         $matches = $false
@@ -544,6 +554,7 @@ function Sync-PreInstallVendorMsi {
             }
         }
         $Acquisition.CacheDecisionReason = Get-PreInstallHttpCacheReason -PackagePath $path -CacheInfo $previous -Remote $remote -MetadataMatches $matches
+        if ($refreshRequired) { $Acquisition.CacheDecisionReason = 'The primary payload is missing, or the cache has unsupported metadata; a new validated generation is required.' }
         if (-not $matches) {
             Invoke-OSDAppBuiltInCacheTransaction -Root $acquireRoot -ExpectedBytes ([double]$remote.ContentLength) -MinimumFreeSpaceGB $(if($ExpectedExtension -eq '.zip'){3}else{1}) -Build {
                 param($candidate)

@@ -60,7 +60,7 @@ to complete this table.
 | Feature | Contract and evidence | Remaining boundary |
 | --- | --- | --- |
 | Repository apps and scripts | Built. [Repository guide](repository.md), [physical validation history](testing.md) and [native-filename acceptance](native-filename-acceptance.md) cover package staging and runner execution. | A package success does not prove all later app behavior. Package authors own their install scripts. |
-| Cache, source acquisition and offline readiness | Built. Version selection, integrity, reusable USB content, preflight and per-deployment reporting. Recorded online/offline and cold/warm scenarios in [testing](testing.md). | Legacy metadata recovery is proposed in [PR #94](https://github.com/roryvossepoel/OSDApps/pull/94), tracked by [issue #92](https://github.com/roryvossepoel/OSDApps/issues/92). Both Windows CI hosts passed; a physical old-cache Sync test remains pending. The fix is not part of this baseline. Offline readiness still requires verified content. |
+| Cache, source acquisition and offline readiness | Built. Version selection, integrity, reusable USB content, preflight and per-deployment reporting. Recorded online/offline and cold/warm scenarios in [testing](testing.md). | Legacy metadata recovery is proposed in [PR #94](https://github.com/roryvossepoel/OSDApps/pull/94), tracked by [issue #92](https://github.com/roryvossepoel/OSDApps/issues/92). Both Windows CI hosts passed on `71ae31f49cfb6f16e93f8ec61454a57120cca5f2`. **Operator-confirmed, 30 October:** the production Sync helper refreshed an isolated Chrome cache with the three legacy metadata fields removed; hash/size validation and Google signature validation passed, and original cache hashes remained unchanged. This is a full-Windows helper test, not a physical public-wrapper, WinPE or PreInstall run. The fix is proposed by #94 on top of this baseline. Offline readiness still requires verified content. |
 | Built-in-only / repository-only selection | Built in [PR #80](https://github.com/roryvossepoel/OSDApps/pull/80). Session options control deployment/discovery; both disabled is refused. Sync remains available for preparation. | Automated behavior coverage; no separate physical mode-isolation result recorded here. |
 | Ordered runtime, fault isolation, logs and cleanup | Built. [Runtime guide](runtime.md) and [testing history](testing.md) describe one-shot execution, retained failure evidence and cleanup. | CleanupMode Never test runs do not prove OnSuccess cleanup. |
 | Inspection and diagnostics | Built. Read-only Viewer, cache health, deployment-result inspection and [maintenance diagnostics](maintenance.md). | Interactive selection/configuration expansion remains deferred. |
@@ -147,11 +147,14 @@ Research the selected option against current Microsoft guidance before design.
    if explicitly selected and actually observed.
 4. Capture Start/taskbar user editability during normal manual acceptance when
    those features are next exercised. Do not add a post-sign-in cleanup task.
-5. Validate [PR #94](https://github.com/roryvossepoel/OSDApps/pull/94) on the
-   full-Windows preparation PC with a preserved legacy cache: Sync should obtain
-   and validate a replacement without manual cache deletion. This does not need
-   another PC1 deployment. Automated staging and standalone PreInstall coverage
-   are separate evidence; a Sync-only physical pass does not establish those paths.
+5. The planned full-Windows cache-recovery acceptance for
+   [PR #94](https://github.com/roryvossepoel/OSDApps/pull/94) passed on 30 October:
+   `LegacyDetected=True`, `Updated=True`, `MetadataValid=True`, `Signature=Valid`
+   and `SourceUnchanged=True`. The test used a separate Chrome cache with legacy
+   metadata simulated from a validated current payload. No installer was run.
+   Automated staging and standalone PreInstall coverage are separate evidence;
+   this helper-only physical pass does not establish those paths. No repeat PC1
+   installation is required for this acceptance gate.
 6. Decide yes/no/defer for Features on Demand and language packs before building
    either. The accepted PDF/protocol scenario above does not need a repeat test
    solely to fill this register.

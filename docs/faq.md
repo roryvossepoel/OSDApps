@@ -47,6 +47,14 @@ The public `Sync-OSDAppMicrosoftTeams` command **rejects WinPE**. Downloading Te
 
 All built-ins follow the same division: stage in WinPE; refresh through full-Windows Sync commands or standalone PreInstall. The MSI/EXE signature policy is enforced in full Windows, not bypassed by treating WinPE as another Sync environment.
 
+## What happens when an older USB has legacy built-in cache metadata?
+
+For built-ins that acquire a recorded primary payload, missing or unsupported `CacheInfo.json` fields (such as `PayloadFileName`, `Sha256` or `Size`) make that generation a cache miss. WinPE can still stage the requested app for acquisition during the normal full-Windows PreInstall phase. A full-Windows Sync also downloads a new validated generation, even when the vendor HTTP metadata has not changed. No manual cache deletion or extra reboot is required.
+
+A replacement is downloaded and validated before the old USB generation is retired. A failed refresh preserves the old generation; preserving it does not make it trusted or eligible for installation. OSDApps does not guess an installer filename or invent verification metadata for old bytes. Existing checks for hash mismatches, publisher signatures and filesystem links remain in force.
+
+An online run needs network access to obtain the replacement. If no supported, verified fallback exists while offline, acquisition reports that a download is required. `Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure` still rejects a deployment that needs a download; a legacy cache cannot satisfy an explicitly offline-only preflight. Company Portal, CMTrace Open and the separate Office cache model retain their own preparation and validation requirements.
+
 ## What if I need Office or Teams fully managed in WinPE?
 
 Use the repository model for organization-managed content and versioning. Repository acquisition and staging can occur in WinPE, but installation still occurs in full Windows through SetupComplete. This does not make a vendor installer a WinPE-compatible executable.

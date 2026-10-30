@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Recover unsupported legacy built-in payload metadata as a cache miss: allow WinPE intent staging and acquire a validated replacement during full-Windows Sync or PreInstall, even with unchanged HTTP metadata. Preserve the previous generation on failed refresh and keep offline readiness and execution integrity checks strict.
+
 - Add experimental initial file/protocol associations through Add-OSDAppDefaultAssociation, with parameter or XML input, merged staging, SHA-256 validation and one-shot DISM baseline export/merge/import during SetupComplete. No policy enforcement, forced reboot or post-sign-in correction. Physical first-user acceptance remains required.
 
 - Add opt-in initial Start and taskbar pins through Add-OSDAppStartPins and Add-OSDAppTaskbarPins. Includes independent configuration, transactional staging, target compatibility checks, result reporting and a combined manual deployment example. Start uses applyOnce; taskbar uses the native file policy with Replace and PinGeneration=1. Empty lists use the documented sentinel. Physical testing confirmed the requested pins, with an additional Outlook pin whose source remains unconfirmed.
