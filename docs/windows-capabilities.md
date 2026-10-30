@@ -4,7 +4,8 @@
 OSDCloud has applied Windows. One `WindowsCapabilities` built-in Script executes
 the combined selections during SetupComplete as native 64-bit SYSTEM.
 
-This is experimental until the physical deployment test passes. The runtime
+The XPS/OpenSSH physical deployment test passed on 30 October 2026; see
+[acceptance evidence](#physical-acceptance-on-30-october-2026). The runtime
 checks the installed target OS: Windows 11 client 25H2 or later (build 26200+).
 WinPE's build is not the target build and is not used for this check. Passing
 staging/preflight validates configuration and files, not target applicability;
@@ -92,7 +93,43 @@ The expected transitions are XPS `NotPresent` to `Installed`, and OpenSSH Client
 an `AlreadyInstalled`/`AlreadyAbsent` result verifies idempotence but is not proof
 of an install/removal transition. Share the result JSON and any failed operation's
 DISM log for review. This does not install a post-login checking task or require
-an additional reboot. No physical acceptance is claimed yet.
+an additional reboot. The initial acceptance result is recorded below.
+
+## Physical acceptance on 30 October 2026
+
+The operator supplied the capability result, Latest and PreInstall results, both
+native DISM logs and the runner log for deployment
+`a3757e21-f962-4194-a5db-27bc323118fb`. The selected test module was PR #95 commit
+`e3aa7c400e02b0e8833a26d00e18aa3c7342c28a`; the supplied runtime results do not
+independently embed the source commit. The runner confirms staged script/config
+SHA-256 validation. DISM identifies the actual target as client Windows build
+`10.0.26300.9711`, architecture `amd64`; do not label this a physical 25H2/build
+26200 test simply because 25H2 is the supported minimum.
+
+| Capability | Before | After | Native exit | Restart needed |
+| --- | --- | --- | --- | --- |
+| XPS.Viewer~~~~0.0.1.0 | NotPresent | Installed | 0 | False |
+| OpenSSH.Client~~~~0.0.1.0 | Installed | NotPresent | 0 | False |
+
+These are actual changes, not already-satisfied skips. The operator's independent
+OOBE query confirmed both final states. The capability result records two
+successful operations, zero failed operations, `RestartNeeded=False` and
+`RebootRequested=False`. The aggregate runner records one successful Script entry,
+zero failures/skips and 328.2 seconds elapsed. XPS DISM ran approximately 319
+seconds; OpenSSH removal approximately two seconds. Both native logs include
+`/NoRestart` and `Reboot required=no`.
+
+PreInstall correctly performed no built-in acquisition and used no OSDApps cache.
+The runtime invoked online DISM without a custom Source or LimitAccess argument.
+The successful install proves the Windows-managed servicing path in this run;
+the supplied DISM logs do not independently identify the source of downloaded
+bytes, so a specific Windows Update network transfer is not separately proven.
+CleanupMode was Never for evidence retention.
+
+This accepts the selected x64 add/remove scenario. ARM64, other capabilities,
+other Windows builds/editions, policy-restricted download environments and
+repository/offline source handling are not established by this test. No additional
+reinstallation or post-login repair is needed to repeat this accepted scenario.
 
 ## Microsoft references
 
