@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Recover unsupported legacy built-in payload metadata as a cache miss: allow WinPE intent staging and acquire a validated replacement during full-Windows Sync or PreInstall, even with unchanged HTTP metadata. Preserve the previous generation on failed refresh and keep offline readiness and execution integrity checks strict.
+
 - Add opt-in initial Start and taskbar pins through Add-OSDAppStartPins and Add-OSDAppTaskbarPins. Includes independent configuration, transactional staging, target compatibility checks, result reporting and a combined manual deployment example. Start uses applyOnce; taskbar uses the native file policy with Replace and PinGeneration=1. Empty lists use the documented sentinel. Physical testing confirmed the requested pins, with an additional Outlook pin whose source remains unconfirmed.
 
 - Add repository `PackageType=Font` with `Add-OSDAppFont`, Font-aware authoring/validation, machine-wide TTF/OTF installation, idempotent `AlreadyPresent` handling, conflict protection and per-font result reporting.

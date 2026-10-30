@@ -52,7 +52,30 @@ function Test-OSDAppBuiltInPayload {
     [CmdletBinding()]
     param([AllowNull()][AllowEmptyString()][string]$Root, [string]$ExpectedExtension)
     if (-not $Root -or -not (Test-Path -LiteralPath (Join-Path $Root 'CacheInfo.json') -PathType Leaf)) { return $false }
-    $path = Resolve-OSDAppBuiltInPayloadPath -Root $Root -ExpectedExtension $ExpectedExtension
+    # Discovery is not the execution/commit gate. Old or unreadable metadata is
+    # a cache miss so staging and refresh can acquire a new, validated generation.
+    # Keep filesystem-link rejection outside the metadata compatibility catch.
+    $infoPath = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root 'CacheInfo.json')
+    try {
+        $info = Get-Content -LiteralPath $infoPath -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+        if ($null -eq $info -or $info -is [array]) { throw 'Cache metadata must be one object.' }
+        foreach ($field in @('PayloadFileName','Sha256','Size','Id','Architecture')) {
+            if (-not $info.PSObject.Properties[$field] -or [string]::IsNullOrWhiteSpace([string]$info.$field)) {
+                throw "Cache metadata lacks $field."
+            }
+        }
+        $size = 0L
+        if ([string]$info.Sha256 -notmatch '^[a-fA-F0-9]{64}$' -or
+            -not [long]::TryParse([string]$info.Size,[ref]$size) -or $size -le 0) {
+            throw 'Cache metadata has no supported hash and size record.'
+        }
+        $leaf = Assert-OSDAppPayloadFileName -FileName ([string]$info.PayloadFileName) -ExpectedExtension $ExpectedExtension
+    }
+    catch {
+        Write-Verbose "Cache refresh required for '$Root': $($_.Exception.Message)"
+        return $false
+    }
+    $path = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $Root $leaf)
     Test-Path -LiteralPath $path -PathType Leaf
 }
 
@@ -80,7 +103,7 @@ function Copy-OSDAppBuiltInPayload {
     param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][string]$DestinationDirectory)
     $source = Get-Item -LiteralPath (Resolve-OSDAppBuiltInPayloadPath -Path $Path) -ErrorAction Stop
     New-Item -ItemType Directory -Path $DestinationDirectory -Force -ErrorAction Stop | Out-Null
-    $destination = Join-Path $DestinationDirectory $source.Name
+    $destination = Resolve-OSDAppBuiltInPayloadPath -Path (Join-Path $DestinationDirectory $source.Name)
     if ([IO.Path]::GetFullPath($source.FullName) -eq [IO.Path]::GetFullPath($destination)) { return }
     $temporary = Join-Path $DestinationDirectory ('.osdapps-copy-' + [guid]::NewGuid().ToString('N'))
     try {
@@ -91,8 +114,7 @@ function Copy-OSDAppBuiltInPayload {
         }
         # Retire only the previously recorded payload, not arbitrary same-extension files.
         $previousPath = $null
-        $infoPath = Join-Path $DestinationDirectory 'CacheInfo.json'
-        if (Test-Path -LiteralPath $infoPath -PathType Leaf) {
+        if (Test-OSDAppBuiltInPayload -Root $DestinationDirectory) {
             $previousPath = Resolve-OSDAppBuiltInPayloadPath -Root $DestinationDirectory
         }
         Move-Item -LiteralPath $temporary -Destination $destination -Force -ErrorAction Stop

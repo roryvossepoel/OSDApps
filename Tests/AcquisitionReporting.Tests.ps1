@@ -384,16 +384,72 @@ Describe 'Per-deployment acquisition reporting' {
         $appResults[0].CacheDecisionReason | Should -Match 'Comparable.*metadata is unavailable'
     }
 
-    It 'rejects malformed metadata rather than inventing a vendor filename or reusing orphaned bytes' {
+    It 'downloads a new generation for malformed metadata instead of reusing orphaned bytes' {
         $script:builtInApps = @($builtInApps | Where-Object Id -eq GoogleChromeEnterprise)
         $root = Join-Path $StagedPath 'BuiltIn\GoogleChromeEnterprise\x64'
         Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json') 'invalid JSON'
         . $script:preparationLoop
+        $appResults[0].Status | Should -Be Succeeded
+        $appResults[0].AcquisitionOutcome | Should -Be Downloaded
+        $appResults[0].PackageUpdated | Should -BeTrue
+        $appResults[0].CacheDecisionReason | Should -Match 'unsupported metadata'
+        Should -Invoke Save-PreInstallDownload -Times 1 -Exactly
+        Test-Path -LiteralPath (Join-Path $root 'googlechromestandaloneenterprise64.msi') | Should -BeFalse
+        Assert-OSDAppCachedPayload -Root $root -Id GoogleChromeEnterprise -Architecture x64 | Should -Be (Join-Path $root 'vendor-GoogleChromeEnterprise.msi')
+    }
+
+    It 'rebuilds old USB metadata and replaces old local metadata in the real loop: <Id>' -ForEach @(
+        @{Id='AdobeAcrobatUnified'}, @{Id='GoogleChromeEnterprise'}, @{Id='MicrosoftTeams'}
+    ) {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq $Id)
+        $app = $builtInApps[0]
+        $local = Join-Path $StagedPath $app.Relative
+        $script:usbRoot = Join-Path $TestDrive ('Usb-' + $Id)
+        $usb = Join-Path $usbRoot $app.Relative
+        New-Item (Split-Path $usb -Parent) -ItemType Directory -Force | Out-Null
+        Copy-Item $local $usb -Recurse
+        foreach ($root in @($local,$usb)) {
+            @{Id=$Id;Architecture='x64';RemoteETag='old';PackageUri=$app.PackageUri} |
+                ConvertTo-Json | Set-Content (Join-Path $root 'CacheInfo.json')
+        }
+        $script:remoteMatches = $true
+        . $script:preparationLoop
+        $appResults[0].Status | Should -Be Succeeded
+        $appResults[0].AcquisitionOutcome | Should -Be Downloaded
+        $appResults[0].PackageUpdated | Should -BeTrue
+        foreach ($root in @($local,$usb)) {
+            $path = Assert-OSDAppCachedPayload -Root $root -Id $Id -Architecture x64
+            (Split-Path $path -Leaf) | Should -BeLike 'vendor-*'
+        }
+        Test-Path (Join-Path $usb $app.File) | Should -BeFalse
+        # Unknown old local bytes are never guessed as a payload or removed by a scan.
+        Test-Path (Join-Path $local $app.File) | Should -BeTrue
+    }
+
+    It 'reports download required offline instead of a legacy metadata exception' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq AdobeAcrobatUnified)
+        $root = Join-Path $StagedPath $builtInApps[0].Relative
+        '{"Id":"AdobeAcrobatUnified","Architecture":"x64"}' | Set-Content (Join-Path $root 'CacheInfo.json')
+        $script:networkAvailable = $false
+        . $script:preparationLoop
         $appResults[0].Status | Should -Be Failed
-        $appResults[0].AcquisitionOutcome | Should -Be Failed
-        $appResults[0].PackageUpdated | Should -BeNullOrEmpty
-        Should -Invoke Save-PreInstallDownload -Times 0 -Exactly
-        Test-Path -LiteralPath (Join-Path $root 'googlechromestandaloneenterprise64.msi') | Should -BeTrue
+        $appResults[0].Error | Should -Match 'requires a download.*no network'
+        $appResults[0].Error | Should -Not -Match 'PayloadFileName'
+        Should -Invoke Save-PreInstallDownload -Exactly 0
+    }
+
+    It 'never uses legacy bytes as fallback after a failed download' {
+        $script:builtInApps = @($builtInApps | Where-Object Id -eq GoogleChromeEnterprise)
+        $root = Join-Path $StagedPath $builtInApps[0].Relative
+        $infoPath = Join-Path $root 'CacheInfo.json'
+        '{"Id":"GoogleChromeEnterprise","Architecture":"x64"}' | Set-Content $infoPath
+        $oldHash = (Get-FileHash $infoPath).Hash
+        $script:failDownload = $true
+        . $script:preparationLoop
+        $appResults[0].Status | Should -Be Failed
+        $appResults[0].Error | Should -Match 'acquisition failed.*no staged fallback'
+        Should -Invoke Save-PreInstallDownload -Exactly 1
+        (Get-FileHash $infoPath).Hash | Should -Be $oldHash
     }
 
     It 'explains last-modified and length comparisons when ETags are absent' {
