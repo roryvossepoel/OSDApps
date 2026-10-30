@@ -78,7 +78,7 @@ function Save-OSDAppDesktopStaging {
         $scriptHash=(Get-FileHash -LiteralPath (Join-Path $transaction 'Install.ps1') -Algorithm SHA256).Hash
         $configHash=(Get-FileHash -LiteralPath (Join-Path $transaction 'config.json') -Algorithm SHA256).Hash
         $app=[pscustomobject]@{
-            Id='DesktopSettings';DisplayName='Windows desktop settings';Vendor='OSDApps'
+            Id='DesktopSettings';DisplayName='Windows StartPins & TaskbarPins';Vendor='OSDApps'
             Source='BuiltIn';PackageType='Script';Type='DesktopSettingsScript';Version='1.0.0';Architecture='any'
             Script='BuiltIn\DesktopSettings\Install.ps1'
             Configuration='BuiltIn\DesktopSettings\config.json'
