@@ -26,6 +26,9 @@ Describe 'Canonical OSDApps terminology' {
             $source = $source -replace ('\bConsole' + $script:obsoleteTerm + '\b'), ''
             # Windows taskbar XML uses these externally defined attribute names.
             $source = $source -replace ('Desktop' + $script:obsoleteTerm + '(ID|LinkPath)'), ''
+            # Windows default-association XML, the policy key and Microsoft documentation URLs are external contracts.
+            $source = $source -replace ('\b' + $script:obsoleteTerm + '(Name|Defaults)\b'), ''
+            $source = $source -replace ('https://learn\.microsoft\.com/en-us/windows-hardware/manufacture/desktop/(?:dism-default-' + $script:obsoleteTerm + '-association-servicing-command-line-options|export-or-import-default-' + $script:obsoleteTerm + '-associations)'), ''
             if ($source -match $script:obsoletePattern) {
                 $found.Add("Content: $relative")
             }

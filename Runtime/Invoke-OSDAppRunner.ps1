@@ -227,7 +227,7 @@ function New-RunnerAppResult {
     # Only current, uniquely correlated PreInstall evidence may describe acquisition.
     # CacheInfo.json still supplies content identity, never per-deployment flags.
     $hasAcquisitionPhase = ([string]$App.Source -eq 'BuiltIn' -and
-        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and
+        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','DefaultAssociationScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and
         [string]$App.Id -ne 'CMTraceOpen')
     $acquisitionOutcome = if ($hasAcquisitionPhase) { 'Unknown' } else { 'NotApplicable' }
     $cacheUsed = $null
@@ -429,7 +429,7 @@ try {
         throw (New-RunnerFailureException -Message 'Device manifest contains an invalid or duplicate app Id.' -FailureType 'ManifestInvalid' -Fatal)
     }
 
-    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','WindowsFeatureScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle')
+    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','WindowsFeatureScript','DefaultAssociationScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle')
     foreach ($app in $apps) {
         $id = [string]$app.Id
         $source = [string]$app.Source
@@ -457,6 +457,17 @@ try {
                 [string]$app.ScriptSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
                 [string]$app.ConfigurationSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
                 throw (New-RunnerFailureException -Message 'Invalid Windows Features built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
+            }
+        }
+        if ($source -eq 'BuiltIn' -and
+            ([string]$app.Type -eq 'DefaultAssociationScript' -or $id -eq 'DefaultAssociations')) {
+            if ([int]$app.DefaultAssociationSchema -ne 1 -or $id -ne 'DefaultAssociations' -or [string]$app.Type -ne 'DefaultAssociationScript' -or
+                [string]$app.PackageType -ne 'Script' -or
+                [string]$app.Script -ne 'BuiltIn\DefaultAssociations\Install.ps1' -or
+                [string]$app.Configuration -ne 'BuiltIn\DefaultAssociations\config.json' -or
+                [string]$app.ScriptSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
+                [string]$app.ConfigurationSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+                throw (New-RunnerFailureException -Message 'Invalid Default associations built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
             }
         }
         if ($source -eq 'BuiltIn' -and
@@ -593,6 +604,20 @@ try {
             }
         }
         Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Windows Features script and configuration SHA-256 validated.' -Data @{ Id=$app.Id }
+    }
+
+    foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'DefaultAssociationScript' })) {
+        foreach ($entry in @(
+            @{ Relative='BuiltIn\DefaultAssociations\Install.ps1'; Hash=[string]$app.ScriptSha256 },
+            @{ Relative='BuiltIn\DefaultAssociations\config.json'; Hash=[string]$app.ConfigurationSha256 }
+        )) {
+            $file = Join-Path $StagedPath $entry.Relative
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $entry.Hash) {
+                throw (New-RunnerFailureException -Message ('Default associations integrity failed for {0}.' -f $entry.Relative) -FailureType 'HashMismatch' -AppId ([string]$app.Id) -Fatal)
+            }
+        }
+        Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Default associations script and configuration SHA-256 validated.' -Data @{ Id=$app.Id }
     }
 
     foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'EnvironmentVariableScript' })) {
@@ -815,6 +840,18 @@ try {
                     throw ('Windows Features failed with exit code {0}.' -f $process.ExitCode)
                 }
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptComplete' -Message 'Windows optional feature configuration completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
+                [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='Sha256Validated' }
+            }
+            'DefaultAssociationScript' {
+                $root = Join-Path $StagedPath 'BuiltIn\DefaultAssociations'
+                $scriptFile = Join-Path $root 'Install.ps1'
+                $configFile = Join-Path $root 'config.json'
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptStart' -Message 'Applying initial default associations.' -Data @{ Id=$app.Id }
+                $process = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"{0}"' -f $scriptFile),'-ConfigPath',('"{0}"' -f $configFile)) -WorkingDirectory $root -Wait -PassThru
+                if ($process.ExitCode -notin @(0,3010)) {
+                    throw ('Default associations failed with exit code {0}.' -f $process.ExitCode)
+                }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptComplete' -Message 'initial default associations completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='Sha256Validated' }
             }
             'EnvironmentVariableScript' {

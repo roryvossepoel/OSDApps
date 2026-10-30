@@ -1,4 +1,5 @@
 $moduleRoot = $PSScriptRoot
+. (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppDefaultAssociations.ps1')
 . (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppDesktopSettings.ps1')
 . (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppServices.ps1')
 . (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppEnvironmentVariables.ps1')
@@ -56,6 +57,7 @@ Export-ModuleMember -Function @(
     'Add-OSDAppRegistryKey',
     'Add-OSDAppRegistryValue',
     'Add-OSDAppWindowsFeature',
+    'Add-OSDAppDefaultAssociation',
     'Add-OSDAppEnvironmentVariable',
     'Add-OSDAppService',
     'Add-OSDAppStartPins',
