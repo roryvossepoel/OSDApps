@@ -379,7 +379,7 @@
     },
     {
       "Id": "DesktopSettings",
-      "DisplayName": "Windows desktop settings",
+      "DisplayName": "Windows StartPins & TaskbarPins",
       "Source": "BuiltIn",
       "PackageType": "Script",
       "Vendor": "OSDApps",
