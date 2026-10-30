@@ -1,7 +1,7 @@
 # Feature scope and validation register
 
-Decision snapshot: 28 October 2026. Implementation baseline: main at
-`82d36a123b3691fa853cfe43ea7611a4be570186`.
+Decision snapshot: 30 October 2026. Implementation baseline: main at
+`26deb9bd1e432cfc71fae848913adbe3d76e11a5` (includes PRs #91 and #93).
 
 This register separates implemented behavior, practical evidence and decisions
 still to be made. It is not a release announcement or approval to build every
@@ -60,7 +60,7 @@ to complete this table.
 | Feature | Contract and evidence | Remaining boundary |
 | --- | --- | --- |
 | Repository apps and scripts | Built. [Repository guide](repository.md), [physical validation history](testing.md) and [native-filename acceptance](native-filename-acceptance.md) cover package staging and runner execution. | A package success does not prove all later app behavior. Package authors own their install scripts. |
-| Cache, source acquisition and offline readiness | Built. Version selection, integrity, reusable USB content, preflight and per-deployment reporting. Recorded online/offline and cold/warm scenarios in [testing](testing.md). | Verify required payload availability per selection; not every new combination has a disconnected test. |
+| Cache, source acquisition and offline readiness | Built. Version selection, integrity, reusable USB content, preflight and per-deployment reporting. Recorded online/offline and cold/warm scenarios in [testing](testing.md). | Legacy metadata recovery is proposed in [PR #94](https://github.com/roryvossepoel/OSDApps/pull/94), tracked by [issue #92](https://github.com/roryvossepoel/OSDApps/issues/92). Both Windows CI hosts passed; a physical old-cache Sync test remains pending. The fix is not part of this baseline. Offline readiness still requires verified content. |
 | Built-in-only / repository-only selection | Built in [PR #80](https://github.com/roryvossepoel/OSDApps/pull/80). Session options control deployment/discovery; both disabled is refused. Sync remains available for preparation. | Automated behavior coverage; no separate physical mode-isolation result recorded here. |
 | Ordered runtime, fault isolation, logs and cleanup | Built. [Runtime guide](runtime.md) and [testing history](testing.md) describe one-shot execution, retained failure evidence and cleanup. | CleanupMode Never test runs do not prove OnSuccess cleanup. |
 | Inspection and diagnostics | Built. Read-only Viewer, cache health, deployment-result inspection and [maintenance diagnostics](maintenance.md). | Interactive selection/configuration expansion remains deferred. |
@@ -95,6 +95,7 @@ guide define the supported parameters; this table records the practical state.
 | Machine variables: `Add-OSDAppEnvironmentVariable` | Set/remove literal or expandable machine values; append PATH without new lexical duplicates. Existing processes are not refreshed. [Contract](environment-variables.md). | **Evidence pending:** combined variables/services test was followed by a merge instruction, but exact settings and before/after outcomes are not recorded in [PR #87](https://github.com/roryvossepoel/OSDApps/pull/87). Recover results before retesting. |
 | Services: `Add-OSDAppService` | Exact existing service name; startup mode and running/stopped state; bounded wait in the same run. No credentials, dependency edits or recurring enforcement. [Contract](services.md). | **Evidence pending:** same combined run as variables. Native automated disposable-service coverage exists; merge alone does not establish the physical result. |
 | Inbox app removal: `Add-OSDAppWindowsInboxCleanup` | Explicit selection or Tested13 preset, optional diagnosis. [Built-in guide](built-in-apps.md). | **Recorded pass:** 13 selected packages removed and reported absent after Autopilot; separate three-package run also recorded in [testing](testing.md). No blanket claim for every inbox package/build. |
+| Initial file/protocol associations: `Add-OSDAppDefaultAssociation` | Explicit identifier/ProgId/app-name parameters or XML input. Install apps first, then select associations; installing an app does not implicitly select it. One-shot DISM baseline export/merge/import during SetupComplete; user-editable initial defaults, no enforcement. [Contract](default-associations.md), [PR #91](https://github.com/roryvossepoel/OSDApps/pull/91). | **Operator-confirmed on PC1, 30 October:** corrected test revision `2b9dfd303c186302414d52b94f306215883904d4` opens `.pdf` in Adobe Acrobat and HTTP/HTTPS in Chrome. Changing PDF and both protocol defaults through Windows Settings also worked. No new runtime logs were supplied for this run. Separate HTML opening, XML-input deployment and ARM64 are not physically confirmed. |
 | Start pins: `Add-OSDAppStartPins` | Supplied ordered pin list or JSON; applyOnce; supported Windows build/ADMX required. [Contract](desktop-settings.md). | **Operator-confirmed:** Edge/Explorer/Settings pins correct. Continued user editability not separately confirmed. |
 | Taskbar pins: `Add-OSDAppTaskbarPins` | Native persistent layout policy with Replace and PinGeneration; supplied ordered list. [Contract](desktop-settings.md). | **Operator-confirmed with accepted limit:** Settings/Explorer appeared, with extra Outlook. Maintainer accepted this result; Outlook's source is unproven. Do not promise exact exclusion of all additional pins. Continued user editability remains unconfirmed. |
 
@@ -116,7 +117,6 @@ Research the selected option against current Microsoft guidance before design.
 
 | Candidate | Decision needed before implementation | Suggested acceptance scenario |
 | --- | --- | --- |
-| Default apps: file and protocol associations | Initial defaults versus managed associations; XML input and validation; handling absent target apps; interaction with later Intune policy. | Select a file type and protocol whose target apps are installed; observe initial behavior and the agreed ability to change defaults. |
 | Features on Demand | Add/remove capabilities; full capability identities; online source versus repository/offline media; build/language matching and restart reporting. | One supported add and one supported remove without a forced reboot or later correction. |
 | Language packs | Whether this belongs in scope at all; pack/media source, build matching, dependencies and caching. Regional preferences are not implicitly included. | Install one matching language package and record servicing results; any language-selection behavior needs its own explicit contract. |
 
@@ -147,9 +147,14 @@ Research the selected option against current Microsoft guidance before design.
    if explicitly selected and actually observed.
 4. Capture Start/taskbar user editability during normal manual acceptance when
    those features are next exercised. Do not add a post-sign-in cleanup task.
-5. Decide yes/no/defer for each remaining candidate before building it. Default
-   file/protocol associations are the proposed next scope discussion, not yet
-   an approved implementation.
+5. Validate [PR #94](https://github.com/roryvossepoel/OSDApps/pull/94) on the
+   full-Windows preparation PC with a preserved legacy cache: Sync should obtain
+   and validate a replacement without manual cache deletion. This does not need
+   another PC1 deployment. Automated staging and standalone PreInstall coverage
+   are separate evidence; a Sync-only physical pass does not establish those paths.
+6. Decide yes/no/defer for Features on Demand and language packs before building
+   either. The accepted PDF/protocol scenario above does not need a repeat test
+   solely to fill this register.
 
 For each accepted scenario record: feature, source commit, Windows build/edition
 and architecture, input excluding secrets, expected change, observed change,
