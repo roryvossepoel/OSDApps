@@ -621,7 +621,7 @@ try {
     $sleepRequest = Start-OSDAppSleepPrevention -Enabled $preventSleep -Reason 'OSDApps PreInstall is acquiring app content.' -Log $sleepLog
 
     $apps=if($manifest.PSObject.Properties.Name -contains 'Apps'){@($manifest.Apps)}else{@()}
-    $builtInApps=@($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','DefaultAssociationScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and [string]$_.Id -ne 'CMTraceOpen' })
+    $builtInApps=@($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and [string]$_.Id -ne 'CMTraceOpen' })
     if($builtInApps.Count -eq 0){
         $preInstallStopwatch.Stop()
         Write-PreInstallLog -Event 'RefreshSkipped' -Message 'No built-in apps require acquisition. Nothing to refresh.'

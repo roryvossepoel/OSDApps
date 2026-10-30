@@ -229,6 +229,7 @@ function Test-OSDAppDeployment {
         $payloadReady = $false
         $integrityValid = $null
         $detail = $null
+        $appNetworkRequired = $false
 
         if ($source -eq 'Repository') {
             $archivePath = Join-Path $stageRoot (Join-Path 'Packages' (Join-Path $id 'Package.zip'))
@@ -305,6 +306,40 @@ function Test-OSDAppDeployment {
             }
             $payloadReady = $definitionValid -and $integrityValid
             $detail = if ($payloadReady) { 'Windows Features script and configuration are SHA-256 validated.' } else { 'Windows Features definition, content or hash validation failed.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WindowsCapabilityScript') {
+            $definitionValid = (
+                $id -eq 'WindowsCapabilities' -and [int]$app.WindowsCapabilitySchema -eq 1 -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\WindowsCapabilities\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\WindowsCapabilities\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\WindowsCapabilities\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\WindowsCapabilities\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $capabilityConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            Assert-OSDAppWindowsCapabilityConfiguration -Configuration $capabilityConfig
+                            $integrityValid = ([string]$capabilityConfig.DeploymentId -eq [string]$manifest.DeploymentId)
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $appNetworkRequired = $payloadReady -and @($capabilityConfig.Operations | Where-Object Action -eq 'Add').Count -gt 0
+            if ($appNetworkRequired) { $networkRequired = $true }
+            $detail = if ($appNetworkRequired) { 'Capabilities script/config are validated; Add may require Windows Update during SetupComplete. Offline readiness is not guaranteed.' } elseif ($payloadReady) { 'Windows Capabilities script and configuration are SHA-256 validated.' } else { 'Windows Capabilities definition, content or hash validation failed.' }
         }
         elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'DefaultAssociationScript') {
             $definitionValid = (
@@ -549,10 +584,11 @@ function Test-OSDAppDeployment {
             $detail = "Unsupported app source '$source'."
         }
 
-        if (-not $payloadReady) { $allPayloadsReady = $false }
-        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','DefaultAssociationScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
+        $offlinePayloadReady = $payloadReady -and -not $appNetworkRequired
+        if (-not $offlinePayloadReady) { $allPayloadsReady = $false }
+        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
         Add-DeploymentCheck -Name 'AppDefinition' -AppId $id -Passed $appRequiredStateValid -Required $true -Message "${id}: $detail"
-        Add-DeploymentCheck -Name 'OfflinePayload' -AppId $id -Passed $payloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
+        Add-DeploymentCheck -Name 'OfflinePayload' -AppId $id -Passed $offlinePayloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
 
         $appStates.Add([pscustomobject]@{
             Id              = $id

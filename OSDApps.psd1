@@ -39,6 +39,7 @@
         'Add-OSDAppRegistryKey',
     'Add-OSDAppRegistryValue',
     'Add-OSDAppWindowsFeature',
+    'Add-OSDAppWindowsCapability',
     'Add-OSDAppDefaultAssociation',
     'Add-OSDAppEnvironmentVariable',
     'Add-OSDAppService',

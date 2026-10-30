@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add experimental Windows 11 25H2+ capabilities through `Add-OSDAppWindowsCapability`: explicit Add/Remove intent, integrity-checked staging, Windows-managed online acquisition during SetupComplete, immediate state verification and restart reporting without an automatic reboot or retry. Physical XPS/OpenSSH acceptance is pending.
+
 - Recover unsupported legacy built-in payload metadata as a cache miss: allow WinPE intent staging and acquire a validated replacement during full-Windows Sync or PreInstall, even with unchanged HTTP metadata. Preserve the previous generation on failed refresh and keep offline readiness and execution integrity checks strict.
 
 - Add experimental initial file/protocol associations through Add-OSDAppDefaultAssociation, with parameter or XML input, merged staging, SHA-256 validation and one-shot DISM baseline export/merge/import during SetupComplete. No policy enforcement, forced reboot or post-sign-in correction. Physical first-user acceptance remains required.

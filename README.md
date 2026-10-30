@@ -163,3 +163,5 @@ Machine environment variables: [staging, PATH and runtime behavior](docs/environ
 Windows services: [one-shot startup and state configuration](docs/services.md).
 
 Start/taskbar pins: [first-use desktop configuration](docs/desktop-settings.md).
+
+Features on Demand: [Windows capabilities](docs/windows-capabilities.md) for Windows 11 25H2 and later.

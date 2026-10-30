@@ -212,6 +212,21 @@
             )
             Link = 'docs/environment-variables.md'
         }
+        'Add-OSDAppWindowsCapability' = @{
+            Parameters = @{
+                Name = 'Exact Windows capability identities from Get-WindowsCapability, including locale/version separators. No wildcards or automatic selection.'
+                Action = 'Add installs the selected capabilities using Windows servicing sources and update policy. Remove uninstalls the selected capabilities without downloading content.'
+            }
+            Synopsis = 'Stage explicit Windows capability additions or removals for one SetupComplete attempt.'
+            Description = 'Combines calls into one WindowsCapabilities Script entry; the last action for each name wins. Runtime checks Windows 11 25H2 or later, validates exact availability, invokes native DISM with NoRestart and records immediate before/after states. Add is conservatively network-required in preflight; no repository payload, cache synchronization, source-policy override or later correction is provided.'
+            Environment = 'Stage in WinPE after OSDCloud. Apply in full Windows 11 25H2+ under native 64-bit SYSTEM during SetupComplete.'
+            Output = 'OSDApps.StagedApp with operation count, Added and Removed identities, and conservative NetworkRequired; staging is not installation proof.'
+            Examples = @(
+                @{ Code = 'Add-OSDAppWindowsCapability -Name ''XPS.Viewer~~~~0.0.1.0'' -Action Add'; Remarks = 'Stage XPS Viewer installation; Windows may need to download the content during SetupComplete.' }
+                @{ Code = 'Add-OSDAppWindowsCapability -Name ''OpenSSH.Client~~~~0.0.1.0'' -Action Remove'; Remarks = 'Stage explicit removal of the OpenSSH client if installed.' }
+            )
+            Link = 'docs/windows-capabilities.md'
+        }
         'Add-OSDAppWindowsFeature' = @{
             Parameters = @{
                 Enable = 'Windows optional feature names to enable. Names are passed to Windows servicing without OSDApps autocomplete or a maintained feature catalog.'

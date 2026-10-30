@@ -1107,3 +1107,7 @@ inventory for all variants.
 Sources: [Visual C++ downloads](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist),
 [.NET installers and runtime types](https://learn.microsoft.com/en-us/dotnet/core/install/windows),
 [.NET release metadata](https://github.com/dotnet/core/tree/main/release-notes).
+
+## Windows capabilities (Features on Demand)
+
+Use `Add-OSDAppWindowsCapability -Name <exact-identity> -Action Add|Remove` for capabilities, separately from optional-feature Enable/Disable. See [Windows capabilities](windows-capabilities.md) for Windows 11 25H2+ scope, online acquisition, result handling and the combined XPS/OpenSSH test.

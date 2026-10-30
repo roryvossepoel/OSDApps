@@ -175,6 +175,7 @@ function Get-OSDApp {
     foreach ($builtIn in @(
         @{ Id='WindowsInboxCleanup'; DisplayName='Windows Inbox App Cleanup'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='WindowsFeatures'; DisplayName='Windows optional features'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
+        @{ Id='WindowsCapabilities'; DisplayName='Windows capabilities (Features on Demand)'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='EnvironmentVariables'; DisplayName='Machine environment variables'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='Services'; DisplayName='Windows services'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='DesktopSettings'; DisplayName='Windows StartPins & TaskbarPins'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
