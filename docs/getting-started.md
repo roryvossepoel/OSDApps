@@ -100,7 +100,7 @@ Test-OSDAppDeployment -ThrowOnFailure |
     Format-List Valid, OfflineReady, NetworkRequired, AppCount
 ```
 
-`Valid=True` means the manifest, queue, SetupComplete integration, staged runtime and required repository packages passed. `OfflineReady=False` is allowed for an online cold deployment: it means PreInstall must acquire one or more built-ins. For a deliberately disconnected deployment, make that a hard requirement:
+`Valid=True` means the manifest, queue, SetupComplete integration, staged runtime and required repository packages passed. `OfflineReady=False` is allowed for an online cold deployment: it means content acquisition is needed. Most built-ins acquire content in PreInstall; Windows capability additions can require Windows Update during SetupComplete. For a deliberately disconnected deployment, make that a hard requirement:
 
 ```powershell
 Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
