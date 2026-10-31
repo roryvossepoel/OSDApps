@@ -40,14 +40,23 @@ Set-OSDAppConfiguration -CatalogUri $CatalogUri -CacheVolumeLabel OSDCloud -Clea
 # Validate XML privately; never emit the returned profile or include it in test evidence.
 & $module { param($Path) $null = Read-OSDAppWiFiProfile -LiteralPath $Path } $WiFiProfilePath
 if ($Phase -eq 'Prepare') {
-    # Validate catalog types before downloading. Do not prune or rename existing cache.
+    # Validate selections before downloads. Preserve valid packages that exist only in cache.
+    $onlineIds = [System.Collections.Generic.List[string]]::new()
     foreach ($package in $packages) {
         $candidates = @(Get-OSDApp -Name $package.Id | Where-Object { $_.Source -eq 'Repository' -and $_.Id -eq $package.Id })
         if ($candidates.Count -ne 1 -or $candidates[0].PackageType -ne $package.Type) {
             throw ('Repository selection must resolve to one {0}: {1}' -f $package.Type,$package.Id)
         }
+        if ($candidates[0].Availability -in @('Cached','Online')) {
+            $onlineIds.Add([string]$package.Id)
+        }
+        elseif ($candidates[0].Availability -ne 'CachedOnly' -or -not $candidates[0].Valid) {
+            throw ('Repository selection is unavailable or its cache is invalid: ' + $package.Id)
+        }
     }
-    Sync-OSDAppRepository -Name $packages.Id -Architecture x64 | Out-Null
+    if ($onlineIds.Count -gt 0) {
+        Sync-OSDAppRepository -Name $onlineIds.ToArray() -Architecture x64 | Out-Null
+    }
     Sync-OSDAppGoogleChromeEnterprise -Architecture x64 | Out-Null
     Sync-OSDAppAdobeAcrobatUnified -Architecture x64 | Out-Null
 }

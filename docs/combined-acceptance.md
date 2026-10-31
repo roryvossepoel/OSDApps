@@ -50,7 +50,9 @@ does not prove connectivity or supply internet before that import runs.
 2. Run the returned `Invoke-OSDAppsCombinedTest.ps1` with `-Phase Prepare`,
    `-CatalogUri`, `-AppId`, `-ScriptId`, `-FontId`, `-CertificateId`, `-DriverId`
    and `-WiFiProfilePath`. This validates selections and normally synchronizes the
-   selected repository packages, Chrome and Adobe without pruning the existing cache.
+   selected online repository packages, Chrome and Adobe without pruning the existing cache.
+   Valid packages available only in the USB cache are retained and hash-checked;
+   their IDs are not requested from an online catalog that does not contain them.
 3. After OSDCloud applies a fresh Windows image, run that same script in WinPE with
    `-Phase Stage` and the same selections. Resolve the USB label again because its
    drive letter can change. `-WindowsPath` may explicitly identify the applied OS.

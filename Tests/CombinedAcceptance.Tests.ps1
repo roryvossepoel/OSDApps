@@ -121,6 +121,14 @@ Describe 'Combined staging orchestration with isolated dependencies' {
         Mock Remove-Module { }
         Mock Set-OSDAppConfiguration { }
         Mock Get-OSDAppCache { $global:OSDAppsCombinedTestState.Cache }
+        Mock Get-OSDApp {
+            $global:OSDAppsCombinedTestState.Cache | Where-Object Id -eq $Name[0] | ForEach-Object {
+                [pscustomobject]@{Id=$_.Id;Source='Repository';PackageType=$_.PackageType;Availability='CachedOnly';Valid=$true}
+            }
+        }
+        Mock Sync-OSDAppRepository { }
+        Mock Sync-OSDAppGoogleChromeEnterprise { }
+        Mock Sync-OSDAppAdobeAcrobatUnified { }
         Mock Read-OSDAppWiFiProfile { } -ModuleName OSDApps
         Mock Resolve-OSDAppWindowsPath { $WindowsPath } -ModuleName OSDApps
         foreach ($name in @('Add-OSDAppFont','Add-OSDAppCertificate','Add-OSDAppDriver','Add-OSDAppEnvironmentVariable','Add-OSDAppService','Add-OSDAppWindowsFeature','Add-OSDAppWindowsCapability','Add-OSDAppWiFiProfile','Add-OSDAppStartPins','Add-OSDAppTaskbarPins','Add-OSDAppWindowsInboxCleanup')) { Mock $name { } }
@@ -134,6 +142,29 @@ Describe 'Combined staging orchestration with isolated dependencies' {
         Mock New-Item { }
         Mock Set-Content { }
         Mock Write-Host { }
+    }
+    It 'prepares valid cache-only selections without requesting absent online IDs' {
+        Mock Test-Path { $false } -ParameterFilter { $LiteralPath -like '*MiniNT' }
+        $prepareParameters = $script:parameters.Clone(); $prepareParameters.Phase = 'Prepare'
+        & $script:runner @prepareParameters | Out-Null
+        Should -Invoke Sync-OSDAppRepository -Times 0 -Exactly
+        Should -Invoke Sync-OSDAppGoogleChromeEnterprise -Times 1 -Exactly
+        Should -Invoke Add-OSDApp -Times 0 -Exactly
+    }
+    It 'refreshes only the online selection while retaining other cached packages' {
+        Mock Test-Path { $false } -ParameterFilter { $LiteralPath -like '*MiniNT' }
+        Mock Get-OSDApp { [pscustomobject]@{Id='App';Source='Repository';PackageType='App';Availability='Online';Valid=$null} } -ParameterFilter { $Name[0] -eq 'App' }
+        $prepareParameters = $script:parameters.Clone(); $prepareParameters.Phase = 'Prepare'
+        & $script:runner @prepareParameters | Out-Null
+        Should -Invoke Sync-OSDAppRepository -Times 1 -Exactly -ParameterFilter { $Name.Count -eq 1 -and $Name[0] -eq 'App' }
+    }
+    It 'rejects an invalid cache-only selection before any synchronization' {
+        Mock Test-Path { $false } -ParameterFilter { $LiteralPath -like '*MiniNT' }
+        Mock Get-OSDApp { [pscustomobject]@{Id='Font';Source='Repository';PackageType='Font';Availability='InvalidCache';Valid=$false} } -ParameterFilter { $Name[0] -eq 'Font' }
+        $prepareParameters = $script:parameters.Clone(); $prepareParameters.Phase = 'Prepare'
+        { & $script:runner @prepareParameters | Out-Null } | Should -Throw '*unavailable or its cache is invalid*'
+        Should -Invoke Sync-OSDAppRepository -Times 0 -Exactly
+        Should -Invoke Sync-OSDAppGoogleChromeEnterprise -Times 0 -Exactly
     }
     It 'stages the complete queue with installers before association import' {
         & $script:runner @script:parameters | Out-Null
