@@ -1,7 +1,7 @@
 # Feature scope and validation register
 
-Decision snapshot: 30 October 2026. Implementation baseline: main at
-`26deb9bd1e432cfc71fae848913adbe3d76e11a5` (includes PRs #91 and #93).
+Decision snapshot: 31 October 2026. Implementation baseline: main at
+`f2073b2665ca2d8b2f19c83cc5e347cabdc895a1` (includes merged PRs #94 and #95).
 
 This register separates implemented behavior, practical evidence and decisions
 still to be made. It is not a release announcement or approval to build every
@@ -11,8 +11,9 @@ modules by commit, not by the manifest version alone.
 
 ## Agreed order
 
-1. Decide the feature scope, test the selected scenarios and record their
-   contracts, limits and results here and in the detailed guides.
+1. Establish technical module stability, run the selected combined acceptance
+   profile and record contracts, limits and results. Viewer, Pages and renaming
+   must wait for technical acceptance.
 2. Decide whether to rename the project, including command names and migration
    impact, before finalizing the UI and public documentation.
 3. Finish the Viewer against the agreed feature set.
@@ -60,7 +61,7 @@ to complete this table.
 | Feature | Contract and evidence | Remaining boundary |
 | --- | --- | --- |
 | Repository apps and scripts | Built. [Repository guide](repository.md), [physical validation history](testing.md) and [native-filename acceptance](native-filename-acceptance.md) cover package staging and runner execution. | A package success does not prove all later app behavior. Package authors own their install scripts. |
-| Cache, source acquisition and offline readiness | Built. Version selection, integrity, reusable USB content, preflight and per-deployment reporting. Recorded online/offline and cold/warm scenarios in [testing](testing.md). | Legacy metadata recovery is proposed in [PR #94](https://github.com/roryvossepoel/OSDApps/pull/94), tracked by [issue #92](https://github.com/roryvossepoel/OSDApps/issues/92). Both Windows CI hosts passed on `71ae31f49cfb6f16e93f8ec61454a57120cca5f2`. **Operator-confirmed, 30 October:** the production Sync helper refreshed an isolated Chrome cache with the three legacy metadata fields removed; hash/size validation and Google signature validation passed, and original cache hashes remained unchanged. This is a full-Windows helper test, not a physical public-wrapper, WinPE or PreInstall run. The fix is proposed by #94 on top of this baseline. Offline readiness still requires verified content. |
+| Cache, source acquisition and offline readiness | Built. Version selection, integrity, reusable USB content, preflight and per-deployment reporting. Recorded online/offline and cold/warm scenarios in [testing](testing.md). | Legacy metadata recovery was merged in [PR #94](https://github.com/roryvossepoel/OSDApps/pull/94), tracked by [issue #92](https://github.com/roryvossepoel/OSDApps/issues/92). Both Windows CI hosts passed on `71ae31f49cfb6f16e93f8ec61454a57120cca5f2`. **Operator-confirmed, 30 October:** the production Sync helper refreshed an isolated Chrome cache with the three legacy metadata fields removed; hash/size validation and Google signature validation passed, and original cache hashes remained unchanged. This is a full-Windows helper test, not a physical public-wrapper, WinPE or PreInstall run. The fix is included in this baseline; the physical acceptance limits remain unchanged. Offline readiness still requires verified content. |
 | Built-in-only / repository-only selection | Built in [PR #80](https://github.com/roryvossepoel/OSDApps/pull/80). Session options control deployment/discovery; both disabled is refused. Sync remains available for preparation. | Automated behavior coverage; no separate physical mode-isolation result recorded here. |
 | Ordered runtime, fault isolation, logs and cleanup | Built. [Runtime guide](runtime.md) and [testing history](testing.md) describe one-shot execution, retained failure evidence and cleanup. | CleanupMode Never test runs do not prove OnSuccess cleanup. |
 | Inspection and diagnostics | Built. Read-only Viewer, cache health, deployment-result inspection and [maintenance diagnostics](maintenance.md). | Interactive selection/configuration expansion remains deferred. |
@@ -87,13 +88,13 @@ guide define the supported parameters; this table records the practical state.
 | Feature / interface | Defined scope | Practical evidence and next decision |
 | --- | --- | --- |
 | Registry: `Add-OSDAppRegistryKey`, `Add-OSDAppRegistryValue` | Keys and typed values; explicit 32/64-bit or process-default view. [Contract](registry-staging.md). | **Recorded pass:** nine operations and independent read-back on x64, documented in the [candidate evidence](release-candidate-0.52.0.md). Other roots/architectures are not implied. |
-| Optional features: `Add-OSDAppWindowsFeature` | Enable/disable Windows feature names once with NoRestart. No source-media management. [PR #81](https://github.com/roryvossepoel/OSDApps/pull/81), [runtime](../Runtime/Invoke-OSDAppWindowsFeatures.ps1). | **Evidence pending:** TelnetClient enable and WorkFolders-Client disable were selected for testing, but no correlated practical result is recorded here. Retrieve that result or include this pair in the next test. FOD capabilities use the separate command below. |
+| Optional features: `Add-OSDAppWindowsFeature` | Enable/disable Windows feature names once with NoRestart. No source-media management. [PR #81](https://github.com/roryvossepoel/OSDApps/pull/81), [runtime](../Runtime/Invoke-OSDAppWindowsFeatures.ps1). | **Operator-confirmed workflow:** on 31 October the maintainer confirmed the earlier practical tests had already been completed. TelnetClient enable and WorkFolders-Client disable were the selected pair; the new combined run now records actual Disabled-to-Enabled and Enabled-to-Disabled transitions respectively. See the 31 October acceptance update below. FOD capabilities use the separate command below. |
 | Fonts: `Add-OSDAppFont -Id` | Repository Font package, machine-wide TTF/OTF; no TTC. No overwrite on conflicting font content. | **Recorded pass:** seven fonts installed/registered and natively loaded in [PR #82](https://github.com/roryvossepoel/OSDApps/pull/82). Separate ARM64, repeat/conflict and user-app rendering tests are not established. |
 | Certificates: `Add-OSDAppCertificate` | Repository Id or local file; public CA certificates into LocalMachine Root or CA only. No private keys/PFX/user stores. [Contract](certificate-staging.md). | **Recorded pass:** local-file and repository-package Root import in [PR #85](https://github.com/roryvossepoel/OSDApps/pull/85). Native automated CA-store coverage exists; separate physical intermediate-CA scenario remains unrecorded. |
 | Drivers: `Add-OSDAppDriver -Id` | Repository Driver package; full vendor tree; SetupComplete adds INFs to the Driver Store and requests matching-device installation. No boot-driver injection. [Contract](driver-packages.md). | **Operator-confirmed:** Realtek drivers were present in the Driver Store; maintainer accepted that outcome. Actual selection/binding and device function are not claimed. Implementation and CI: [PR #86](https://github.com/roryvossepoel/OSDApps/pull/86). |
 | Wi-Fi: `Add-OSDAppWiFiProfile` | WLAN XML or parameters; WPA2-Personal, WPA3-Personal and Open. No EAP/Enterprise. All-user profile import, no explicit connect. [Contract](wifi-staging.md). | **Recorded pass:** XML input accepted on one adapter in [PR #84](https://github.com/roryvossepoel/OSDApps/pull/84). Parameter-generated input has automated coverage but no separate physical pass recorded there. Neither import nor merge proves connectivity. |
-| Machine variables: `Add-OSDAppEnvironmentVariable` | Set/remove literal or expandable machine values; append PATH without new lexical duplicates. Existing processes are not refreshed. [Contract](environment-variables.md). | **Evidence pending:** combined variables/services test was followed by a merge instruction, but exact settings and before/after outcomes are not recorded in [PR #87](https://github.com/roryvossepoel/OSDApps/pull/87). Recover results before retesting. |
-| Services: `Add-OSDAppService` | Exact existing service name; startup mode and running/stopped state; bounded wait in the same run. No credentials, dependency edits or recurring enforcement. [Contract](services.md). | **Evidence pending:** same combined run as variables. Native automated disposable-service coverage exists; merge alone does not establish the physical result. |
+| Machine variables: `Add-OSDAppEnvironmentVariable` | Set/remove literal or expandable machine values; append PATH without new lexical duplicates. Existing processes are not refreshed. [Contract](environment-variables.md). | **Operator-confirmed workflow:** maintainer reconfirmed completion of earlier practical tests on 31 October. The new combined run records four actual changes: literal and expandable values, one PATH append and removal of the seeded variable. Earlier confirmation remains valid; see the acceptance update below. |
+| Services: `Add-OSDAppService` | Exact existing service name; startup mode and running/stopped state; bounded wait in the same run. No credentials, dependency edits or recurring enforcement. [Contract](services.md). | **Operator-confirmed workflow:** same combined run as variables, reconfirmed by the maintainer on 31 October. The new combined run records WSearch changing from Running/AutomaticDelayedStart to Stopped/Manual; Spooler was already Running/Automatic. Native automated disposable-service coverage remains separate evidence. |
 | Inbox app removal: `Add-OSDAppWindowsInboxCleanup` | Explicit selection or Tested13 preset, optional diagnosis. [Built-in guide](built-in-apps.md). | **Recorded pass:** 13 selected packages removed and reported absent after Autopilot; separate three-package run also recorded in [testing](testing.md). No blanket claim for every inbox package/build. |
 | Windows capabilities: `Add-OSDAppWindowsCapability` | Explicit Add/Remove by full capability identity; Windows 11 client 25H2+ at runtime; online servicing sources under existing policy. No custom source/repository integration, reboot or follow-up correction. [Contract](windows-capabilities.md). | **Log-backed, 30 October:** actual XPS `NotPresent` to `Installed` and OpenSSH Client `Installed` to `NotPresent`; both exit 0, no restart required/requested. One successful SetupComplete Script, zero failures, 328.2 seconds; independent OOBE query confirms final states. DISM target is build **26300.9711 x64**, not a separate build-26200/25H2 test. [Evidence and limits](windows-capabilities.md#physical-acceptance-on-30-october-2026). ARM64 and other capabilities remain unvalidated in practice. |
 | Initial file/protocol associations: `Add-OSDAppDefaultAssociation` | Explicit identifier/ProgId/app-name parameters or XML input. Install apps first, then select associations; installing an app does not implicitly select it. One-shot DISM baseline export/merge/import during SetupComplete; user-editable initial defaults, no enforcement. [Contract](default-associations.md), [PR #91](https://github.com/roryvossepoel/OSDApps/pull/91). | **Operator-confirmed on PC1, 30 October:** corrected test revision `2b9dfd303c186302414d52b94f306215883904d4` opens `.pdf` in Adobe Acrobat and HTTP/HTTPS in Chrome. Changing PDF and both protocol defaults through Windows Settings also worked. No new runtime logs were supplied for this run. Separate HTML opening, XML-input deployment and ARM64 are not physically confirmed. |
@@ -111,19 +112,56 @@ as independently verified. Early interruption before the runtime can leave
 restricted staging behind. Caller scripts/original exports are outside automatic
 cleanup, and the installed Windows WLAN profile necessarily remains.
 
-## Candidates awaiting a scope decision
+## Feature-scope closeout — 31 October 2026
 
-These are options, not approved feature work or promises of Windows support.
-Research the selected option against current Microsoft guidance before design.
+No additional feature candidate remains selected for investigation in this
+register. Language packs are excluded by maintainer decision after a successful
+standalone experiment; see [the evaluation record](language-evaluation.md).
+Existing Windows capabilities (FoDs) remain in scope. This is a scope decision,
+not a claim that every implemented variant has passed physical acceptance or
+that a Gallery release is ready.
 
-| Candidate | Decision needed before implementation | Suggested acceptance scenario |
-| --- | --- | --- |
-| Language packs | Whether this belongs in scope at all; pack/media source, build matching, dependencies and caching. Regional preferences are not implicitly included. | Install one matching language package and record servicing results; any language-selection behavior needs its own explicit contract. |
+### Physical acceptance update
+
+The selected combined and repository-only execution scenarios passed on
+31 October. The detailed sanitized record is in
+[PR #97](https://github.com/roryvossepoel/OSDApps/pull/97), in
+`docs/combined-acceptance.md` under "Recorded acceptance on 31 October 2026".
+The maintainer supplied the matching runtime/feature results and confirmed that
+`C:\Windows\Temp\OSDApps` was absent after each run. Raw private logs and Wi-Fi
+inputs are not committed to the repository.
+
+| Scenario | Correlated evidence and result |
+| --- | --- |
+| Combined retained features | DeploymentId `ac04a216-0a5f-4cf7-b88d-c4ba93528f07`; selected module commit `9ad02052b4f721bd7ca8e70c8f422bd67b5fb1ee`; build 26300.9711 x64. All 16 entries succeeded, zero failures/skips, 553.6 seconds. Covers apps, Script, fonts, Root certificate, six driver INFs, registry, variables, services, optional features, capabilities, Wi-Fi XML import, pin preparation, inbox removal and initial association import. Acrobat returned successful code 3010; no claim that every installer needed no restart. |
+| HTTP catalog to cache to SetupComplete | DeploymentId `41654f0d-451c-4444-8012-f6b2613f49ca`; same base test module with manifest-reader fix `c6f007436a2f20fe95bdf6b266931ea43637247d`. Four fresh repository IDs synchronized with Valid=True, all four staged ZIP hashes verified before execution, all four entries exited 0 in 16.3 seconds. Seven fonts installed, Root certificate imported, six INFs ready in Driver Store and one Wi-Fi profile imported through a Script package. |
+| Runtime cleanup | CleanupMode OnSuccess for both runs. Logs show cleanup scheduling; the maintainer separately confirmed Test-Path returned False after each. Results remain available outside staging. |
+
+The BOM-prefixed manifest defect discovered during the HTTP synchronization test
+is addressed by [PR #98](https://github.com/roryvossepoel/OSDApps/pull/98). The
+maintainer's successful four-package Sync and deployment validate that fix in
+the tested path; CI remains a separate requirement before merging.
+
+Repository Wi-Fi in this test is a generic Script package, not a new native
+package type or a repository-Id parameter on Add-OSDAppWiFiProfile. The selected
+package intentionally carries the XML/key inside its ZIP. Its wrapper deletes
+extracted XML and temporary config on normal completion/handled failure, and
+fails if that cleanup fails. The supplied reports contain no password/profile
+XML. The runtime staging directory was confirmed absent, but original exports,
+repository/USB cache ZIPs and Windows' installed WLAN profile are outside that
+cleanup claim.
+
+These logs establish execution/configuration success, not additional proof of
+rendered user pins, actual Wi-Fi connectivity, hardware binding or every parameter
+set. Existing operator-confirmed PDF/protocol behavior and accepted extra Outlook
+pin remain valid. Parameter-generated Wi-Fi and pin editability are still explicit
+coverage limits, not reasons to repeat these completed installations.
 
 ## Excluded or deferred decisions
 
 | Item | Decision |
 | --- | --- |
+| Language packs and multilingual OOBE preparation | Excluded on 31 October 2026. The standalone Dutch-image/English-language experiment passed after the update step was included, but language-media, build matching and cumulative/checkpoint update management are outside OSDApps. Select the base language in OSDCloud; prepare a multilingual WIM separately when needed, or add languages later in Windows. No language-installation cmdlet is introduced. [Evidence and limits](language-evaluation.md). |
 | Wallpaper, lock screen, themes, colors and screensavers | Excluded from OSDApps. [PR #89](https://github.com/roryvossepoel/OSDApps/pull/89) closed without merge. Do not replace/delete Windows-owned images as a workaround. Start/taskbar pins remain in scope. |
 | Regional settings | Dropped from the current feature scope; leave the normal OOBE/Autopilot choices to that flow. |
 | Time zone | Dropped after the test still showed Western Europe instead of the requested Tokyo zone. No working time-zone feature is claimed. |
@@ -133,29 +171,23 @@ Research the selected option against current Microsoft guidance before design.
 | Separate OneDrive per-machine integration | No new work selected. Revisit only after an explicit need and current installation behavior are established. |
 | Viewer expansion, GitHub Pages and naming | Deferred until feature scope and acceptance are settled; follow the agreed order above. |
 
-## Next acceptance work
+## Next closeout work
 
-1. Recover the prior optional-feature and variables/services results where
-   available. Record exact candidate revision, scenario and outcome; a missing
-   record is not a reason to repeat all successful features.
-2. If evidence is still missing, use one combined fresh-image test for the
-   selected optional features, machine variables and services. Choose safe test
-   values/services and record expected transitions before running it.
-3. In a suitable WLAN-equipped test, cover the parameter-generated profile,
-   secret-free reports and deletion of owned credential staging. Do not commit
-   real credentials or profile exports. Connectivity is only a success criterion
-   if explicitly selected and actually observed.
-4. Capture Start/taskbar user editability during normal manual acceptance when
-   those features are next exercised. Do not add a post-sign-in cleanup task.
-5. The planned full-Windows cache-recovery acceptance for
-   [PR #94](https://github.com/roryvossepoel/OSDApps/pull/94) passed on 30 October:
-   `LegacyDetected=True`, `Updated=True`, `MetadataValid=True`, `Signature=Valid`
-   and `SourceUnchanged=True`. The test used a separate Chrome cache with legacy
-   metadata simulated from a validated current payload. No installer was run.
-   Automated staging and standalone PreInstall coverage are separate evidence;
-   this helper-only physical pass does not establish those paths. No repeat PC1
-   installation is required for this acceptance gate.
-6. The selected [capability test](windows-capabilities.md#physical-acceptance-on-30-october-2026) passed on build 26300.9711 x64. No repeat installation is required for that accepted XPS/OpenSSH scenario. Language packs still need a separate scope decision. The accepted PDF/protocol scenario also does not need repeating.
+1. Preserve both accepted execution runs and the earlier operator confirmations.
+   No additional installation is required for the two completed scenarios.
+2. Complete review and CI of the manifest-reader fix, combined acceptance tooling
+   and this scope register. The combined test used the original Stage/runtime
+   path; the later Prepare-phase change for valid cached-only packages has
+   automated coverage and is not misrepresented as part of that physical run.
+3. Keep parameter-generated Wi-Fi and Start/taskbar editability marked as
+   unconfirmed in practice. If separately selected, collect only the relevant
+   observation; do not introduce a follow-up task or force a reboot.
+4. The accepted legacy-cache helper test remains limited to the tested isolated
+   full-Windows refresh. The new runs used valid cache generations and do not
+   broaden legacy-cache recovery evidence to new failure scenarios.
+5. After technical review/CI closeout, decide naming, then finish Viewer and public
+   Pages documentation. Language packs, branding, regional settings and time zone
+   remain outside scope.
 
 For each accepted scenario record: feature, source commit, Windows build/edition
 and architecture, input excluding secrets, expected change, observed change,
