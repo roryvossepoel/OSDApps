@@ -1,7 +1,7 @@
 # Feature scope and validation register
 
-Decision snapshot: 30 October 2026. Implementation baseline: main at
-`26deb9bd1e432cfc71fae848913adbe3d76e11a5` (includes PRs #91 and #93).
+Decision snapshot: 31 October 2026. Implementation baseline: main at
+`f2073b2665ca2d8b2f19c83cc5e347cabdc895a1` (includes merged PRs #94 and #95).
 
 This register separates implemented behavior, practical evidence and decisions
 still to be made. It is not a release announcement or approval to build every
@@ -60,7 +60,7 @@ to complete this table.
 | Feature | Contract and evidence | Remaining boundary |
 | --- | --- | --- |
 | Repository apps and scripts | Built. [Repository guide](repository.md), [physical validation history](testing.md) and [native-filename acceptance](native-filename-acceptance.md) cover package staging and runner execution. | A package success does not prove all later app behavior. Package authors own their install scripts. |
-| Cache, source acquisition and offline readiness | Built. Version selection, integrity, reusable USB content, preflight and per-deployment reporting. Recorded online/offline and cold/warm scenarios in [testing](testing.md). | Legacy metadata recovery is proposed in [PR #94](https://github.com/roryvossepoel/OSDApps/pull/94), tracked by [issue #92](https://github.com/roryvossepoel/OSDApps/issues/92). Both Windows CI hosts passed on `71ae31f49cfb6f16e93f8ec61454a57120cca5f2`. **Operator-confirmed, 30 October:** the production Sync helper refreshed an isolated Chrome cache with the three legacy metadata fields removed; hash/size validation and Google signature validation passed, and original cache hashes remained unchanged. This is a full-Windows helper test, not a physical public-wrapper, WinPE or PreInstall run. The fix is proposed by #94 on top of this baseline. Offline readiness still requires verified content. |
+| Cache, source acquisition and offline readiness | Built. Version selection, integrity, reusable USB content, preflight and per-deployment reporting. Recorded online/offline and cold/warm scenarios in [testing](testing.md). | Legacy metadata recovery was merged in [PR #94](https://github.com/roryvossepoel/OSDApps/pull/94), tracked by [issue #92](https://github.com/roryvossepoel/OSDApps/issues/92). Both Windows CI hosts passed on `71ae31f49cfb6f16e93f8ec61454a57120cca5f2`. **Operator-confirmed, 30 October:** the production Sync helper refreshed an isolated Chrome cache with the three legacy metadata fields removed; hash/size validation and Google signature validation passed, and original cache hashes remained unchanged. This is a full-Windows helper test, not a physical public-wrapper, WinPE or PreInstall run. The fix is included in this baseline; the physical acceptance limits remain unchanged. Offline readiness still requires verified content. |
 | Built-in-only / repository-only selection | Built in [PR #80](https://github.com/roryvossepoel/OSDApps/pull/80). Session options control deployment/discovery; both disabled is refused. Sync remains available for preparation. | Automated behavior coverage; no separate physical mode-isolation result recorded here. |
 | Ordered runtime, fault isolation, logs and cleanup | Built. [Runtime guide](runtime.md) and [testing history](testing.md) describe one-shot execution, retained failure evidence and cleanup. | CleanupMode Never test runs do not prove OnSuccess cleanup. |
 | Inspection and diagnostics | Built. Read-only Viewer, cache health, deployment-result inspection and [maintenance diagnostics](maintenance.md). | Interactive selection/configuration expansion remains deferred. |
@@ -111,19 +111,41 @@ as independently verified. Early interruption before the runtime can leave
 restricted staging behind. Caller scripts/original exports are outside automatic
 cleanup, and the installed Windows WLAN profile necessarily remains.
 
-## Candidates awaiting a scope decision
+## Feature-scope closeout — 31 October 2026
 
-These are options, not approved feature work or promises of Windows support.
-Research the selected option against current Microsoft guidance before design.
+No additional feature candidate remains selected for investigation in this
+register. Language packs are excluded by maintainer decision after a successful
+standalone experiment; see [the evaluation record](language-evaluation.md).
+Existing Windows capabilities (FoDs) remain in scope. This is a scope decision,
+not a claim that every implemented variant has passed physical acceptance or
+that a Gallery release is ready.
 
-| Candidate | Decision needed before implementation | Suggested acceptance scenario |
-| --- | --- | --- |
-| Language packs | Whether this belongs in scope at all; pack/media source, build matching, dependencies and caching. Regional preferences are not implicitly included. | Install one matching language package and record servicing results; any language-selection behavior needs its own explicit contract. |
+### Evidence recovery review
+
+The 31 October review checked the current repository guides/testing history and
+PR descriptions and comment timelines for #81, #84 and #87. Those timelines
+contained no comments. No additional correlated physical result was recovered
+for the scenarios below. Original earlier device logs were not available to this
+review; this does not establish that the operator never supplied or retained them.
+Do not turn a merge instruction into a physical pass or repeat all deployments.
+
+| Remaining evidence | Smallest useful next step |
+| --- | --- |
+| Optional features: TelnetClient enable / WorkFolders-Client disable | Recover the existing WindowsFeatures result and matching deployment summary; if unavailable, include only this pair in a combined acceptance run. |
+| Machine variables and services | Recover EnvironmentVariables and Services results with the matching deployment summary and non-secret test inputs. Only if unavailable, choose explicit safe transitions for one combined run. |
+| Parameter-generated Wi-Fi | XML import already passed. Exercise one generated profile on a WLAN-equipped device; inspect import result, secret-free reporting and removal of owned credential staging. Do not require a connectivity test unless selected. |
+| Start/taskbar editability | During a normal manual test, try adding/removing/reordering pins after initial application. Record immediate editability separately from persistence across a later normal sign-in; no forced reboot or automated correction. |
+
+FoD XPS/OpenSSH, PDF/HTTP/HTTPS associations and the selected legacy-cache helper
+scenario are accepted within their recorded limits and do not need repeating.
+Name selection, Viewer completion and GitHub Pages follow scope/acceptance
+closeout in the agreed order; both remain deferred during this evidence review.
 
 ## Excluded or deferred decisions
 
 | Item | Decision |
 | --- | --- |
+| Language packs and multilingual OOBE preparation | Excluded on 31 October 2026. The standalone Dutch-image/English-language experiment passed after the update step was included, but language-media, build matching and cumulative/checkpoint update management are outside OSDApps. Select the base language in OSDCloud; prepare a multilingual WIM separately when needed, or add languages later in Windows. No language-installation cmdlet is introduced. [Evidence and limits](language-evaluation.md). |
 | Wallpaper, lock screen, themes, colors and screensavers | Excluded from OSDApps. [PR #89](https://github.com/roryvossepoel/OSDApps/pull/89) closed without merge. Do not replace/delete Windows-owned images as a workaround. Start/taskbar pins remain in scope. |
 | Regional settings | Dropped from the current feature scope; leave the normal OOBE/Autopilot choices to that flow. |
 | Time zone | Dropped after the test still showed Western Europe instead of the requested Tokyo zone. No working time-zone feature is claimed. |
@@ -155,7 +177,7 @@ Research the selected option against current Microsoft guidance before design.
    Automated staging and standalone PreInstall coverage are separate evidence;
    this helper-only physical pass does not establish those paths. No repeat PC1
    installation is required for this acceptance gate.
-6. The selected [capability test](windows-capabilities.md#physical-acceptance-on-30-october-2026) passed on build 26300.9711 x64. No repeat installation is required for that accepted XPS/OpenSSH scenario. Language packs still need a separate scope decision. The accepted PDF/protocol scenario also does not need repeating.
+6. The selected [capability test](windows-capabilities.md#physical-acceptance-on-30-october-2026) passed on build 26300.9711 x64. No repeat installation is required for that accepted XPS/OpenSSH scenario. Language packs are excluded; the separate successful experiment does not expand capability scope. The accepted PDF/protocol scenario also does not need repeating.
 
 For each accepted scenario record: feature, source commit, Windows build/edition
 and architecture, input excluding secrets, expected change, observed change,
