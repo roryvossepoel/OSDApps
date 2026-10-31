@@ -54,6 +54,24 @@ A raw source import does not generate the external help. Existing comment-based 
 
 ## Review boundaries
 
+### Icon-only CI
+
+CI first classifies the complete push or pull-request diff and validates the SVG
+files in `metadata/icons/`. When all changes are additions or modifications of
+SVG files directly in that directory, the PowerShell 7 and 5.1 jobs are skipped.
+Their check names remain unchanged; no branch-protection changes are required.
+
+Any other file change, deletion, rename, manual run, or unavailable comparison
+history runs the full module checks. Invalid SVG files fail CI, including the
+existing required PowerShell check names. The short validation checks XML and
+SVG dimensions; it does not replace visual review of the logo.
+
+Run the CI-selection regression tests with:
+
+```text
+python3 -m unittest discover -s build -p test_ci_changes.py -v
+```
+
 Describe behavior changes, execution environment, destructive effects and validation limits in every PR. Keep public parameter contracts, metadata consumers and standalone runtime requirements in mind. Do not call code safe merely because the analyzer is green; retain focused tests for failure paths. Do not fix a warning by weakening a security check or changing deployment defaults as a side effect of documentation work.
 
 Normal CI never publishes to the Gallery. Version bumps and immutable release publication follow [Releasing](docs/releasing.md). Help and build improvements require a later approved module release before Gallery consumers receive them; merging the tooling PR alone does not replace a published package.

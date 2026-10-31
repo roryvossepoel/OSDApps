@@ -15,11 +15,34 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
 jobs:
+  changes:
+    name: Classify changes and validate icons
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_module: ${{ steps.classify.outputs.run_module }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Test change selection
+        run: python3 -m unittest discover -s build -p test_ci_changes.py -v
+      - name: Classify changes and validate SVG files
+        id: classify
+        run: python3 build/ci_changes.py
+
   validate:
     name: Validate PowerShell 7
+    needs: changes
+    if: ${{ always() && (needs.changes.result != 'success' || needs.changes.outputs.run_module != 'false') }}
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
+      - name: Require successful change and icon checks
+        if: ${{ needs.changes.result != 'success' }}
+        shell: pwsh
+        run: throw 'Change classification or SVG validation failed. See the changes job.'
       - name: Checkout
         uses: actions/checkout@v5
       - name: Install test dependencies
@@ -70,9 +93,15 @@ jobs:
 
   validate_windows_powershell:
     name: Validate Windows PowerShell 5.1
+    needs: changes
+    if: ${{ always() && (needs.changes.result != 'success' || needs.changes.outputs.run_module != 'false') }}
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
+      - name: Require successful change and icon checks
+        if: ${{ needs.changes.result != 'success' }}
+        shell: pwsh
+        run: throw 'Change classification or SVG validation failed. See the changes job.'
       - name: Checkout
         uses: actions/checkout@v5
       - name: Install test dependencies
