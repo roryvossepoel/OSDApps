@@ -84,7 +84,7 @@ refresh will install those exact versions; use the runtime results for that.
 | Services | WSearch Manual/Stopped; Spooler Automatic/Running | Per-operation before/after result; a later Windows state change is separate |
 | Optional features | Enable TelnetClient; disable WorkFolders-Client | Per-feature state and any pending restart reported honestly |
 | Capabilities | Add XPS.Viewer; remove OpenSSH.Client | Installed / NotPresent; distinguish actual changes from already-correct state |
-| Wi-Fi | Supplied all-user profile | Import succeeds; operator can connect; staged XML/config removed |
+| Wi-Fi | Supplied all-user profile | Import succeeds; staged XML/config removed; connectivity is a separate observation when selected |
 | Start | Edge, Explorer, Settings | Pins shown at first sign-in; user can change them |
 | Taskbar | Settings, Explorer | Selected pins shown; previously accepted additional Outlook pin is recorded if present |
 | Inbox apps | Remove Solitaire, BingWeather, BingNews | Absent provisioning; already-absent items are not proof of an actual removal |
@@ -115,3 +115,83 @@ Review logs before sharing. Never archive the entire staging tree or original
 Wi-Fi XML as routine test evidence. If a defect is found, fix it and run the
 smallest relevant regression test before deciding whether another full deployment
 is needed. Viewer, Pages and rename remain deferred until technical acceptance.
+
+## Recorded acceptance on 31 October 2026
+
+The maintainer supplied runtime logs and per-feature results for two fresh
+deployments, then confirmed `Test-Path 'C:\Windows\Temp\OSDApps'` returned
+`False` after each. Cleanup completion is operator-confirmed; the runtime logs
+themselves record cleanup scheduling. Raw device logs and credential-bearing
+inputs remain outside this public repository.
+
+### Combined configuration run
+
+DeploymentId: `ac04a216-0a5f-4cf7-b88d-c4ba93528f07`.
+The selected test module was commit
+`9ad02052b4f721bd7ca8e70c8f422bd67b5fb1ee`, on Windows build
+`26300.9711` x64. Preparation used the explicit online selections and a local
+marker package because some test packages existed only in the USB cache. The
+subsequent Prepare-phase fix does not change the tested Stage/runtime path.
+
+`Latest.json` reports 16 expected and 16 successful unique entries, zero failures
+or skips, in 553.6 seconds. The feature results carrying a DeploymentId match
+this run. Inbox cleanup uses its own RunId; its timestamps and successful runner
+entry correlate it to this deployment.
+
+| Area | Observed result |
+| --- | --- |
+| Repo app and Script | Omnissa Horizon Client 8.16.2.36295 and the harmless marker Script exited 0 |
+| Vendor built-ins | Acrobat Unified 26.002.22031 exited 3010; Chrome Enterprise 156.0.8078.80 exited 0. PreInstall checked vendor metadata and reused both caches without acquisition warnings |
+| Font, certificate, driver | Seven fonts installed and activated; selected root certificate imported into LocalMachine Root; six Realtek INFs ready in the Driver Store |
+| Registry | Seven operations succeeded, including both 32/64-bit views and the variable-removal seed |
+| Machine variables | Four actual changes: literal value, expandable value, PATH append and removal |
+| Services | WSearch changed from Running/AutomaticDelayedStart to Stopped/Manual; Spooler was already Running/Automatic |
+| Optional features | TelnetClient changed Disabled to Enabled; WorkFolders-Client changed Enabled to Disabled |
+| Capabilities | XPS.Viewer changed NotPresent to Installed; OpenSSH.Client changed Installed to NotPresent; both exit 0 without a restart requirement |
+| Wi-Fi | One XML profile imported successfully on the available WLAN interface |
+| Pins | Three Start pins configured with applyOnce; two taskbar pins prepared with Replace and PinGeneration 1 |
+| Inbox cleanup | Solitaire, BingWeather and BingNews actually removed; provisioning and registrations reported absent afterwards |
+| Associations | Five explicit selections imported for first sign-in: PDF to Acrobat.Document.DC, HTTP/HTTPS/HTM/HTML to ChromeHTML; 22 total baseline associations preserved/merged |
+
+Acrobat's 3010 is a successful installer exit with a restart indication; it must
+not be reported as no restart required. The runner continued through all entries.
+The new logs establish configuration/import success, not fresh observations of
+rendered pins, opening files, Wi-Fi connectivity or driver binding. Earlier
+operator-confirmed user behavior remains separate evidence.
+
+### Catalog-to-cache repository run
+
+DeploymentId: `41654f0d-451c-4444-8012-f6b2613f49ca`.
+The maintainer used the same `9ad0205` test module with only the manifest reader
+replaced by the reviewed fix from
+`c6f007436a2f20fe95bdf6b266931ea43637247d` ([PR #98](https://github.com/roryvossepoel/OSDApps/pull/98)).
+This is not a test of a newly published Gallery module. The repository-only
+results do not independently record an OS build/edition.
+
+The four newly published IDs were synchronized from the maintainer's HTTP
+catalog and all reported `Valid=True` on the preparation PC. WinPE staged those
+cached packages for one SetupComplete pass. Runtime verified all four archive
+SHA-256 values before execution; `Latest.json` reports four successes, zero
+failures or skips, in 16.3 seconds, all exit 0.
+
+| Package | Observed result |
+| --- | --- |
+| RepoTestFonts | All seven fonts installed and activated |
+| RepoTestRootCA | Selected test certificate imported into LocalMachine Root |
+| RepoTestRealtekUSB | All six INFs ready in the Driver Store; device binding not confirmed |
+| RepoTestWiFiProfile | Script package imported one all-user WLAN profile successfully |
+
+Wi-Fi here uses a generic repository Script wrapper around the existing runtime,
+not a new native Wi-Fi package type or an `Add-OSDAppWiFiProfile -Id` parameter.
+The wrapper removes its extracted XML and temporary config on normal completion
+or handled failure, and reports a nonzero exit if that cleanup fails. No password
+or profile XML was present in the supplied logs/results. The maintainer confirmed
+the entire runtime staging directory was gone after completion. This does not
+claim removal of the original export, the repository/USB ZIP (which intentionally
+contains the profile), or Windows' installed WLAN profile.
+
+Both selected execution scenarios are accepted within these limits; no repeat
+installation is required solely for additional copies of the same evidence.
+Parameter-generated Wi-Fi, pin editability, other architectures and fault cases
+are not newly validated by these runs. Complete review and CI of the remaining
+changes before proceeding to naming, Viewer or Pages work.
