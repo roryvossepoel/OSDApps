@@ -69,7 +69,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
 
           $expectedVersion = $env:EXPECTED_VERSION.Trim() -replace '^v',''
-          $manifestPath = Join-Path $PWD 'dist\OSDApps\OSDApps.psd1'
+          $manifestPath = Join-Path $PWD 'dist\OSDStage\OSDStage.psd1'
           $manifest = Test-ModuleManifest -Path $manifestPath -ErrorAction Stop
           $galleryVersion = $manifest.Version.ToString()
 
@@ -78,7 +78,7 @@ jobs:
           }
 
           "gallery_version=$galleryVersion" >> $env:GITHUB_OUTPUT
-          Write-Host "Release package validation passed for OSDApps $galleryVersion."
+          Write-Host "Release package validation passed for OSDStage $galleryVersion."
 
       - name: Publish and verify PowerShell Gallery package
         shell: pwsh
@@ -88,11 +88,11 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $version = $env:GALLERY_VERSION
-          $modulePath = Join-Path $PWD 'dist\OSDApps'
+          $modulePath = Join-Path $PWD 'dist\OSDStage'
 
           function Find-PublishedVersion {
               try {
-                  Find-Module -Name OSDApps -RequiredVersion $version -Repository PSGallery -ErrorAction Stop
+                  Find-Module -Name OSDStage -RequiredVersion $version -Repository PSGallery -ErrorAction Stop
               }
               catch {
                   if ($_.Exception.Message -match 'No match was found|Unable to find module|No match found') { return $null }
@@ -116,7 +116,7 @@ jobs:
                   }
                   New-Item -ItemType Directory -Path $downloadPath -Force -ErrorAction Stop | Out-Null
                   try {
-                      Save-Module -Name OSDApps -RequiredVersion $version -Repository PSGallery -Path $downloadPath -Force -ErrorAction Stop
+                      Save-Module -Name OSDStage -RequiredVersion $version -Repository PSGallery -Path $downloadPath -Force -ErrorAction Stop
                       $downloaded = $true
                       break
                   }
@@ -127,14 +127,14 @@ jobs:
                   if ($attempt -lt $MaximumAttempts) { Start-Sleep -Seconds $RetryDelaySeconds }
               }
               if (-not $downloaded) {
-                  throw "Unable to download OSDApps $version for verification after $MaximumAttempts attempts. Publication is not verified. Last download error: $lastDownloadError"
+                  throw "Unable to download OSDStage $version for verification after $MaximumAttempts attempts. Publication is not verified. Last download error: $lastDownloadError"
               }
 
               # Retrieval can be delayed after a successful push. Content mismatches
               # are not retrieval failures and must fail immediately without a retry.
-              $publishedPath = Join-Path $downloadPath "OSDApps\$version"
+              $publishedPath = Join-Path $downloadPath "OSDStage\$version"
               if (-not (Test-Path -LiteralPath $publishedPath -PathType Container)) {
-                  throw "Published OSDApps $version was not downloaded for verification."
+                  throw "Published OSDStage $version was not downloaded for verification."
               }
 
               $localFiles = @(Get-ChildItem -LiteralPath $modulePath -Recurse -File)
@@ -156,7 +156,7 @@ jobs:
 
           # A pre-existing version must not masquerade as a successful new publication.
           if (Find-PublishedVersion) {
-              throw "OSDApps $version already exists before publication. PSGallery versions are immutable; do not retry publishing this version."
+              throw "OSDStage $version already exists before publication. PSGallery versions are immutable; do not retry publishing this version."
           }
           if ([string]::IsNullOrWhiteSpace($env:PSGALLERY_API_KEY)) {
               throw 'PSGALLERY_API_KEY is not available.'
@@ -182,5 +182,5 @@ jobs:
               Write-Host "The push returned 409, but PSGallery contains the exact verified release. Publication succeeded."
           }
           else {
-              Write-Host "OSDApps $version published and verified successfully."
+              Write-Host "OSDStage $version published and verified successfully."
           }

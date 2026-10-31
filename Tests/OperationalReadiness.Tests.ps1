@@ -2,10 +2,10 @@ BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Operational readiness and deployment results' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Path $PSScriptRoot -Parent
-        $script:manifestPath = Join-Path $script:moduleRoot 'OSDApps.psd1'
-        Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
+        $script:manifestPath = Join-Path $script:moduleRoot 'OSDStage.psd1'
+        Remove-Module OSDStage -Force -ErrorAction SilentlyContinue
         Import-Module $script:manifestPath -Force
-        . (Join-Path $script:moduleRoot 'Runtime/OSDAppPayloadFile.ps1')
+        . (Join-Path $script:moduleRoot 'Runtime/OSDStagePayloadFile.ps1')
 
         function New-OperationalDeploymentFixture {
             param(
@@ -13,43 +13,43 @@ Describe 'Operational readiness and deployment results' {
                 [switch]$IncludeBuiltInPayload
             )
 
-            $stage = Join-Path $Root 'Windows\Temp\OSDApps'
+            $stage = Join-Path $Root 'Windows\Temp\OSDStage'
             $setupDirectory = Join-Path $Root 'Windows\Setup\Scripts'
             $packageDirectory = Join-Path $stage 'Packages\ExampleApp'
             New-Item -ItemType Directory -Path $stage,$setupDirectory,$packageDirectory -Force | Out-Null
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Enter-OSDAppCacheLock.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Assert-OSDAppTransactionSpace.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Test-OSDAppOfficeCacheCompatibility.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppSleepPrevention.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppPayloadFile.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDApp7Zip.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppVisualStudioCode.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppPrerequisite.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppFont.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppCertificate.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDAppDriver.ps1') -Destination $stage
-            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppBuiltInCacheTransaction.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDStagePreInstall.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDStageRunner.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Enter-OSDStageCacheLock.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Assert-OSDStageTransactionSpace.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Restore-OSDStageCacheGeneration.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Test-OSDStageOfficeCacheCompatibility.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStageSleepPrevention.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStagePayloadFile.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStage7Zip.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStageVisualStudioCode.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStagePrerequisite.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStageFont.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStageCertificate.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStageDriver.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDStageBuiltInCacheTransaction.ps1') -Destination $stage
 
             $archive = Join-Path $packageDirectory 'Package.zip'
             Set-Content -LiteralPath $archive -Value 'known package bytes' -Encoding ASCII
             $sha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
             $deploymentId = [guid]::NewGuid().Guid
             [ordered]@{
-                SchemaVersion = 1
+                SchemaVersion = 2
                 DeploymentId = $deploymentId
                 Runtime = [ordered]@{
                     CleanupMode = 'OnSuccess'
                     CacheVolumeLabel = 'OSDCloud'
-                    LogPath = '%ProgramData%\OSDApps\Logs\Runtime.log'
-                    ResultPath = '%ProgramData%\OSDApps\Results\Latest.json'
+                    LogPath = '%ProgramData%\OSDStage\Logs\Runtime.log'
+                    ResultPath = '%ProgramData%\OSDStage\Results\Latest.json'
                 }
-                Apps = @(
+                Packages = @(
                     [ordered]@{
                         Id = 'ExampleApp'; DisplayName = 'Example App'; Source = 'Repository'
-                        Version = '1.0.0'; Architecture = 'x64'; Archive = @{ Sha256 = $sha256 }
+                        Version = '1.0.0'; Architecture = 'x64'; Payload = @{ Sha256 = $sha256 }
                     },
                     [ordered]@{
                         Id = 'MicrosoftTeams'; DisplayName = 'Microsoft Teams'; Source = 'BuiltIn'
@@ -64,15 +64,15 @@ Describe 'Operational readiness and deployment results' {
 
             @(
                 '@echo off'
-                ':: OSDApps PreInstall'
-                'powershell.exe -File Invoke-OSDAppPreInstall.ps1'
-                'set "OSDAPPS_PREINSTALL_EXITCODE=%ERRORLEVEL%"'
-                'if not "%OSDAPPS_PREINSTALL_EXITCODE%"=="0" exit /b %OSDAPPS_PREINSTALL_EXITCODE%'
-                ':: OSDApps Begin'
-                'powershell.exe -File Invoke-OSDAppRunner.ps1'
-                'set "OSDAPPS_EXITCODE=%ERRORLEVEL%"'
-                'if not "%OSDAPPS_EXITCODE%"=="0" exit /b %OSDAPPS_EXITCODE%'
-                ':: OSDApps End'
+                ':: OSDStage PreInstall'
+                'powershell.exe -File Invoke-OSDStagePreInstall.ps1'
+                'set "OSDStage_PREINSTALL_EXITCODE=%ERRORLEVEL%"'
+                'if not "%OSDStage_PREINSTALL_EXITCODE%"=="0" exit /b %OSDStage_PREINSTALL_EXITCODE%'
+                ':: OSDStage Begin'
+                'powershell.exe -File Invoke-OSDStageRunner.ps1'
+                'set "OSDStage_EXITCODE=%ERRORLEVEL%"'
+                'if not "%OSDStage_EXITCODE%"=="0" exit /b %OSDStage_EXITCODE%'
+                ':: OSDStage End'
             ) | Set-Content -LiteralPath (Join-Path $setupDirectory 'SetupComplete.cmd') -Encoding ASCII
 
             if ($IncludeBuiltInPayload) {
@@ -80,18 +80,18 @@ Describe 'Operational readiness and deployment results' {
                 New-Item -ItemType Directory -Path $teams -Force | Out-Null
                 Set-Content -LiteralPath (Join-Path $teams 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding ASCII
                 Set-Content -LiteralPath (Join-Path $teams 'MSTeams-x64.msix') -Value 'msix' -Encoding ASCII
-                Set-OSDAppsTestPayloadInfo -Path (Join-Path $teams 'MSTeams-x64.msix') -Id MicrosoftTeams
+                Set-OSDStageTestPayloadInfo -Path (Join-Path $teams 'MSTeams-x64.msix') -Id MicrosoftTeams
             }
 
             $manifestPath = Join-Path $stage 'DeviceManifest.json'
             $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-            Set-OSDAppManifestPayload -App $manifest.Apps[1] -StagedPath $stage -AllowPending
+            Set-OSDStageManifestPayload -App $manifest.Packages[1] -StagedPath $stage -AllowPending
             $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
             [pscustomobject]@{
                 Root = $Root
                 Stage = $stage
-                Archive = $archive
+                Payload = $archive
                 DeploymentId = $deploymentId
             }
         }
@@ -99,14 +99,14 @@ Describe 'Operational readiness and deployment results' {
 
     It 'accepts an online-ready deployment and reports the missing built-in payload' {
         $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive 'OnlineReady')
-        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
+        $result = Test-OSDStageDeployment -WindowsPath $fixture.Root
 
         $result.Valid | Should -BeTrue
         $result.OfflineReady | Should -BeFalse
         $result.NetworkRequired | Should -BeTrue
         $result.DeploymentId | Should -Be $fixture.DeploymentId
-        @($result.Apps).Count | Should -Be 2
-        ($result.Apps | Where-Object Id -eq 'MicrosoftTeams').PayloadReady | Should -BeFalse
+        @($result.Packages).Count | Should -Be 2
+        ($result.Packages | Where-Object Id -eq 'MicrosoftTeams').PayloadReady | Should -BeFalse
     }
 
     It 'accepts only a Boolean when optional PreventSleep is present' -TestCases @(
@@ -121,33 +121,33 @@ Describe 'Operational readiness and deployment results' {
         $manifest = Get-Content $manifestFile -Raw | ConvertFrom-Json
         $manifest.Runtime | Add-Member NoteProperty PreventSleep $Value
         $manifest | ConvertTo-Json -Depth 20 | Set-Content $manifestFile -Encoding UTF8
-        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
+        $result = Test-OSDStageDeployment -WindowsPath $fixture.Root
         ($result.Checks | Where-Object Name -eq 'RuntimeConfiguration').Passed | Should -Be $Expected
     }
 
     It 'rejects missing or changed sleep prevention runtime content' {
         $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive 'SleepHelper')
-        $helper = Join-Path $fixture.Stage 'OSDAppSleepPrevention.ps1'
+        $helper = Join-Path $fixture.Stage 'OSDStageSleepPrevention.ps1'
         Add-Content $helper '# Unexpected change'
-        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
+        $result = Test-OSDStageDeployment -WindowsPath $fixture.Root
         ($result.Checks | Where-Object Name -eq 'RuntimeVersion').Passed | Should -BeFalse
         Remove-Item $helper
-        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
+        $result = Test-OSDStageDeployment -WindowsPath $fixture.Root
         ($result.Checks | Where-Object Name -eq 'RuntimeScripts').Passed | Should -BeFalse
     }
 
     It 'enforces hard offline readiness when requested' {
         $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive 'OfflineRequired')
-        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root -RequireOfflineReady
+        $result = Test-OSDStageDeployment -WindowsPath $fixture.Root -RequireOfflineReady
 
         $result.Valid | Should -BeFalse
-        { Test-OSDAppDeployment -WindowsPath $fixture.Root -RequireOfflineReady -ThrowOnFailure } |
+        { Test-OSDStageDeployment -WindowsPath $fixture.Root -RequireOfflineReady -ThrowOnFailure } |
             Should -Throw '*MicrosoftTeams*'
     }
 
     It 'accepts a complete offline deployment' {
         $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive 'OfflineReady') -IncludeBuiltInPayload
-        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root -RequireOfflineReady
+        $result = Test-OSDStageDeployment -WindowsPath $fixture.Root -RequireOfflineReady
 
         $result.Valid | Should -BeTrue
         $result.OfflineReady | Should -BeTrue
@@ -156,9 +156,9 @@ Describe 'Operational readiness and deployment results' {
 
     It 'rejects a corrupted repository archive in every mode' {
         $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive 'CorruptArchive')
-        Set-Content -LiteralPath $fixture.Archive -Value 'tampered bytes' -Encoding ASCII
+        Set-Content -LiteralPath $fixture.Payload -Value 'tampered bytes' -Encoding ASCII
 
-        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
+        $result = Test-OSDStageDeployment -WindowsPath $fixture.Root
         $result.Valid | Should -BeFalse
         ($result.Checks | Where-Object { $_.Name -eq 'AppDefinition' -and $_.AppId -eq 'ExampleApp' }).Passed |
             Should -BeFalse
@@ -172,13 +172,13 @@ Describe 'Operational readiness and deployment results' {
         $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive "Single-$Source") -IncludeBuiltInPayload
         $path = Join-Path $fixture.Stage 'DeviceManifest.json'
         $manifest = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-        $manifest.Apps = @($manifest.Apps | Where-Object Source -eq $Source)
+        $manifest.Packages = @($manifest.Packages | Where-Object Source -eq $Source)
         $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $path -Encoding UTF8
 
-        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root -RequireOfflineReady -ThrowOnFailure
+        $result = Test-OSDStageDeployment -WindowsPath $fixture.Root -RequireOfflineReady -ThrowOnFailure
         $result.Valid | Should -BeTrue
         $result.OfflineReady | Should -BeTrue
-        $result.AppCount | Should -Be 1
+        $result.PackageCount | Should -Be 1
         ($result.Checks | Where-Object Name -eq 'AppQueue').Passed | Should -BeTrue
     }
 
@@ -192,46 +192,46 @@ Describe 'Operational readiness and deployment results' {
         $path = Join-Path $fixture.Stage 'DeviceManifest.json'
         $manifest = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
         switch ($Case) {
-            'Empty' { $manifest.Apps = @() }
-            'Duplicate' { $manifest.Apps = @($manifest.Apps[1], $manifest.Apps[1]) }
-            'InvalidId' { $manifest.Apps = @($manifest.Apps[1]); $manifest.Apps[0].Id = 'Invalid..Id' }
+            'Empty' { $manifest.Packages = @() }
+            'Duplicate' { $manifest.Packages = @($manifest.Packages[1], $manifest.Packages[1]) }
+            'InvalidId' { $manifest.Packages = @($manifest.Packages[1]); $manifest.Packages[0].Id = 'Invalid..Id' }
         }
         $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $path -Encoding UTF8
 
-        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
+        $result = Test-OSDStageDeployment -WindowsPath $fixture.Root
         $result.Valid | Should -BeFalse
         ($result.Checks | Where-Object Name -eq 'AppQueue').Passed | Should -BeFalse
-        { Test-OSDAppDeployment -WindowsPath $fixture.Root -ThrowOnFailure } | Should -Throw '*App queue*'
+        { Test-OSDStageDeployment -WindowsPath $fixture.Root -ThrowOnFailure } | Should -Throw '*App queue*'
     }
 
     It 'rejects a staged runtime that differs from the loaded module' {
         $fixture = New-OperationalDeploymentFixture -Root (Join-Path $TestDrive 'RuntimeMismatch')
-        Add-Content -LiteralPath (Join-Path $fixture.Stage 'Invoke-OSDAppRunner.ps1') -Value '# altered'
+        Add-Content -LiteralPath (Join-Path $fixture.Stage 'Invoke-OSDStageRunner.ps1') -Value '# altered'
 
-        $result = Test-OSDAppDeployment -WindowsPath $fixture.Root
+        $result = Test-OSDStageDeployment -WindowsPath $fixture.Root
         $result.Valid | Should -BeFalse
         ($result.Checks | Where-Object Name -eq 'RuntimeVersion').Passed | Should -BeFalse
     }
 
     It 'reads a valid machine-readable deployment result' {
         $path = Join-Path $TestDrive 'Latest.json'
-        @{ SchemaVersion='1.0'; DeploymentId='test'; Status='Succeeded'; Apps=@() } |
+        @{ SchemaVersion='2.0'; DeploymentId='test'; Status='Succeeded'; Packages=@() } |
             ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $path -Encoding UTF8
 
-        $result = Get-OSDAppDeploymentResult -Path $path
+        $result = Get-OSDStageDeploymentResult -Path $path
         $result.Status | Should -Be 'Succeeded'
         $result.ResultPath | Should -Be $path
-        $result.PSObject.TypeNames[0] | Should -Be 'OSDApps.DeploymentResult'
+        $result.PSObject.TypeNames[0] | Should -Be 'OSDStage.DeploymentResult'
     }
 
     It 'rejects malformed or incomplete deployment results' {
         $malformed = Join-Path $TestDrive 'Malformed.json'
         $incomplete = Join-Path $TestDrive 'Incomplete.json'
         Set-Content -LiteralPath $malformed -Value '{ invalid' -Encoding UTF8
-        @{ SchemaVersion='1.0' } | ConvertTo-Json | Set-Content -LiteralPath $incomplete -Encoding UTF8
+        @{ SchemaVersion='2.0' } | ConvertTo-Json | Set-Content -LiteralPath $incomplete -Encoding UTF8
 
-        { Get-OSDAppDeploymentResult -Path $malformed } | Should -Throw '*not valid JSON*'
-        { Get-OSDAppDeploymentResult -Path $incomplete } | Should -Throw '*missing required properties*'
+        { Get-OSDStageDeploymentResult -Path $malformed } | Should -Throw '*not valid JSON*'
+        { Get-OSDStageDeploymentResult -Path $incomplete } | Should -Throw '*missing required properties*'
     }
 
     It 'validates an explicit repository cache and detects tampering' {
@@ -242,23 +242,23 @@ Describe 'Operational readiness and deployment results' {
         Set-Content -LiteralPath $archive -Value 'cache bytes' -Encoding ASCII
         $sha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
         @{
-            SchemaVersion=1; GeneratedAt=(Get-Date).ToUniversalTime().ToString('o')
-            Packages=@(@{Id='ExampleApp';DisplayName='Example App';Version='1.0';Architecture='x64';Archive=@{Sha256=$sha256}})
+            SchemaVersion=2; GeneratedAt=(Get-Date).ToUniversalTime().ToString('o')
+            Packages=@(@{Id='ExampleApp';DisplayName='Example App';Version='1.0';Architecture='x64';Payload=@{Sha256=$sha256}})
         } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $cache 'CacheCatalog.json') -Encoding UTF8
 
-        $valid = Test-OSDAppCache -CachePath $cache -VerifySignatures
+        $valid = Test-OSDStageCache -CachePath $cache -VerifySignatures
         $valid.Valid | Should -BeTrue
         $valid.EntryCount | Should -Be 1
         $valid.SignatureChecksComplete | Should -BeTrue
 
         Set-Content -LiteralPath $archive -Value 'tampered cache bytes' -Encoding ASCII
-        $invalid = Test-OSDAppCache -CachePath $cache
+        $invalid = Test-OSDStageCache -CachePath $cache
         $invalid.Valid | Should -BeFalse
         $invalid.InvalidEntryCount | Should -Be 1
     }
 
     It 'returns a stable unavailable summary when no cache exists' {
-        $result = Test-OSDAppCache -CachePath (Join-Path $TestDrive 'AbsentCache')
+        $result = Test-OSDStageCache -CachePath (Join-Path $TestDrive 'AbsentCache')
         $result.CacheAvailable | Should -BeFalse
         $result.Valid | Should -BeFalse
         $result.EntryCount | Should -Be 0
@@ -271,19 +271,19 @@ Describe 'Operational readiness and deployment results' {
         New-Item -ItemType Directory -Path $stage -Force | Out-Null
         $deploymentId = [guid]::NewGuid().Guid
         @{
-            SchemaVersion=1; DeploymentId=$deploymentId; Apps=@()
+            SchemaVersion=2; DeploymentId=$deploymentId; Packages=@()
             Runtime=@{CleanupMode='Never';CacheVolumeLabel='OSDCloud';LogPath=$logPath;ResultPath=$resultPath}
         } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $stage 'DeviceManifest.json') -Encoding UTF8
 
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1') -StagedPath $stage
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDStagePreInstall.ps1') -StagedPath $stage
         $LASTEXITCODE | Should -Be 0
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1') -StagedPath $stage
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDStageRunner.ps1') -StagedPath $stage
         $LASTEXITCODE | Should -Be 0
 
-        $result = Get-OSDAppDeploymentResult -Path $resultPath
+        $result = Get-OSDStageDeploymentResult -Path $resultPath
         $result.Status | Should -Be 'Succeeded'
         $result.DeploymentId | Should -Be $deploymentId
-        $result.ExpectedAppCount | Should -Be 0
+        $result.ExpectedPackageCount | Should -Be 0
         $result.CleanupMode | Should -Be 'Never'
         $result.PreInstall.Status | Should -Be 'Succeeded'
         $result.PreInstall.DeploymentId | Should -Be $deploymentId

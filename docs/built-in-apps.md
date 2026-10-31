@@ -2,7 +2,7 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Repository apps and scripts](repository.md)
 
-Built-in **software installers** use vendor-native acquisition and installation instead of the repository package contract. Built-in scripts, such as Windows Inbox Cleanup, ship with OSDApps itself and are staged directly without network access or an app repository.
+Built-in **software installers** use vendor-native acquisition and installation instead of the repository package contract. Built-in scripts, such as Windows Inbox Cleanup, ship with OSDStage itself and are staged directly without network access or an app repository.
 
 App built-ins default to x64. Runtime prerequisite cmdlets require one explicit architecture (x86 or x64). Supported choices differ by product; support in the interface is separate from [field validation](testing.md#validated-built-ins-and-remaining-variants).
 
@@ -23,10 +23,10 @@ App built-ins default to x64. Runtime prerequisite cmdlets require one explicit 
 
 ## Windows optional features
 
-`Add-OSDAppWindowsFeature` stages explicit Windows optional feature names and applies them once during SetupComplete under SYSTEM. OSDApps does not maintain a feature-name catalog, offer feature-name autocomplete, infer dependencies, or select source media. The operator is responsible for supplying feature names that exist on the target Windows build.
+`Add-OSDStageWindowsFeature` stages explicit Windows optional feature names and applies them once during SetupComplete under SYSTEM. OSDStage does not maintain a feature-name catalog, offer feature-name autocomplete, infer dependencies, or select source media. The operator is responsible for supplying feature names that exist on the target Windows build.
 
 ```powershell
-Add-OSDAppWindowsFeature -Enable @(
+Add-OSDStageWindowsFeature -Enable @(
     'NetFx3',
     'Microsoft-Windows-Subsystem-Linux'
 ) -Disable @(
@@ -36,9 +36,9 @@ Add-OSDAppWindowsFeature -Enable @(
 
 The staged `WindowsFeatures` built-in is a Script and requires no repository, USB cache, or network acquisition. Repeated Add calls build one operation set; the most recently staged desired state for a feature replaces its earlier state. Supplying the same feature to both `-Enable` and `-Disable` in one call is rejected.
 
-SetupComplete queries the current state before changing anything. Already enabled/disabled features succeed idempotently. Remaining operations are still attempted when one feature fails. The aggregate script returns failure when any operation failed. Windows servicing is always called with `-NoRestart`; OSDApps records `RestartNeeded` and may return the normal 3010 success code to Runner, but does not reboot the device.
+SetupComplete queries the current state before changing anything. Already enabled/disabled features succeed idempotently. Remaining operations are still attempted when one feature fails. The aggregate script returns failure when any operation failed. Windows servicing is always called with `-NoRestart`; OSDStage records `RestartNeeded` and may return the normal 3010 success code to Runner, but does not reboot the device.
 
-Results are written to `%ProgramData%\OSDApps\Results\WindowsFeatures-Result.json` by default. No DISM source/media management is included in this first implementation.
+Results are written to `%ProgramData%\OSDStage\Results\WindowsFeatures-Result.json` by default. No DISM source/media management is included in this first implementation.
 
 ## Windows Inbox Cleanup
 
@@ -46,25 +46,25 @@ The optional **built-in script** is staged in WinPE and runs once in SetupComple
 
 ```powershell
 # WinPE after OSDCloud. No CatalogUri or USB cache is needed.
-Import-Module OSDApps
-Add-OSDAppWindowsInboxCleanup -Preset Tested13
-Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
+Import-Module OSDStage
+Add-OSDStageWindowsInboxCleanup -Preset Tested13
+Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure
 ```
 
-The `Tested13` preset matches the 13 package names tested on Windows 11 25H2 during the repository proof of concept. The preset is opt-in: simply importing OSDApps never removes anything. For a custom list:
+The `Tested13` preset matches the 13 package names tested on Windows 11 25H2 during the repository proof of concept. The preset is opt-in: simply importing OSDStage never removes anything. For a custom list:
 
 ```powershell
-Add-OSDAppWindowsInboxCleanup -Remove @(
+Add-OSDStageWindowsInboxCleanup -Remove @(
     'Microsoft.BingWeather',
     'Microsoft.MicrosoftSolitaireCollection'
 )
 ```
 
-Use `-DiagnoseOnly` to inspect and log selected packages during SetupComplete without removing them. OSDApps copies the script plus `config.json` from the module to `BuiltIn\WindowsInboxCleanup` in the offline Windows staging folder, pins their SHA-256 hashes in `DeviceManifest.json`, and validates both before execution. The built-in script does not use Azure Blob Storage, package archives, publisher URLs or pre-install downloads. `Remove-OSDAppStaging -Name WindowsInboxCleanup` can remove it from the pending queue in WinPE.
+Use `-DiagnoseOnly` to inspect and log selected packages during SetupComplete without removing them. OSDStage copies the script plus `config.json` from the module to `BuiltIn\WindowsInboxCleanup` in the offline Windows staging folder, pins their SHA-256 hashes in `DeviceManifest.json`, and validates both before execution. The built-in script does not use Azure Blob Storage, package archives, publisher URLs or pre-install downloads. `Remove-OSDStageStaging -Name WindowsInboxCleanup` can remove it from the pending queue in WinPE.
 
 The earlier standalone repository package is named `WindowsInboxAppCleanup`; the new built-in ID is `WindowsInboxCleanup`, so both identities remain distinct. Avoid selecting both on the same device.
 
-After the first boot, check `%ProgramData%\OSDApps\Results\Latest.json`, `%ProgramData%\OSDApps\Results\InboxCleanup-Result.json`, and `%ProgramData%\OSDApps\Logs\InboxCleanup.log`. Additional early diagnostics are written to `%SystemRoot%\Temp\OSDApps-InboxCleanup-Diagnostics.log`. A successful OSDApps result is not a replacement for post-Autopilot verification.
+After the first boot, check `%ProgramData%\OSDStage\Results\Latest.json`, `%ProgramData%\OSDStage\Results\InboxCleanup-Result.json`, and `%ProgramData%\OSDStage\Logs\InboxCleanup.log`. Additional early diagnostics are written to `%SystemRoot%\Temp\OSDStage-InboxCleanup-Diagnostics.log`. A successful OSDStage result is not a replacement for post-Autopilot verification.
 
 ## Installer filenames
 
@@ -102,9 +102,9 @@ CI validates the file against the module's exported built-in Add commands so a n
 
 ## Vendor-only source policy
 
-Built-in third-party software installers are always sourced directly from their software vendor. OSDApps-owned built-in scripts are bundled as text in the module and do not download installers.
+Built-in third-party software installers are always sourced directly from their software vendor. OSDStage-owned built-in scripts are bundled as text in the module and do not download installers.
 
-OSDApps does not contain, embed, mirror, redistribute, or publish built-in app installers or payloads. The module only contains acquisition and installation logic plus vendor-owned URLs or supported endpoints.
+OSDStage does not contain, embed, mirror, redistribute, or publish built-in app installers or payloads. The module only contains acquisition and installation logic plus vendor-owned URLs or supported endpoints.
 
 ```text
 Vendor
@@ -114,11 +114,11 @@ Vendor
 → installation
 ```
 
-The OSDCloud USB cache is only a local deployment cache of vendor content. It is never a distribution source maintained by OSDApps.
+The OSDCloud USB cache is only a local deployment cache of vendor content. It is never a distribution source maintained by OSDStage.
 
-This rule is absolute for built-in **software products**: if an installer cannot be obtained directly and maintainably from the vendor, it is not eligible for built-in installer support. The Windows Inbox Cleanup script is a separate OSDApps-maintained configuration action, not a third-party redistributable.
+This rule is absolute for built-in **software products**: if an installer cannot be obtained directly and maintainably from the vendor, it is not eligible for built-in installer support. The Windows Inbox Cleanup script is a separate OSDStage-maintained configuration action, not a third-party redistributable.
 
-Repository apps are different. Repository content is controlled by the repository owner, and OSDApps does not prescribe where that organization obtains or hosts those packages.
+Repository apps are different. Repository content is controlled by the repository owner, and OSDStage does not prescribe where that organization obtains or hosts those packages.
 
 ## Authenticode and publisher policy (0.34.0)
 
@@ -154,20 +154,20 @@ the limited bootstrapper/ODT EXE checks. Adobe ZIP is **not** reported as
 having a verified Authenticode signature. Certificate trust/revocation
 may require network access independently of vendor URL availability.
 
-The read-only OSDApps Viewer enables signature inspection by default on
+The read-only OSDStage Viewer enables signature inspection by default on
 full Windows, reports it as unavailable in WinPE, and permits the optional
 `-SkipSignatureVerification` for isolated viewing only. This flag does not
 relax built-in sync or SetupComplete security policy. The existing
-`Get-OSDAppCache` CLI remains opt-in with `-VerifySignatures`.
+`Get-OSDStageCache` CLI remains opt-in with `-VerifySignatures`.
 
 ## Configuration and synchronization
 
-Each built-in has its own cmdlet and parameter set. Run `Sync-OSDApp*` on the full-Windows preparation machine and `Add-OSDApp*` in WinPE after Windows has been applied. Examples below show configuration alternatives; they are not a single script to run in one environment.
+Each built-in has its own cmdlet and parameter set. Run `Sync-OSDStage*` on the full-Windows preparation machine and `Add-OSDStage*` in WinPE after Windows has been applied. Examples below show configuration alternatives; they are not a single script to run in one environment.
 
 ### Microsoft 365 Apps
 
 ```powershell
-Sync-OSDAppMicrosoft365Apps `
+Sync-OSDStageMicrosoft365Apps `
     -Channel Current `
     -Architecture x64 `
     -ProductId O365ProPlusRetail `
@@ -206,33 +206,33 @@ ODT configuration XML still uses OfficeClientEdition=64/32.
 
 The Office cache contains the Office Deployment Tool, `configuration.xml`, and `Office\Data`.
 
-The built-in Office configuration uses a shared XML generator for `Add-OSDAppMicrosoft365Apps` and `Sync-OSDAppMicrosoft365Apps`. The common parameters are `Architecture` (x86/x64, x64 by default), `Channel`, `ProductId`, `Language`, `UpdatesEnabled`, `AcceptEula`, `SharedComputerLicensing`, `DeviceBasedLicensing`, and `ExcludeApp`. Optional `IncludeVisio` and `IncludeProject` switches include `VisioProRetail` and `ProjectProRetail` as separate Office Deployment Tool products. Each product gets the requested languages; exclusions apply only to Microsoft 365 Apps. The respective licenses must be assigned separately.
+The built-in Office configuration uses a shared XML generator for `Add-OSDStageMicrosoft365Apps` and `Sync-OSDStageMicrosoft365Apps`. The common parameters are `Architecture` (x86/x64, x64 by default), `Channel`, `ProductId`, `Language`, `UpdatesEnabled`, `AcceptEula`, `SharedComputerLicensing`, `DeviceBasedLicensing`, and `ExcludeApp`. Optional `IncludeVisio` and `IncludeProject` switches include `VisioProRetail` and `ProjectProRetail` as separate Office Deployment Tool products. Each product gets the requested languages; exclusions apply only to Microsoft 365 Apps. The respective licenses must be assigned separately.
 
 ```powershell
 # Without cached configuration: Enterprise x64, Current channel, en-us, updates on
-Add-OSDAppMicrosoft365Apps
+Add-OSDStageMicrosoft365Apps
 
 # Typical Dutch Office with monthly enterprise updates and Visio/Project
-Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language nl-nl -IncludeVisio -IncludeProject
+Add-OSDStageMicrosoft365Apps -Channel MonthlyEnterprise -Language nl-nl -IncludeVisio -IncludeProject
 
 # Shared workstation with licensed individual users
-Add-OSDAppMicrosoft365Apps -SharedComputerLicensing $true
+Add-OSDStageMicrosoft365Apps -SharedComputerLicensing $true
 
 # Specialized device-based licensing, requiring an eligible device license
-Add-OSDAppMicrosoft365Apps -DeviceBasedLicensing $true
+Add-OSDStageMicrosoft365Apps -DeviceBasedLicensing $true
 
 # Disable Office updates (manage Office updates separately)
-Add-OSDAppMicrosoft365Apps -UpdatesEnabled $false
+Add-OSDStageMicrosoft365Apps -UpdatesEnabled $false
 ```
 
-When no Office configuration parameter is supplied to `Add-OSDAppMicrosoft365Apps`, a usable cached configuration can be retained. Specify the channel, language and other required choices explicitly when you want to override it. The README does this for MonthlyEnterprise/en-us.
+When no Office configuration parameter is supplied to `Add-OSDStageMicrosoft365Apps`, a usable cached configuration can be retained. Specify the channel, language and other required choices explicitly when you want to override it. The README does this for MonthlyEnterprise/en-us.
 
 For advanced or unusual configurations, export XML from Microsoft's Office Customization Tool and pass `-ConfigurationXml <path>`. The supplied XML is checked only for file existence and well-formed XML syntax (without DTD or external entity resolution), then preserved without modification. Office Deployment Tool validates its own products, channels, languages and other configuration semantics. Do not simultaneously supply conflicting generated configuration switches; the custom XML takes precedence.
 
 ### Microsoft Teams
 
 ```powershell
-Sync-OSDAppMicrosoftTeams -Architecture x64
+Sync-OSDStageMicrosoftTeams -Architecture x64
 ```
 
 Supported architectures:
@@ -258,12 +258,12 @@ Adobe Acrobat Unified supports Adobe's official x64 and x86 unified Acrobat/Read
 
 ```powershell
 # x64 is the default
-Sync-OSDAppAdobeAcrobatUnified
-Add-OSDAppAdobeAcrobatUnified
+Sync-OSDStageAdobeAcrobatUnified
+Add-OSDStageAdobeAcrobatUnified
 
 # optional x86
-Sync-OSDAppAdobeAcrobatUnified -Architecture x86
-Add-OSDAppAdobeAcrobatUnified -Architecture x86
+Sync-OSDStageAdobeAcrobatUnified -Architecture x86
+Add-OSDStageAdobeAcrobatUnified -Architecture x86
 ```
 
 The cache contains:
@@ -287,12 +287,12 @@ Setup.exe /sAll /msi ADDLOCAL=ALL
 The Adobe installation timeout defaults to 15 minutes. While Setup.exe is running, the runner logs a heartbeat every 60 seconds. Override the timeout when needed:
 
 ```powershell
-Add-OSDAppAdobeAcrobatUnified -InstallTimeoutMinutes 20
+Add-OSDStageAdobeAcrobatUnified -InstallTimeoutMinutes 20
 ```
 
 x64 is used when `-Architecture` is omitted. x86 and x64 caches are kept separately so a single OSDCloud USB can hold both variants.
 
-During WinPE, a populated USB cache is staged to the same architecture-specific directory on the Windows disk, retaining the vendor ZIP filename. For example: `Windows\Temp\OSDApps\BuiltIn\AdobeAcrobatUnified\x64\Acrobat_DC_Web_x64_WWMUI.zip`. If the cache is empty, the runtime downloads it later. Staging verifies that the copied file exists and its size matches the USB source.
+During WinPE, a populated USB cache is staged to the same architecture-specific directory on the Windows disk, retaining the vendor ZIP filename. For example: `Windows\Temp\OSDStage\BuiltIn\AdobeAcrobatUnified\x64\Acrobat_DC_Web_x64_WWMUI.zip`. If the cache is empty, the runtime downloads it later. Staging verifies that the copied file exists and its size matches the USB source.
 
 ### Google Chrome Enterprise
 
@@ -300,12 +300,12 @@ Google Chrome Enterprise uses Google's official Enterprise MSI directly from Goo
 
 ```powershell
 # x64 default
-Sync-OSDAppGoogleChromeEnterprise
-Add-OSDAppGoogleChromeEnterprise
+Sync-OSDStageGoogleChromeEnterprise
+Add-OSDStageGoogleChromeEnterprise
 
 # optional x86
-Sync-OSDAppGoogleChromeEnterprise -Architecture x86
-Add-OSDAppGoogleChromeEnterprise -Architecture x86
+Sync-OSDStageGoogleChromeEnterprise -Architecture x86
+Add-OSDStageGoogleChromeEnterprise -Architecture x86
 ```
 
 Cache layout:
@@ -332,16 +332,16 @@ Mozilla Firefox Enterprise uses Mozilla's official MSI redirect endpoint. Both R
 
 ```powershell
 # Rapid Release, x64, en-US
-Sync-OSDAppMozillaFirefoxEnterprise
-Add-OSDAppMozillaFirefoxEnterprise
+Sync-OSDStageMozillaFirefoxEnterprise
+Add-OSDStageMozillaFirefoxEnterprise
 
 # ESR
-Sync-OSDAppMozillaFirefoxEnterprise -Channel ESR
-Add-OSDAppMozillaFirefoxEnterprise -Channel ESR
+Sync-OSDStageMozillaFirefoxEnterprise -Channel ESR
+Add-OSDStageMozillaFirefoxEnterprise -Channel ESR
 
 # x86 or another Mozilla locale
-Sync-OSDAppMozillaFirefoxEnterprise -Architecture x86 -Language nl
-Add-OSDAppMozillaFirefoxEnterprise -Architecture x86 -Language nl
+Sync-OSDStageMozillaFirefoxEnterprise -Architecture x86 -Language nl
+Add-OSDStageMozillaFirefoxEnterprise -Architecture x86 -Language nl
 ```
 
 Cache layout keeps channel, architecture, and language isolated:
@@ -380,16 +380,16 @@ These x64/ARM64 URLs are listed in Cisco's [Webex App installation guide](https:
 
 ```powershell
 # Full Windows: prepare a warm OSDCloud USB cache (optional)
-Sync-OSDAppCiscoWebex
-Sync-OSDAppCiscoWebex -Architecture arm64
+Sync-OSDStageCiscoWebex
+Sync-OSDStageCiscoWebex -Architecture arm64
 
 # WinPE: stage installation intent + any existing cached MSI
-Add-OSDAppCiscoWebex
-Add-OSDAppCiscoWebex -Architecture arm64
+Add-OSDStageCiscoWebex
+Add-OSDStageCiscoWebex -Architecture arm64
 
 # Configure installation only when needed
-Add-OSDAppCiscoWebex -PreventPreLoginUpdates $true -EnableOutlookIntegration $true -EmailHint '$userPrincipalName'
-Add-OSDAppCiscoWebex -DefaultTheme Light -AdditionalMsiProperties 'INSTALLWV2=1'
+Add-OSDStageCiscoWebex -PreventPreLoginUpdates $true -EnableOutlookIntegration $true -EmailHint '$userPrincipalName'
+Add-OSDStageCiscoWebex -DefaultTheme Light -AdditionalMsiProperties 'INSTALLWV2=1'
 ```
 
 Cache and WinPE destination (the same relative path, preventing staging mismatches):
@@ -404,7 +404,7 @@ BuiltIn\CiscoWebex\
     └── CacheInfo.json
 ```
 
-The generic `VendorMsi` runner uses `msiexec.exe /i "<vendor-installer>.msi" /qn /norestart` plus the manifest's `MsiProperties`, accepts exit codes 0 and 3010, and honors `-InstallTimeoutMinutes` (default 10). OSDApps caches the installer for **future OS deployments**; Webex's own user-session update mechanism is independent of the MSI cache.
+The generic `VendorMsi` runner uses `msiexec.exe /i "<vendor-installer>.msi" /qn /norestart` plus the manifest's `MsiProperties`, accepts exit codes 0 and 3010, and honors `-InstallTimeoutMinutes` (default 10). OSDStage caches the installer for **future OS deployments**; Webex's own user-session update mechanism is independent of the MSI cache.
 
 | Add parameter | Default | MSI behavior |
 | --- | --- | --- |
@@ -431,7 +431,7 @@ The freshness mechanism is product-specific:
 
 | App | Update check | Download behavior |
 | --- | --- | --- |
-| Microsoft 365 Apps | PreInstall checks configuration compatibility, generation consistency and the channel version CAB (or an exact build pin) | A current compatible generation is reused. Otherwise ODT downloads into a separate new generation, validated before replacement. Explicit `Sync-OSDAppMicrosoft365Apps` still acquires a fresh generation. |
+| Microsoft 365 Apps | PreInstall checks configuration compatibility, generation consistency and the channel version CAB (or an exact build pin) | A current compatible generation is reused. Otherwise ODT downloads into a separate new generation, validated before replacement. Explicit `Sync-OSDStageMicrosoft365Apps` still acquires a fresh generation. |
 | Microsoft Teams | HTTP metadata for the official MSIX: `ETag` preferred, otherwise `Last-Modified + Content-Length` | MSIX is downloaded only when the metadata changed or no valid cached MSIX exists. The Teams bootstrapper is refreshed on every online sync. |
 | Adobe Acrobat Unified | HTTP metadata for the official Adobe ZIP: `ETag` preferred, otherwise `Last-Modified + Content-Length` | The vendor ZIP is downloaded only when the remote metadata changed or no cached ZIP exists. |
 | Google Chrome Enterprise | HTTP metadata for the official Enterprise MSI: `ETag` preferred, otherwise `Last-Modified + Content-Length` | The vendor MSI is downloaded only when the remote metadata changed or no cached MSI exists. |
@@ -440,7 +440,7 @@ The freshness mechanism is product-specific:
 
 ### HTTP metadata comparison
 
-For Teams, Adobe Acrobat Unified, Google Chrome Enterprise, Mozilla Firefox Enterprise, and Cisco Webex, OSDApps first asks the vendor endpoint for remote file metadata.
+For Teams, Adobe Acrobat Unified, Google Chrome Enterprise, Mozilla Firefox Enterprise, and Cisco Webex, OSDStage first asks the vendor endpoint for remote file metadata.
 
 The comparison order is:
 
@@ -463,7 +463,7 @@ reuse and fallback for the current deployment; see [acquisition reporting](runti
 
 Microsoft 365 Apps does not use the generic HTTP metadata comparison for the Office payload.
 
-OSDApps runs the Office Deployment Tool in download mode with the staged configuration:
+OSDStage runs the Office Deployment Tool in download mode with the staged configuration:
 
 ```text
 setup.exe /download configuration.xml
@@ -491,11 +491,11 @@ The metadata request has a 30-second timeout and native CAB extraction has a
 The temporary descriptor is
 removed on success and failure, and is never copied over a cached CAB.
 
-When acquisition is needed, ODT acquires the requested channel, architecture, products and languages into a new sibling directory. OSDApps does not seed that directory with the active Office data tree. After ODT reports a successful download, OSDApps checks the candidate's version-folder and CAB consistency before switching the active directory. These checks are described below; they are not a full verification of every payload file. The previous generation is removed as a whole only after successful promotion; individual old Office files are not selectively pruned.
+When acquisition is needed, ODT acquires the requested channel, architecture, products and languages into a new sibling directory. OSDStage does not seed that directory with the active Office data tree. After ODT reports a successful download, OSDStage checks the candidate's version-folder and CAB consistency before switching the active directory. These checks are described below; they are not a full verification of every payload file. The previous generation is removed as a whole only after successful promotion; individual old Office files are not selectively pruned.
 
 This also requires free space for the candidate alongside the current generation. See [transaction space checks](architecture.md#cache-transaction-space-checks).
 
-OSDApps reads the concrete cached build from:
+OSDStage reads the concrete cached build from:
 
 ```text
 Office\Data\<version>
@@ -509,7 +509,7 @@ Office generation integrity and configuration compatibility are separate checks.
 A valid version directory and matching CAB files do not establish that cached
 content was downloaded for the requested products, languages or channel.
 
-Before staging fallback content, OSDApps compares the selected XML with the
+Before staging fallback content, OSDStage compares the selected XML with the
 cache's recorded download configuration. PreInstall repeats this check before
 USB restaging, offline use and failed-refresh fallback. The selected deployment
 XML is never replaced by the USB cache XML during PreInstall.
@@ -522,7 +522,7 @@ XML is never replaced by the USB cache XML during PreInstall.
   an older compatible generation remains eligible for failed-refresh fallback.
 - Licensing, display and update settings outside `Add` do not change payload
   eligibility. The deployment still uses its selected settings.
-- `SourcePath` is excluded from comparison because OSDApps manages the download
+- `SourcePath` is excluded from comparison because OSDStage manages the download
   and local installation locations.
 - Dynamic languages such as `MatchOS`/`MatchInstalled`, conditional products,
   implicit architecture/channel and other unresolved configuration cannot prove
@@ -547,20 +547,20 @@ additionally needs one `Add` element for the acquisition workflow.
 The configuration comparison is additional to physical generation checks. It
 does not replace them, and matching XML alone does not make a cache valid.
 
-| Check | What OSDApps verifies |
+| Check | What OSDStage verifies |
 | --- | --- |
 | Required paths | `setup.exe`, `configuration.xml` and `Office\Data` exist in the cache generation. |
 | Version layout | Exactly one numerically named Office version directory exists; its version must match an explicitly requested version when one is supplied. |
 | Payload presence | The active version directory contains files. The count is recorded, but is not compared with an expected inventory. |
 | CAB consistency | The architecture-specific shared CAB and active version-specific CAB both exist and have identical SHA-256 hashes. |
-| ODT executable | Separate signature checks validate Authenticode and the expected Microsoft publisher before OSDApps executes `setup.exe`. |
+| ODT executable | Separate signature checks validate Authenticode and the expected Microsoft publisher before OSDStage executes `setup.exe`. |
 | Download result | A candidate download must complete successfully before it can be validated and promoted. |
 | Configuration provenance | The recorded acquisition settings must be compatible with the requested deployment before existing content is accepted as fallback. |
 
 The two CAB hashes are compared with each other, not with an independently
 trusted Microsoft hash. Their equality establishes consistency between those
 two files; it does not prove that every Office data file is authentic or intact.
-OSDApps does not currently compare the payload against a complete expected file
+OSDStage does not currently compare the payload against a complete expected file
 list, expected individual file sizes, a known total size, or hashes for every
 Office data file. A missing or damaged payload file can therefore escape these
 checks if the version directory remains nonempty. Reported cache sizes and
@@ -569,7 +569,7 @@ free-space checks are not completeness checks.
 Configuration compatibility records what the content was acquired for. It does
 not independently inspect the Office files to prove product/language coverage
 or license entitlement. ODT performs acquisition and installation; passing the
-OSDApps checks is not a guarantee that a subsequent installation will succeed.
+OSDStage checks is not a guarantee that a subsequent installation will succeed.
 
 #### One active Office cache: configuration changes
 
@@ -583,7 +583,7 @@ validation leaves the existing generation intact.
 | Dutch to German | The Dutch generation is incompatible. Acquire a new German generation; replace the active cache only after success. |
 | German back to Dutch | Acquire Dutch content again. The previous Dutch generation is not retained as a second cache. |
 | Add Visio, change channel or architecture | Existing content with different acquisition settings is incompatible and cannot serve as fallback. |
-| Multiple languages to a subset | Conservative matching still requires acquisition; OSDApps does not infer subset coverage. |
+| Multiple languages to a subset | Conservative matching still requires acquisition; OSDStage does not infer subset coverage. |
 | Only licensing, display or update settings outside `Add` change | Otherwise matching content can be reused after freshness checks; installation uses the selected deployment XML. |
 | Refresh fails with an incompatible cache | Preserve that cache, but do not install the requested configuration from it. Without a compatible staged fallback, PreInstall fails. |
 
@@ -591,7 +591,7 @@ Online Office PreInstall reuses a compatible, consistent generation when its
 build matches the architecture-specific build advertised by the channel CDN, or an explicit build pin matches. Missing,
 incompatible or changed content takes the complete acquisition path. A compatible
 older build remains eligible for offline or failed-refresh fallback unless a
-requested version pin excludes it. An explicit `Sync-OSDAppMicrosoft365Apps` call
+requested version pin excludes it. An explicit `Sync-OSDStageMicrosoft365Apps` call
 on the preparation PC still requests a fresh complete acquisition.
 
 For multiple independently maintained Office configurations, use separate
@@ -626,7 +626,7 @@ self-maintained repository
 → no built-in Office ODT freshness check
 ```
 
-This is an intentional OSDApps design choice:
+This is an intentional OSDStage design choice:
 
 | Approach | Freshness owner | Sync moment | Full-Windows overhead | Best fit |
 | --- | --- | --- | --- | --- |
@@ -635,7 +635,7 @@ This is an intentional OSDApps design choice:
 
 Neither approach is inherently better. Built-ins optimize for vendor-native evergreen maintenance; repository apps optimize for organization-owned packaging, version control, and deterministic deployment behavior.
 
-This same principle applies more broadly in OSDApps: a supported built-in is a convenience path, not a requirement. Any app can still be delivered through the self-maintained repository when that better matches the deployment strategy.
+This same principle applies more broadly in OSDStage: a supported built-in is a convenience path, not a requirement. Any app can still be delivered through the self-maintained repository when that better matches the deployment strategy.
 
 ### Microsoft Teams bootstrapper
 
@@ -665,11 +665,11 @@ Repository versions and hashes are controlled by the repository owner. Content c
 The same commands are used with or without USB cache:
 
 ```powershell
-Add-OSDAppMicrosoft365Apps
-Add-OSDAppMicrosoftTeams
-Add-OSDAppAdobeAcrobatUnified
-Add-OSDAppGoogleChromeEnterprise
-Add-OSDAppMozillaFirefoxEnterprise
+Add-OSDStageMicrosoft365Apps
+Add-OSDStageMicrosoftTeams
+Add-OSDStageAdobeAcrobatUnified
+Add-OSDStageGoogleChromeEnterprise
+Add-OSDStageMozillaFirefoxEnterprise
 ```
 
 In WinPE, the built-in Add cmdlets stage deployment intent and any already-available cached payload into Windows Temp. A USB cache is not required.
@@ -684,11 +684,11 @@ In full Windows, PreInstall resolves the source automatically:
 
 No alternate parameter or command is required.
 
-When no `OSDCloud` volume is connected, PreInstall downloads the current built-in content directly into the local Windows runtime under `%SystemRoot%\Temp\OSDApps`. The runner then installs from that local source.
+When no `OSDCloud` volume is connected, PreInstall downloads the current built-in content directly into the local Windows runtime under `%SystemRoot%\Temp\OSDStage`. The runner then installs from that local source.
 
 When an `OSDCloud` volume is connected, it is detected automatically. Existing cache content is used when available and the cache is refreshed/updated during SetupComplete.
 
-A completely blank `OSDCloud` volume is supported. OSDApps creates the cache structure and populates it during the full-Windows pre-install phase.
+A completely blank `OSDCloud` volume is supported. OSDStage creates the cache structure and populates it during the full-Windows pre-install phase.
 
 ## Fallback behavior
 
@@ -714,11 +714,11 @@ If no `OSDCloud` volume is present, built-ins are acquired directly to the local
 Use:
 
 ```powershell
-Add-OSDAppMicrosoft365Apps -Verbose
-Add-OSDAppMicrosoftTeams -Verbose
-Add-OSDAppAdobeAcrobatUnified -Verbose
-Add-OSDAppGoogleChromeEnterprise -Verbose
-Add-OSDAppMozillaFirefoxEnterprise -Verbose
+Add-OSDStageMicrosoft365Apps -Verbose
+Add-OSDStageMicrosoftTeams -Verbose
+Add-OSDStageAdobeAcrobatUnified -Verbose
+Add-OSDStageGoogleChromeEnterprise -Verbose
+Add-OSDStageMozillaFirefoxEnterprise -Verbose
 ```
 
 Verbose output shows:
@@ -736,7 +736,7 @@ The same decisions are written to the CMTrace-compatible logs.
 
 ## Validated deployment behavior
 
-OSDApps has been validated with both blank-cache and warm-cache deployments using the same Add commands and installation queue.
+OSDStage has been validated with both blank-cache and warm-cache deployments using the same Add commands and installation queue.
 
 Validated behavior includes:
 
@@ -751,7 +751,7 @@ See [Validation matrix](testing.md) and [Performance](performance.md) for the te
 
 ## Requesting a new built-in app
 
-Built-ins are maintained as product-specific code in OSDApps, so they are deliberately selective. A request should only be considered when the app is a good fit for a generic, repeatable deployment path.
+Built-ins are maintained as product-specific code in OSDStage, so they are deliberately selective. A request should only be considered when the app is a good fit for a generic, repeatable deployment path.
 
 ### Required characteristics
 
@@ -759,7 +759,7 @@ A built-in candidate should:
 
 - be broadly used in enterprise or managed Windows environments;
 - have a direct, deterministic vendor download source;
-- be acquired from that vendor at runtime/cache time rather than being bundled, mirrored, or redistributed by OSDApps;
+- be acquired from that vendor at runtime/cache time rather than being bundled, mirrored, or redistributed by OSDStage;
 - use a stable URL, documented API/endpoint, or similarly maintainable vendor-supported acquisition method;
 - support unattended installation with predictable exit codes;
 - work without customer-specific credentials, tenant-specific portals, or interactive download flows;
@@ -767,9 +767,9 @@ A built-in candidate should:
 
 ### Download-source rule
 
-OSDApps must be able to acquire the installer directly from the vendor in a predictable way.
+OSDStage must be able to acquire the installer directly from the vendor in a predictable way.
 
-A vendor using a CDN is not automatically a problem. The requirement is that the vendor exposes a stable, supported download URL or endpoint. A built-in will not be added when the installer must come from a third-party mirror, community package source, OSDApps itself, or when acquisition depends on techniques such as:
+A vendor using a CDN is not automatically a problem. The requirement is that the vendor exposes a stable, supported download URL or endpoint. A built-in will not be added when the installer must come from a third-party mirror, community package source, OSDStage itself, or when acquisition depends on techniques such as:
 
 ```text
 scraping a download page
@@ -818,16 +818,16 @@ plugin or a VDI package. The default architecture is x64; ARM64 is opt-in.
 
 ```powershell
 # WinPE after OSDCloud, before the first Windows boot.
-Add-OSDAppZoomWorkplace
+Add-OSDStageZoomWorkplace
 
 # Optional installation settings. Replaces the existing Zoom queue entry.
-Add-OSDAppZoomWorkplace -NoDesktopShortcut -SsoHost 'example.zoom.us' `
+Add-OSDStageZoomWorkplace -NoDesktopShortcut -SsoHost 'example.zoom.us' `
     -ZConfig @{ DisableZoomOnboarding = $true } `
     -ZRecommend @{ AudioAutoAdjust = $true }
 
 # Full Windows preparation machine only: optional cache preparation.
-Sync-OSDAppZoomWorkplace
-Sync-OSDAppZoomWorkplace -Architecture arm64
+Sync-OSDStageZoomWorkplace
+Sync-OSDStageZoomWorkplace -Architecture arm64
 ```
 
 Downloads use Zoom's latest MSI endpoints:
@@ -844,7 +844,7 @@ requires a valid staged MSI. The ordinary MSI runner installs silently with
 `/qn /norestart ALLUSERS=1`, a timeout and runtime logging. No retry task is added.
 
 `ZConfig` enforces settings; `ZRecommend` supplies defaults users may change.
-Zoom gives enforced settings precedence. OSDApps serializes hashtables in a
+Zoom gives enforced settings precedence. OSDStage serializes hashtables in a
 stable order and converts Boolean values to `1`/`0`. Values must be strings,
 integers or Booleans; quotes, semicolon separators, control characters and
 trailing backslashes are rejected. Settings requiring those characters need a
@@ -855,7 +855,7 @@ intent and MSI diagnostics are not secret stores.
 
 The obsolete `EnableSilentAutoUpdate`, `AlwaysCheckLatestVersion`, `ZoomAutoUpdate`
 and `SetUpdatingChannel` settings are rejected. Use Zoom's current Enterprise
-Auto Update policies when needed. Omission preserves vendor behavior; OSDApps
+Auto Update policies when needed. Omission preserves vendor behavior; OSDStage
 does not disable updates, configure a user account or install plugins by default.
 Changing these installation settings does not require a different MSI and does
 not invalidate an otherwise reusable cache. A repeated Add call updates the
@@ -871,21 +871,21 @@ from automated tests; see [the Zoom test procedure](zoom-validation.md).
 
 ```powershell
 # WinPE, after OSDCloud has applied Windows:
-Add-OSDApp7Zip
+Add-OSDStage7Zip
 
 # Optional: prepare the USB flash drive on a full Windows development PC:
-Sync-OSDApp7Zip
+Sync-OSDStage7Zip
 ```
 
 Both commands accept `-Architecture x64`, `x86` or `arm64`; the default is `x64`.
-`Add-OSDApp7Zip` also accepts `-InstallTimeoutMinutes` (default 10) and the
+`Add-OSDStage7Zip` also accepts `-InstallTimeoutMinutes` (default 10) and the
 usual optional `-WindowsPath`. It stages deployment intent without downloading
 in WinPE. The official EXE is installed silently, machine-wide, with `/S` during
 the Windows phase before OOBE. File associations and user preferences are left
-to Windows/vendor defaults. There is no automatic update service added by OSDApps.
+to Windows/vendor defaults. There is no automatic update service added by OSDStage.
 
 The [vendor recommends the EXE installer](https://www.7-zip.org/download.html).
-OSDApps resolves the latest stable release from the official
+OSDStage resolves the latest stable release from the official
 [`ip7z/7zip` GitHub repository](https://github.com/ip7z/7zip/releases/latest).
 It requires a matching architecture asset, an expected official asset URL and a
 published SHA-256 digest. Missing or unexpected metadata fails closed; there is
@@ -902,7 +902,7 @@ This is **release SHA-256 validation, not Authenticode publisher validation**.
 The trust anchor for a new download is the official repository metadata over HTTPS.
 Offline validation compares against the locally recorded release digest; it does
 not protect against an attacker changing both the installer and its local metadata.
-`Get-OSDAppCache` also checks the recorded hash, size and architecture for 7Zip.
+`Get-OSDStageCache` also checks the recorded hash, size and architecture for 7Zip.
 
 If the release API or download fails (including GitHub rate limits), PreInstall
 may use a valid staged generation, reporting `FallbackCacheUsed` and the refresh
@@ -916,14 +916,14 @@ Use a custom repository package when you require a pinned release or custom setu
 
 ```powershell
 # WinPE, after OSDCloud
-Add-OSDAppVisualStudioCode
+Add-OSDStageVisualStudioCode
 
 # Optional cache preparation on a full Windows computer
-Sync-OSDAppVisualStudioCode
+Sync-OSDStageVisualStudioCode
 ```
 
 Both commands accept `-Architecture x64` (default) or `arm64`.
-`Add-OSDAppVisualStudioCode` also accepts `-InstallTimeoutMinutes` (default 10)
+`Add-OSDStageVisualStudioCode` also accepts `-InstallTimeoutMinutes` (default 10)
 and the usual optional `-WindowsPath`. The built-in uses **Stable system setup**:
 installation in Program Files for all users, not the per-user installer,
 Insiders or a portable ZIP.
@@ -948,8 +948,8 @@ generations after an interrupted swap.
 The API does not publish a file size. The cache records the downloaded length;
 the release SHA-256 verifies the downloaded content. Architecture is selected
 through the exact official platform and filename, not the PE machine type of the
-Inno Setup bootstrapper. `Get-OSDAppCache` checks recorded metadata, length and
-SHA-256 without requiring publisher evaluation in WinPE. Use `Get-OSDAppCache -VerifySignatures`
+Inno Setup bootstrapper. `Get-OSDStageCache` checks recorded metadata, length and
+SHA-256 without requiring publisher evaluation in WinPE. Use `Get-OSDStageCache -VerifySignatures`
 on full Windows for trust inspection; metadata alone is not a signature.
 
 If acquisition fails, a fully verified staged generation of the requested
@@ -965,7 +965,7 @@ The system installer runs with:
 ```
 
 This prevents automatic editor launch and reboot. Other installer tasks keep
-Microsoft's defaults, including PATH and supported-file registration. OSDApps
+Microsoft's defaults, including PATH and supported-file registration. OSDStage
 does not configure extensions, accounts, telemetry, editor settings or update
 policies. System-install updates may require elevation; manage these separately
 if your organization requires a specific policy.
@@ -976,9 +976,9 @@ and [Inno Setup command-line parameters](https://jrsoftware.org/ishelp/topic_set
 
 ### Isolated deployment test
 
-Run `tools/Test-OSDAppsVisualStudioCode.ps1 -Phase Stage` from the candidate source
+Run `tools/Test-OSDStageVisualStudioCode.ps1 -Phase Stage` from the candidate source
 in WinPE on a fresh Windows deployment. It stages only VS Code and copies its
-validator to `C:\ProgramData\OSDApps\Tests`. At OOBE, run that copied script with
+validator to `C:\ProgramData\OSDStage\Tests`. At OOBE, run that copied script with
 `-Phase Validate`. It correlates deployment IDs, verifies the machine-wide
 registration, executable version, successful result and cleanup, and checks
 that the editor did not launch. It never reruns SetupComplete. Interactive
@@ -991,13 +991,13 @@ after Windows is applied, just like apps:
 
 ```powershell
 # Select exactly one architecture per command.
-Add-OSDAppVisualCRedist -Architecture x64
+Add-OSDStageVisualCRedist -Architecture x64
 
 # Standalone runtime for console apps and services.
-Add-OSDAppDotNetRuntime -RuntimeType Runtime -Channel 10.0 -Architecture x64
+Add-OSDStageDotNetRuntime -RuntimeType Runtime -Channel 10.0 -Architecture x64
 
 # Desktop runtime for WPF/Windows Forms; includes the ordinary .NET runtime.
-Add-OSDAppDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64
+Add-OSDStageDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64
 ```
 
 Normally choose Runtime **or** Desktop for the same channel and architecture;
@@ -1011,12 +1011,12 @@ Visual C++ runtime families such as 2013 are separate products and are not insta
 
 Runtime staging puts these prerequisites before app entries while
 preserving the relative order within each group. This is not a dependency engine:
-OSDApps does not infer which apps need which runtimes, and its normal
+OSDStage does not infer which apps need which runtimes, and its normal
 continue-queue behavior still applies if a prerequisite fails.
 
 ### Why Visual C++ has one evergreen family
 
-`Add-OSDAppVisualCRedist` and `Sync-OSDAppVisualCRedist` offer the latest supported
+`Add-OSDStageVisualCRedist` and `Sync-OSDStageVisualCRedist` offer the latest supported
 v14 redistributable through Microsoft's official evergreen endpoint. There is no
 year or legacy-version selector. Visual Studio 2017, 2019, 2022 and 2026 use the
 same v14 runtime family; the redistributable must be at least as recent as the
@@ -1088,9 +1088,9 @@ not a guarantee that an offline fallback is the newest available patch.
 ### Cache and preparation computer
 
 ```powershell
-Sync-OSDAppVisualCRedist -Architecture x64
-Sync-OSDAppDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64
-Get-OSDAppCache -Name VisualCRedist,DotNetRuntime -VerifySignatures
+Sync-OSDStageVisualCRedist -Architecture x64
+Sync-OSDStageDotNetRuntime -RuntimeType Desktop -Channel 10.0 -Architecture x64
+Get-OSDStageCache -Name VisualCRedist,DotNetRuntime -VerifySignatures
 ```
 
 Sync runs on full Windows, prepares the USB flash drive and installs nothing on
@@ -1100,7 +1100,7 @@ the preparation computer. Run Add in WinPE. Cache paths are
 Only the active patch is retained per variant; a different channel or architecture
 uses a different generation. Deployment IDs include the variant, for example
 `VisualCRedist-x86` and `DotNetRuntime-Desktop-10.0-x64`.
-`Get-OSDAppCache` exposes `VariantId` and `RuntimeType` to distinguish them.
+`Get-OSDStageCache` exposes `VariantId` and `RuntimeType` to distinguish them.
 The app list summarizes x64 Visual C++ and Desktop 10.0 x64; inspect the cache
 inventory for all variants.
 
@@ -1110,4 +1110,4 @@ Sources: [Visual C++ downloads](https://learn.microsoft.com/en-us/cpp/windows/la
 
 ## Windows capabilities (Features on Demand)
 
-Use `Add-OSDAppWindowsCapability -Name <exact-identity> -Action Add|Remove` for capabilities, separately from optional-feature Enable/Disable. See [Windows capabilities](windows-capabilities.md) for Windows 11 25H2+ scope, online acquisition, result handling and the combined XPS/OpenSSH test.
+Use `Add-OSDStageWindowsCapability -Name <exact-identity> -Action Add|Remove` for capabilities, separately from optional-feature Enable/Disable. See [Windows capabilities](windows-capabilities.md) for Windows 11 25H2+ scope, online acquisition, result handling and the combined XPS/OpenSSH test.

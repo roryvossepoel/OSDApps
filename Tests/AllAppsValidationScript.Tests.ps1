@@ -1,12 +1,12 @@
 Describe 'All-app cold validation result boundaries' {
     BeforeAll {
-        $script:testScript = Join-Path (Split-Path $PSScriptRoot -Parent) 'tools/Test-OSDAppsAllApps.ps1'
+        $script:testScript = Join-Path (Split-Path $PSScriptRoot -Parent) 'tools/Test-OSDStageAllApps.ps1'
         $script:originalProgramData = $env:ProgramData
         $script:originalSystemRoot = $env:SystemRoot
         $env:ProgramData = Join-Path $TestDrive 'ProgramData'
         $env:SystemRoot = Join-Path $TestDrive 'Windows'
-        $script:results = Join-Path $env:ProgramData 'OSDApps/Results'
-        $script:records = Join-Path $env:ProgramData 'OSDApps/Tests'
+        $script:results = Join-Path $env:ProgramData 'OSDStage/Results'
+        $script:records = Join-Path $env:ProgramData 'OSDStage/Tests'
         New-Item -ItemType Directory -Path $script:results,$script:records,(Join-Path $env:SystemRoot 'Temp') -Force | Out-Null
         $script:builtIns = @('Microsoft365Apps','MicrosoftTeams','GoogleChromeEnterprise','MozillaFirefoxEnterprise','CiscoWebex','AdobeAcrobatUnified','ZoomWorkplace')
         $script:allIds = @($script:builtIns) + @('NotepadPlusPlus','OmnissaHorizonClient')
@@ -22,14 +22,14 @@ Describe 'All-app cold validation result boundaries' {
         Mock Write-Host { }
         $script:pre = [pscustomobject]@{
             DeploymentId='fixture-deployment'; Status='Succeeded'; DurationSeconds=100
-            Apps=@($script:builtIns | ForEach-Object { [pscustomobject]@{Id=$_;Status='Succeeded';AcquisitionOutcome='Downloaded';RefreshError=$null} })
+            Packages=@($script:builtIns | ForEach-Object { [pscustomobject]@{Id=$_;Status='Succeeded';AcquisitionOutcome='Downloaded';RefreshError=$null} })
         }
         $script:runner = [pscustomobject]@{
             DeploymentId='fixture-deployment'; Status='Succeeded'; DurationSeconds=200
-            FailedAppCount=0; SkippedAppCount=0
-            Apps=@($script:allIds | ForEach-Object { [pscustomobject]@{Id=$_;Status='Succeeded';ExitCode=0} })
+            FailedPackageCount=0; SkippedPackageCount=0
+            Packages=@($script:allIds | ForEach-Object { [pscustomobject]@{Id=$_;Status='Succeeded';ExitCode=0} })
         }
-        Write-FixtureRecord ([pscustomobject]@{DeploymentId='fixture-deployment';ModuleVersion='0.45.0';TestMode='Cold';PreviousCacheBackup='E:\OSDApps-Backup-fixture'}) (Join-Path $script:records 'AllApps-Staging.json')
+        Write-FixtureRecord ([pscustomobject]@{DeploymentId='fixture-deployment';ModuleVersion='0.45.0';TestMode='Cold';PreviousCacheBackup='E:\OSDStage-Backup-fixture'}) (Join-Path $script:records 'AllApps-Staging.json')
         Write-FixtureRecord $script:pre (Join-Path $script:results 'PreInstall.json')
         Write-FixtureRecord $script:runner (Join-Path $script:results 'Latest.json')
     }
@@ -38,7 +38,7 @@ Describe 'All-app cold validation result boundaries' {
         Should -Invoke Write-Host -Exactly -Times 1 -ParameterFilter { $Object -eq 'ALL APPS COLD OOBE VALIDATION PASSED!' }
     }
     It 'rejects a successful fallback instead of reporting a cold download pass' {
-        $script:pre.Apps[0].AcquisitionOutcome = 'FallbackCacheUsed'
+        $script:pre.Packages[0].AcquisitionOutcome = 'FallbackCacheUsed'
         Write-FixtureRecord $script:pre (Join-Path $script:results 'PreInstall.json')
         { & $script:testScript -Phase Validate | Out-Null } | Should -Throw '*Cold acquisition was not confirmed*'
         Should -Invoke Write-Host -Exactly -Times 0 -ParameterFilter { $Object -eq 'ALL APPS COLD OOBE VALIDATION PASSED!' }
@@ -49,12 +49,12 @@ Describe 'All-app cold validation result boundaries' {
         { & $script:testScript -Phase Validate | Out-Null } | Should -Throw '*belongs to another deployment*'
     }
     It 'rejects duplicated entries even when every entry reports success' {
-        $script:runner.Apps[8].Id = $script:runner.Apps[7].Id
+        $script:runner.Packages[8].Id = $script:runner.Packages[7].Id
         Write-FixtureRecord $script:runner (Join-Path $script:results 'Latest.json')
         { & $script:testScript -Phase Validate | Out-Null } | Should -Throw '*expected app IDs*'
     }
     It 'rejects a missing failed-app counter under StrictMode' {
-        $script:runner.PSObject.Properties.Remove('FailedAppCount')
+        $script:runner.PSObject.Properties.Remove('FailedPackageCount')
         Write-FixtureRecord $script:runner (Join-Path $script:results 'Latest.json')
         { & $script:testScript -Phase Validate | Out-Null } | Should -Throw '*Unexpected result counter*'
     }

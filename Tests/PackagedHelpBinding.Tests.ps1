@@ -6,8 +6,8 @@ Describe 'Packaged external-help binding' {
     It 'adds only an external-help comment and keeps executable tokens unchanged' {
         $root = Join-Path $TestDrive 'WithComments'
         New-Item -ItemType Directory -Path (Join-Path $root 'Public') -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path $root 'OSDApps.psd1') -Encoding UTF8 -Value "@{FunctionsToExport=@('Get-Example')}"
-        Set-Content -LiteralPath (Join-Path $root 'OSDApps-help.xml') -Encoding UTF8 -Value '<helpItems />'
+        Set-Content -LiteralPath (Join-Path $root 'OSDStage.psd1') -Encoding UTF8 -Value "@{FunctionsToExport=@('Get-Example')}"
+        Set-Content -LiteralPath (Join-Path $root 'OSDStage-help.xml') -Encoding UTF8 -Value '<helpItems />'
         $file = Join-Path $root 'Public\Get-Example.ps1'
         $source = @'
 function Get-Example {
@@ -25,7 +25,7 @@ function Get-Example {
         [void][Management.Automation.Language.Parser]::ParseFile($file,[ref]$beforeTokens,[ref]$errors)
         & $script:connector -ModulePath $root
         $after = Get-Content -LiteralPath $file -Raw
-        $after | Should -Match '\.EXTERNALHELP OSDApps-help.xml'
+        $after | Should -Match '\.EXTERNALHELP OSDStage-help.xml'
         $afterTokens = $null
         [void][Management.Automation.Language.Parser]::ParseFile($file,[ref]$afterTokens,[ref]$errors)
         @($errors).Count | Should -Be 0
@@ -40,8 +40,8 @@ function Get-Example {
     It 'leaves functions without local help byte-for-byte unchanged' {
         $root = Join-Path $TestDrive 'AutomaticDiscovery'
         New-Item -ItemType Directory -Path (Join-Path $root 'Public') -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path $root 'OSDApps.psd1') -Encoding UTF8 -Value "@{FunctionsToExport=@('Get-Example')}"
-        Set-Content -LiteralPath (Join-Path $root 'OSDApps-help.xml') -Encoding UTF8 -Value '<helpItems />'
+        Set-Content -LiteralPath (Join-Path $root 'OSDStage.psd1') -Encoding UTF8 -Value "@{FunctionsToExport=@('Get-Example')}"
+        Set-Content -LiteralPath (Join-Path $root 'OSDStage-help.xml') -Encoding UTF8 -Value '<helpItems />'
         $file = Join-Path $root 'Public\Get-Example.ps1'
         Set-Content -LiteralPath $file -Encoding UTF8 -Value 'function Get-Example { param() throw "never execute" }'
         $hash = (Get-FileHash -LiteralPath $file).Hash
@@ -52,7 +52,7 @@ function Get-Example {
     It 'refuses to bind help when the packaged help file is missing' {
         $root = Join-Path $TestDrive 'MissingHelp'
         New-Item -ItemType Directory -Path $root -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path $root 'OSDApps.psd1') -Encoding UTF8 -Value "@{FunctionsToExport=@('Get-Example')}"
+        Set-Content -LiteralPath (Join-Path $root 'OSDStage.psd1') -Encoding UTF8 -Value "@{FunctionsToExport=@('Get-Example')}"
         { & $script:connector -ModulePath $root } | Should -Throw '*Generate packaged MAML*'
     }
 }

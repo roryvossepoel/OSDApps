@@ -1,6 +1,6 @@
 Describe 'Launcher staging example process contract' {
     BeforeAll {
-        $example = Join-Path (Split-Path $PSScriptRoot -Parent) 'Examples/Stage-OSDApps.ps1'
+        $example = Join-Path (Split-Path $PSScriptRoot -Parent) 'Examples/Stage-OSDStage.ps1'
         $engine = (Get-Process -Id $PID).Path
     }
 
@@ -35,27 +35,27 @@ function Test-Path {
 }
 function Install-Module {
     param($Name, [switch]$Force, [switch]$SkipPublisherCheck)
-    if ($Name -ne 'OSDApps' -or -not $Force -or -not $SkipPublisherCheck) { throw 'Wrong Gallery request.' }
+    if ($Name -ne 'OSDStage' -or -not $Force -or -not $SkipPublisherCheck) { throw 'Wrong Gallery request.' }
     Invoke-Stub Gallery
 }
 function Import-Module {
     param($Name, [switch]$Force)
-    if ($Name -ne 'OSDApps' -or -not $Force) { throw 'Wrong module import.' }
+    if ($Name -ne 'OSDStage' -or -not $Force) { throw 'Wrong module import.' }
     Invoke-Stub Import
 }
-function Add-OSDAppMicrosoft365Apps {
+function Add-OSDStageMicrosoft365Apps {
     param($Channel, $Language)
     if ($Channel -ne 'MonthlyEnterprise' -or $Language -ne 'en-us') { throw 'Wrong Office options.' }
     Invoke-Stub Office
 }
-function Add-OSDAppAdobeAcrobatUnified { Invoke-Stub Adobe }
-function Add-OSDAppGoogleChromeEnterprise { Invoke-Stub Chrome }
-function Test-OSDAppDeployment {
+function Add-OSDStageAdobeAcrobatUnified { Invoke-Stub Adobe }
+function Add-OSDStageGoogleChromeEnterprise { Invoke-Stub Chrome }
+function Test-OSDStageDeployment {
     param([switch]$ThrowOnFailure)
     if (-not $ThrowOnFailure) { throw 'Preflight must terminate on failure.' }
     Invoke-Stub Preflight
     [pscustomobject]@{
-        WindowsPath = 'C:\'; DeploymentId = 'test'; AppCount = 3
+        WindowsPath = 'C:\'; DeploymentId = 'test'; PackageCount = 3
         Valid = $true; OfflineReady = $false; NetworkRequired = $true
     }
 }
@@ -86,9 +86,9 @@ exit $LASTEXITCODE
             ((Get-Content -LiteralPath $trace) -join ',') | Should -Be $Expected
             $output = $outputTask.GetAwaiter().GetResult()
             if ($ExitCode -eq 0) {
-                $output | Should -Match 'OSDApps staging passed'
+                $output | Should -Match 'OSDStage staging passed'
             } else {
-                $output | Should -Not -Match 'OSDApps staging passed'
+                $output | Should -Not -Match 'OSDStage staging passed'
                 $errorTask.GetAwaiter().GetResult() | Should -Match 'Do not reboot'
             }
         }

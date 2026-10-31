@@ -6,11 +6,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $data = Import-PowerShellDataFile -LiteralPath $HelpDataPath -ErrorAction Stop
-if ($data.SchemaVersion -ne 1) { throw 'Unsupported command-help schema.' }
+if ($data.SchemaVersion -ne 2) { throw 'Unsupported command-help schema.' }
 $moduleRoot = (Resolve-Path -LiteralPath $ModulePath).Path
-$manifestPath = Join-Path $moduleRoot 'OSDApps.psd1'
+$manifestPath = Join-Path $moduleRoot 'OSDStage.psd1'
 $manifest = Import-PowerShellDataFile -LiteralPath $manifestPath
-Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
+Remove-Module OSDStage -Force -ErrorAction SilentlyContinue
 $module = Import-Module $manifestPath -Force -PassThru -ErrorAction Stop
 $names = @($manifest.FunctionsToExport | Sort-Object)
 $unknown = @($data.Commands.Keys | Where-Object { $_ -notin $names })
@@ -24,7 +24,7 @@ $data.CommonParameters['Confirm'] = 'Request confirmation for operations using S
 $maml = 'http://schemas.microsoft.com/maml/2004/10'
 $commandNs = 'http://schemas.microsoft.com/maml/dev/command/2004/10'
 $dev = 'http://schemas.microsoft.com/maml/dev/2004/10'
-$destination = Join-Path $moduleRoot 'OSDApps-help.xml'
+$destination = Join-Path $moduleRoot 'OSDStage-help.xml'
 $temp = "$destination.tmp"
 $settings = [System.Xml.XmlWriterSettings]::new()
 $settings.Indent = $true
@@ -162,7 +162,7 @@ try {
         $writer.WriteStartElement('command','returnValues',$commandNs)
         $writer.WriteStartElement('command','returnValue',$commandNs)
         $writer.WriteStartElement('dev','type',$dev)
-        Write-HelpText 'maml' 'name' $maml $(if ($name -eq 'Show-OSDAppUI') { 'None' } else { 'System.Management.Automation.PSObject' })
+        Write-HelpText 'maml' 'name' $maml $(if ($name -eq 'Show-OSDStageUI') { 'None' } else { 'System.Management.Automation.PSObject' })
         $writer.WriteEndElement()
         $writer.WriteStartElement('maml','description',$maml)
         Write-HelpParagraph $spec.Output
@@ -187,7 +187,7 @@ try {
         $writer.WriteEndElement()
         $writer.WriteStartElement('command','relatedLinks',$commandNs)
         $writer.WriteStartElement('maml','navigationLink',$maml)
-        Write-HelpText 'maml' 'linkText' $maml 'OSDApps documentation'
+        Write-HelpText 'maml' 'linkText' $maml 'OSDStage documentation'
         Write-HelpText 'maml' 'uri' $maml ('https://github.com/roryvossepoel/OSDApps/blob/main/' + $spec.Link)
         $writer.WriteEndElement()
         $writer.WriteEndElement()

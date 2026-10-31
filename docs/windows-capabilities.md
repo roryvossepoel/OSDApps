@@ -1,6 +1,6 @@
 # Windows capabilities (Features on Demand)
 
-`Add-OSDAppWindowsCapability` stages explicit capability changes in WinPE after
+`Add-OSDStageWindowsCapability` stages explicit capability changes in WinPE after
 OSDCloud has applied Windows. One `WindowsCapabilities` built-in Script executes
 the combined selections during SetupComplete as native 64-bit SYSTEM.
 
@@ -14,10 +14,10 @@ the OS/context and capability-availability checks happen during SetupComplete.
 ## Explicit selections
 
 ```powershell
-Add-OSDAppWindowsCapability -Name 'XPS.Viewer~~~~0.0.1.0' -Action Add
-Add-OSDAppWindowsCapability -Name 'OpenSSH.Client~~~~0.0.1.0' -Action Remove
-Test-OSDAppDeployment -ThrowOnFailure |
-    Format-List Valid,OfflineReady,NetworkRequired,AppCount
+Add-OSDStageWindowsCapability -Name 'XPS.Viewer~~~~0.0.1.0' -Action Add
+Add-OSDStageWindowsCapability -Name 'OpenSSH.Client~~~~0.0.1.0' -Action Remove
+Test-OSDStageDeployment -ThrowOnFailure |
+    Format-List Valid,OfflineReady,NetworkRequired,PackageCount
 ```
 
 `-Name` accepts an array of exact capability identities. Obtain names from
@@ -32,8 +32,8 @@ staging. Existing owned script/config hashes are checked before replacement.
 Availability differs by OS release, edition and architecture. The runtime checks
 for exactly the requested identity on the actual device. An unknown identity is
 an error even for Remove. Windows resolves installation dependencies and may
-reject a removal if another package depends on it. OSDApps does not remove those
-dependents automatically. Installing OpenSSH Server does not request any OSDApps
+reject a removal if another package depends on it. OSDStage does not remove those
+dependents automatically. Installing OpenSSH Server does not request any OSDStage
 service/firewall configuration. Capability support does not imply language-pack,
 display-language or regional-settings orchestration.
 
@@ -42,7 +42,7 @@ display-language or regional-settings orchestration.
 No custom repository is needed. This first implementation provides the bundled
 action, not Microsoft's FoD binaries. DISM selects sources using Windows servicing
 policy and Windows Update when permitted. The device needs usable network access
-at runtime when content is missing. OSDApps does not override update policies,
+at runtime when content is missing. OSDStage does not override update policies,
 change service settings or populate its USB app cache from Windows servicing.
 Custom `Source`, `LimitAccess` and repository `Package.zip` sources are not exposed
 in this version.
@@ -50,7 +50,7 @@ in this version.
 Preflight conservatively reports `NetworkRequired=True` and `OfflineReady=False`
 whenever any Add operation is queued, even if Windows might already have that
 capability. Script/config integrity must still pass. Consequently, use
-`Test-OSDAppDeployment -ThrowOnFailure` for this online test, without
+`Test-OSDStageDeployment -ThrowOnFailure` for this online test, without
 `-RequireOfflineReady`. A valid remove-only capability entry is offline-ready.
 Preflight `PayloadReady` describes the bundled script/config; it does not mean
 Microsoft's installation payload has been cached.
@@ -72,7 +72,7 @@ explicit operations continue. A DISM attempt is bounded to 30 minutes; after a
 timeout remaining operations are marked `NotAttempted` because servicing may
 still be active. No rollback or retry is attempted.
 
-The configured result directory (normally `%ProgramData%\OSDApps\Results`) contains:
+The configured result directory (normally `%ProgramData%\OSDStage\Results`) contains:
 
 - `WindowsCapabilities-Result.json`: deployment ID, aggregate status/counts,
   per-capability action, before/after states, outcome, exit code, error and
@@ -82,7 +82,7 @@ The configured result directory (normally `%ProgramData%\OSDApps\Results`) conta
 
 ## First physical test
 
-Run [the staging example](../Examples/Stage-OSDAppsCapabilitiesTest.ps1) in WinPE
+Run [the staging example](../Examples/Stage-OSDStageCapabilitiesTest.ps1) in WinPE
 after applying a fresh Windows 11 25H2+ image. Import the test module first. It
 requests XPS Viewer Add and OpenSSH Client Remove, keeps logs with CleanupMode
 Never and validates staging without requiring offline readiness. Keep network
@@ -119,7 +119,7 @@ zero failures/skips and 328.2 seconds elapsed. XPS DISM ran approximately 319
 seconds; OpenSSH removal approximately two seconds. Both native logs include
 `/NoRestart` and `Reboot required=no`.
 
-PreInstall correctly performed no built-in acquisition and used no OSDApps cache.
+PreInstall correctly performed no built-in acquisition and used no OSDStage cache.
 The runtime invoked online DISM without a custom Source or LimitAccess argument.
 The successful install proves the Windows-managed servicing path in this run;
 the supplied DISM logs do not independently identify the source of downloaded
@@ -138,4 +138,4 @@ reinstallation or post-login repair is needed to repeat this accepted scenario.
 - [Add-WindowsCapability](https://learn.microsoft.com/en-us/powershell/module/dism/add-windowscapability)
 
 Optional Features are a separate Windows interface: use the existing
-`Add-OSDAppWindowsFeature` for Enable/Disable feature names such as TelnetClient.
+`Add-OSDStageWindowsFeature` for Enable/Disable feature names such as TelnetClient.

@@ -1,9 +1,9 @@
 BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Per-deployment acquisition reporting' {
     BeforeAll {
-        . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime/OSDAppPayloadFile.ps1')
+        . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime/OSDStagePayloadFile.ps1')
         $moduleRoot = Split-Path $PSScriptRoot -Parent
-        $runtimePath = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1'
+        $runtimePath = Join-Path $moduleRoot 'Runtime\Invoke-OSDStagePreInstall.ps1'
         $tokens = $null; $errors = $null
         $ast = [System.Management.Automation.Language.Parser]::ParseFile($runtimePath, [ref]$tokens, [ref]$errors)
         if (@($errors).Count) { throw 'PreInstall parser errors.' }
@@ -15,11 +15,11 @@ Describe 'Per-deployment acquisition reporting' {
         $loop = $ast.Find({ param($node) $node -is [System.Management.Automation.Language.ForEachStatementAst] -and $node.Condition.Extent.Text -eq '$builtInApps' }, $true)
         if (-not $loop) { throw 'PreInstall app loop not found.' }
         $script:preparationLoop = [scriptblock]::Create($loop.Extent.Text)
-        . (Join-Path $moduleRoot 'Runtime\Assert-OSDAppTransactionSpace.ps1')
-        . (Join-Path $moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1')
-        . (Join-Path $moduleRoot 'Runtime\Invoke-OSDAppBuiltInCacheTransaction.ps1')
-        . (Join-Path $moduleRoot 'Runtime\Test-OSDAppOfficeCacheCompatibility.ps1')
-        $runnerAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'), [ref]$tokens, [ref]$errors)
+        . (Join-Path $moduleRoot 'Runtime\Assert-OSDStageTransactionSpace.ps1')
+        . (Join-Path $moduleRoot 'Runtime\Restore-OSDStageCacheGeneration.ps1')
+        . (Join-Path $moduleRoot 'Runtime\Invoke-OSDStageBuiltInCacheTransaction.ps1')
+        . (Join-Path $moduleRoot 'Runtime\Test-OSDStageOfficeCacheCompatibility.ps1')
+        $runnerAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $moduleRoot 'Runtime\Invoke-OSDStageRunner.ps1'), [ref]$tokens, [ref]$errors)
         foreach ($name in @('Get-RunnerCacheInfo','New-RunnerAppResult','Write-RunnerResult')) {
             $definition = $runnerAst.Find({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $true)
             . ([scriptblock]::Create($definition.Extent.Text))
@@ -48,7 +48,7 @@ Describe 'Per-deployment acquisition reporting' {
     BeforeEach {
         Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value 'changed CDN descriptor' }
         $script:advertisedOfficeBuild = '2.0.0.0'
-        Mock Expand-OSDAppOfficeDescriptor {
+        Mock Expand-OSDStageOfficeDescriptor {
             $path = Join-Path $DestinationPath 'VersionDescriptor.xml'
             '<Version><Available I640Version="{0}" /><DeliveryMechanism FFNRoot="492350f6-3a01-4f97-b9c0-c7c6ddf67d60" /></Version>' -f $script:advertisedOfficeBuild | Set-Content $path
             $path
@@ -70,7 +70,7 @@ Describe 'Per-deployment acquisition reporting' {
         $script:remoteMatches = $false
         $script:failDownload = $false
         Mock Assert-PreInstallSignedPayload { }
-        Mock Assert-OSDAppTransactionSpace { }
+        Mock Assert-OSDStageTransactionSpace { }
         Mock Test-InternetEndpoint { $true }
         Mock Get-RemoteMetadata {
             [pscustomobject]@{ ETag=$(if ($script:remoteMatches) { 'old' } else { 'new' }); LastModified=$null; ContentLength=100; FinalUri='https://example.invalid/package' }
@@ -119,7 +119,7 @@ Describe 'Per-deployment acquisition reporting' {
             }
             $cacheInfo = @{ Id=$app.Id; Version='1.0.0.0'; Architecture='x64'; RemoteETag='old'; Updated=$true; Cached=$true; PackageUri=$app.PackageUri }
             if ($app.Id -eq 'Microsoft365Apps') {
-                $cacheInfo.PayloadProfile = Get-OSDAppOfficePayloadProfile -Path (Join-Path $root 'configuration.xml')
+                $cacheInfo.PayloadProfile = Get-OSDStageOfficePayloadProfile -Path (Join-Path $root 'configuration.xml')
             }
             if ($app.Id -ne 'Microsoft365Apps') {
                 $cacheInfo.PayloadFileName = $app.File
@@ -127,7 +127,7 @@ Describe 'Per-deployment acquisition reporting' {
                 $cacheInfo.Size = (Get-Item -LiteralPath $payload).Length
             }
             $cacheInfo | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Encoding UTF8
-            Set-OSDAppManifestPayload -App $app -StagedPath $StagedPath -AllowPending
+            Set-OSDStageManifestPayload -App $app -StagedPath $StagedPath -AllowPending
         }
     }
 
@@ -191,7 +191,7 @@ Describe 'Per-deployment acquisition reporting' {
         $appResults[0].CacheDecisionReason | Should -Match 'cached build matches'
         Should -Invoke Start-Process -Exactly 0
         Should -Invoke Save-PreInstallDownload -Exactly 0
-        Should -Invoke Assert-OSDAppTransactionSpace -Exactly 0
+        Should -Invoke Assert-OSDStageTransactionSpace -Exactly 0
         Should -Invoke Assert-PreInstallSignedPayload -Exactly 1
         $after = @(Get-ChildItem $root -File -Recurse | Get-FileHash | Sort-Object Path | ForEach-Object { $_.Path + ':' + $_.Hash })
         Compare-Object $before $after | Should -BeNullOrEmpty
@@ -277,9 +277,9 @@ Describe 'Per-deployment acquisition reporting' {
         Should -Invoke Save-PreInstallDownload -Exactly 0
         Write-PreInstallResult -Status Succeeded
         $saved = Get-Content $preInstallResultPath -Raw | ConvertFrom-Json
-        $saved.OfflineCacheAppCount | Should -Be 7
-        foreach ($result in $saved.Apps) { $result.CacheDecisionReason | Should -Match 'No network.*Currency was not checked' }
-        $saved.FallbackAppCount | Should -Be 0
+        $saved.OfflineCachePackageCount | Should -Be 7
+        foreach ($result in $saved.Packages) { $result.CacheDecisionReason | Should -Match 'No network.*Currency was not checked' }
+        $saved.FallbackPackageCount | Should -Be 0
         $saved.HasAcquisitionWarnings | Should -BeTrue
     }
 
@@ -298,10 +298,10 @@ Describe 'Per-deployment acquisition reporting' {
         Write-PreInstallResult -Status Succeeded
         $saved = Get-Content $preInstallResultPath -Raw | ConvertFrom-Json
         $saved.Status | Should -Be Succeeded
-        $saved.FailedBuiltInAppCount | Should -Be 0
-        $saved.FallbackAppCount | Should -Be 7
+        $saved.FailedBuiltInPackageCount | Should -Be 0
+        $saved.FallbackPackageCount | Should -Be 7
         $saved.HasAcquisitionWarnings | Should -BeTrue
-        foreach ($result in $saved.Apps) { $result.CacheDecisionReason | Should -Match 'Refresh failed.*HTTP download timeout' }
+        foreach ($result in $saved.Packages) { $result.CacheDecisionReason | Should -Match 'Refresh failed.*HTTP download timeout' }
         @(Get-Content $logPath | Select-String 'AppAcquisitionComplete.*CacheDecisionReason=Refresh failed').Count | Should -Be 7
         @(Get-Content $logPath | Select-String 'AppAcquisitionComplete.*AcquisitionOutcome=FallbackCacheUsed').Count | Should -Be 7
     }
@@ -358,11 +358,11 @@ Describe 'Per-deployment acquisition reporting' {
         Write-RunnerResult -Status Succeeded
         $latest = Get-Content $resultPath -Raw | ConvertFrom-Json
         $latest.Status | Should -Be Succeeded
-        $latest.PreInstall.FallbackAppCount | Should -Be 1
-        $latest.Apps[0].AcquisitionOutcome | Should -Be FallbackCacheUsed
-        $latest.Apps[0].PackageUpdated | Should -BeFalse
-        $latest.PreInstall.Apps[0].PackageUpdated | Should -BeFalse
-        $latest.Apps[0].CacheDecisionReason | Should -Be $success.CacheDecisionReason
+        $latest.PreInstall.FallbackPackageCount | Should -Be 1
+        $latest.Packages[0].AcquisitionOutcome | Should -Be FallbackCacheUsed
+        $latest.Packages[0].PackageUpdated | Should -BeFalse
+        $latest.PreInstall.Packages[0].PackageUpdated | Should -BeFalse
+        $latest.Packages[0].CacheDecisionReason | Should -Be $success.CacheDecisionReason
     }
 
 
@@ -395,7 +395,7 @@ Describe 'Per-deployment acquisition reporting' {
         $appResults[0].CacheDecisionReason | Should -Match 'unsupported metadata'
         Should -Invoke Save-PreInstallDownload -Times 1 -Exactly
         Test-Path -LiteralPath (Join-Path $root 'googlechromestandaloneenterprise64.msi') | Should -BeFalse
-        Assert-OSDAppCachedPayload -Root $root -Id GoogleChromeEnterprise -Architecture x64 | Should -Be (Join-Path $root 'vendor-GoogleChromeEnterprise.msi')
+        Assert-OSDStageCachedPayload -Root $root -Id GoogleChromeEnterprise -Architecture x64 | Should -Be (Join-Path $root 'vendor-GoogleChromeEnterprise.msi')
     }
 
     It 'rebuilds old USB metadata and replaces old local metadata in the real loop: <Id>' -ForEach @(
@@ -418,7 +418,7 @@ Describe 'Per-deployment acquisition reporting' {
         $appResults[0].AcquisitionOutcome | Should -Be Downloaded
         $appResults[0].PackageUpdated | Should -BeTrue
         foreach ($root in @($local,$usb)) {
-            $path = Assert-OSDAppCachedPayload -Root $root -Id $Id -Architecture x64
+            $path = Assert-OSDStageCachedPayload -Root $root -Id $Id -Architecture x64
             (Split-Path $path -Leaf) | Should -BeLike 'vendor-*'
         }
         Test-Path (Join-Path $usb $app.File) | Should -BeFalse
@@ -491,7 +491,7 @@ Describe 'Per-deployment acquisition reporting' {
     }
 
     It 'reports Unknown when the current result has no acquisition evidence' {
-        $preInstallResult = [pscustomobject]@{ Apps=@([pscustomobject]@{ Id='MicrosoftTeams'; Status='Succeeded' }) }
+        $preInstallResult = [pscustomobject]@{ Packages=@([pscustomobject]@{ Id='MicrosoftTeams'; Status='Succeeded' }) }
         $result = New-RunnerAppResult -App $builtInApps[1] -Status Succeeded
         $result.AcquisitionOutcome | Should -Be Unknown
         $result.RefreshError | Should -BeNullOrEmpty

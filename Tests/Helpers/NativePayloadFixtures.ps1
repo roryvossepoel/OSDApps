@@ -1,4 +1,4 @@
-function global:Set-OSDAppsTestPayloadInfo {
+function global:Set-OSDStageTestPayloadInfo {
     param(
         [Parameter(Mandatory)][string]$Path,
         [Parameter(Mandatory)][string]$Id,

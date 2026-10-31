@@ -3,8 +3,8 @@ param([Parameter(Mandatory)][string]$ModulePath)
 
 $ErrorActionPreference = 'Stop'
 $moduleRoot = (Resolve-Path -LiteralPath $ModulePath).Path
-$manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $moduleRoot 'OSDApps.psd1')
-if (-not (Test-Path -LiteralPath (Join-Path $moduleRoot 'OSDApps-help.xml') -PathType Leaf)) {
+$manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $moduleRoot 'OSDStage.psd1')
+if (-not (Test-Path -LiteralPath (Join-Path $moduleRoot 'OSDStage-help.xml') -PathType Leaf)) {
     throw 'Generate packaged MAML before connecting existing comment-based help.'
 }
 $changed = 0
@@ -19,7 +19,7 @@ foreach ($name in $manifest.FunctionsToExport) {
     if (-not $match.Success -or $match.Groups['help'].Value -match '(?im)^\s*\.EXTERNALHELP\b') { continue }
     $newline = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
     $position = $match.Groups[1].Index + $match.Groups[1].Length
-    $updated = $text.Insert($position, ($newline + '    .EXTERNALHELP OSDApps-help.xml'))
+    $updated = $text.Insert($position, ($newline + '    .EXTERNALHELP OSDStage-help.xml'))
 
     $beforeTokens = $null; $beforeErrors = $null
     $afterTokens = $null; $afterErrors = $null

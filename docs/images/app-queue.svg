@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="610" viewBox="0 0 1200 610" role="img" aria-labelledby="title desc">
-<title id="title">OSDApps app queue</title><desc id="desc">The order of Add commands becomes the exact DeviceManifest Apps array and Runner installation order.</desc>
+<title id="title">OSDStage app queue</title><desc id="desc">The order of Add commands becomes the exact DeviceManifest Apps array and Runner installation order.</desc>
 <style>text{font-family:Segoe UI,Arial,sans-serif;fill:#172033}.h{font-size:28px;font-weight:700}.sh{font-size:20px;font-weight:700}.cmd{font-size:15px;font-family:Consolas,monospace}.t{font-size:16px;font-weight:600}.s{font-size:14px}.box{fill:#fff;stroke:#9fb1c8;stroke-width:2}.repo{fill:#f4f7fb;stroke:#6b83a3;stroke-width:2}.built{fill:#eef7f2;stroke:#6a9a7d;stroke-width:2}.arrow{stroke:#4a5a73;stroke-width:3;fill:none;marker-end:url(#a)}</style>
 <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#4a5a73"/></marker></defs>
 <text x="600" y="42" text-anchor="middle" class="h">Add order becomes install order</text>
 <text x="275" y="92" text-anchor="middle" class="sh">PowerShell</text><text x="865" y="92" text-anchor="middle" class="sh">DeviceManifest.json · Apps[]</text>
 <rect x="70" y="120" width="410" height="345" rx="12" class="box"/>
-<text x="95" y="160" class="cmd">Add-OSDAppMicrosoft365Apps</text><text x="95" y="205" class="cmd">Add-OSDAppMicrosoftTeams</text><text x="95" y="250" class="cmd">Add-OSDAppGoogleChromeEnterprise</text><text x="95" y="295" class="cmd">Add-OSDApp OmnissaHorizonClient</text><text x="95" y="340" class="cmd">Add-OSDApp NotepadPlusPlus</text><text x="95" y="385" class="cmd">Add-OSDAppAdobeAcrobatUnified</text><text x="95" y="430" class="s">Re-adding an app moves it to the end.</text>
+<text x="95" y="160" class="cmd">Add-OSDStageMicrosoft365Apps</text><text x="95" y="205" class="cmd">Add-OSDStageMicrosoftTeams</text><text x="95" y="250" class="cmd">Add-OSDStageGoogleChromeEnterprise</text><text x="95" y="295" class="cmd">Add-OSDStage OmnissaHorizonClient</text><text x="95" y="340" class="cmd">Add-OSDStage NotepadPlusPlus</text><text x="95" y="385" class="cmd">Add-OSDStageAdobeAcrobatUnified</text><text x="95" y="430" class="s">Re-adding an app moves it to the end.</text>
 <path d="M480 292 H585" class="arrow"/>
 <rect x="610" y="120" width="500" height="55" rx="10" class="built"/><text x="635" y="153" class="t">1 · Microsoft365Apps</text>
 <rect x="610" y="185" width="500" height="55" rx="10" class="built"/><text x="635" y="218" class="t">2 · MicrosoftTeams</text>

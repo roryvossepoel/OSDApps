@@ -29,7 +29,7 @@ Run local documentation checks separately when editing Markdown:
 ./build/Test-Documentation.ps1
 ```
 
-This checks local inline-link targets and section anchors, parses fenced PowerShell and validates literal public OSDApps command/parameter names. It does not run examples or crawl external websites. A passing parser test does not establish that an example deployed software successfully.
+This checks local inline-link targets and section anchors, parses fenced PowerShell and validates literal public OSDStage command/parameter names. It does not run examples or crawl external websites. A passing parser test does not establish that an example deployed software successfully.
 
 ## Command help
 
@@ -44,10 +44,10 @@ Build and then open a fresh PowerShell session to inspect the **built** package:
 In the new session, from the repository root:
 
 ```powershell
-Import-Module ./dist/OSDApps/OSDApps.psd1 -Force
-Get-Help Show-OSDAppUI -Full
-Get-Help Add-OSDApp -Examples
-./build/Test-PackagedHelp.ps1 -ModulePath ./dist/OSDApps
+Import-Module ./dist/OSDStage/OSDStage.psd1 -Force
+Get-Help Show-OSDStageUI -Full
+Get-Help Add-OSDStage -Examples
+./build/Test-PackagedHelp.ps1 -ModulePath ./dist/OSDStage
 ```
 
 A raw source import does not generate the external help. Existing comment-based help is connected to MAML only in distribution copies, with executable-token equivalence checked. See [Maintaining command help](help/README.md) for the authoring contract and packaging boundary.
@@ -60,7 +60,7 @@ Normal CI never publishes to the Gallery. Version bumps and immutable release pu
 
 ## Built-in app requests
 
-Built-in apps are product-specific integrations maintained inside OSDApps. They are intentionally reserved for broadly used software with a stable, vendor-supported acquisition and unattended installation path. Built-in payloads must always be acquired directly from the software vendor; installers may never be bundled with, mirrored by, or redistributed through OSDApps.
+Built-in apps are product-specific integrations maintained inside OSDStage. They are intentionally reserved for broadly used software with a stable, vendor-supported acquisition and unattended installation path. Built-in payloads must always be acquired directly from the software vendor; installers may never be bundled with, mirrored by, or redistributed through OSDStage.
 
 Before requesting a built-in, review the [Built-in app request policy](docs/built-in-apps.md#requesting-a-new-built-in-app).
 
@@ -87,7 +87,7 @@ For niche, customer-specific, internal, authenticated, or otherwise non-generic 
 
 The README uses a standard Shields.io dynamic XML badge. It reads the public
 PowerShell Gallery feed and sums `VersionDownloadCount` across the returned
-OSDApps versions. The ordinary `/powershellgallery/dt/OSDApps` badge reads the
+OSDStage versions. The ordinary `/powershellgallery/dt/OSDStage` badge reads the
 Gallery's aggregate `DownloadCount`, which currently reports zero incorrectly.
 
 No GitHub Action, generated SVG or dedicated branch is required. Shields.io and

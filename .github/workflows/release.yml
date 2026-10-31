@@ -1,11 +1,6 @@
 name: Create GitHub Release
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'OSDApps.psd1'
   workflow_dispatch:
     inputs:
       expected_version:
@@ -46,12 +41,12 @@ jobs:
           if ($env:BEFORE_SHA -notmatch '^[0-9a-f]{40}$' -or $env:BEFORE_SHA -match '^0+$') {
               throw 'Cannot establish the previous main version. Use a reviewed manual release.'
           }
-          $previousText = git show "$($env:BEFORE_SHA):OSDApps.psd1"
+          $previousText = git show "$($env:BEFORE_SHA):OSDStage.psd1"
           if ($LASTEXITCODE -ne 0) { throw 'Cannot read the previous module manifest.' }
           $match = [regex]::Match(($previousText -join "`n"), '(?m)^\s*ModuleVersion\s*=\s*[''"](?<version>\d+\.\d+\.\d+(?:\.\d+)?)[''"]')
           if (-not $match.Success) { throw 'Cannot read the previous module version.' }
           $previous = [version]$match.Groups['version'].Value
-          $current = [version](Import-PowerShellDataFile ./OSDApps.psd1).ModuleVersion
+          $current = [version](Import-PowerShellDataFile ./OSDStage.psd1).ModuleVersion
           if ($current -lt $previous) { throw 'The module version must not decrease.' }
           $publish = $current -gt $previous
           "publish=$($publish.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
@@ -95,7 +90,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          $manifest = Test-ModuleManifest ./OSDApps.psd1 -ErrorAction Stop
+          $manifest = Test-ModuleManifest ./OSDStage.psd1 -ErrorAction Stop
           $moduleVersion = $manifest.Version.ToString()
           $expectedVersion = [string]$env:EXPECTED_VERSION
 
@@ -198,14 +193,14 @@ jobs:
           }
           [System.IO.File]::WriteAllText(
               $releaseNotesPath,
-              ("# OSDApps v$($env:RELEASE_VERSION)" + [Environment]::NewLine + [Environment]::NewLine + $notes + [Environment]::NewLine),
+              ("# OSDStage v$($env:RELEASE_VERSION)" + [Environment]::NewLine + [Environment]::NewLine + $notes + [Environment]::NewLine),
               [System.Text.UTF8Encoding]::new($false)
           )
 
           $arguments = @(
               'release', 'create', $env:TAG,
               '--repo', $env:GITHUB_REPOSITORY,
-              '--title', "OSDApps v$env:RELEASE_VERSION",
+              '--title', "OSDStage v$env:RELEASE_VERSION",
               '--notes-file', $releaseNotesPath
           )
 
@@ -235,6 +230,6 @@ jobs:
           # This happens only after the tag/release and validation succeeded.
           gh workflow run publish.yml --repo $env:GITHUB_REPOSITORY --ref main -f "expected_version=$env:RELEASE_VERSION"
           if ($LASTEXITCODE -ne 0) {
-              throw "Could not dispatch PSGallery publication for OSDApps $env:RELEASE_VERSION."
+              throw "Could not dispatch PSGallery publication for OSDStage $env:RELEASE_VERSION."
           }
-          Write-Host "Dispatched PSGallery publication for OSDApps $env:RELEASE_VERSION."
+          Write-Host "Dispatched PSGallery publication for OSDStage $env:RELEASE_VERSION."

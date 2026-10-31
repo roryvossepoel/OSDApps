@@ -1,6 +1,6 @@
 # Performance
 
-OSDApps records PreInstall and Runner durations separately. The measurements below describe the stated versions and conditions, not a performance guarantee for the current release.
+OSDStage records PreInstall and Runner durations separately. The measurements below describe the stated versions and conditions, not a performance guarantee for the current release.
 
 The [validation matrix](testing.md) includes newer 0.36.0 and 0.39.0 measurements and the recent Gallery workflow reports. Office replacement acquires a fresh complete generation. PreInstall can now skip that acquisition when a compatible generation matches the advertised CDN build or requested build pin; the measured Office-only reuse path is recorded below. The recent Gallery workflow reports include no new timings.
 
@@ -17,7 +17,7 @@ An x64 PC staged one Office app with MonthlyEnterprise / nl-nl, no exact build p
 
 The Office preparation item is part of PreInstall, not an additional phase. These are single-run observations for an Office-only queue, not directly comparable to the older multi-app benchmarks. Image deployment, WinPE staging, reboot and OOBE are excluded. See the [validation evidence](testing.md#office-online-warm-cache-reuse--19-october-2026).
 
-## OSDApps 0.35.0 release candidate — populated USB cache, online (12 October 2026)
+## OSDStage 0.35.0 release candidate — populated USB cache, online (12 October 2026)
 
 A freshly reinstalled x64 PC completed the eight-app queue after hard offline-readiness preflight passed in WinPE. The populated USB cache remained attached and networking was available. All six built-ins recorded cache use; Cisco Webex refreshed while the other five cached packages were retained.
 
@@ -27,9 +27,9 @@ A freshly reinstalled x64 PC completed the eight-app queue after hard offline-re
 | Runner | 369.0 s | 8/8 successful |
 | **Measured Windows total** | **422.9 s (7:03)** | **Succeeded** |
 
-The total excludes image deployment, WinPE staging, reboot and OOBE. It is one release-candidate field observation, not a controlled cache-speed comparison or performance guarantee. See the [0.35.0 validation record](testing.md#osdapps-0350-release-candidate-physical-validation--12-october-2026) for integrity, result-correlation and cleanup evidence.
+The total excludes image deployment, WinPE staging, reboot and OOBE. It is one release-candidate field observation, not a controlled cache-speed comparison or performance guarantee. See the [0.35.0 validation record](testing.md#osdstage-0350-release-candidate-physical-validation--12-october-2026) for integrity, result-correlation and cleanup evidence.
 
-## OSDApps 0.34.0 — full eight-app deployment comparison (11 October 2026)
+## OSDStage 0.34.0 — full eight-app deployment comparison (11 October 2026)
 
 On two freshly installed x64 test PCs, the same six built-ins and two repository apps completed through SetupComplete with `CleanupMode=OnSuccess`. Built-in installer signatures and expected publishers were enforced on Office `setup.exe`, Teams `teamsbootstrapper.exe`, Chrome, Firefox and Cisco Webex; Adobe's outer ZIP remains outside the Authenticode scope.
 
@@ -40,9 +40,9 @@ On two freshly installed x64 test PCs, the same six built-ins and two repository
 
 The offline PreInstall phase was **546.5 s shorter**; the overall measured Windows phase was **519.0 s shorter**. PC 1 downloaded vendor content (including Office/Adobe), while PC 2 recorded six `BuiltInRefreshSkipped` events and used signed local content. The two devices and their network/cache conditions differed, so these are observed times, **not a controlled hardware speed comparison or guaranteed throughput**. WinPE staging, OSDCloud OS app, boot and OOBE are excluded.
 
-See the [0.34.0 validation matrix](testing.md#osdapps-0340-release-candidate-physical-validation--11-october-2026) for app order, package variants and verification boundaries.
+See the [0.34.0 validation matrix](testing.md#osdstage-0340-release-candidate-physical-validation--11-october-2026) for app order, package variants and verification boundaries.
 
-## End-to-end measurements — OSDApps 0.30.0 (9 October 2026)
+## End-to-end measurements — OSDStage 0.30.0 (9 October 2026)
 
 Four fresh OSDCloud v2 deployments validated the same six-app queue: Microsoft 365 Apps, Teams, Chrome Enterprise, Adobe Acrobat Unified, Omnissa Horizon Client (repository), and Notepad++ (repository). The fourth run changed the Office XML to MonthlyEnterprise / nl-nl with Visio and Project.
 
@@ -87,7 +87,7 @@ All four runs completed the six-entry queue successfully according to `Runtime.l
 
 See [Validation matrix](testing.md) for the test sequence, acceptance criteria, cache behavior and outstanding coverage.
 
-## Warm USB cache, fully offline — OSDApps 0.30.0 test 5 (9 October 2026)
+## Warm USB cache, fully offline — OSDStage 0.30.0 test 5 (9 October 2026)
 
 | Phase | Duration |
 | --- | ---: |
@@ -97,11 +97,11 @@ See [Validation matrix](testing.md) for the test sequence, acceptance criteria, 
 
 All six installer/provisioning calls exited with code `0` with networking disconnected before reboot. The populated USB cache was recognized. Office, Teams and Chrome used existing local staging, while Adobe was restaged from USB after a local staging path mismatch. That mismatch is corrected in **0.30.1**; these numbers describe the original successful **0.30.0** field run, not a benchmark of the patched release.
 
-## Historical cold/warm cache benchmark — OSDApps 0.29.1
+## Historical cold/warm cache benchmark — OSDStage 0.29.1
 
-The following benchmark was captured with OSDApps 0.29.1 using the same hardware, the same OSDCloud USB flash drive, the same app order, and the same deployment configuration.
+The following benchmark was captured with OSDStage 0.29.1 using the same hardware, the same OSDCloud USB flash drive, the same app order, and the same deployment configuration.
 
-![OSDApps 0.29.1 cold vs warm cache benchmark](images/cold-warm-benchmark.svg)
+![OSDStage 0.29.1 cold vs warm cache benchmark](images/cold-warm-benchmark.svg)
 
 | Phase | Cold cache | Warm cache | Difference |
 | --- | ---: | ---: | ---: |
@@ -132,7 +132,7 @@ The validated queue deliberately mixed built-in and repository apps:
 | Notepad++ | Self-maintained repository example |
 | Adobe Acrobat Unified | Built-in |
 
-`OmnissaHorizonClient` and `NotepadPlusPlus` were packages from the test repository used for this benchmark. They are not built into OSDApps. Their repository synchronization/cache validation occurred in WinPE; the Runner measurements shown here cover the later local validation/extraction/installation phase.
+`OmnissaHorizonClient` and `NotepadPlusPlus` were packages from the test repository used for this benchmark. They are not built into OSDStage. Their repository synchronization/cache validation occurred in WinPE; the Runner measurements shown here cover the later local validation/extraction/installation phase.
 
 The installation order was identical for both runs.
 
@@ -188,7 +188,7 @@ Chrome MSI   70.2 MB/s
 Adobe ZIP    71.4 MB/s
 ```
 
-Microsoft 365 Apps is intentionally different: OSDApps delegates Office synchronization to the Office Deployment Tool rather than implementing a separate generic HTTP freshness mechanism.
+Microsoft 365 Apps is intentionally different: OSDStage delegates Office synchronization to the Office Deployment Tool rather than implementing a separate generic HTTP freshness mechanism.
 
 ## Warm-cache behavior
 
@@ -219,26 +219,26 @@ This is the historical 0.29.1 command sequence, including its module path and te
 The historical runs used this app order:
 
 ```powershell
-Import-Module E:\Modules\OSDApps\OSDApps.psd1 -Force
+Import-Module E:\Modules\OSDStage\OSDStage.psd1 -Force
 
-Set-OSDAppConfiguration `
-    -CatalogUri "https://example.blob.core.windows.net/osdapps/catalog.json" `
+Set-OSDStageConfiguration `
+    -CatalogUri "https://example.blob.core.windows.net/osdstage/catalog.json" `
     -CleanupMode Never
 
 # Built-ins
-Add-OSDAppMicrosoft365Apps
-Add-OSDAppMicrosoftTeams
-Add-OSDAppGoogleChromeEnterprise
+Add-OSDStageMicrosoft365Apps
+Add-OSDStageMicrosoftTeams
+Add-OSDStageGoogleChromeEnterprise
 
 # Example apps from the configured repository
-Add-OSDApp OmnissaHorizonClient
-Add-OSDApp NotepadPlusPlus
+Add-OSDStage OmnissaHorizonClient
+Add-OSDStage NotepadPlusPlus
 
 # Built-in
-Add-OSDAppAdobeAcrobatUnified
+Add-OSDStageAdobeAcrobatUnified
 ```
 
-For the cold run, start with an empty OSDApps cache. For the warm run, reuse the cache populated by the cold run.
+For the cold run, start with an empty OSDStage cache. For the warm run, reuse the cache populated by the cold run.
 
 Relevant runtime events include:
 
@@ -252,13 +252,13 @@ InstallComplete
 The runtime log is written by default to:
 
 ```text
-%ProgramData%\OSDApps\Logs\Runtime.log
+%ProgramData%\OSDStage\Logs\Runtime.log
 ```
 
 The module-side cache and staging log remains:
 
 ```text
-<OSDCloud>:\OSDApps\Logs\Client.log
+<OSDCloud>:\OSDStage\Logs\Client.log
 ```
 
 Performance depends on network, vendor CDN throughput, storage, CPU, app behavior, and hardware. These numbers are therefore a validated reference measurement, not a guaranteed deployment duration.

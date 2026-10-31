@@ -1,7 +1,7 @@
 {
-  "SchemaVersion": 1,
-  "Project": "OSDApps",
-  "Apps": [
+  "SchemaVersion": 2,
+  "Project": "OSDStage",
+  "Packages": [
     {
       "Id": "Microsoft365Apps",
       "DisplayName": "Microsoft 365 Apps",
@@ -9,8 +9,8 @@
       "Vendor": "Microsoft",
       "Acquisition": "OfficeDeploymentTool",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppMicrosoft365Apps",
-      "SyncCommand": "Sync-OSDAppMicrosoft365Apps",
+      "AddCommand": "Add-OSDStageMicrosoft365Apps",
+      "SyncCommand": "Sync-OSDStageMicrosoft365Apps",
       "Architectures": [
         "x86",
         "x64"
@@ -40,8 +40,8 @@
       "Vendor": "Microsoft",
       "Acquisition": "MicrosoftTeamsBootstrapper",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppMicrosoftTeams",
-      "SyncCommand": "Sync-OSDAppMicrosoftTeams",
+      "AddCommand": "Add-OSDStageMicrosoftTeams",
+      "SyncCommand": "Sync-OSDStageMicrosoftTeams",
       "Architectures": [
         "x86",
         "x64",
@@ -59,8 +59,8 @@
       "Vendor": "Adobe",
       "Acquisition": "VendorZip",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppAdobeAcrobatUnified",
-      "SyncCommand": "Sync-OSDAppAdobeAcrobatUnified",
+      "AddCommand": "Add-OSDStageAdobeAcrobatUnified",
+      "SyncCommand": "Sync-OSDStageAdobeAcrobatUnified",
       "Architectures": [
         "x64",
         "x86"
@@ -77,8 +77,8 @@
       "Vendor": "Google",
       "Acquisition": "VendorMsi",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppGoogleChromeEnterprise",
-      "SyncCommand": "Sync-OSDAppGoogleChromeEnterprise",
+      "AddCommand": "Add-OSDStageGoogleChromeEnterprise",
+      "SyncCommand": "Sync-OSDStageGoogleChromeEnterprise",
       "Architectures": [
         "x64",
         "x86"
@@ -95,8 +95,8 @@
       "Vendor": "Mozilla",
       "Acquisition": "VendorMsi",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppMozillaFirefoxEnterprise",
-      "SyncCommand": "Sync-OSDAppMozillaFirefoxEnterprise",
+      "AddCommand": "Add-OSDStageMozillaFirefoxEnterprise",
+      "SyncCommand": "Sync-OSDStageMozillaFirefoxEnterprise",
       "Architectures": [
         "x64",
         "x86"
@@ -119,8 +119,8 @@
       "Vendor": "Cisco",
       "Acquisition": "VendorMsi",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppCiscoWebex",
-      "SyncCommand": "Sync-OSDAppCiscoWebex",
+      "AddCommand": "Add-OSDStageCiscoWebex",
+      "SyncCommand": "Sync-OSDStageCiscoWebex",
       "Architectures": [
         "x64",
         "arm64"
@@ -137,8 +137,8 @@
       "Vendor": "Zoom",
       "Acquisition": "VendorMsi",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppZoomWorkplace",
-      "SyncCommand": "Sync-OSDAppZoomWorkplace",
+      "AddCommand": "Add-OSDStageZoomWorkplace",
+      "SyncCommand": "Sync-OSDStageZoomWorkplace",
       "Architectures": [
         "x64",
         "arm64"
@@ -155,8 +155,8 @@
       "Vendor": "Igor Pavlov",
       "Acquisition": "7ZipExe",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDApp7Zip",
-      "SyncCommand": "Sync-OSDApp7Zip",
+      "AddCommand": "Add-OSDStage7Zip",
+      "SyncCommand": "Sync-OSDStage7Zip",
       "Architectures": [
         "x64",
         "x86",
@@ -174,8 +174,8 @@
       "Vendor": "Microsoft",
       "Acquisition": "VisualStudioCodeExe",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppVisualStudioCode",
-      "SyncCommand": "Sync-OSDAppVisualStudioCode",
+      "AddCommand": "Add-OSDStageVisualStudioCode",
+      "SyncCommand": "Sync-OSDStageVisualStudioCode",
       "Architectures": [
         "x64",
         "arm64"
@@ -192,8 +192,8 @@
       "Vendor": "Microsoft",
       "Acquisition": "PrerequisiteExe",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppVisualCRedist",
-      "SyncCommand": "Sync-OSDAppVisualCRedist",
+      "AddCommand": "Add-OSDStageVisualCRedist",
+      "SyncCommand": "Sync-OSDStageVisualCRedist",
       "Architectures": [
         "x86",
         "x64"
@@ -211,8 +211,8 @@
       "Vendor": "Microsoft",
       "Acquisition": "PrerequisiteExe",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppDotNetRuntime",
-      "SyncCommand": "Sync-OSDAppDotNetRuntime",
+      "AddCommand": "Add-OSDStageDotNetRuntime",
+      "SyncCommand": "Sync-OSDStageDotNetRuntime",
       "Architectures": [
         "x86",
         "x64"
@@ -238,10 +238,10 @@
       "DisplayName": "Windows Inbox App Cleanup",
       "Source": "BuiltIn",
       "PackageType": "Script",
-      "Vendor": "OSDApps",
+      "Vendor": "OSDStage",
       "Acquisition": "BundledScript",
       "SyncPhase": "None",
-      "AddCommand": "Add-OSDAppWindowsInboxCleanup",
+      "AddCommand": "Add-OSDStageWindowsInboxCleanup",
       "SyncCommand": null,
       "Architectures": [
         "any"
@@ -256,10 +256,10 @@
       "DisplayName": "Windows optional features",
       "Source": "BuiltIn",
       "PackageType": "Script",
-      "Vendor": "OSDApps",
+      "Vendor": "OSDStage",
       "Acquisition": "BundledScript",
       "SyncPhase": "None",
-      "AddCommand": "Add-OSDAppWindowsFeature",
+      "AddCommand": "Add-OSDStageWindowsFeature",
       "SyncCommand": null,
       "Architectures": [
         "any"
@@ -274,10 +274,10 @@
       "DisplayName": "Windows capabilities (Features on Demand)",
       "Source": "BuiltIn",
       "PackageType": "Script",
-      "Vendor": "OSDApps",
+      "Vendor": "OSDStage",
       "Acquisition": "BundledScript",
       "SyncPhase": "None",
-      "AddCommand": "Add-OSDAppWindowsCapability",
+      "AddCommand": "Add-OSDStageWindowsCapability",
       "SyncCommand": null,
       "Architectures": [
         "any"
@@ -294,8 +294,8 @@
       "Vendor": "Microsoft",
       "Acquisition": "MicrosoftPreinstallKit",
       "SyncPhase": "FullWindowsPreparation",
-      "AddCommand": "Add-OSDAppMicrosoftCompanyPortal",
-      "SyncCommand": "Sync-OSDAppMicrosoftCompanyPortal",
+      "AddCommand": "Add-OSDStageMicrosoftCompanyPortal",
+      "SyncCommand": "Sync-OSDStageMicrosoftCompanyPortal",
       "Architectures": [
         "x64",
         "arm64"
@@ -312,8 +312,8 @@
       "Vendor": "CMTrace Open",
       "Acquisition": "GitHubReleaseMsi",
       "SyncPhase": "FullWindowsPreparation",
-      "AddCommand": "Add-OSDAppCMTraceOpen",
-      "SyncCommand": "Sync-OSDAppCMTraceOpen",
+      "AddCommand": "Add-OSDStageCMTraceOpen",
+      "SyncCommand": "Sync-OSDStageCMTraceOpen",
       "Architectures": [
         "x64",
         "arm64"
@@ -328,10 +328,10 @@
       "DisplayName": "Wi-Fi profiles",
       "Source": "BuiltIn",
       "PackageType": "Script",
-      "Vendor": "OSDApps",
+      "Vendor": "OSDStage",
       "Acquisition": "BundledScript",
       "SyncPhase": "None",
-      "AddCommand": "Add-OSDAppWiFiProfile",
+      "AddCommand": "Add-OSDStageWiFiProfile",
       "SyncCommand": null,
       "Architectures": [
         "any"
@@ -346,10 +346,10 @@
       "DisplayName": "Public CA certificates",
       "Source": "BuiltIn",
       "PackageType": "Script",
-      "Vendor": "OSDApps",
+      "Vendor": "OSDStage",
       "Acquisition": "BundledScript",
       "SyncPhase": "None",
-      "AddCommand": "Add-OSDAppCertificate",
+      "AddCommand": "Add-OSDStageCertificate",
       "SyncCommand": null,
       "Architectures": [
         "any"
@@ -364,10 +364,10 @@
       "DisplayName": "Machine environment variables",
       "Source": "BuiltIn",
       "PackageType": "Script",
-      "Vendor": "OSDApps",
+      "Vendor": "OSDStage",
       "Acquisition": "BundledScript",
       "SyncPhase": "None",
-      "AddCommand": "Add-OSDAppEnvironmentVariable",
+      "AddCommand": "Add-OSDStageEnvironmentVariable",
       "SyncCommand": null,
       "Architectures": [
         "any"
@@ -382,10 +382,10 @@
       "DisplayName": "Windows services",
       "Source": "BuiltIn",
       "PackageType": "Script",
-      "Vendor": "OSDApps",
+      "Vendor": "OSDStage",
       "Acquisition": "BundledScript",
       "SyncPhase": "None",
-      "AddCommand": "Add-OSDAppService",
+      "AddCommand": "Add-OSDStageService",
       "SyncCommand": null,
       "Architectures": [
         "any"
@@ -400,10 +400,10 @@
       "DisplayName": "Windows StartPins & TaskbarPins",
       "Source": "BuiltIn",
       "PackageType": "Script",
-      "Vendor": "OSDApps",
+      "Vendor": "OSDStage",
       "Acquisition": "BundledScript",
       "SyncPhase": "None",
-      "AddCommand": "Add-OSDAppStartPins",
+      "AddCommand": "Add-OSDStageStartPins",
       "SyncCommand": null,
       "Architectures": [
         "any"
@@ -413,7 +413,7 @@
       "RepositoryAlternative": false,
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg",
       "AdditionalAddCommands": [
-        "Add-OSDAppTaskbarPins"
+        "Add-OSDStageTaskbarPins"
       ]
     },
     {
@@ -421,10 +421,10 @@
       "DisplayName": "Initial default apps",
       "Source": "BuiltIn",
       "PackageType": "Script",
-      "Vendor": "OSDApps",
+      "Vendor": "OSDStage",
       "Acquisition": "BundledScript",
       "SyncPhase": "None",
-      "AddCommand": "Add-OSDAppDefaultAssociation",
+      "AddCommand": "Add-OSDStageDefaultAssociation",
       "SyncCommand": null,
       "Architectures": [
         "any"

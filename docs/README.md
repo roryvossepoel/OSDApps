@@ -1,6 +1,6 @@
-# OSDApps documentation
+# OSDStage documentation
 
-OSDApps is CLI-first. Use PowerShell to configure, cache and stage apps and machine-context scripts; use OSDApps Viewer to inspect what was prepared. Start with the workflow for the environment you are actually using.
+OSDStage is CLI-first. Use PowerShell to configure, cache and stage apps and machine-context scripts; use OSDStage Viewer to inspect what was prepared. Start with the workflow for the environment you are actually using.
 
 ## Start here
 
@@ -11,7 +11,7 @@ OSDApps is CLI-first. Use PowerShell to configure, cache and stage apps and mach
 | Stage apps after OSDCloud has applied Windows | [Online WinPE deployment](../Examples/WinPE-Online.md) | WinPE, before the first Windows boot |
 | Integrate staging with OSDT or another launcher | [Launcher integration](../Examples/Launcher-Integration.md) | WinPE; exit-code gate before the launcher reboots |
 | Deploy without network from prepared content | [Offline WinPE deployment](../Examples/WinPE-Offline.md) | WinPE and SetupComplete, with a complete matching cache |
-| Preflight staging and inspect cache, signatures and logs | [Getting started](getting-started.md#3-inspect-before-reboot) and [OSDApps Viewer](viewer.md) | WinPE or full Windows |
+| Preflight staging and inspect cache, signatures and logs | [Getting started](getting-started.md#3-inspect-before-reboot) and [OSDStage Viewer](viewer.md) | WinPE or full Windows |
 | Choose a source, cache, release or deployment-result check | [Choose the right check](maintenance.md#choose-the-right-check) | Environment and effects listed per check |
 | Audit or reconcile long-lived repository cache content | [Cache health and reconciliation](repository.md#cache-health-and-reconciliation) | Full Windows preparation or WinPE cache session |
 | Package your own app or machine-context script | [Package authoring walkthrough](../Examples/Build-Repository-Package.md) | Full Windows authoring machine |
@@ -52,9 +52,9 @@ Historical test results are not claims about every currently supported architect
 | --- | --- |
 | Preparation machine | Full Windows computer used to download the module, build packages or maintain USB content |
 | Windows target | The offline Windows installation selected for deployment, not the preparation machine |
-| USB cache | Content under `\OSDApps` on the volume identified by `CacheVolumeLabel` (default `OSDCloud`) |
-| Local staging | `Windows\Temp\OSDApps` under the Windows target, containing its manifest, runtime and app content |
-| Built-in | Vendor-native integration maintained by OSDApps; payloads are not distributed by the module |
+| USB cache | Content under `\OSDStage` on the volume identified by `CacheVolumeLabel` (default `OSDCloud`) |
+| Local staging | `Windows\Temp\OSDStage` under the Windows target, containing its manifest, runtime and app content |
+| Built-in | Vendor-native integration maintained by OSDStage; payloads are not distributed by the module |
 | Repository package | Your own `Package.zip` plus published metadata, classified as `App` or `Script` |
 | Staged | Queued for SetupComplete; not evidence of successful installation |
 

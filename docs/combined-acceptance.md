@@ -29,13 +29,13 @@ Choose five distinct repository IDs: one App, one harmless Script, a Font, a
 Certificate package and a Driver package. Confirm what each package actually does.
 Use the previously tested root certificate and Realtek driver set where available.
 Do not substitute a corporate VPN/provisioning script merely to fill the Script
-slot. A script fixture can create a harmless marker under `C:\ProgramData\OSDApps\Tests`.
+slot. A script fixture can create a harmless marker under `C:\ProgramData\OSDStage\Tests`.
 Certificate store selection comes from its repository manifest (machine Root or CA).
 The test itself does not choose the store or download a new trust anchor.
 
 Supply an existing supported Wi-Fi XML export locally. It may contain a clear-text
 key: keep it outside the repository and do not paste it in reports. The source XML
-belongs to the operator; runtime cleanup removes OSDApps' staged copy, not that
+belongs to the operator; runtime cleanup removes OSDStage' staged copy, not that
 source file. This run tests XML input; the parameter-generated variant remains
 covered separately. The test PC needs an enabled Wi-Fi adapter and its driver.
 Keep wired internet available for capability downloads; importing a Wi-Fi profile
@@ -43,11 +43,11 @@ does not prove connectivity or supply internet before that import runs.
 
 ## Preparation and staging
 
-1. Run [Prepare-OSDAppsCombinedTest.ps1](../tools/Prepare-OSDAppsCombinedTest.ps1)
+1. Run [Prepare-OSDStageCombinedTest.ps1](../tools/Prepare-OSDStageCombinedTest.ps1)
    on the preparation PC with the reviewed full commit SHA as `-Revision`.
    It finds the USB volume by label `OSDCloud`, installs an isolated test copy under
-   `TestModules`, and returns its `TestPath`. It never imports Gallery OSDApps.
-2. Run the returned `Invoke-OSDAppsCombinedTest.ps1` with `-Phase Prepare`,
+   `TestModules`, and returns its `TestPath`. It never imports Gallery OSDStage.
+2. Run the returned `Invoke-OSDStageCombinedTest.ps1` with `-Phase Prepare`,
    `-CatalogUri`, `-AppId`, `-ScriptId`, `-FontId`, `-CertificateId`, `-DriverId`
    and `-WiFiProfilePath`. This validates selections and normally synchronizes the
    selected online repository packages, Chrome and Adobe without pruning the existing cache.
@@ -59,13 +59,13 @@ does not prove connectivity or supply internet before that import runs.
    Check the returned validation before continuing with the normal launcher.
 
 Do not add this profile after an existing staging block: it deliberately refuses
-existing `Windows\Temp\OSDApps` content. If staging fails midway, do not boot and
+existing `Windows\Temp\OSDStage` content. If staging fails midway, do not boot and
 call it a complete test. Diagnose the error; no rollback of earlier staged entries
 is promised. The script never deletes existing staging to hide that failure.
 
 The profile deliberately uses `CleanupMode OnSuccess`. Runtime results remain
 outside staging; failed runs retain diagnostic staging except for secret cleanup.
-A small `ProgramData\OSDApps\Tests\Combined-Staging.json` records the commit,
+A small `ProgramData\OSDStage\Tests\Combined-Staging.json` records the commit,
 deployment ID, expected IDs and cached versions without Wi-Fi XML or credentials.
 These cached versions are preparation evidence, not a promise that the pre-install
 refresh will install those exact versions; use the runtime results for that.
@@ -79,8 +79,8 @@ refresh will install those exact versions; use the runtime results for that.
 | Fonts | Explicit Font ID | Expected font installed and usable |
 | Certificates | Explicit Certificate ID | Expected thumbprint in the manifest-selected LocalMachine store |
 | Drivers | Explicit Driver ID | Expected INF/provider present in DriverStore; binding to hardware is separate |
-| Registry | Nested empty key, string and DWORD in both 32/64 views | `HKLM\SOFTWARE\OSDApps\Tests\Combined`; Marker names the view, Number = 42 |
-| Environment | Set, expandable string, PATH append and removal | Machine OSDAppsMega = CombinedTest; OSDAppsMegaExpanded retains REG_EXPAND_SZ; one PATH entry; seeded OSDAppsMegaRemove absent |
+| Registry | Nested empty key, string and DWORD in both 32/64 views | `HKLM\SOFTWARE\OSDStage\Tests\Combined`; Marker names the view, Number = 42 |
+| Environment | Set, expandable string, PATH append and removal | Machine OSDStageMega = CombinedTest; OSDStageMegaExpanded retains REG_EXPAND_SZ; one PATH entry; seeded OSDStageMegaRemove absent |
 | Services | WSearch Manual/Stopped; Spooler Automatic/Running | Per-operation before/after result; a later Windows state change is separate |
 | Optional features | Enable TelnetClient; disable WorkFolders-Client | Per-feature state and any pending restart reported honestly |
 | Capabilities | Add XPS.Viewer; remove OpenSSH.Client | Installed / NotPresent; distinguish actual changes from already-correct state |
@@ -99,7 +99,7 @@ entry is a test marker and does not install a tool directory.
 ## Read-only result check
 
 After the normal deployment completes, manually run
-[Test-OSDAppsCombinedResult.ps1](../tools/Test-OSDAppsCombinedResult.ps1) from the
+[Test-OSDStageCombinedResult.ps1](../tools/Test-OSDStageCombinedResult.ps1) from the
 same test module. It checks the stored deployment ID, all 16 unique expected
 entries, successful states, consistent counters and removal of staging. It rejects
 old results, missing entries, duplicate IDs and incomplete cleanup. It does not
@@ -110,7 +110,7 @@ cleanup to finish before repeating this read-only inspection. Do not delete the
 stage directory to manufacture a pass. Record the table's manual observations
 separately, especially user-editable defaults/pins and Wi-Fi connectivity.
 
-Retain the staging record and the matching `ProgramData\OSDApps\Results` files.
+Retain the staging record and the matching `ProgramData\OSDStage\Results` files.
 Review logs before sharing. Never archive the entire staging tree or original
 Wi-Fi XML as routine test evidence. If a defect is found, fix it and run the
 smallest relevant regression test before deciding whether another full deployment
@@ -119,7 +119,7 @@ is needed. Viewer, Pages and rename remain deferred until technical acceptance.
 ## Recorded acceptance on 31 October 2026
 
 The maintainer supplied runtime logs and per-feature results for two fresh
-deployments, then confirmed `Test-Path 'C:\Windows\Temp\OSDApps'` returned
+deployments, then confirmed `Test-Path 'C:\Windows\Temp\OSDStage'` returned
 `False` after each. Cleanup completion is operator-confirmed; the runtime logs
 themselves record cleanup scheduling. Raw device logs and credential-bearing
 inputs remain outside this public repository.
@@ -182,7 +182,7 @@ failures or skips, in 16.3 seconds, all exit 0.
 | RepoTestWiFiProfile | Script package imported one all-user WLAN profile successfully |
 
 Wi-Fi here uses a generic repository Script wrapper around the existing runtime,
-not a new native Wi-Fi package type or an `Add-OSDAppWiFiProfile -Id` parameter.
+not a new native Wi-Fi package type or an `Add-OSDStageWiFiProfile -Id` parameter.
 The wrapper removes its extracted XML and temporary config on normal completion
 or handled failure, and reports a nonzero exit if that cleanup fails. No password
 or profile XML was present in the supplied logs/results. The maintainer confirmed

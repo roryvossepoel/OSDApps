@@ -1,5 +1,5 @@
 name: Built-in app request
-description: Request a new built-in app for OSDApps.
+description: Request a new built-in app for OSDStage.
 title: "[Built-in request] "
 body:
   - type: markdown
@@ -84,7 +84,7 @@ body:
     id: update_mechanism
     attributes:
       label: Update / freshness mechanism
-      description: Explain how OSDApps can determine or acquire the current version.
+      description: Explain how OSDStage can determine or acquire the current version.
       placeholder: |
         Stable evergreen URL, version endpoint, redirect behavior, ETag/Last-Modified support, etc.
     validations:
@@ -114,7 +114,7 @@ body:
     id: requirements
     attributes:
       label: Built-in requirements
-      description: Confirm that the requested app fits the OSDApps built-in model.
+      description: Confirm that the requested app fits the OSDStage built-in model.
       options:
         - label: The installer is acquired directly from the software vendor.
           required: true

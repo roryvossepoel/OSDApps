@@ -1,13 +1,13 @@
 # CMTrace Open (built-in)
 
-This optional built-in installs the CMTrace Open MSI sourced directly from [adamgell/cmtraceopen GitHub releases](https://github.com/adamgell/cmtraceopen/releases). No binary is committed to OSDApps.
+This optional built-in installs the CMTrace Open MSI sourced directly from [adamgell/cmtraceopen GitHub releases](https://github.com/adamgell/cmtraceopen/releases). No binary is committed to OSDStage.
 
 ## Full Windows preparation
 
 ```powershell
-Import-Module OSDApps
-Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud
-Sync-OSDAppCMTraceOpen -Architecture x64
+Import-Module OSDStage
+Set-OSDStageConfiguration -CacheVolumeLabel OSDCloud
+Sync-OSDStageCMTraceOpen -Architecture x64
 ```
 
 The synchronizer reads the latest **stable** release from the exact upstream GitHub repository, requires a matching architecture-specific MSI, compares downloaded bytes with the asset's official SHA-256 digest and checks the MSI Authenticode signature. Cached content remains unchanged if a download fails.
@@ -19,13 +19,13 @@ The confirmed upstream release on 24 October 2026 is **1.6.3**. Upstream asset S
 ## WinPE
 
 ```powershell
-Import-Module OSDApps
-Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud -CleanupMode OnSuccess
-Add-OSDAppCMTraceOpen -Architecture x64 -DisableUpdateChecks $true
-Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
+Import-Module OSDStage
+Set-OSDStageConfiguration -CacheVolumeLabel OSDCloud -CleanupMode OnSuccess
+Add-OSDStageCMTraceOpen -Architecture x64 -DisableUpdateChecks $true
+Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure
 ```
 
-The built-in uses a **pre-synchronized MSI**, rather than downloading the MSI during SetupComplete. OSDApps retains the upstream vendor filename (for x64 release 1.6.3, `CMTrace-Open_1.6.3_x64.msi`). Build a fresh cache; no generic-filename cache is accepted or converted. It reuses the existing built-in VendorMsi runner with `/qn /norestart` and optional `DISABLEUPDATECHECKS=1`. MSI hash and Authenticode checks run again before installation.
+The built-in uses a **pre-synchronized MSI**, rather than downloading the MSI during SetupComplete. OSDStage retains the upstream vendor filename (for x64 release 1.6.3, `CMTrace-Open_1.6.3_x64.msi`). Build a fresh cache; no generic-filename cache is accepted or converted. It reuses the existing built-in VendorMsi runner with `/qn /norestart` and optional `DISABLEUPDATECHECKS=1`. MSI hash and Authenticode checks run again before installation.
 
 ## Validation and remaining tests
 

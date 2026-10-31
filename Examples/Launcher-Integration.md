@@ -8,9 +8,9 @@ It is an integration example, not a change to OSDT itself.
 
 ## Staging script
 
-Include [Stage-OSDApps.ps1](Stage-OSDApps.ps1) in your launcher files. It loads
-OSDApps from PowerShell Gallery, stages Office, Adobe Acrobat Unified and Chrome,
-and calls `Test-OSDAppDeployment -ThrowOnFailure` after the last Add command.
+Include [Stage-OSDStage.ps1](Stage-OSDStage.ps1) in your launcher files. It loads
+OSDStage from PowerShell Gallery, stages Office, Adobe Acrobat Unified and Chrome,
+and calls `Test-OSDStageDeployment -ThrowOnFailure` after the last Add command.
 Edit the queue and Office language in that file for your deployment. No module
 version, USB module path or cache label is required.
 
@@ -25,7 +25,7 @@ Prepare those prerequisites in the WinPE image or launcher initialization.
 Adapt the local script path to where your launcher stores its files:
 
 ```powershell
-$StagingScript = 'X:\OSDT\Scripts\Stage-OSDApps.ps1'
+$StagingScript = 'X:\OSDT\Scripts\Stage-OSDStage.ps1'
 if (-not (Test-Path -LiteralPath $StagingScript -PathType Leaf)) {
     throw "Staging script not found: $StagingScript"
 }
@@ -35,7 +35,7 @@ $process = Start-Process -FilePath 'powershell.exe' `
     -Wait -PassThru -ErrorAction Stop
 
 if ($process.ExitCode -ne 0) {
-    throw "OSDApps staging failed (exit $($process.ExitCode)). Reboot blocked."
+    throw "OSDStage staging failed (exit $($process.ExitCode)). Reboot blocked."
 }
 
 # Only this success path may reach the launcher's existing reboot action.

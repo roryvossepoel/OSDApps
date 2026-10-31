@@ -1,4 +1,4 @@
-Describe 'Canonical OSDApps terminology' {
+Describe 'Canonical OSDStage terminology' {
     BeforeAll {
         $script:repositoryRoot = Split-Path $PSScriptRoot -Parent
         $script:obsoleteTerm = 'Applic' + 'ation'
@@ -20,7 +20,7 @@ Describe 'Canonical OSDApps terminology' {
             $source = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8
             # Standard HTTP media types are external contracts, not project terminology.
             $source = $source -replace ('(?i)' + $script:obsoleteTerm + '/(?:vnd\.github\+json|json|octet-stream)\b'), ''
-            # These are mandatory PSHost API overrides, not OSDApps-owned terminology.
+            # These are mandatory PSHost API overrides, not OSDStage-owned terminology.
             $source = $source -replace ('Notify(Begin|End)' + $script:obsoleteTerm), ''
             # The Add-Type compiler output kind is a mandatory external API enum.
             $source = $source -replace ('\bConsole' + $script:obsoleteTerm + '\b'), ''
@@ -42,9 +42,9 @@ Describe 'Canonical OSDApps terminology' {
     It 'keeps the vendor-mandated GitHub media type intact' {
         $expected = ('applic' + 'ation/vnd.github+json')
         foreach ($relative in @(
-            'Runtime/OSDApp7Zip.ps1',
-            'Public/Sync-OSDAppCMTraceOpen.ps1',
-            'tools/Test-OSDAppsMaintenance.ps1'
+            'Runtime/OSDStage7Zip.ps1',
+            'Public/Sync-OSDStageCMTraceOpen.ps1',
+            'tools/Test-OSDStageMaintenance.ps1'
         )) {
             $content = Get-Content -LiteralPath (Join-Path $script:repositoryRoot $relative) -Raw -Encoding UTF8
             $content | Should -Match ([regex]::Escape($expected)) -Because "$relative must retain the external GitHub API media type"

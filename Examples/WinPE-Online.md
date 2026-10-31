@@ -9,17 +9,17 @@ This example uses the current PowerShell Gallery release and three x64 built-ins
 ## 1. Import the module and stage built-ins
 
 ```powershell
-Install-Module OSDApps -Force -SkipPublisherCheck
-Import-Module OSDApps -Force
+Install-Module OSDStage -Force -SkipPublisherCheck
+Import-Module OSDStage -Force
 
-Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
-Add-OSDAppAdobeAcrobatUnified
-Add-OSDAppGoogleChromeEnterprise
+Add-OSDStageMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
+Add-OSDStageAdobeAcrobatUnified
+Add-OSDStageGoogleChromeEnterprise
 ```
 
-Change the Office channel and language to suit your deployment. OSDApps discovers the offline Windows installation automatically. If multiple installations are found, specify the intended root with `-WindowsPath` on each Add command and on the preflight check.
+Change the Office channel and language to suit your deployment. OSDStage discovers the offline Windows installation automatically. If multiple installations are found, specify the intended root with `-WindowsPath` on each Add command and on the preflight check.
 
-The defaults already select the `OSDCloud` cache label and `OnSuccess` cleanup. `-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDApps installer signature checks.
+The defaults already select the `OSDCloud` cache label and `OnSuccess` cleanup. `-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDStage installer signature checks.
 
 ### With a USB flash drive
 
@@ -39,11 +39,11 @@ Removing the USB flash drive only after staging is not a clean no-cache test: ca
 $CatalogUri = Read-Host 'Enter the HTTPS URL of your repository catalog.json'
 $RepoAppId = Read-Host 'Enter an app Id present in that repository'
 
-Set-OSDAppConfiguration -CatalogUri $CatalogUri
-Add-OSDApp -Name $RepoAppId
+Set-OSDStageConfiguration -CatalogUri $CatalogUri
+Add-OSDStage -Name $RepoAppId
 ```
 
-Use your own published catalog and app Id. Notepad++ and Omnissa Horizon Client are examples of user-supplied packages, not built-ins supplied by OSDApps. The same command stages a repository package classified as `Script`.
+Use your own published catalog and app Id. Notepad++ and Omnissa Horizon Client are examples of user-supplied packages, not built-ins supplied by OSDStage. The same command stages a repository package classified as `Script`.
 
 ## 3. Review before continuing
 
@@ -52,7 +52,7 @@ For an automated launcher, use the [launcher integration example](Launcher-Integ
 Optionally run the preflight after the last Add command:
 
 ```powershell
-Test-OSDAppDeployment -ThrowOnFailure
+Test-OSDStageDeployment -ThrowOnFailure
 ```
 
 If you run this check, resolve any reported failure before rebooting. For a fresh built-in deployment without cache, `OfflineReady=False` and `NetworkRequired=True` are expected; `Valid=True` means staging passed, not that installation has happened.
@@ -60,7 +60,7 @@ If you run this check, resolve any reported failure before rebooting. For a fres
 Optionally inspect the queue in the read-only Viewer:
 
 ```powershell
-Show-OSDAppUI -Offline
+Show-OSDStageUI -Offline
 ```
 
 Expect Microsoft 365 Apps first, Adobe Acrobat Unified second and Google Chrome Enterprise third, followed by a repository app only if step 2 was used. The Viewer needs Windows Forms and an STA session. Its `-Offline` switch limits repository lookup; it does not change deployment networking.

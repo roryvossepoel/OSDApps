@@ -1,9 +1,9 @@
 Describe 'One-shot fault-tolerant runtime' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Path $PSScriptRoot -Parent
-        $script:runnerPath = Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'
-        $script:preInstallPath = Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1'
-        Import-Module (Join-Path $script:moduleRoot 'OSDApps.psd1') -Force
+        $script:runnerPath = Join-Path $script:moduleRoot 'Runtime\Invoke-OSDStageRunner.ps1'
+        $script:preInstallPath = Join-Path $script:moduleRoot 'Runtime\Invoke-OSDStagePreInstall.ps1'
+        Import-Module (Join-Path $script:moduleRoot 'OSDStage.psd1') -Force
 
         function ConvertTo-SingleQuotedPowerShellLiteral {
             param([Parameter(Mandatory)][string]$Value)
@@ -36,7 +36,7 @@ Describe 'One-shot fault-tolerant runtime' {
                 PackageType = $PackageType
                 Version = '1.0.0'
                 Architecture = 'x64'
-                Archive = [ordered]@{ Sha256 = $sha256 }
+                Payload = [ordered]@{ Sha256 = $sha256 }
                 SuccessCodes = @(0,3010)
             }
         }
@@ -54,7 +54,7 @@ Describe 'One-shot fault-tolerant runtime' {
             New-Item -ItemType Directory -Path $stage -Force | Out-Null
             $deploymentId = [guid]::NewGuid().Guid
             [ordered]@{
-                SchemaVersion = 1
+                SchemaVersion = 2
                 DeploymentId = $deploymentId
                 Runtime = [ordered]@{
                     CleanupMode = $CleanupMode
@@ -62,7 +62,7 @@ Describe 'One-shot fault-tolerant runtime' {
                     LogPath = $logPath
                     ResultPath = $resultPath
                 }
-                Apps = @($Apps)
+                Packages = @($Apps)
             } | ConvertTo-Json -Depth 20 |
                 Set-Content -LiteralPath (Join-Path $stage 'DeviceManifest.json') -Encoding UTF8
 
@@ -99,14 +99,14 @@ Describe 'One-shot fault-tolerant runtime' {
         $result = Get-Content -LiteralPath $fixture.ResultPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $result.Status | Should -Be 'Failed'
         $result.FailureType | Should -Be 'AppFailures'
-        $result.SuccessfulAppCount | Should -Be 1
-        $result.FailedAppCount | Should -Be 1
-        $result.SkippedAppCount | Should -Be 0
-        @($result.Apps.Status) | Should -Be @('Failed','Succeeded')
-        $result.Apps[0].ExitCode | Should -Be 42
-        $result.Apps[0].FailureType | Should -Be 'InstallerFailed'
-        $result.Apps[0].PackageType | Should -Be 'Script'
-        $result.Apps[1].PackageType | Should -Be 'App'
+        $result.SuccessfulPackageCount | Should -Be 1
+        $result.FailedPackageCount | Should -Be 1
+        $result.SkippedPackageCount | Should -Be 0
+        @($result.Packages.Status) | Should -Be @('Failed','Succeeded')
+        $result.Packages[0].ExitCode | Should -Be 42
+        $result.Packages[0].FailureType | Should -Be 'InstallerFailed'
+        $result.Packages[0].PackageType | Should -Be 'Script'
+        $result.Packages[1].PackageType | Should -Be 'App'
         (Get-Content -LiteralPath $fixture.LogPath -Raw) | Should -Match '\[InstallCompletedWithErrors\]'
     }
 
@@ -129,11 +129,11 @@ Describe 'One-shot fault-tolerant runtime' {
         $preInstallPath = Join-Path (Split-Path $fixture.ResultPath -Parent) 'PreInstall.json'
         New-Item -ItemType Directory -Path (Split-Path $preInstallPath -Parent) -Force | Out-Null
         [ordered]@{
-            SchemaVersion = '1.0'
+            SchemaVersion = '2.0'
             DeploymentId = $fixture.DeploymentId
             Phase = 'PreInstall'
             Status = 'CompletedWithErrors'
-            Apps = @(
+            Packages = @(
                 [ordered]@{
                     Id = 'AdobeAcrobatUnified'
                     Status = 'Failed'
@@ -148,10 +148,10 @@ Describe 'One-shot fault-tolerant runtime' {
 
         (Test-Path -LiteralPath $successMarker -PathType Leaf) | Should -BeTrue
         $result = Get-Content -LiteralPath $fixture.ResultPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        @($result.Apps.Status) | Should -Be @('Skipped','Succeeded')
-        $result.SuccessfulAppCount | Should -Be 1
-        $result.SkippedAppCount | Should -Be 1
-        $result.Apps[0].FailureType | Should -Be 'RemoteAcquisition'
+        @($result.Packages.Status) | Should -Be @('Skipped','Succeeded')
+        $result.SuccessfulPackageCount | Should -Be 1
+        $result.SkippedPackageCount | Should -Be 1
+        $result.Packages[0].FailureType | Should -Be 'RemoteAcquisition'
     }
 
     It 'aborts before every installer when repository integrity fails' -Skip:(-not (Get-Command powershell.exe -ErrorAction SilentlyContinue)) {
@@ -164,7 +164,7 @@ Describe 'One-shot fault-tolerant runtime' {
         $secondScript = "Set-Content -LiteralPath $(ConvertTo-SingleQuotedPowerShellLiteral $secondMarker) -Value 'attempted' -Encoding ASCII`r`nexit 0"
         $first = New-OneShotRepositoryPackage -Stage $stage -Id 'TamperedPackage' -InstallScript $firstScript
         $second = New-OneShotRepositoryPackage -Stage $stage -Id 'NeverAttemptedPackage' -InstallScript $secondScript
-        $first.Archive.Sha256 = ('0' * 64)
+        $first.Payload.Sha256 = ('0' * 64)
         $fixture = New-OneShotDeploymentFixture -Root $root -Apps @($first,$second)
 
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:runnerPath -StagedPath $fixture.Stage
@@ -175,9 +175,9 @@ Describe 'One-shot fault-tolerant runtime' {
         $result = Get-Content -LiteralPath $fixture.ResultPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $result.Status | Should -Be 'Failed'
         $result.FailureType | Should -Be 'HashMismatch'
-        @($result.Apps.Status) | Should -Be @('Failed','Skipped')
-        $result.FailedAppCount | Should -Be 1
-        $result.SkippedAppCount | Should -Be 1
+        @($result.Packages.Status) | Should -Be @('Failed','Skipped')
+        $result.FailedPackageCount | Should -Be 1
+        $result.SkippedPackageCount | Should -Be 1
     }
 
     It 'records an ordinary built-in acquisition failure without requesting a retry' -Skip:(-not (Get-Command powershell.exe -ErrorAction SilentlyContinue)) {
@@ -187,7 +187,7 @@ Describe 'One-shot fault-tolerant runtime' {
         $logPath = Join-Path $root 'Logs\Runtime.log'
         New-Item -ItemType Directory -Path $stage -Force | Out-Null
         [ordered]@{
-            SchemaVersion = 1
+            SchemaVersion = 2
             DeploymentId = [guid]::NewGuid().Guid
             Runtime = [ordered]@{
                 CleanupMode = 'OnSuccess'
@@ -195,7 +195,7 @@ Describe 'One-shot fault-tolerant runtime' {
                 LogPath = $logPath
                 ResultPath = $resultPath
             }
-            Apps = @(
+            Packages = @(
                 [ordered]@{
                     Id = 'AdobeAcrobatUnified'
                     DisplayName = 'Adobe Acrobat Unified'
@@ -214,21 +214,21 @@ Describe 'One-shot fault-tolerant runtime' {
         $preInstallResultPath = Join-Path (Split-Path $resultPath -Parent) 'PreInstall.json'
         $result = Get-Content -LiteralPath $preInstallResultPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $result.Status | Should -Be 'CompletedWithErrors'
-        $result.FailedBuiltInAppCount | Should -Be 1
-        @($result.Apps).Count | Should -Be 1
-        $result.Apps[0].Status | Should -Be 'Failed'
+        $result.FailedBuiltInPackageCount | Should -Be 1
+        @($result.Packages).Count | Should -Be 1
+        $result.Packages[0].Status | Should -Be 'Failed'
         $result.Error | Should -Match 'no automatic retry'
     }
 
     It 'keeps SetupComplete one-shot and does not install a persistence retry mechanism' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $windowsRoot = Join-Path $TestDrive 'OneShotSetupComplete'
-            Add-OSDAppSetupComplete -WindowsPath $windowsRoot -Confirm:$false | Out-Null
+            Add-OSDStageSetupComplete -WindowsPath $windowsRoot -Confirm:$false | Out-Null
         }
         $windowsRoot = Join-Path $TestDrive 'OneShotSetupComplete'
         $setupComplete = Get-Content -LiteralPath (Join-Path $windowsRoot 'Windows\Setup\Scripts\SetupComplete.cmd') -Raw
         $setupComplete | Should -Not -Match '(?i)Register-ScheduledTask|schtasks(?:\.exe)?|\\RunOnce\b|New-Service|sc(?:\.exe)?\s+create'
-        ([regex]::Matches($setupComplete, '(?m)^powershell\.exe.*Invoke-OSDAppPreInstall\.ps1.*$')).Count | Should -Be 1
-        ([regex]::Matches($setupComplete, '(?m)^powershell\.exe.*Invoke-OSDAppRunner\.ps1.*$')).Count | Should -Be 1
+        ([regex]::Matches($setupComplete, '(?m)^powershell\.exe.*Invoke-OSDStagePreInstall\.ps1.*$')).Count | Should -Be 1
+        ([regex]::Matches($setupComplete, '(?m)^powershell\.exe.*Invoke-OSDStageRunner\.ps1.*$')).Count | Should -Be 1
     }
 }

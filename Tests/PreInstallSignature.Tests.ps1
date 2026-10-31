@@ -1,7 +1,7 @@
 Describe 'Standalone SetupComplete PreInstall built-in signer checks' {
     BeforeAll {
         $root = Split-Path -Parent $PSScriptRoot
-        $runtime = Join-Path $root 'Runtime\Invoke-OSDAppPreInstall.ps1'
+        $runtime = Join-Path $root 'Runtime\Invoke-OSDStagePreInstall.ps1'
         $tokens = $null
         $errors = $null
         $ast = [System.Management.Automation.Language.Parser]::ParseFile(
