@@ -18,8 +18,8 @@ Describe 'Canonical OSDApps terminology' {
                 $found.Add("Filename: $relative")
             }
             $source = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8
-            # The GitHub Accept header is an external MIME standard, not OSDApps terminology.
-            $source = $source -replace ('(?i)' + $script:obsoleteTerm + '/vnd\.github\+json'), ''
+            # Standard HTTP media types are external contracts, not project terminology.
+            $source = $source -replace ('(?i)' + $script:obsoleteTerm + '/(?:vnd\.github\+json|json|octet-stream)\b'), ''
             # These are mandatory PSHost API overrides, not OSDApps-owned terminology.
             $source = $source -replace ('Notify(Begin|End)' + $script:obsoleteTerm), ''
             # The Add-Type compiler output kind is a mandatory external API enum.
@@ -49,6 +49,15 @@ Describe 'Canonical OSDApps terminology' {
             $content = Get-Content -LiteralPath (Join-Path $script:repositoryRoot $relative) -Raw -Encoding UTF8
             $content | Should -Match ([regex]::Escape($expected)) -Because "$relative must retain the external GitHub API media type"
             $content | Should -Not -Match 'app/vnd\.github\+json'
+        }
+    }
+
+    It 'keeps standard JSON and binary media types in manifest encoding coverage' {
+        $source = Get-Content (Join-Path $script:repositoryRoot 'Tests\RepositoryManifestEncoding.Tests.ps1') -Raw
+        foreach ($suffix in @('json','octet-stream')) {
+            $expected = $script:obsoleteTerm.ToLowerInvariant() + '/' + $suffix
+            $source | Should -Match ([regex]::Escape($expected))
+            $source | Should -Not -Match ('(?<![A-Za-z])app/' + $suffix)
         }
     }
 }
