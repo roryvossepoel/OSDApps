@@ -11,8 +11,9 @@ modules by commit, not by the manifest version alone.
 
 ## Agreed order
 
-1. Decide the feature scope, test the selected scenarios and record their
-   contracts, limits and results here and in the detailed guides.
+1. Establish technical module stability, run the selected combined acceptance
+   profile and record contracts, limits and results. Viewer, Pages and renaming
+   must wait for technical acceptance.
 2. Decide whether to rename the project, including command names and migration
    impact, before finalizing the UI and public documentation.
 3. Finish the Viewer against the agreed feature set.
@@ -87,13 +88,13 @@ guide define the supported parameters; this table records the practical state.
 | Feature / interface | Defined scope | Practical evidence and next decision |
 | --- | --- | --- |
 | Registry: `Add-OSDAppRegistryKey`, `Add-OSDAppRegistryValue` | Keys and typed values; explicit 32/64-bit or process-default view. [Contract](registry-staging.md). | **Recorded pass:** nine operations and independent read-back on x64, documented in the [candidate evidence](release-candidate-0.52.0.md). Other roots/architectures are not implied. |
-| Optional features: `Add-OSDAppWindowsFeature` | Enable/disable Windows feature names once with NoRestart. No source-media management. [PR #81](https://github.com/roryvossepoel/OSDApps/pull/81), [runtime](../Runtime/Invoke-OSDAppWindowsFeatures.ps1). | **Evidence pending:** TelnetClient enable and WorkFolders-Client disable were selected for testing, but no correlated practical result is recorded here. Retrieve that result or include this pair in the next test. FOD capabilities use the separate command below. |
+| Optional features: `Add-OSDAppWindowsFeature` | Enable/disable Windows feature names once with NoRestart. No source-media management. [PR #81](https://github.com/roryvossepoel/OSDApps/pull/81), [runtime](../Runtime/Invoke-OSDAppWindowsFeatures.ps1). | **Operator-confirmed workflow:** on 31 October the maintainer confirmed the earlier practical tests had already been completed. TelnetClient enable and WorkFolders-Client disable were the selected pair; exact retained before/after evidence is unavailable. Do not require a repeat solely to recover old logs. FOD capabilities use the separate command below. |
 | Fonts: `Add-OSDAppFont -Id` | Repository Font package, machine-wide TTF/OTF; no TTC. No overwrite on conflicting font content. | **Recorded pass:** seven fonts installed/registered and natively loaded in [PR #82](https://github.com/roryvossepoel/OSDApps/pull/82). Separate ARM64, repeat/conflict and user-app rendering tests are not established. |
 | Certificates: `Add-OSDAppCertificate` | Repository Id or local file; public CA certificates into LocalMachine Root or CA only. No private keys/PFX/user stores. [Contract](certificate-staging.md). | **Recorded pass:** local-file and repository-package Root import in [PR #85](https://github.com/roryvossepoel/OSDApps/pull/85). Native automated CA-store coverage exists; separate physical intermediate-CA scenario remains unrecorded. |
 | Drivers: `Add-OSDAppDriver -Id` | Repository Driver package; full vendor tree; SetupComplete adds INFs to the Driver Store and requests matching-device installation. No boot-driver injection. [Contract](driver-packages.md). | **Operator-confirmed:** Realtek drivers were present in the Driver Store; maintainer accepted that outcome. Actual selection/binding and device function are not claimed. Implementation and CI: [PR #86](https://github.com/roryvossepoel/OSDApps/pull/86). |
 | Wi-Fi: `Add-OSDAppWiFiProfile` | WLAN XML or parameters; WPA2-Personal, WPA3-Personal and Open. No EAP/Enterprise. All-user profile import, no explicit connect. [Contract](wifi-staging.md). | **Recorded pass:** XML input accepted on one adapter in [PR #84](https://github.com/roryvossepoel/OSDApps/pull/84). Parameter-generated input has automated coverage but no separate physical pass recorded there. Neither import nor merge proves connectivity. |
-| Machine variables: `Add-OSDAppEnvironmentVariable` | Set/remove literal or expandable machine values; append PATH without new lexical duplicates. Existing processes are not refreshed. [Contract](environment-variables.md). | **Evidence pending:** combined variables/services test was followed by a merge instruction, but exact settings and before/after outcomes are not recorded in [PR #87](https://github.com/roryvossepoel/OSDApps/pull/87). Recover results before retesting. |
-| Services: `Add-OSDAppService` | Exact existing service name; startup mode and running/stopped state; bounded wait in the same run. No credentials, dependency edits or recurring enforcement. [Contract](services.md). | **Evidence pending:** same combined run as variables. Native automated disposable-service coverage exists; merge alone does not establish the physical result. |
+| Machine variables: `Add-OSDAppEnvironmentVariable` | Set/remove literal or expandable machine values; append PATH without new lexical duplicates. Existing processes are not refreshed. [Contract](environment-variables.md). | **Operator-confirmed workflow:** maintainer reconfirmed completion of earlier practical tests on 31 October. Exact settings and before/after outcomes are not retained in [PR #87](https://github.com/roryvossepoel/OSDApps/pull/87); this does not invalidate that confirmation or require repeating the deployment. |
+| Services: `Add-OSDAppService` | Exact existing service name; startup mode and running/stopped state; bounded wait in the same run. No credentials, dependency edits or recurring enforcement. [Contract](services.md). | **Operator-confirmed workflow:** same combined run as variables, reconfirmed by the maintainer on 31 October. Individual service transitions are not retained; native automated disposable-service coverage is separate evidence. |
 | Inbox app removal: `Add-OSDAppWindowsInboxCleanup` | Explicit selection or Tested13 preset, optional diagnosis. [Built-in guide](built-in-apps.md). | **Recorded pass:** 13 selected packages removed and reported absent after Autopilot; separate three-package run also recorded in [testing](testing.md). No blanket claim for every inbox package/build. |
 | Windows capabilities: `Add-OSDAppWindowsCapability` | Explicit Add/Remove by full capability identity; Windows 11 client 25H2+ at runtime; online servicing sources under existing policy. No custom source/repository integration, reboot or follow-up correction. [Contract](windows-capabilities.md). | **Log-backed, 30 October:** actual XPS `NotPresent` to `Installed` and OpenSSH Client `Installed` to `NotPresent`; both exit 0, no restart required/requested. One successful SetupComplete Script, zero failures, 328.2 seconds; independent OOBE query confirms final states. DISM target is build **26300.9711 x64**, not a separate build-26200/25H2 test. [Evidence and limits](windows-capabilities.md#physical-acceptance-on-30-october-2026). ARM64 and other capabilities remain unvalidated in practice. |
 | Initial file/protocol associations: `Add-OSDAppDefaultAssociation` | Explicit identifier/ProgId/app-name parameters or XML input. Install apps first, then select associations; installing an app does not implicitly select it. One-shot DISM baseline export/merge/import during SetupComplete; user-editable initial defaults, no enforcement. [Contract](default-associations.md), [PR #91](https://github.com/roryvossepoel/OSDApps/pull/91). | **Operator-confirmed on PC1, 30 October:** corrected test revision `2b9dfd303c186302414d52b94f306215883904d4` opens `.pdf` in Adobe Acrobat and HTTP/HTTPS in Chrome. Changing PDF and both protocol defaults through Windows Settings also worked. No new runtime logs were supplied for this run. Separate HTML opening, XML-input deployment and ARM64 are not physically confirmed. |
@@ -157,12 +158,15 @@ closeout in the agreed order; both remain deferred during this evidence review.
 
 ## Next acceptance work
 
-1. Recover the prior optional-feature and variables/services results where
-   available. Record exact candidate revision, scenario and outcome; a missing
-   record is not a reason to repeat all successful features.
-2. If evidence is still missing, use one combined fresh-image test for the
-   selected optional features, machine variables and services. Choose safe test
-   values/services and record expected transitions before running it.
+1. Retain the maintainer's confirmation that the earlier practical tests were
+   completed. Distinguish operator confirmation from preserved logs; do not
+   request old-machine evidence after the machine has been reinstalled.
+2. The maintainer explicitly selected one combined acceptance deployment on
+   31 October. Use it to check feature interactions, staging order, cache use,
+   failure reporting and cleanup. This is a new integration gate, not a repeat
+   demanded by missing historical logs. Technical stability comes before Viewer,
+   Pages and renaming. See [PR #97](https://github.com/roryvossepoel/OSDApps/pull/97)
+   for the proposed profile; no physical combined-test pass is claimed yet.
 3. In a suitable WLAN-equipped test, cover the parameter-generated profile,
    secret-free reports and deletion of owned credential staging. Do not commit
    real credentials or profile exports. Connectivity is only a success criterion
