@@ -1,4 +1,4 @@
-# OSDApps Viewer documentation
+# OSDStage Viewer documentation
 
 The user guide is now **[docs/viewer.md](viewer.md)**. This address is retained so existing links to the former development-preview page still have a destination.
 

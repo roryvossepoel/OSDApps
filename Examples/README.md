@@ -36,7 +36,7 @@ replace it with your own logic before using it in a deployment.
 `Repository/catalog.json` is an empty valid catalog template. It deliberately contains no real vendor installers or deployable sample apps. To start a new local repository without copying the template:
 
 ```powershell
-New-OSDAppRepository -Path C:\OSDApps\Repository
+New-OSDStageRepository -Path C:\OSDStage\Repository
 ```
 
 See [Repository apps](../docs/repository.md) for per-app manifests, archive hashes, publishing and deployment. No tenant-specific URL, credential or organization deployment profile is supplied by these examples.

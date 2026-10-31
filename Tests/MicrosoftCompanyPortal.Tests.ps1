@@ -1,18 +1,18 @@
 Describe 'Microsoft Company Portal built-in staging' {
     BeforeAll {
         $root = Split-Path $PSScriptRoot -Parent
-        Import-Module (Join-Path $root 'OSDApps.psd1') -Force
+        Import-Module (Join-Path $root 'OSDStage.psd1') -Force
     }
 
     It 'exposes Company Portal as a built-in app without an online catalog' {
-        $app = Get-OSDApp -Name MicrosoftCompanyPortal -Offline
+        $app = Get-OSDStage -Name MicrosoftCompanyPortal -Offline
         $app.Id | Should -Be 'MicrosoftCompanyPortal'
         $app.PackageType | Should -Be 'App'
         $app.Source | Should -Be 'BuiltIn'
     }
 
     It 'stages a complete pre-prepared kit without changing the other queue entries' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $cache = Join-Path $TestDrive 'Cache'
             $target = Join-Path $TestDrive 'OfflineWindows'
             $variant = Join-Path $cache 'BuiltIn\MicrosoftCompanyPortal\x64'
@@ -40,23 +40,23 @@ Describe 'Microsoft Company Portal built-in staging' {
             } | ConvertTo-Json -Depth 12 |
                 Set-Content -LiteralPath (Join-Path $variant 'CacheInfo.json') -Encoding UTF8
 
-            Mock Get-OSDAppCachePath { $cache }
-            Mock Resolve-OSDAppWindowsPath { $target }
+            Mock Get-OSDStageCachePath { $cache }
+            Mock Resolve-OSDStageWindowsPath { $target }
 
-            $staged = Add-OSDAppMicrosoftCompanyPortal -Architecture x64 -WindowsPath $target -Confirm:$false
+            $staged = Add-OSDStageMicrosoftCompanyPortal -Architecture x64 -WindowsPath $target -Confirm:$false
             $staged.Name | Should -Be 'MicrosoftCompanyPortal'
-            $manifest = Get-Content -LiteralPath (Join-Path $target 'Windows\Temp\OSDApps\DeviceManifest.json') -Raw | ConvertFrom-Json
-            @($manifest.Apps).Count | Should -Be 1
-            $manifest.Apps[0].Type | Should -Be 'CompanyPortalAppxBundle'
-            @($manifest.Apps[0].Dependencies).Count | Should -Be 5
+            $manifest = Get-Content -LiteralPath (Join-Path $target 'Windows\Temp\OSDStage\DeviceManifest.json') -Raw | ConvertFrom-Json
+            @($manifest.Packages).Count | Should -Be 1
+            $manifest.Packages[0].Type | Should -Be 'CompanyPortalAppxBundle'
+            @($manifest.Packages[0].Dependencies).Count | Should -Be 5
 
-            $check = Test-OSDAppDeployment -WindowsPath $target -RequireOfflineReady
+            $check = Test-OSDStageDeployment -WindowsPath $target -RequireOfflineReady
             $check.Valid | Should -BeTrue
             $check.OfflineReady | Should -BeTrue
 
-            $bundle = Join-Path $target 'Windows\Temp\OSDApps\BuiltIn\MicrosoftCompanyPortal\x64\CompanyPortal_11_2_1495_0_neutral.appxbundle'
+            $bundle = Join-Path $target 'Windows\Temp\OSDStage\BuiltIn\MicrosoftCompanyPortal\x64\CompanyPortal_11_2_1495_0_neutral.appxbundle'
             Set-Content -LiteralPath $bundle -Value 'changed' -Encoding ASCII
-            $broken = Test-OSDAppDeployment -WindowsPath $target -RequireOfflineReady
+            $broken = Test-OSDStageDeployment -WindowsPath $target -RequireOfflineReady
             $broken.Valid | Should -BeFalse
             $broken.OfflineReady | Should -BeFalse
         }

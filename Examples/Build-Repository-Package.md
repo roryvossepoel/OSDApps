@@ -11,7 +11,7 @@ this guide does not supply a built-in script, sample debloat logic or vendor pay
 Create this folder with your real unattended script and any files it needs:
 
 ```text
-C:\OSDApps\Source\YourPackage\
+C:\OSDStage\Source\YourPackage\
     Install.ps1
     <supporting files, if needed>
 ```
@@ -34,33 +34,33 @@ upload anything to your hosting.
 ```powershell
 $ErrorActionPreference = 'Stop'
 
-Install-Module OSDApps -Force -SkipPublisherCheck
-Import-Module OSDApps -Force
+Install-Module OSDStage -Force -SkipPublisherCheck
+Import-Module OSDStage -Force
 
 $Id = 'YourPackage'
 $Version = '1.0.0'
 $Architecture = 'x64'
 $PackageType = 'App' # App, Script or Font.
-$SourcePath = "C:\OSDApps\Source\$Id"
-$OutputPath = "C:\OSDApps\Build\$Id\$Version\$Architecture"
-$RepositoryPath = 'C:\OSDApps\Repository'
+$SourcePath = "C:\OSDStage\Source\$Id"
+$OutputPath = "C:\OSDStage\Build\$Id\$Version\$Architecture"
+$RepositoryPath = 'C:\OSDStage\Repository'
 
-New-OSDAppRepository -Path $RepositoryPath | Out-Host
+New-OSDStageRepository -Path $RepositoryPath | Out-Host
 
-$package = New-OSDAppPackage -Id $Id -Version $Version -PackageType $PackageType `
+$package = New-OSDStagePackage -Id $Id -Version $Version -PackageType $PackageType `
     -SourcePath $SourcePath -OutputPath $OutputPath
 
-$packageCheck = Test-OSDAppPackage -PackagePath $package.PackagePath -PackageType $PackageType
+$packageCheck = Test-OSDStagePackage -PackagePath $package.PackagePath -PackageType $PackageType
 if (-not $packageCheck.Valid) {
     throw 'Package layout validation failed.'
 }
 
-Add-OSDAppPackage -Id $Id -DisplayName 'Your package' -Vendor 'Your organization' `
+Add-OSDStagePackage -Id $Id -DisplayName 'Your package' -Vendor 'Your organization' `
     -Version $Version -Architecture $Architecture -PackageType $PackageType `
     -SuccessCodes @(0) -PackagePath $package.PackagePath `
     -RepositoryPath $RepositoryPath | Out-Host
 
-$checks = @(Test-OSDAppRepository -RepositoryPath $RepositoryPath)
+$checks = @(Test-OSDStageRepository -RepositoryPath $RepositoryPath)
 $checks | Format-Table Id, Version, Architecture, HashValid, PackageValid, Orphaned, Valid
 if ($checks.Count -eq 0 -or @($checks | Where-Object { -not $_.Valid }).Count -gt 0) {
     throw 'Repository validation failed. Do not publish this content.'
@@ -82,7 +82,7 @@ For a script package, change `$PackageType` to `Script`. It still enters through
 For a font package, use `$PackageType = 'Font'`. The source folder does not need
 `Install.ps1`; place one or more `.ttf`/`.otf` files in it. Publish with
 `-Architecture any` when the font files are architecture-neutral, then stage in
-WinPE with `Add-OSDAppFont -Id <Id>`. OSDApps owns the machine-wide font
+WinPE with `Add-OSDStageFont -Id <Id>`. OSDStage owns the machine-wide font
 installation and ignores unsupported files in the archive.
 
 The resulting files are:
@@ -90,7 +90,7 @@ The resulting files are:
 ```text
 Repository/
     catalog.json
-    Apps/YourPackage/1.0.0/x64/
+    Packages/YourPackage/1.0.0/x64/
         manifest.json
         Package.zip
 ```
@@ -115,20 +115,20 @@ clients do not discover the new version before its files are available.
 
 The existing root catalog may reference other packages: publish its complete
 updated contents, not a replacement catalog containing only the new package.
-`Add-OSDAppPackage` updates the local repository; it is not a cloud upload command.
+`Add-OSDStagePackage` updates the local repository; it is not a cloud upload command.
 
 ## 4. Stage on a deployment PC
 
-In WinPE after OSDCloud has applied Windows, load OSDApps and use the actual URL
+In WinPE after OSDCloud has applied Windows, load OSDStage and use the actual URL
 and ID from your repository:
 
 ```powershell
-Install-Module OSDApps -Force -SkipPublisherCheck
-Import-Module OSDApps -Force
+Install-Module OSDStage -Force -SkipPublisherCheck
+Import-Module OSDStage -Force
 
-Set-OSDAppConfiguration -CatalogUri 'https://packages.example.com/osdapps/catalog.json'
-Add-OSDApp -Name 'YourPackage'
-Test-OSDAppDeployment -ThrowOnFailure
+Set-OSDStageConfiguration -CatalogUri 'https://packages.example.com/osdstage/catalog.json'
+Add-OSDStage -Name 'YourPackage'
+Test-OSDStageDeployment -ThrowOnFailure
 ```
 
 Replace the placeholder URL. Repository packages are acquired, hash-checked and

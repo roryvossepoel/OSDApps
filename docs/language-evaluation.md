@@ -3,7 +3,7 @@
 ## Decision — 31 October 2026
 
 Language-pack installation and multilingual OOBE image preparation are **outside
-OSDApps scope**. The maintainer accepted the technical experiment but rejected
+OSDStage scope**. The maintainer accepted the technical experiment but rejected
 the associated language-media, build-matching and cumulative/checkpoint update
 management as module responsibilities. No language cmdlet, bundled Microsoft
 binaries or automatic update acquisition is introduced. Existing
@@ -17,7 +17,7 @@ running Windows is a separate option, not an equivalent pre-OOBE feature.
 
 ## Experiment and observed outcome
 
-This was a manually supplied DISM experiment, not an OSDApps implementation or
+This was a manually supplied DISM experiment, not an OSDStage implementation or
 commit-pinned module acceptance. The device was not enrolled in Autopilot.
 
 | Item | Recorded evidence |
@@ -31,7 +31,7 @@ commit-pinned module acceptance. The device was not enrolled in Autopilot.
 | Revised OOBE | Operator reported that the previously missing country/region page appeared after choosing English, and subsequently confirmed reaching the desktop with the result looking correct. The requested scenario used Netherlands as region and a local account; no final machine-readable locale inventory was supplied. |
 
 The revised preparation log directory reported by the device was
-`C:\Windows\Logs\OSDApps-LanguageTest-20261031-103812`.
+`C:\Windows\Logs\OSDStage-LanguageTest-20261031-103812`.
 The supplied console output shows success for all four stages, including the
 update operation and Get-Intl. The detailed cumulative-update DISM log and
 Packages.txt were not supplied, so no component-by-component resource comparison
@@ -57,7 +57,7 @@ Windows 11 24H2 and later checkpoint servicing can distribute the required
 payload across multiple update files. Microsoft's offline FoD/language
 customization guidance calls for the target cumulative update and preceding
 checkpoints together, with the target MSU passed to DISM. These ongoing source
-and update requirements are the reason for excluding this workflow from OSDApps,
+and update requirements are the reason for excluding this workflow from OSDStage,
 not a claim that multilingual Windows images are unsupported.
 
 - [Add languages to Windows images](https://learn.microsoft.com/windows-hardware/manufacture/desktop/add-language-packs-to-windows?view=windows-11)

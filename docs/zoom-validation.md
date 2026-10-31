@@ -1,6 +1,6 @@
 # Zoom Workplace validation
 
-Zoom Workplace is introduced in OSDApps `0.45.0`. For a source-based validation,
+Zoom Workplace is introduced in OSDStage `0.45.0`. For a source-based validation,
 use the exact reviewed commit and its adjacent module; the script does not
 replace an installed module. A source candidate may retain the preceding
 release version, so record the commit as well as the manifest version.
@@ -13,7 +13,7 @@ reviewed commit ZIP from GitHub and extract it onto the USB flash drive or a loc
 temporary directory. From the extracted repository root run:
 
 ```powershell
-.\tools\Test-OSDAppsZoom.ps1 -Phase Stage
+.\tools\Test-OSDStageZoom.ps1 -Phase Stage
 ```
 
 For a native ARM64 target, explicitly add `-Architecture arm64`. Start with x64.
@@ -40,7 +40,7 @@ refresh warning; inspect `AcquisitionOutcome` and `RefreshError` as well as succ
 Open a command prompt with Shift+F10 and run:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\ProgramData\OSDApps\Tests\Test-OSDAppsZoom.ps1 -Phase Validate
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\ProgramData\OSDStage\Tests\Test-OSDStageZoom.ps1 -Phase Validate
 ```
 
 This copy was placed on the OS disk during staging. It needs no module download.

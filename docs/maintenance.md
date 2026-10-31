@@ -1,6 +1,6 @@
 # Maintenance checks and diagnostics
 
-Use [`tools/Test-OSDAppsMaintenance.ps1`](../tools/Test-OSDAppsMaintenance.ps1) on the Windows preparation PC when reviewing a USB flash drive, a release or a saved deployment result. Use Diagnostics mode on the deployed PC (including OOBE PowerShell) to collect its results and logs. This optional repository tool is separate from the Gallery module: it adds no exported commands and is not part of SetupComplete.
+Use [`tools/Test-OSDStageMaintenance.ps1`](../tools/Test-OSDStageMaintenance.ps1) on the Windows preparation PC when reviewing a USB flash drive, a release or a saved deployment result. Use Diagnostics mode on the deployed PC (including OOBE PowerShell) to collect its results and logs. This optional repository tool is separate from the Gallery module: it adds no exported commands and is not part of SetupComplete.
 
 Download the script from the repository, or run it from a checkout. Windows PowerShell 5.1 and PowerShell 7 are supported. The examples below assume the repository root is the current directory.
 
@@ -11,9 +11,9 @@ Run the check that answers your question; a routine module update does not requi
 | Question | Check | Where / what it changes |
 | --- | --- | --- |
 | Can the built-in download sources still be resolved? | [Vendor source metadata](#check-vendor-source-metadata) | Preparation PC with internet; saves a temporary module, a small Office descriptor and reports. No USB flash drive required; no app-cache access. |
-| Is the existing USB cache healthy? | [USB inspection](#check-a-usb-flash-drive), or `Get-OSDAppCacheHealth -Offline` | Preparation PC with the intended USB flash drive; reads local cache content. Does not establish vendor freshness. |
+| Is the existing USB cache healthy? | [USB inspection](#check-a-usb-flash-drive), or `Get-OSDStageCacheHealth -Offline` | Preparation PC with the intended USB flash drive; reads local cache content. Does not establish vendor freshness. |
 | Did the module release and publication finish? | [Release inspection](#check-a-published-release) | Preparation PC with internet; reads GitHub and Gallery status. |
-| Is this target ready for its first Windows boot? | `Test-OSDAppDeployment -ThrowOnFailure` | WinPE after staging; validates the prepared deployment. See [preflight](getting-started.md#3-inspect-before-reboot). It does not install apps. |
+| Is this target ready for its first Windows boot? | `Test-OSDStageDeployment -ThrowOnFailure` | WinPE after staging; validates the prepared deployment. See [preflight](getting-started.md#3-inspect-before-reboot). It does not install apps. |
 | What did a completed deployment report? | [Saved-result inspection](#inspect-a-saved-deployment-result) | Reads the deployment's result file on the target or a preparation PC. Does not inspect installed apps or rerun SetupComplete. |
 | What should I collect for troubleshooting? | [Diagnostic bundle](#export-a-diagnostic-bundle) | Usually the affected Windows PC; reads results/logs and writes a new ZIP. Review it before sharing. |
 | Does installation actually work on this hardware? | A scoped [deployment test](testing.md) | Fresh Windows target after OSDCloud; stages and installs apps and may update the connected cache. This is separate from the read-only inspections above. |
@@ -22,15 +22,15 @@ If multiple USB flash drives are connected, explicitly select the intended drive
 
 ## Check vendor source metadata
 
-Download [`Test-OSDApps-VendorSources.ps1`](../tools/Test-OSDApps-VendorSources.ps1), or run it from a checkout in a separate Windows PowerShell process:
+Download [`Test-OSDStage-VendorSources.ps1`](../tools/Test-OSDStage-VendorSources.ps1), or run it from a checkout in a separate Windows PowerShell process:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-OSDApps-VendorSources.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-OSDStage-VendorSources.ps1
 ```
 
 Use full Windows on the preparation PC with internet access and PowerShellGet's `Save-Module` available. The script refuses WinPE. No USB flash drive or test deployment is required; connected USB flash drives are neither inspected nor changed. No GitHub Action or scheduled task is needed.
 
-This is a **version-pinned diagnostic for OSDApps 0.49.1**, not a latest-module or all-variants check. It saves that exact Gallery module in a new temporary directory and imports it only in the child PowerShell process. It does not install or replace the preparation PC's module. Fixed source URLs match 0.49.1; 7Zip, VS Code and prerequisite releases use that module's resolvers, and the Office descriptor uses its parser. Review the pin and source list before using this tool to validate a future implementation.
+This is a **version-pinned diagnostic for OSDStage 0.49.1**, not a latest-module or all-variants check. It saves that exact Gallery module in a new temporary directory and imports it only in the child PowerShell process. It does not install or replace the preparation PC's module. Fixed source URLs match 0.49.1; 7Zip, VS Code and prerequisite releases use that module's resolvers, and the Office descriptor uses its parser. Review the pin and source list before using this tool to validate a future implementation.
 
 The 15 checks cover these selections:
 
@@ -52,7 +52,7 @@ A pass does not verify installer contents, signatures, app-cache health, every a
 ## Check a USB flash drive
 
 ```powershell
-$report = & .\tools\Test-OSDAppsMaintenance.ps1 -Mode Usb -UsbRoot D:\
+$report = & .\tools\Test-OSDStageMaintenance.ps1 -Mode Usb -UsbRoot D:\
 $report.Checks | Format-Table -Wrap
 $report.Details.CacheHealth | Format-List
 ```
@@ -64,7 +64,7 @@ This checks the module manifest, import, exported functions, required runtime fi
 Run while no synchronization or other cache writer is active. The read-only health check does not take a writer lock or provide an atomic snapshot. The module is imported into the script session; use a separate PowerShell process if you want to keep your current session untouched:
 
 ```powershell
-powershell.exe -NoProfile -File .\tools\Test-OSDAppsMaintenance.ps1 -Mode Usb -UsbRoot D:\ -ThrowOnFailure
+powershell.exe -NoProfile -File .\tools\Test-OSDStageMaintenance.ps1 -Mode Usb -UsbRoot D:\ -ThrowOnFailure
 ```
 
 ## What a cache check proves
@@ -73,9 +73,9 @@ powershell.exe -NoProfile -File .\tools\Test-OSDAppsMaintenance.ps1 -Mode Usb -U
 
 | Inspection | Evidence and limits |
 | --- | --- |
-| `Get-OSDAppCacheHealth -Offline` | Checks local repository metadata and archive hashes, built-in identity/layout and the app-specific checks below. Reports missing, corrupt, orphaned and renamed content. It does not query vendor releases or compare an Office deployment request. |
-| `Get-OSDAppCacheHealth` with a configured repository catalog | Also compares repository packages with the selected catalog's versions, architectures and hashes. This is repository desired state, not a freshness query for built-ins. Check `DesiredStateAvailable` and `CatalogError`. |
-| `Get-OSDAppCache` / `Test-OSDAppCache` | Inspect discovered entries using the app-specific rules below. They do not provide the same namespace/reconciliation report as cache health. `Test-OSDAppCache` summarizes these entries; a `-Name` filter limits that summary. |
+| `Get-OSDStageCacheHealth -Offline` | Checks local repository metadata and archive hashes, built-in identity/layout and the app-specific checks below. Reports missing, corrupt, orphaned and renamed content. It does not query vendor releases or compare an Office deployment request. |
+| `Get-OSDStageCacheHealth` with a configured repository catalog | Also compares repository packages with the selected catalog's versions, architectures and hashes. This is repository desired state, not a freshness query for built-ins. Check `DesiredStateAvailable` and `CatalogError`. |
+| `Get-OSDStageCache` / `Test-OSDStageCache` | Inspect discovered entries using the app-specific rules below. They do not provide the same namespace/reconciliation report as cache health. `Test-OSDStageCache` summarizes these entries; a `-Name` filter limits that summary. |
 | `-ResolveVersions` on the inventory/test commands | Resolves eligible cached package versions locally on full Windows. It does not ask the vendor whether those versions are latest. |
 | `-VerifySignatures` on the inventory/test commands | Adds Windows Authenticode and expected-publisher inspection for supported files. Check each entry's `SignatureStatus` and `SignatureScope`; unsupported formats remain outside this check. Windows trust evaluation can use the network. |
 
@@ -100,18 +100,18 @@ These are the checks used by cache inventory and inherited by cache health. They
 ### Reading the summary safely
 
 - `Healthy=True` means no failing health condition was found under those rules. It is not proof of vendor freshness, all publisher signatures or compatibility with a future app selection. Check `CacheAvailable`, `EntryCount` and the individual entries; an existing empty cache can be healthy without containing deployable apps.
-- An entry's `Valid=True` means its app-specific local checks passed. `Get-OSDAppCache -VerifySignatures` reports the signature separately; it does not turn the entry's `Valid` field into a publisher result. `Test-OSDAppCache -VerifySignatures` also requires supported signature checks to complete for its overall `Valid` result.
+- An entry's `Valid=True` means its app-specific local checks passed. `Get-OSDStageCache -VerifySignatures` reports the signature separately; it does not turn the entry's `Valid` field into a publisher result. `Test-OSDStageCache -VerifySignatures` also requires supported signature checks to complete for its overall `Valid` result.
 - `SignatureChecksComplete=True` covers the supported signature candidates, not every cached file. Repository ZIPs, Adobe's outer ZIP and 7Zip are outside that Authenticode scope. WinPE cannot complete supported Authenticode inspection.
 - `Version=Current` is a policy/metadata value, not confirmation that the vendor still advertises that release.
 
 For a local inspection on full Windows:
 
 ```powershell
-$health = Get-OSDAppCacheHealth -Offline
+$health = Get-OSDStageCacheHealth -Offline
 $health | Select-Object CacheAvailable, EntryCount, Healthy
 $health.Entries | Format-Table Id, State, Integrity, Reason -Wrap
 
-Get-OSDAppCache -VerifySignatures |
+Get-OSDStageCache -VerifySignatures |
     Select-Object Id, Version, Valid, SignatureStatus, SignatureScope
 ```
 
@@ -134,7 +134,7 @@ success alone does not prove a physical deployment or provisioning result.
 ## Check a published release
 
 ```powershell
-$report = & .\tools\Test-OSDAppsMaintenance.ps1 -Mode Release
+$report = & .\tools\Test-OSDStageMaintenance.ps1 -Mode Release
 $report.Checks | Format-Table -Wrap
 ```
 
@@ -149,9 +149,9 @@ A failed publishing run remains visible even when the version is available in Ga
 Copy the deployment's `Latest.json` to the preparation PC, then run:
 
 ```powershell
-$report = & .\tools\Test-OSDAppsMaintenance.ps1 -Mode Result -ResultPath C:\Temp\Latest.json
+$report = & .\tools\Test-OSDStageMaintenance.ps1 -Mode Result -ResultPath C:\Temp\Latest.json
 $report.Checks | Format-Table -Wrap
-$report.Details.Result.Apps | Format-Table Id, Status, AcquisitionOutcome
+$report.Details.Result.Packages | Format-Table Id, Status, AcquisitionOutcome
 ```
 
 Optionally supply `-DeploymentId` to ensure you are inspecting the intended deployment. The tool validates the supported result schema, identity, app counts and final status. It surfaces recorded offline/fallback acquisition warnings separately from installation success. Older results without acquisition fields remain readable; missing historical fields do not establish whether an online refresh succeeded.
@@ -163,18 +163,18 @@ This examines recorded installer outcomes. It does not inspect the deployed mach
 Run on the affected PC after deployment, using an existing output directory:
 
 ```powershell
-$report = & .\tools\Test-OSDAppsMaintenance.ps1 -Mode Diagnostics -OutputPath C:\Temp\OSDApps-Diagnostics.zip
+$report = & .\tools\Test-OSDStageMaintenance.ps1 -Mode Diagnostics -OutputPath C:\Temp\OSDStage-Diagnostics.zip
 $report.Details.Bundle | Format-List
 ```
 
-This writes a local ZIP. It reads `%ProgramData%\OSDApps\Results\Latest.json`, follows its recorded `LogPath`, and includes available `.1`, `.2` and `.3` rotations. A standalone `PreInstall.json` is included only when its deployment ID matches. The embedded PreInstall result remains in Latest.json. If Runner never produced a readable result, the standalone PreInstall result supplies the identity and time window; the missing Runner result is still reported as a warning. Use `-DeploymentId` to require a particular deployment; a missing or different identity stops export.
+This writes a local ZIP. It reads `%ProgramData%\OSDStage\Results\Latest.json`, follows its recorded `LogPath`, and includes available `.1`, `.2` and `.3` rotations. A standalone `PreInstall.json` is included only when its deployment ID matches. The embedded PreInstall result remains in Latest.json. If Runner never produced a readable result, the standalone PreInstall result supplies the identity and time window; the missing Runner result is still reported as a warning. Use `-DeploymentId` to require a particular deployment; a missing or different identity stops export.
 
 The collector searches only the top level of the current temporary directory, Windows Temp, SystemTemp and SYSTEM profile Temp. It selects Office ODT machine/date logs and known Teams, Chrome, VC++ and Adobe log names modified within the recorded deployment period, with five minutes of padding. These are **installer log candidates**, not proof that a file belongs to the deployment. It does not recursively search all temporary files. No valid start/completion timestamps means automatic installer discovery is skipped with a warning.
 
 For custom paths or logs saved elsewhere:
 
 ```powershell
-$report = & .\tools\Test-OSDAppsMaintenance.ps1 -Mode Diagnostics `
+$report = & .\tools\Test-OSDStageMaintenance.ps1 -Mode Diagnostics `
     -ResultPath C:\Evidence\Latest.json `
     -LogPath C:\Evidence\Runtime.log `
     -InstallerLogDirectory C:\Evidence\InstallerLogs `
@@ -182,7 +182,7 @@ $report = & .\tools\Test-OSDAppsMaintenance.ps1 -Mode Diagnostics `
     -OutputPath C:\Evidence\Support.zip
 ```
 
-`-LogPath` overrides the result's runtime log path. `-InstallerLogDirectory` replaces the default discovery directories; `-AdditionalLogPath` includes explicitly selected files without a filename or time filter. Nothing is downloaded or uploaded, and no OSDApps module import is required. Installers, cached payloads, scripts and Office configuration XML are not automatically collected.
+`-LogPath` overrides the result's runtime log path. `-InstallerLogDirectory` replaces the default discovery directories; `-AdditionalLogPath` includes explicitly selected files without a filename or time filter. Nothing is downloaded or uploaded, and no OSDStage module import is required. Installers, cached payloads, scripts and Office configuration XML are not automatically collected.
 
 The ZIP includes `Bundle.json` with source paths, file hashes, copy/skip outcomes and collection warnings. Files use numbered names to prevent collisions. Limits are 100 copied files, 20 MB per file and 100 MB total source data. Missing, inaccessible, oversized or linked files are reported and skipped; a bundle can still be created as `ReviewRequired`. An existing output file is never overwritten. Temporary collection files are removed afterwards.
 

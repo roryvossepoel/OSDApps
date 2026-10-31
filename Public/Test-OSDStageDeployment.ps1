@@ -1,0 +1,626 @@
+function Test-OSDStageDeployment {
+    [CmdletBinding()]
+    param(
+        [string]$WindowsPath,
+
+        [Alias('RequireCache')]
+        [switch]$RequireOfflineReady,
+
+        [ValidateRange(0, 1024)]
+        [double]$MinimumFreeSpaceGB = 0,
+
+        [switch]$ThrowOnFailure
+    )
+
+    $target = Resolve-OSDStageWindowsPath -WindowsPath $WindowsPath
+    $stageRoot = Join-Path $target 'Windows\Temp\OSDStage'
+    $manifestPath = Join-Path $stageRoot 'DeviceManifest.json'
+    $setupCompletePath = Join-Path $target 'Windows\Setup\Scripts\SetupComplete.cmd'
+    $checks = [System.Collections.Generic.List[object]]::new()
+
+    function Add-DeploymentCheck {
+        param(
+            [Parameter(Mandatory)][string]$Name,
+            [Parameter(Mandatory)][bool]$Passed,
+            [Parameter(Mandatory)][bool]$Required,
+            [Parameter(Mandatory)][string]$Message,
+            [string]$AppId
+        )
+
+        $checks.Add([pscustomobject]@{
+            PSTypeName    = 'OSDStage.DeploymentCheck'
+            Name          = $Name
+            AppId = $AppId
+            Required      = $Required
+            Passed        = $Passed
+            Message       = $Message
+        })
+    }
+
+    function Test-SafeRelativePath {
+        param([string]$Path)
+
+        if ([string]::IsNullOrWhiteSpace($Path) -or
+            [IO.Path]::IsPathRooted($Path) -or
+            $Path -match '[:*?"<>|\x00-\x1F]') {
+            return $false
+        }
+
+        $segments = @($Path -split '[\\/]')
+        return ($segments.Count -gt 0 -and @($segments | Where-Object { $_ -in @('', '.', '..') }).Count -eq 0)
+    }
+
+    function Get-BuiltInPayloadState {
+        param([Parameter(Mandatory)]$App)
+        if ([string]$App.Type -eq 'OfficeDeploymentTool') {
+            $paths = @([string]$App.Setup,[string]$App.Configuration,'BuiltIn\Microsoft365Apps\Office\Data')
+            $invalid = @($paths | Where-Object { -not (Test-SafeRelativePath -Path $_) })
+            $missing = @($paths | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stageRoot $_)) })
+            return [pscustomobject]@{DefinitionValid=($invalid.Count -eq 0);PayloadReady=($invalid.Count -eq 0 -and $missing.Count -eq 0);MissingPaths=$missing}
+        }
+        try {
+            $spec = Get-OSDStageBuiltInPayloadSpec -App $App
+            if (-not $spec -or [string]$App.PayloadRoot -ne $spec.RelativeRoot -or [string]$App.PayloadExtension -ne $spec.Extension) {
+                throw 'Invalid built-in payload intent.'
+            }
+            $relative = [string]$App.($spec.Field)
+            if ([string]::IsNullOrWhiteSpace($relative)) {
+                if ($App.PayloadSha256) { throw 'Pending payload intent must not contain a payload hash.' }
+                return [pscustomobject]@{DefinitionValid=$true;PayloadReady=$false;MissingPaths=@("Pending vendor payload: $($spec.RelativeRoot)")}
+            }
+            if (-not (Test-SafeRelativePath -Path $relative)) { throw 'Unsafe staged payload path.' }
+            Assert-OSDStageManifestPayload -App $App -StagedPath $stageRoot | Out-Null
+            $root = Join-Path $stageRoot $spec.RelativeRoot
+            if ([string]$App.Type -eq 'PrerequisiteExe') {
+                $prerequisite = Get-OSDStagePrerequisiteSpec -Family $App.Family -Architecture $App.Architecture -RuntimeType $App.RuntimeType -Channel $App.Channel
+                Assert-OSDStagePrerequisiteGeneration -Root $root -Spec $prerequisite | Out-Null
+            }
+            elseif ([string]$App.Type -eq 'MicrosoftTeamsBootstrapper') {
+                if ([string]$App.Setup -ne 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe' -or
+                    -not (Test-Path -LiteralPath (Join-Path $stageRoot $App.Setup) -PathType Leaf)) { throw 'Teams bootstrapper is missing or invalid.' }
+            }
+            elseif ([string]$App.Type -eq '7ZipExe') { Assert-OSDStage7ZipGeneration -Root $root -Architecture $App.Architecture | Out-Null }
+            elseif ([string]$App.Type -eq 'VisualStudioCodeExe') { Assert-OSDStageVisualStudioCodeGeneration -Root $root -Architecture $App.Architecture | Out-Null }
+            [pscustomobject]@{DefinitionValid=$true;PayloadReady=$true;MissingPaths=@()}
+        }
+        catch {
+            [pscustomobject]@{DefinitionValid=$false;PayloadReady=$false;MissingPaths=@($_.Exception.Message)}
+        }
+    }
+
+    function Complete-DeploymentValidation {
+        param(
+            $Manifest,
+            [object[]]$Apps,
+            [bool]$OfflineReady,
+            [bool]$NetworkRequired,
+            $FreeSpaceGB
+        )
+
+        $failedRequired = @($checks | Where-Object { $_.Required -and -not $_.Passed })
+        $result = [pscustomobject]@{
+            PSTypeName       = 'OSDStage.DeploymentValidation'
+            WindowsPath      = $target
+            StagedPath       = $stageRoot
+            ManifestPath     = $manifestPath
+            SetupCompletePath= $setupCompletePath
+            DeploymentId     = if ($Manifest -and $Manifest.DeploymentId) { [string]$Manifest.DeploymentId } else { $null }
+            PackageCount = @($Apps).Count
+            Packages     = @($Apps)
+            RequireOfflineReady = [bool]$RequireOfflineReady
+            OfflineReady     = $OfflineReady
+            NetworkRequired  = $NetworkRequired
+            FreeSpaceGB      = $FreeSpaceGB
+            Checks           = @($checks)
+            Valid            = ($failedRequired.Count -eq 0)
+        }
+
+        if ($ThrowOnFailure -and -not $result.Valid) {
+            $messages = @($failedRequired | ForEach-Object { $_.Message })
+            throw "OSDStage deployment validation failed: $($messages -join ' | ')"
+        }
+
+        $result
+    }
+
+    $manifestExists = Test-Path -LiteralPath $manifestPath -PathType Leaf
+    Add-DeploymentCheck -Name 'DeviceManifest' -Passed $manifestExists -Required $true -Message $(
+        if ($manifestExists) { 'DeviceManifest.json is present.' } else { "DeviceManifest.json is missing: $manifestPath" }
+    )
+    if (-not $manifestExists) {
+        return (Complete-DeploymentValidation -Manifest $null -Apps @() -OfflineReady $false -NetworkRequired $false -FreeSpaceGB $null)
+    }
+
+    $manifest = $null
+    try {
+        $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 |
+            ConvertFrom-Json -ErrorAction Stop
+        Add-DeploymentCheck -Name 'ManifestJson' -Passed $true -Required $true -Message 'DeviceManifest.json contains valid JSON.'
+    }
+    catch {
+        Add-DeploymentCheck -Name 'ManifestJson' -Passed $false -Required $true -Message "DeviceManifest.json is invalid: $($_.Exception.Message)"
+        return (Complete-DeploymentValidation -Manifest $null -Apps @() -OfflineReady $false -NetworkRequired $false -FreeSpaceGB $null)
+    }
+
+    # Capture the output of the conditional as an array. Arrays emitted inside
+    # an if branch are unrolled; a single PSCustomObject has no Count in PS 5.1.
+    $apps = @(
+        if ($manifest.PSObject.Properties.Name -contains 'Packages') {
+            $manifest.Packages | Where-Object { $null -ne $_ }
+        }
+    )
+    $parsedDeploymentId = [guid]::Empty
+    $deploymentIdValid = [guid]::TryParse([string]$manifest.DeploymentId, [ref]$parsedDeploymentId)
+    Add-DeploymentCheck -Name 'DeploymentId' -Passed $deploymentIdValid -Required $true -Message $(
+        if ($deploymentIdValid) { 'DeploymentId is a valid GUID.' } else { 'DeploymentId is missing or invalid; restage an app with the current module.' }
+    )
+
+    $runtimeValid = (
+        $manifest.Runtime -and
+        ([string]$manifest.Runtime.CleanupMode) -in @('OnSuccess', 'Never') -and
+        -not [string]::IsNullOrWhiteSpace([string]$manifest.Runtime.LogPath) -and
+        -not [string]::IsNullOrWhiteSpace([string]$manifest.Runtime.ResultPath) -and
+        -not [string]::IsNullOrWhiteSpace([string]$manifest.Runtime.CacheVolumeLabel) -and
+        ($null -eq $manifest.Runtime.PSObject.Properties['PreventSleep'] -or $manifest.Runtime.PreventSleep -is [bool])
+    )
+    Add-DeploymentCheck -Name 'RuntimeConfiguration' -Passed $runtimeValid -Required $true -Message $(
+        if ($runtimeValid) { 'Runtime configuration is complete.' } else { 'Runtime configuration is incomplete or unsupported.' }
+    )
+
+    $ids = @($apps | ForEach-Object { [string]$_.Id })
+    $validIds = @($ids | Where-Object { $_ -match '^[A-Za-z0-9][A-Za-z0-9._-]*$' -and $_ -notmatch '\.\.' })
+    $uniqueIds = @($ids | Select-Object -Unique)
+    $queueValid = ($apps.Count -gt 0 -and $validIds.Count -eq $apps.Count -and $uniqueIds.Count -eq $apps.Count)
+    Add-DeploymentCheck -Name 'AppQueue' -Passed $queueValid -Required $true -Message $(
+        if ($queueValid) { "App queue contains $($apps.Count) unique valid entries." } else { 'App queue is empty, contains duplicate IDs, or contains an invalid ID.' }
+    )
+
+    $runtimeFiles = @('Invoke-OSDStagePreInstall.ps1', 'Invoke-OSDStageRunner.ps1', 'Restore-OSDStageCacheGeneration.ps1', 'Assert-OSDStageTransactionSpace.ps1', 'Enter-OSDStageCacheLock.ps1', 'Test-OSDStageOfficeCacheCompatibility.ps1', 'OSDStageSleepPrevention.ps1', 'OSDStagePayloadFile.ps1','OSDStage7Zip.ps1','OSDStageVisualStudioCode.ps1','OSDStagePrerequisite.ps1','OSDStageFont.ps1','OSDStageCertificate.ps1','OSDStageDriver.ps1', 'Invoke-OSDStageBuiltInCacheTransaction.ps1')
+    $runtimeMissing = @($runtimeFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stageRoot $_) -PathType Leaf) })
+    Add-DeploymentCheck -Name 'RuntimeScripts' -Passed ($runtimeMissing.Count -eq 0) -Required $true -Message $(
+        if ($runtimeMissing.Count -eq 0) { 'Standalone runtime scripts and shared cache helpers are staged.' } else { "Missing runtime script(s): $($runtimeMissing -join ', ')." }
+    )
+
+    $moduleRoot = Split-Path $PSScriptRoot -Parent
+    $mismatchedRuntime = @()
+    if ($runtimeMissing.Count -eq 0) {
+        foreach ($file in $runtimeFiles) {
+            $source = Join-Path $moduleRoot (Join-Path 'Runtime' $file)
+            $staged = Join-Path $stageRoot $file
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath $staged -Algorithm SHA256).Hash) {
+                $mismatchedRuntime += $file
+            }
+        }
+    }
+    Add-DeploymentCheck -Name 'RuntimeVersion' -Passed ($runtimeMissing.Count -eq 0 -and $mismatchedRuntime.Count -eq 0) -Required $true -Message $(
+        if ($runtimeMissing.Count -eq 0 -and $mismatchedRuntime.Count -eq 0) { 'Staged runtime scripts match the loaded module.' } else { "Staged runtime does not match the loaded module: $($mismatchedRuntime -join ', ')." }
+    )
+
+    $setupValid = $false
+    $setupMessage = "SetupComplete.cmd is missing: $setupCompletePath"
+    if (Test-Path -LiteralPath $setupCompletePath -PathType Leaf) {
+        $setupText = Get-Content -LiteralPath $setupCompletePath -Raw -ErrorAction Stop
+        $preCount = [regex]::Matches($setupText, '(?m)^:: OSDStage PreInstall\r?$').Count
+        $beginCount = [regex]::Matches($setupText, '(?m)^:: OSDStage Begin\r?$').Count
+        $endCount = [regex]::Matches($setupText, '(?m)^:: OSDStage End\r?$').Count
+        $preIndex = $setupText.IndexOf(':: OSDStage PreInstall', [StringComparison]::Ordinal)
+        $beginIndex = $setupText.IndexOf(':: OSDStage Begin', [StringComparison]::Ordinal)
+        $endIndex = $setupText.IndexOf(':: OSDStage End', [StringComparison]::Ordinal)
+        $setupValid = (
+            $preCount -eq 1 -and $beginCount -eq 1 -and $endCount -eq 1 -and
+            $preIndex -lt $beginIndex -and $beginIndex -lt $endIndex -and
+            $setupText -match 'Invoke-OSDStagePreInstall\.ps1' -and
+            $setupText -match 'OSDStage_PREINSTALL_EXITCODE' -and
+            $setupText -match 'Invoke-OSDStageRunner\.ps1' -and
+            $setupText -match 'OSDStage_EXITCODE'
+        )
+        $setupMessage = if ($setupValid) { 'SetupComplete contains one ordered, exit-code-guarded OSDStage sequence.' } else { 'SetupComplete OSDStage markers, order, script calls, or exit-code guards are invalid.' }
+    }
+    Add-DeploymentCheck -Name 'SetupComplete' -Passed $setupValid -Required $true -Message $setupMessage
+
+    $appStates = [System.Collections.Generic.List[object]]::new()
+    $allPayloadsReady = $apps.Count -gt 0
+    $networkRequired = $false
+    foreach ($app in $apps) {
+        $id = [string]$app.Id
+        $source = [string]$app.Source
+        $definitionValid = $false
+        $payloadReady = $false
+        $integrityValid = $null
+        $detail = $null
+        $appNetworkRequired = $false
+
+        if ($source -eq 'Repository') {
+            $archivePath = Join-Path $stageRoot (Join-Path 'Packages' (Join-Path $id 'Package.zip'))
+            $definitionValid = ($app.Payload -and [string]$app.Payload.Sha256 -match '^[A-Fa-f0-9]{64}$')
+            if ([string]$app.PackageType -eq 'Certificate' -and [string]$app.CertificateStore -notin @('Root','CA')) { $definitionValid=$false }
+            $payloadReady = Test-Path -LiteralPath $archivePath -PathType Leaf
+            $integrityValid = $false
+            if ($definitionValid -and $payloadReady) {
+                $integrityValid = Test-OSDStageFileHash -Path $archivePath -ExpectedSha256 ([string]$app.Payload.Sha256)
+            }
+            if ($integrityValid -and [string]$app.PackageType -eq 'Certificate') {
+                $integrityValid=(Test-OSDStagePackage -PackagePath $archivePath -PackageType Certificate -CertificateStore ([string]$app.CertificateStore)).Valid
+            }
+            $payloadReady = ($payloadReady -and $integrityValid)
+            $detail = if ($payloadReady) { 'Repository archive is present and SHA-256 validated.' } else { 'Repository archive is missing, malformed, or failed SHA-256 validation.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and $id -eq 'CMTraceOpen') {
+            $expectedName = 'CMTrace-Open_{0}_{1}.msi' -f [string]$app.Version,[string]$app.Architecture
+            $expectedRelative = 'BuiltIn\CMTraceOpen\' + [string]$app.Architecture + '\' + $expectedName
+            $definitionValid = (
+                [string]$app.Version -match '^\d+\.\d+\.\d+$' -and
+                [string]$app.Type -eq 'VendorMsi' -and
+                [string]$app.Package -eq $expectedRelative -and
+                [string]$app.Architecture -in @('x64','arm64') -and
+                [string]$app.ExpectedSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $file = Join-Path $stageRoot $expectedRelative
+            $payloadReady = $definitionValid -and (Test-Path -LiteralPath $file -PathType Leaf)
+            $integrityValid = $payloadReady -and
+                ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -eq [string]$app.ExpectedSha256)
+            $payloadReady = $payloadReady -and $integrityValid
+            $detail = if ($payloadReady) { 'CMTrace Open MSI SHA-256 validated.' } else { 'CMTrace Open MSI missing or hash mismatch.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'CompanyPortalAppxBundle') {
+            $definitionValid = Test-OSDStageCompanyPortalDefinition -App $app
+            $integrityValid = $false
+            if ($definitionValid) {
+                try { Assert-OSDStageCompanyPortalFiles -App $app -StagedPath $stageRoot; $integrityValid = $true }
+                catch { $integrityValid = $false }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'Company Portal bundle, license and dependencies are SHA-256 validated.' } else { 'Company Portal package contents are missing or corrupt.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WindowsFeatureScript') {
+            $definitionValid = (
+                $id -eq 'WindowsFeatures' -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\WindowsFeatures\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\WindowsFeatures\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\WindowsFeatures\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\WindowsFeatures\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $featureConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            $integrityValid = (
+                                [int]$featureConfig.SchemaVersion -eq 2 -and
+                                @($featureConfig.Operations).Count -gt 0
+                            )
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'Windows Features script and configuration are SHA-256 validated.' } else { 'Windows Features definition, content or hash validation failed.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WindowsCapabilityScript') {
+            $definitionValid = (
+                $id -eq 'WindowsCapabilities' -and [int]$app.WindowsCapabilitySchema -eq 1 -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\WindowsCapabilities\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\WindowsCapabilities\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\WindowsCapabilities\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\WindowsCapabilities\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $capabilityConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            Assert-OSDStageWindowsCapabilityConfiguration -Configuration $capabilityConfig
+                            $integrityValid = ([string]$capabilityConfig.DeploymentId -eq [string]$manifest.DeploymentId)
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $appNetworkRequired = $payloadReady -and @($capabilityConfig.Operations | Where-Object Action -eq 'Add').Count -gt 0
+            if ($appNetworkRequired) { $networkRequired = $true }
+            $detail = if ($appNetworkRequired) { 'Capabilities script/config are validated; Add may require Windows Update during SetupComplete. Offline readiness is not guaranteed.' } elseif ($payloadReady) { 'Windows Capabilities script and configuration are SHA-256 validated.' } else { 'Windows Capabilities definition, content or hash validation failed.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'DefaultAssociationScript') {
+            $definitionValid = (
+                $id -eq 'DefaultAssociations' -and [int]$app.DefaultAssociationSchema -eq 1 -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\DefaultAssociations\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\DefaultAssociations\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\DefaultAssociations\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\DefaultAssociations\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $featureConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            Assert-OSDStageDefaultAssociationConfiguration -Configuration $featureConfig
+                            $integrityValid = ([string]$featureConfig.DeploymentId -eq [string]$manifest.DeploymentId)
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'Default associations script and configuration are SHA-256 validated.' } else { 'Default associations definition, content or hash validation failed.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'EnvironmentVariableScript') {
+            $definitionValid = (
+                $id -eq 'EnvironmentVariables' -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\EnvironmentVariables\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\EnvironmentVariables\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\EnvironmentVariables\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\EnvironmentVariables\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $featureConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            Assert-OSDStageEnvironmentConfiguration -Configuration $featureConfig
+                            $integrityValid = ([string]$featureConfig.DeploymentId -eq [string]$manifest.DeploymentId)
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'Environment Variables script and configuration are SHA-256 validated.' } else { 'Environment Variables definition, content or hash validation failed.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'ServiceScript') {
+            $definitionValid = (
+                $id -eq 'Services' -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\Services\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\Services\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\Services\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\Services\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $featureConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            Assert-OSDStageServiceConfiguration -Configuration $featureConfig
+                            $integrityValid = ([string]$featureConfig.DeploymentId -eq [string]$manifest.DeploymentId)
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'Services script and configuration are SHA-256 validated.' } else { 'Services definition, content or hash validation failed.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'DesktopSettingsScript') {
+            $definitionValid = (
+                $id -eq 'DesktopSettings' -and [int]$app.DesktopSettingsSchema -eq 1 -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\DesktopSettings\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\DesktopSettings\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\DesktopSettings\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\DesktopSettings\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $featureConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            Assert-OSDStageDesktopConfiguration -Configuration $featureConfig
+                            $integrityValid = ([string]$featureConfig.DeploymentId -eq [string]$manifest.DeploymentId)
+                            foreach ($op in @($featureConfig.Operations | Where-Object Kind -eq 'TaskbarPins')) {
+                                $layoutFile=Join-Path $target 'Windows\OEM\OSDStage\TaskbarLayoutModification.xml'
+                                if (-not (Test-Path -LiteralPath $layoutFile -PathType Leaf) -or
+                                    [IO.File]::ReadAllText($layoutFile) -cne (ConvertTo-OSDStageTaskbarXml -Pins @($op.Pins))) { $integrityValid=$false }
+                            }
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'DesktopSettings script and configuration are SHA-256 validated.' } else { 'DesktopSettings definition, content or hash validation failed.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WiFiProfileScript') {
+            $definitionValid = (
+                $id -eq 'WiFiProfiles' -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\WiFiProfiles\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\WiFiProfiles\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\WiFiProfiles\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\WiFiProfiles\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $featureConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            $integrityValid = (
+                                [int]$featureConfig.SchemaVersion -eq 2 -and
+                                @($featureConfig.Operations).Count -gt 0
+                            )
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'Wi-Fi profiles script and configuration are SHA-256 validated.' } else { 'Wi-Fi profiles definition, content or hash validation failed.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'CertificateScript') {
+            $definitionValid = (
+                $id -eq 'Certificates' -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\Certificates\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\Certificates\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\Certificates\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\Certificates\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $featureConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            $integrityValid = (
+                                [int]$featureConfig.SchemaVersion -eq 2 -and
+                                @($featureConfig.Operations).Count -gt 0
+                            )
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'Certificates script and configuration are SHA-256 validated.' } else { 'Certificates definition, content or hash validation failed.' }
+        }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WindowsInboxCleanupScript') {
+            $definitionValid = (
+                $id -eq 'WindowsInboxCleanup' -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\WindowsInboxCleanup\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\WindowsInboxCleanup\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\WindowsInboxCleanup\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\WindowsInboxCleanup\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $cleanupConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            $integrityValid = ($cleanupConfig.Remove -is [array] -and @($cleanupConfig.Remove).Count -gt 0)
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'Bundled script and configuration are SHA-256 validated.' } else { 'Bundled script definition, content or hash validation failed.' }
+        }
+        elseif ($source -eq 'BuiltIn') {
+            $state = Get-BuiltInPayloadState -App $app
+            $definitionValid = $state.DefinitionValid
+            $payloadReady = $state.PayloadReady
+            if ($definitionValid -and -not $payloadReady) { $networkRequired = $true }
+            $detail = if ($payloadReady) { 'Complete built-in payload is staged locally.' } elseif ($definitionValid) { "Built-in acquisition is required for: $($state.MissingPaths -join ', ')." } else { 'Built-in manifest paths or type are invalid.' }
+        }
+        else {
+            $detail = "Unsupported app source '$source'."
+        }
+
+        $offlinePayloadReady = $payloadReady -and -not $appNetworkRequired
+        if (-not $offlinePayloadReady) { $allPayloadsReady = $false }
+        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
+        Add-DeploymentCheck -Name 'AppDefinition' -AppId $id -Passed $appRequiredStateValid -Required $true -Message "${id}: $detail"
+        Add-DeploymentCheck -Name 'OfflinePayload' -AppId $id -Passed $offlinePayloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
+
+        $appStates.Add([pscustomobject]@{
+            Id              = $id
+            Source          = $source
+            Type            = [string]$app.Type
+            Version         = if ($app.Version) { [string]$app.Version } else { $null }
+            Architecture    = if ($app.Architecture) { [string]$app.Architecture } else { $null }
+            DefinitionValid = $definitionValid
+            PayloadReady    = $payloadReady
+            IntegrityValid  = $integrityValid
+            Detail          = $detail
+        })
+    }
+
+    $freeSpaceGB = $null
+    try {
+        $driveRoot = [IO.Path]::GetPathRoot([IO.Path]::GetFullPath($target))
+        $drive = Get-PSDrive -Name $driveRoot.TrimEnd('\').TrimEnd(':') -ErrorAction Stop
+        $freeSpaceGB = [math]::Round([double]$drive.Free / 1GB, 2)
+        $freeSpaceValid = ($MinimumFreeSpaceGB -le 0 -or $freeSpaceGB -ge $MinimumFreeSpaceGB)
+        Add-DeploymentCheck -Name 'FreeSpace' -Passed $freeSpaceValid -Required ($MinimumFreeSpaceGB -gt 0) -Message $(
+            if ($freeSpaceValid) { "Offline Windows volume has $freeSpaceGB GB free." } else { "Offline Windows volume has $freeSpaceGB GB free; $MinimumFreeSpaceGB GB is required." }
+        )
+    }
+    catch {
+        Add-DeploymentCheck -Name 'FreeSpace' -Passed $false -Required ($MinimumFreeSpaceGB -gt 0) -Message "Free space could not be determined: $($_.Exception.Message)"
+    }
+
+    Complete-DeploymentValidation `
+        -Manifest $manifest `
+        -Apps @($appStates) `
+        -OfflineReady $allPayloadsReady `
+        -NetworkRequired $networkRequired `
+        -FreeSpaceGB $freeSpaceGB
+}

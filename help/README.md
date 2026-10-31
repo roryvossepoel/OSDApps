@@ -2,7 +2,7 @@
 
 [Contributing](../CONTRIBUTING.md) · [User documentation](../docs/README.md)
 
-`CommandHelp.psd1` contains reviewed text for every exported OSDApps function. It is build-time input, not an alternative command implementation. Examples are literal strings and are never executed to generate help.
+`CommandHelp.psd1` contains reviewed text for every exported OSDStage function. It is build-time input, not an alternative command implementation. Examples are literal strings and are never executed to generate help.
 
 ## What to document
 
@@ -12,21 +12,21 @@ The generator obtains parameter sets, names, types, declared defaults and Valida
 
 ## Build and inspect
 
-Run from a repository checkout on a Windows development machine. This builds a package under `dist/OSDApps`; it does not stage or install apps.
+Run from a repository checkout on a Windows development machine. This builds a package under `dist/OSDStage`; it does not stage or install apps.
 
 ```powershell
 ./build/Build-Module.ps1
 ```
 
-`New-CommandHelp.ps1` generates `dist/OSDApps/OSDApps-help.xml`. Functions that already contain local comment-based help receive an `.EXTERNALHELP` comment **only in the built copies**. The connector verifies their non-comment PowerShell tokens have not changed. Repository files under `Public`, `Private` and `Runtime` are not rewritten.
+`New-CommandHelp.ps1` generates `dist/OSDStage/OSDStage-help.xml`. Functions that already contain local comment-based help receive an `.EXTERNALHELP` comment **only in the built copies**. The connector verifies their non-comment PowerShell tokens have not changed. Repository files under `Public`, `Private` and `Runtime` are not rewritten.
 
 Start a fresh PowerShell session to avoid cached help from a previous module import, then run:
 
 ```powershell
-Import-Module ./dist/OSDApps/OSDApps.psd1 -Force
-Get-Help Show-OSDAppUI -Full
-Get-Help Add-OSDApp -Examples
-Get-Help Clear-OSDAppCache -Parameter All
+Import-Module ./dist/OSDStage/OSDStage.psd1 -Force
+Get-Help Show-OSDStageUI -Full
+Get-Help Add-OSDStage -Examples
+Get-Help Clear-OSDStageCache -Parameter All
 ```
 
 The generated file supports offline Get-Help; no Update-Help or network download is needed to read it. A direct import of the **raw source** manifest does not generate the external help. Test the built package, not a previously installed Gallery version or raw checkout. `Get-Help -Online` deliberately opens the related online documentation instead.
@@ -41,10 +41,10 @@ The generated file supports offline Get-Help; no Update-Help or network download
 In a new PowerShell process after the build:
 
 ```powershell
-./build/Test-PackagedHelp.ps1 -ModulePath ./dist/OSDApps
+./build/Test-PackagedHelp.ps1 -ModulePath ./dist/OSDStage
 ```
 
-The packaged check uses real `Get-Help -Full` for every export, checking synopsis, execution-environment text, parameter sets, parameter names and example count. CI runs this separately on Windows PowerShell 5.1 and PowerShell 7. The help-source tests additionally parse example PowerShell and validate public OSDApps command/parameter names **without executing examples**.
+The packaged check uses real `Get-Help -Full` for every export, checking synopsis, execution-environment text, parameter sets, parameter names and example count. CI runs this separately on Windows PowerShell 5.1 and PowerShell 7. The help-source tests additionally parse example PowerShell and validate public OSDStage command/parameter names **without executing examples**.
 
 Markdown validation checks the repository's inline local links, section anchors and fenced PowerShell syntax. It is not an external website crawler, complete Markdown implementation, hardware deployment test or validation of vendor installer behavior. Historical release-evidence pages keep their historical command names.
 

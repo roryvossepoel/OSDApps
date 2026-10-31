@@ -1,6 +1,6 @@
 Describe 'Microsoft 365 Apps PreInstall configuration handling' {
     BeforeAll {
-        $runtimePath = Join-Path (Split-Path -Parent $PSScriptRoot) 'Runtime\Invoke-OSDAppPreInstall.ps1'
+        $runtimePath = Join-Path (Split-Path -Parent $PSScriptRoot) 'Runtime\Invoke-OSDStagePreInstall.ps1'
         $tokens = $null
         $parseErrors = $null
         $runtimeAst = [System.Management.Automation.Language.Parser]::ParseFile(
@@ -46,7 +46,7 @@ Describe 'Microsoft 365 Apps PreInstall configuration handling' {
     }
 
     It 'uses an isolated generation configuration in the Office PreInstall acquisition route' {
-        $runtime = Get-Content -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'Runtime\Invoke-OSDAppPreInstall.ps1') -Raw
+        $runtime = Get-Content -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'Runtime\Invoke-OSDStagePreInstall.ps1') -Raw
         $runtime | Should -Match 'Set-OfficeDownloadSourcePath -SourcePath \$localConfig -DestinationPath \$downloadConfig'
         $runtime | Should -Match 'Test-OfficeCacheGeneration -OfficeRoot \$transactionRoot'
         [regex]::IsMatch($runtime, 'Copy-OfficeConfigurationToCache -LocalConfig \$localConfig -AcquireConfig \$acquireConfig') | Should -BeFalse

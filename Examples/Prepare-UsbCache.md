@@ -32,22 +32,22 @@ if ($UsbRoot.TrimEnd('\') -ieq $env:SystemDrive) {
 $ModuleParent = Join-Path $UsbRoot 'Modules'
 New-Item -ItemType Directory -Path $ModuleParent -Force | Out-Null
 
-Save-Module -Name OSDApps -Repository PSGallery -Path $ModuleParent
+Save-Module -Name OSDStage -Repository PSGallery -Path $ModuleParent
 
-$SavedVersions = @(Get-ChildItem -LiteralPath (Join-Path $UsbRoot 'Modules\OSDApps') -Directory |
+$SavedVersions = @(Get-ChildItem -LiteralPath (Join-Path $UsbRoot 'Modules\OSDStage') -Directory |
     Where-Object { $_.Name -as [version] } |
     Sort-Object { [version]$_.Name } -Descending)
-if ($SavedVersions.Count -eq 0) { throw 'No saved OSDApps version found on this USB.' }
-$ModulePath = Join-Path $SavedVersions[0].FullName 'OSDApps.psd1'
+if ($SavedVersions.Count -eq 0) { throw 'No saved OSDStage version found on this USB.' }
+$ModulePath = Join-Path $SavedVersions[0].FullName 'OSDStage.psd1'
 if (-not (Test-Path -LiteralPath $ModulePath -PathType Leaf)) {
     throw "Saved module not found: $ModulePath"
 }
 
-Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
+Remove-Module OSDStage -Force -ErrorAction SilentlyContinue
 Import-Module $ModulePath -Force -ErrorAction Stop
-Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud
+Set-OSDStageConfiguration -CacheVolumeLabel OSDCloud
 
-Get-Module OSDApps | Select-Object Name, Version, Path
+Get-Module OSDStage | Select-Object Name, Version, Path
 ```
 
 `Save-Module` places the module in a version subdirectory. The examples select the newest version saved under this USB's module directory, without depending on an installed version elsewhere. For controlled rollouts, you can deliberately pin a version with `Save-Module -RequiredVersion` and import its exact saved path.
@@ -59,14 +59,14 @@ At this point an **online** target can use the saved module even when the app ca
 **Run in the same full-Windows PowerShell session.** These commands download or refresh the USB cache; they do not install Office, Adobe or Chrome on the preparation machine.
 
 ```powershell
-Sync-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
-Sync-OSDAppAdobeAcrobatUnified
-Sync-OSDAppGoogleChromeEnterprise
+Sync-OSDStageMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
+Sync-OSDStageAdobeAcrobatUnified
+Sync-OSDStageGoogleChromeEnterprise
 
-Get-OSDAppCache -Name Microsoft365Apps,AdobeAcrobatUnified,GoogleChromeEnterprise -ResolveVersions -VerifySignatures |
+Get-OSDStageCache -Name Microsoft365Apps,AdobeAcrobatUnified,GoogleChromeEnterprise -ResolveVersions -VerifySignatures |
     Select-Object Id, Version, Architecture, Channel, Language, Valid, SignatureStatus
 
-Get-OSDAppCacheHealth -Offline |
+Get-OSDStageCacheHealth -Offline |
     Select-Object Healthy, ActiveCount, RenamedCount, IncompleteCount, CorruptCount
 ```
 
@@ -83,10 +83,10 @@ Skip this section for built-ins-only deployment. It requires an already publishe
 $CatalogUri = Read-Host 'Enter the HTTPS URL of your repository catalog.json'
 $RepoAppId = Read-Host 'Enter an app Id present in that repository'
 
-Set-OSDAppConfiguration -CatalogUri $CatalogUri
-Sync-OSDAppRepository -Name $RepoAppId -Architecture x64
+Set-OSDStageConfiguration -CatalogUri $CatalogUri
+Sync-OSDStageRepository -Name $RepoAppId -Architecture x64
 
-Get-OSDAppCache -Name $RepoAppId |
+Get-OSDStageCache -Name $RepoAppId |
     Select-Object Id, DisplayName, Vendor, Version, Architecture, Valid
 ```
 
@@ -95,10 +95,10 @@ long-lived repository cache against the complete configured catalog, inspect
 the plan first and approve it separately:
 
 ```powershell
-Get-OSDAppCacheHealth -Architecture x64
-Sync-OSDAppRepository -Architecture x64 -Prune -WhatIf
+Get-OSDStageCacheHealth -Architecture x64
+Sync-OSDStageRepository -Architecture x64 -Prune -WhatIf
 # After reviewing the exact cache volume and WhatIf output:
-Sync-OSDAppRepository -Architecture x64 -Prune -Confirm
+Sync-OSDStageRepository -Architecture x64 -Prune -Confirm
 ```
 
 From 0.43.0, `-Architecture x64` explicitly prepares repository packages for the x64 target, including from an ARM64 preparation machine. Use `arm64` for an ARM64 target. Without the parameter, synchronization and desired-state health checks use the host architecture. An exact variant is preferred over an architecture-neutral `any` package.
@@ -111,10 +111,10 @@ Wait for all commands and file activity to finish. The relevant layout is:
 
 ```text
 <USB>:\
-    Modules\OSDApps\<version>\OSDApps.psd1
-    OSDApps\BuiltIn\...
-    OSDApps\Packages\...          (when repository content was synced)
-    OSDApps\CacheCatalog.json    (when repository content was synced)
+    Modules\OSDStage\<version>\OSDStage.psd1
+    OSDStage\BuiltIn\...
+    OSDStage\Packages\...          (when repository content was synced)
+    OSDStage\CacheCatalog.json    (when repository content was synced)
 ```
 
 Existing OSDCloud boot/image files remain separate and unchanged. Continue on the target machine with [Online WinPE deployment](WinPE-Online.md) or [Offline WinPE deployment](WinPE-Offline.md). Do not run those staging commands on the preparation machine.
