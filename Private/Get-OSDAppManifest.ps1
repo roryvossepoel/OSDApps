@@ -9,7 +9,28 @@ function Get-OSDAppManifest {
     )
 
     if ($PSCmdlet.ParameterSetName -eq 'Uri') {
-        return Invoke-RestMethod -Uri $Uri -Method Get -UseBasicParsing
+        # Read the bytes ourselves: Invoke-RestMethod can return BOM-prefixed
+        # JSON as a string instead of deserializing it, even for application/json.
+        $response = Invoke-WebRequest -Uri $Uri -Method Get -UseBasicParsing -ErrorAction Stop
+        $stream = $response.RawContentStream
+        if ($stream.CanSeek) { $stream.Position = 0 }
+        $reader = [IO.StreamReader]::new($stream, [Text.UTF8Encoding]::new($false, $true), $true)
+        try {
+            $json = $reader.ReadToEnd()
+        }
+        finally {
+            $reader.Dispose()
+        }
+        try {
+            $manifest = ConvertFrom-Json -InputObject $json -ErrorAction Stop
+        }
+        catch {
+            throw 'Repository manifest response is not valid JSON.'
+        }
+        if (-not $json.TrimStart().StartsWith('{')) {
+            throw 'Repository manifest response must contain a JSON object.'
+        }
+        return $manifest
     }
 
     if (-not (Test-Path -LiteralPath $Path)) {
