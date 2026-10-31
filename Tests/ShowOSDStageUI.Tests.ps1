@@ -79,7 +79,7 @@ Describe 'Show-OSDStageUI - read-only device inspector' {
             Mock Get-OSDStageCache { }
             Mock Get-OSDStageCachePath { throw 'No cache' }
             { Get-OSDStageUIReadOnlySnapshot -WindowsPath $target -Offline } |
-                Should -Throw '*Apps property is missing*'
+                Should -Throw '*Packages property is missing*'
         }
     }
 

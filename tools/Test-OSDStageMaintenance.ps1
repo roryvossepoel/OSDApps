@@ -339,7 +339,7 @@ switch ($Mode) {
             }
             elseif ($apps.Count -eq 0) { Add-MaintenanceCheck Deployment Warning 'Successful result contains no app executions.' }
             else { Add-MaintenanceCheck Deployment Passed "$($apps.Count) successful app entries. DeploymentId=$($result.DeploymentId). This is recorded installer evidence, not a fresh device health test." }
-            $preApps = @(Get-MaintenanceValue $preInstall Apps -Default @())
+            $preApps = @(Get-MaintenanceValue $preInstall Packages -Default @())
             $acquisitionWarnings = @(@($apps) + @($preApps) | Where-Object { (Get-MaintenanceValue $_ AcquisitionOutcome) -in @('FallbackCacheUsed','OfflineCacheUsed') })
             if ((Get-MaintenanceValue $preInstall HasAcquisitionWarnings -Default $false) -or $acquisitionWarnings.Count -gt 0) {
                 Add-MaintenanceCheck Acquisition Warning 'Offline cache use or fallback was recorded. Installation can still have succeeded; inspect acquisition outcomes and refresh errors.'

@@ -54,6 +54,16 @@ Describe 'Read-only maintenance tool' {
         $report.Status | Should -Be ReviewRequired
         $report.Passed | Should -BeFalse
     }
+    It 'reads acquisition warnings from the renamed PreInstall package collection' {
+        $result.PreInstall=[pscustomobject]@{
+            Status='Succeeded'
+            Packages=@([pscustomobject]@{Id='AppA';Status='Succeeded';AcquisitionOutcome='OfflineCacheUsed'})
+        }
+        Save-ResultFixture
+        $report=& $tool -Mode Result -ResultPath $resultPath
+        $report.Status | Should -Be ReviewRequired
+        @($report.Checks | Where-Object { $_.Status -eq 'Warning' }).Count | Should -BeGreaterThan 0
+    }
     It 'does not report unfinished or empty deployments as passed' {
         $result.Status='Running'; Save-ResultFixture
         (& $tool -Mode Result -ResultPath $resultPath).Status | Should -Be ReviewRequired

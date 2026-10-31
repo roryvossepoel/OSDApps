@@ -1,5 +1,7 @@
 # Combined technical acceptance
 
+> Historical device evidence below was recorded with OSDApps, before the rename. Command and path examples are now written for OSDStage; the recorded commit IDs and deployment IDs refer to the original tests. This is not acceptance evidence for the renamed candidate.
+
 Technical stability and one combined deployment come before Viewer work, GitHub
 Pages and a possible rename. Earlier operator-confirmed tests remain evidence;
 missing retained logs alone are not a reason to reinstall a machine again.

@@ -1,5 +1,7 @@
 # Validation matrix
 
+> Historical device evidence below was recorded with OSDApps, before the rename. Command and path examples are now written for OSDStage; the recorded commit IDs and deployment IDs refer to the original tests. This is not acceptance evidence for the renamed candidate.
+
 This page records version-specific maintenance checks and real OSDStage deployment scenarios after OSDCloud applies Windows. **Staging success alone is not an installation success**: the Windows `SetupComplete.cmd` phases must finish and the individual app results must be checked.
 
 For current operating instructions, use [Choose the right check](maintenance.md#choose-the-right-check) and the [online WinPE example](../Examples/WinPE-Online.md). The [0.45.0 all-app cold procedure](all-apps-cold-validation.md) is retained as a historical, version-pinned test; it is not the next required test or a current-release quick start.

@@ -10,7 +10,7 @@ function Get-OSDStageUIStagedApps {
     $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 |
         ConvertFrom-Json -ErrorAction Stop
     if ($null -eq $manifest -or -not ($manifest.PSObject.Properties.Name -contains 'Packages')) {
-        throw "Invalid DeviceManifest.json: Apps property is missing: $manifestPath"
+        throw "Invalid DeviceManifest.json: Packages property is missing: $manifestPath"
     }
     foreach ($app in @($manifest.Packages)) {
         if ($null -ne $app -and -not [string]::IsNullOrWhiteSpace([string]$app.Id)) {

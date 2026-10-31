@@ -1,5 +1,7 @@
 # Feature scope and validation register
 
+> Historical device evidence below was recorded with OSDApps, before the rename. Command and path examples are now written for OSDStage; the recorded commit IDs and deployment IDs refer to the original tests. This is not acceptance evidence for the renamed candidate.
+
 Decision snapshot: 31 October 2026. Implementation baseline: main at
 `f2073b2665ca2d8b2f19c83cc5e347cabdc895a1` (includes merged PRs #94 and #95).
 

@@ -49,7 +49,7 @@ function Remove-OSDStageStaging {
     $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 |
         ConvertFrom-Json -ErrorAction Stop
     if ($null -eq $manifest -or -not ($manifest.PSObject.Properties.Name -contains 'Packages')) {
-        throw "Invalid DeviceManifest.json: Apps property is missing."
+        throw "Invalid DeviceManifest.json: Packages property is missing."
     }
 
     $requested = @($Name | Select-Object -Unique)

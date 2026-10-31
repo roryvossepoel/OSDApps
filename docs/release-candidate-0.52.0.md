@@ -1,5 +1,7 @@
 # Candidate review and release handoff
 
+> Historical device evidence below was recorded with OSDApps, before the rename. Command and path examples are now written for OSDStage; the recorded commit IDs and deployment IDs refer to the original tests. This is not acceptance evidence for the renamed candidate.
+
 ## Status and scope
 
 Review date: 25 October 2026. Proposed next version: **0.52.0**.
