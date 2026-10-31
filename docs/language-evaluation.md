@@ -40,7 +40,7 @@ is claimed. Raw device logs and screenshots are not published in this repository
 Including the cumulative-update step was the intended difference between the
 attempts and is consistent with Microsoft's image-servicing guidance. The
 successful retest is strong practical evidence for this preparation sequence,
-not a proven root-cause analysis of the earlier OOBE reset. Earlier application
+not a proven root-cause analysis of the earlier OOBE reset. Earlier diagnostic
 reports included black-screen diagnostics and Edge/WebView update errors; no
 causal connection was established. It does not establish behavior for every
 language, build, architecture, app resource set, recovery image or Autopilot flow.

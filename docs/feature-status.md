@@ -135,7 +135,7 @@ Do not turn a merge instruction into a physical pass or repeat all deployments.
 | Optional features: TelnetClient enable / WorkFolders-Client disable | Recover the existing WindowsFeatures result and matching deployment summary; if unavailable, include only this pair in a combined acceptance run. |
 | Machine variables and services | Recover EnvironmentVariables and Services results with the matching deployment summary and non-secret test inputs. Only if unavailable, choose explicit safe transitions for one combined run. |
 | Parameter-generated Wi-Fi | XML import already passed. Exercise one generated profile on a WLAN-equipped device; inspect import result, secret-free reporting and removal of owned credential staging. Do not require a connectivity test unless selected. |
-| Start/taskbar editability | During a normal manual test, try adding/removing/reordering pins after initial application. Record immediate editability separately from persistence across a later normal sign-in; no forced reboot or automated correction. |
+| Start/taskbar editability | During a normal manual test, try adding/removing/reordering pins after the initial layout is applied. Record immediate editability separately from persistence across a later normal sign-in; no forced reboot or automated correction. |
 
 FoD XPS/OpenSSH, PDF/HTTP/HTTPS associations and the selected legacy-cache helper
 scenario are accepted within their recorded limits and do not need repeating.
