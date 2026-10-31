@@ -411,7 +411,7 @@ try {
             Write-RunnerLog -LogPath $logPath -Event 'PreInstallResultReadFailed' -Level Warning -Message $_.Exception.Message -Data @{ Path=$preInstallResultPath }
         }
     }
-    Write-RunnerLog -LogPath $logPath -Event 'InstallStart' -Message 'OSD App Runner started.' -Data @{ StagedPath = $StagedPath }
+    Write-RunnerLog -LogPath $logPath -Event 'InstallStart' -Message 'OSDStage Runner started.' -Data @{ StagedPath = $StagedPath }
 
     $apps = if ($manifest.PSObject.Properties.Name -contains 'Packages') { @($manifest.Packages) } else { @() }
     if ($Name) { $apps = @($apps | Where-Object { $_.Id -in $Name }) }
@@ -1393,7 +1393,7 @@ try {
         exit 1
     }
 
-    Write-RunnerLog -LogPath $logPath -Event 'InstallComplete' -Message 'OSD App Runner completed successfully.' -Data @{
+    Write-RunnerLog -LogPath $logPath -Event 'InstallComplete' -Message 'OSDStage Runner completed successfully.' -Data @{
         PackageCount = @($apps).Count
         CleanupMode = $cleanupMode
         DurationSeconds = [math]::Round($runnerStopwatch.Elapsed.TotalSeconds, 1)

@@ -2,6 +2,8 @@
 
 ## 0.1.0
 
+- Record the successful OSDStage empty-cache deployment and independent cleanup, registry, machine-variable and certificate checks. Complete the runner start/completion log label rename.
+
 - Introduce OSDStage as a new module identity with renamed commands, schema 2 repository/package manifests and fresh cache, staging, log and result paths. No OSDApps command aliases or data migration.
 - Use Packages / Architectures in catalogs and Payload in package manifests. Keep Package.zip and the OSDCloud volume label.
 - Require manual release initiation. This candidate does not publish or rename the GitHub repository.
