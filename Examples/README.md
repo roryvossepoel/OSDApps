@@ -6,6 +6,7 @@ Choose an example for the environment you are using. These are reference workflo
 
 | Example | Run on | Changes made |
 | --- | --- | --- |
+| [Combined feature acceptance](../docs/combined-acceptance.md) | Full Windows preparation, then WinPE staging | Uses a pinned test module, explicit repository IDs and normal cache; stages a representative test across retained configuration families. |
 | [Prepare a USB cache](Prepare-UsbCache.md) | Full Windows preparation machine | Saves module files, optionally downloads/refreshes content, and shows explicit repository health/prune preview; does not stage apps against Windows. |
 | [Online WinPE deployment](WinPE-Online.md) | WinPE after OSDCloud has applied Windows | Loads the module from Gallery and stages apps with or without a USB flash drive; optional repository sync downloads packages. |
 | [WinPE launcher integration](Launcher-Integration.md) | WinPE, called by OSDT or another launcher | Loads from Gallery, stages the example queue and returns a checked exit code; the launcher owns the reboot. |
