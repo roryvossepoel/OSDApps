@@ -1,5 +1,7 @@
 # Prepare a USB cache
 
+> Development candidate: Gallery installation examples apply after the first OSDStage publication. For the current candidate, use a reviewed CI module artifact; see [Getting started](../docs/getting-started.md#before-you-start).
+
 [Examples](README.md) · [Next: online WinPE](WinPE-Online.md) · [Next: offline WinPE](WinPE-Offline.md)
 
 **Run on a full Windows preparation machine, not in WinPE.** This example saves the module to an existing USB volume and optionally refreshes app content. It does not stage apps against the preparation machine's Windows drive, format the volume or create bootable OSDCloud media. The optional repository reconciliation section can remove stale repository cache folders only after a separate `-Prune` confirmation.
@@ -81,12 +83,12 @@ Skip this section for built-ins-only deployment. It requires an already publishe
 ```powershell
 # Full Windows, same session. Enter values for your own published repository.
 $CatalogUri = Read-Host 'Enter the HTTPS URL of your repository catalog.json'
-$RepoAppId = Read-Host 'Enter an app Id present in that repository'
+$RepoPackageId = Read-Host 'Enter a package Id present in that repository'
 
 Set-OSDStageConfiguration -CatalogUri $CatalogUri
-Sync-OSDStageRepository -Name $RepoAppId -Architecture x64
+Sync-OSDStageRepository -Name $RepoPackageId -Architecture x64
 
-Get-OSDStageCache -Name $RepoAppId |
+Get-OSDStageCache -Name $RepoPackageId |
     Select-Object Id, DisplayName, Vendor, Version, Architecture, Valid
 ```
 

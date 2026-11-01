@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
   <title id="title">Your repository. Your packages.</title>
-  <desc id="desc">A static OSDStage repository contains a root catalog.json pointing to package manifests. Each manifest describes an app or script and records the SHA-256 of its adjacent Package.zip. The archive contains Package/Install.ps1 and any supporting files. Publish the repository over HTTP or HTTPS while preserving its paths.</desc>
+  <desc id="desc">A static OSDStage repository contains a root catalog.json pointing to package manifests. Each schema 2 manifest declares its package type and Payload metadata for the adjacent Package.zip. App/Script payloads contain Install.ps1; Font, Certificate and Driver payloads use dedicated handlers. Publish the repository over HTTP or HTTPS while preserving its paths.</desc>
   <defs>
     <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#425c75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
   </defs>
@@ -19,7 +19,7 @@
   <rect x="56" y="44" width="5" height="22" rx="2.5" fill="#8db69d"/>
   <text x="76" y="62" class="brand">OSDStage / REPOSITORY</text>
   <text x="56" y="119" class="headline">Your repository. Your packages.</text>
-  <text x="58" y="157" class="body">Static files. Versioned content. One contract for apps and scripts.</text>
+  <text x="58" y="157" class="body">Static files. Versioned content. Five package types. One catalog.</text>
 
   <!-- Equal cards separate the three files and their responsibilities. -->
   <rect x="56" y="196" width="320" height="260" rx="16" fill="#eaf5ee" stroke="#8db69d"/>
@@ -28,7 +28,7 @@
   </g>
   <text x="140" y="248" class="small">01 / INDEX</text>
   <text x="80" y="310" class="label">catalog.json</text>
-  <text x="80" y="350" class="small">Lists package IDs and variants.</text>
+  <text x="80" y="350" class="small">Packages with Architectures.</text>
   <text x="80" y="380" class="small">Points to the current manifest</text>
   <text x="80" y="407" class="small">for each architecture.</text>
 
@@ -41,7 +41,7 @@
   <text x="464" y="310" class="label">manifest.json</text>
   <text x="464" y="350" class="small">ID, version and architecture.</text>
   <text x="464" y="380" class="small">Type and success codes.</text>
-  <text x="464" y="410" class="small">Archive name and SHA-256.</text>
+  <text x="464" y="410" class="small">Payload filename and SHA-256.</text>
 
   <path d="M773 326 H810" class="connector"/>
   <rect x="824" y="196" width="320" height="260" rx="16" fill="#fff6e6" stroke="#cfb57f"/>
@@ -52,8 +52,8 @@
   <text x="848" y="310" class="label">Package.zip</text>
   <text x="848" y="350" class="mono">Package/</text>
   <path d="M858 363 V411 M858 380 H872 M858 411 H872" stroke="#cfb57f" stroke-width="2" fill="none"/>
-  <text x="884" y="385" class="mono">Install.ps1</text>
-  <text x="884" y="416" class="small">Supporting files, if needed</text>
+  <text x="884" y="385" class="mono">Typed content</text>
+  <text x="884" y="416" class="small">App/Script: Install.ps1</text>
 
   <rect x="56" y="484" width="660" height="282" rx="16" fill="#fff" stroke="#cad6e3"/>
   <text x="80" y="526" class="label">Published structure</text>
@@ -69,10 +69,10 @@
   <text x="764" y="526" class="label">You own the lifecycle.</text>
   <text x="764" y="568" class="small">Choose versions and publish updates.</text>
   <text x="764" y="608" class="small">OSDStage checks the archive hash,</text>
-  <text x="764" y="635" class="small">stages the selected package, then runs</text>
-  <text x="764" y="662" class="small">Install.ps1 as SYSTEM before OOBE.</text>
+  <text x="764" y="635" class="small">stages the selected package, then uses</text>
+  <text x="764" y="662" class="small">its type-specific runtime handler.</text>
   <rect x="764" y="694" width="356" height="44" rx="9" fill="#fff"/>
-  <text x="942" y="722" text-anchor="middle" font-size="18" font-weight="600">Apps &amp; scripts · one format</text>
+  <text x="942" y="722" text-anchor="middle" font-size="16" font-weight="600">App · Script · Font · Certificate · Driver</text>
 
   <rect x="56" y="790" width="1088" height="70" rx="14" fill="#203e60"/>
   <g class="icon" stroke="#fff" transform="translate(80 809)"><path d="M0 12 V30 H35 V12 M17 22 V0 M9 8 L17 0 L25 8"/></g>

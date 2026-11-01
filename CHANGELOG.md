@@ -2,6 +2,8 @@
 
 ## 0.1.0
 
+- Align documentation, FAQ and diagrams with the five repository package types and schema 2. Label pre-rename screenshots as historical evidence, distinguish both viewers, and correct manual release and cache-preparation guidance.
+
 - Point source downloads, module metadata, generated help, icons and documentation at the renamed roryvossepoel/OSDStage GitHub repository. Gallery publication remains manual.
 
 - Record the successful OSDStage empty-cache deployment and independent cleanup, registry, machine-variable and certificate checks. Complete the runner start/completion log label rename.

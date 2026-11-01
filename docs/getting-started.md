@@ -8,14 +8,16 @@ This guide separates the three environments used by OSDStage. The commands you r
 
 Run OSDStage after OSDCloud has applied the Windows image and before the first Windows boot. OSDStage does not replace Windows image deployment.
 
-The examples target x64 and use the current Gallery release or the newest module version saved on your USB. Individual built-ins have different architecture options; consult [Built-in apps](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
+OSDStage is currently a development candidate. Download the module artifact from a successful reviewed [CI run](https://github.com/roryvossepoel/OSDStage/actions/workflows/ci.yml), extract it, and import its `OSDStage.psd1` by full path. Use that same reviewed module in WinPE. Gallery Install-Module/Save-Module examples below apply after the first publication; they do not install this unpublished candidate.
+
+The examples target x64. Individual built-ins have different architecture options; consult [Built-in apps](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
 
 Decide which source types you need:
 
 | Choice | What you supply |
 | --- | --- |
 | Built-ins only | Select their dedicated `Add-OSDStage*` commands and configuration. No repository URL is needed. |
-| Repository apps and scripts | Publish your own catalog, manifests and packages; configure the catalog URL and use actual app IDs from that repository. |
+| Repository packages | Publish your own catalog, manifests and packages; configure the catalog URL and use actual package IDs from that repository. |
 | Both | Add both types to the same ordered device queue. |
 
 For an online deployment, vendor/repository access must be available when acquisition occurs. A fully offline deployment requires complete content for the selected app variants **before** reboot; supported MSI/EXE files must still pass Windows signature and expected-publisher validation.
@@ -199,4 +201,4 @@ With `CleanupMode OnSuccess`, the runtime schedules removal of temporary staging
 
 ## Next steps
 
-[Built-in configuration](built-in-apps.md) covers Office licensing flags, channels, language, Firefox variants, Webex options and Zoom settings. [Repository apps and scripts](repository.md) explains organization-managed packages and optional Vendor metadata. [Viewer](viewer.md) explains the difference between staged, cached, version and signature information.
+[Built-in configuration](built-in-apps.md) covers Office licensing flags, channels, language, Firefox variants, Webex options and Zoom settings. [Repository packages](repository.md) explains organization-managed packages and optional Vendor metadata. [Viewer](viewer.md) explains the difference between staged, cached, version and signature information.

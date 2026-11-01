@@ -1,6 +1,6 @@
 # OSDStage documentation
 
-OSDStage is CLI-first. Use PowerShell to configure, cache and stage apps and machine-context scripts; use OSDStage Viewer to inspect what was prepared. Start with the workflow for the environment you are actually using.
+OSDStage is CLI-first. Use PowerShell to configure, cache and stage software and device settings; use OSDStage Viewer to inspect what was prepared. Start with the workflow for the environment you are actually using.
 
 ## Start here
 
@@ -24,8 +24,13 @@ OSDStage is CLI-first. Use PowerShell to configure, cache and stage apps and mac
 | --- | --- |
 | [Built-in apps](built-in-apps.md) | Per-app configuration, architectures, vendor sources and signature/publisher policy |
 | [Initial default apps](default-associations.md) | File/protocol associations from parameters or XML, one-shot DISM import and physical acceptance |
-| [Repository apps and scripts](repository.md) | Catalog/alias structure, package authoring, cache health, transactional reconciliation and SHA-256 integrity |
-| [Viewer](viewer.md) | Launch options, tab contents, cache/version/signature meanings and read-only boundaries |
+| [Repository packages](repository.md) | Catalog/alias structure, package authoring, cache health, transactional reconciliation and SHA-256 integrity |
+| [Viewers](viewer.md) | Windows deployment inspector versus web catalog browser; read-only boundaries |
+| [Registry](registry-staging.md), [variables](environment-variables.md), [services](services.md) | Explicit machine settings applied once during SetupComplete |
+| [Certificates](certificate-staging.md), [drivers](driver-packages.md), [fonts](repository.md) | Typed repository payloads and machine-wide application |
+| [Wi-Fi](wifi-staging.md) | WLAN XML or parameters, profile import and credential cleanup |
+| [Start/taskbar pins](desktop-settings.md) | Explicit pin lists and documented limitations |
+| [Windows capabilities](windows-capabilities.md) | Add/remove Features on Demand on Windows 11 25H2 and later |
 | [Runtime and cleanup](runtime.md) | SetupComplete, PreInstall, Runner, machine-readable results, configuration, logs and failure handling |
 | [FAQ and troubleshooting](faq.md) | Environment mistakes, cache and network failures, trust checks, logs and upgrades |
 
@@ -42,7 +47,7 @@ OSDStage is CLI-first. Use PowerShell to configure, cache and stage apps and mac
 
 ## Evidence and history
 
-[Validation matrix](testing.md) records what was actually tested, on which version, and what remains outside the test scope. [Performance](performance.md) keeps the measured phase timings and their limitations. [Changelog](../CHANGELOG.md) preserves version-specific behavior changes and migration history.
+[Validation matrix](testing.md) records what was actually tested, on which version, and what remains outside the test scope. [Performance](performance.md) keeps the measured phase timings and their limitations. [Changelog](../CHANGELOG.md) preserves version-specific behavior changes and earlier development history.
 
 Historical test results are not claims about every currently supported architecture or every device. A successful installer exit code does not independently prove product activation, sign-in or all interactive features.
 
@@ -53,9 +58,11 @@ Historical test results are not claims about every currently supported architect
 | Preparation machine | Full Windows computer used to download the module, build packages or maintain USB content |
 | Windows target | The offline Windows installation selected for deployment, not the preparation machine |
 | USB cache | Content under `\OSDStage` on the volume identified by `CacheVolumeLabel` (default `OSDCloud`) |
-| Local staging | `Windows\Temp\OSDStage` under the Windows target, containing its manifest, runtime and app content |
-| Built-in | Vendor-native integration maintained by OSDStage; payloads are not distributed by the module |
-| Repository package | Your own `Package.zip` plus published metadata, classified as `App` or `Script` |
+| Local staging | `Windows\Temp\OSDStage` under the Windows target, containing its manifest, runtime, payloads and configuration |
+| Built-in | Module-provided vendor integration or configuration handler; vendor payloads are downloaded separately |
+| Repository package | Your own `Package.zip` plus published metadata; type `App`, `Script`, `Font`, `Certificate` or `Driver` |
+| Payload | Content named by `Payload.FileName` and protected by `Payload.Sha256` in a schema 2 package manifest |
+| Device queue | Ordered `Packages` array in `DeviceManifest.json`; records both software and settings |
 | Staged | Queued for SetupComplete; not evidence of successful installation |
 
 [Back to the project](../README.md)

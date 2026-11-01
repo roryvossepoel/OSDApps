@@ -85,7 +85,7 @@ These are the checks used by cache inventory and inherited by cache health. They
 
 | Package | Local checks |
 | --- | --- |
-| Repository apps and scripts | `Package.zip` is hashed against the recorded SHA-256. Online desired-state health uses the selected catalog hash when available. This does not validate script behavior or installer success. |
+| Repository packages | `Package.zip` is hashed against the recorded SHA-256. Online desired-state health uses the selected catalog hash when available. This does not validate script behavior or installer success. |
 | Microsoft 365 Apps | Required paths, exactly one version directory matching the recorded build, a nonempty payload directory, and equal SHA-256 hashes for the shared and version-specific CABs. This is generation consistency, not a hash check of every Office data file. |
 | Microsoft Teams | Bootstrapper plus the recorded MSIX filename, SHA-256 and size. Optional Authenticode inspection covers the bootstrapper only. |
 | Chrome, Firefox, Webex and Zoom | Recorded MSI filename, identity, SHA-256 and size. Optional Authenticode inspection covers the MSI and expected publisher. |

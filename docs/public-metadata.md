@@ -8,19 +8,17 @@ OSDStage publishes a stable, machine-readable **built-in catalog** at [`metadata
 https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/builtins.json
 ```
 
-This file is a **catalog of OSDStage' vendor-native built-in integrations**, **not** a listing of an organization's self-maintained app repository. For organization-managed apps, point a private or authorized viewer to that organization's own `catalog.json` and then resolve the linked package `manifest.json` files. The sample repository under `Examples/Repository` deliberately does not publish any private apps.
+This file is a **catalog of OSDStage built-in vendor integrations and configuration handlers**, **not** a listing of an organization's self-maintained app repository. For organization-managed apps, point a private or authorized viewer to that organization's own `catalog.json` and then resolve the linked package `manifest.json` files. The sample repository under `Examples/Repository` deliberately does not publish any private apps.
 
 ## Stable schema and fields
 
-The current catalog uses `Apps[]`. This PR changes the OSDStage-owned field
-contract and is not backward-compatible with earlier consumers. There are no
-retired built-in cache aliases. Rebuild caches and update external consumers
-before adopting this branch; do not mix it with previously staged manifests.
+The catalog has `SchemaVersion: 2`, `Project: "OSDStage"` and a root `Packages` array. Each item describes one built-in integration or configuration handler. It is distinct from a repository catalog: built-in `Architectures` is a list of supported choices; repository `Architectures` entries point to package manifests. Consumers must validate the schema rather than infer it from a filename.
 
 | Field | Viewer use |
 | --- | --- |
 | `Id`, `DisplayName`, `Vendor` | Stable key and human-readable label |
-| `Source`, `Acquisition`, `SyncPhase` | Distinguish ownership and acquisition phase. `FullWindowsPreparation` means the cache must be prepared before WinPE; `FullWindowsPreInstall` permits first-boot acquisition. |
+| `PackageType` | `App` for vendor applications or `Script` for built-in configuration handlers |
+| `Source`, `Acquisition`, `SyncPhase` | Distinguish ownership and acquisition phase. `FullWindowsPreparation` means the cache must be prepared before WinPE; `FullWindowsPreInstall` permits first-boot acquisition; `None` identifies handlers with no downloadable content. |
 | `AddCommand`, `SyncCommand` | Show ready-to-copy PowerShell examples |
 | `Architectures`, `DefaultArchitecture` | Selectable architectures, not necessarily field-validated ones. DefaultArchitecture is null when an explicit selection is required. |
 | `ArchitectureRequired` | When true, the runtime Add/Sync commands require one explicit architecture. |
@@ -38,7 +36,7 @@ Use `Id` as the card key rather than display name. Render optional fields only w
 
 ## Example: Cisco Webex
 
-The public catalog includes 14 built-in integrations. This `CiscoWebex` entry illustrates the schema:
+The catalog includes both vendor apps and configuration handlers. Read the entries dynamically rather than hardcoding a count. This `CiscoWebex` entry illustrates the schema:
 
 ```json
 {
@@ -64,7 +62,7 @@ The JSON describes **supported choices**. In the 0.32.0 field tests, **x64** dow
 
 ```mermaid
 flowchart TB
-    A[Viewer consumes public builtins.json] --> B[Show built-in apps, commands, icons]
+    A[Viewer consumes public builtins.json] --> B[Show built-ins, commands and icons]
     R[Organization catalog.json] --> S[Organization packages and manifests]
     B --> C[WinPE: Add command stages intent]
     S --> D[WinPE: repository sync, SHA-256, staging]
@@ -83,4 +81,4 @@ The two data sources must not be conflated: public built-ins do **not** expose o
 3. Confirm the raw `main` JSON and corresponding icon URLs are available after merge.
 4. Refresh the website/CDN cache. A viewer reading the raw `main` JSON dynamically needs no separate list update; a viewer using a compiled snapshot needs to refresh that snapshot.
 
-See [Built-in apps](built-in-apps.md), [Repository apps and scripts](repository.md) and [Release process](releasing.md).
+See [Built-in apps](built-in-apps.md), [Repository packages](repository.md) and [Release process](releasing.md).

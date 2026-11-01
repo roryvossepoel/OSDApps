@@ -2,7 +2,7 @@
 
 > Development candidate. OSDStage has not been published to the PowerShell Gallery. Use the CI module artifact for testing; Gallery commands below apply after release. Repository and package manifests use schema 2. See [the OSDStage contract](docs/osdstage-contract.md).
 
-![OSDStage — Your apps. Ready before OOBE. Built-in apps and your own repository, with optional USB flash drive caching.](docs/images/osdstage-banner.svg)
+![OSDStage — Your deployment. Ready before OOBE. Software and device configuration with optional USB caching.](docs/images/osdstage-banner.svg)
 
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/OSDStage?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/OSDStage)
 [![PowerShell Gallery total downloads](https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fwww.powershellgallery.com%2Fapi%2Fv2%2FFindPackagesById%28%29%3Fid%3D%27OSDStage%27&query=concat%28substring%28string%28sum%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%29%2C1%2C32%2A%28count%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%3E0%20and%20not%28%2F%2F%2A%5Blocal-name%28%29%3D%27link%27%5D%5B%40rel%3D%27next%27%5D%29%29%29%2Csubstring%28%27unavailable%27%2C1%2C11%2Anot%28count%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%3E0%20and%20not%28%2F%2F%2A%5Blocal-name%28%29%3D%27link%27%5D%5B%40rel%3D%27next%27%5D%29%29%29%29&label=Downloads&color=blue)](https://www.powershellgallery.com/packages/OSDStage)
@@ -10,19 +10,19 @@
 [![Windows PowerShell 5.1](https://img.shields.io/badge/Windows%20PowerShell-5.1-blue)](#install-from-powershell-gallery)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Stage apps and PowerShell scripts in WinPE **after OSDCloud has applied Windows**. OSDStage runs them in order during the first Windows boot, just before OOBE starts. Use ready-made vendor integrations, your own repository packages, or both.
+Stage software and device configuration in WinPE **after OSDCloud has applied Windows**. OSDStage applies the selected packages and settings in order during the first Windows boot, just before OOBE starts. Use built-in integrations, your own repository packages, or both.
 
 - **Start with a few commands.** Built-in apps need no repository or custom installer wrapper.
 - **Reuse your downloads.** An optional USB cache serves multiple devices; validated replacements keep it current.
-- **Bring your own apps and scripts.** Both share one ordered queue and the same package integrity checks.
+- **Bring your own packages.** Apps, scripts, fonts, certificates and drivers share one ordered queue and package integrity checks.
 - **Opt in to Windows inbox cleanup.** A bundled script can remove explicitly selected provisioned apps before OOBE, without an app repository.
 - **Leave a clean deployment.** Successful runs remove temporary staging while keeping logs and results. No module installation is required in the deployed Windows system.
 
-[Get started](#quick-start) · [Built-in apps](docs/built-in-apps.md) · [USB preparation](Examples/Prepare-UsbCache.md) · [Apps and scripts](docs/repository.md) · [Documentation](docs/README.md)
+[Get started](#quick-start) · [Built-in apps](docs/built-in-apps.md) · [USB preparation](Examples/Prepare-UsbCache.md) · [Repository packages](docs/repository.md) · [Documentation](docs/README.md)
 
 ## Install from PowerShell Gallery
 
-Run in PowerShell on your Windows preparation machine, or in online WinPE with PowerShellGet available:
+**After the first Gallery release**, run in PowerShell on your Windows preparation machine, or in online WinPE with PowerShellGet available. Until then, use the reviewed CI artifact as described in [Getting started](docs/getting-started.md#before-you-start).
 
 ```powershell
 Install-Module OSDStage -Force -SkipPublisherCheck
@@ -35,7 +35,7 @@ For WinPE without Gallery access, [save the module to your USB flash drive](Exam
 
 ## Quick start
 
-**Run this complete example in online WinPE, after OSDCloud has applied Windows and before the first reboot.** It stages three apps for the target PC:
+**After Gallery publication, run this complete example in online WinPE, after OSDCloud has applied Windows and before the first reboot.** It stages three apps for the target PC:
 
 ```powershell
 Install-Module OSDStage -Force -SkipPublisherCheck
@@ -89,9 +89,17 @@ The optional Windows Inbox Cleanup script is staged with `Add-OSDStageWindowsInb
 
 Installers come directly from their vendors. Supported architectures and options differ by app; see the [built-in guide](docs/built-in-apps.md) for Office configuration, Firefox channels and other settings. OSDStage does not bundle vendor installers or provide product licenses.
 
-## Your apps. Your scripts. One queue.
+## Software and settings. One queue.
 
-Use a repository for apps you package yourself and PowerShell scripts that configure the machine. Classify a package as `App` or `Script`; both use the same `Package.zip` layout, SHA-256 validation and `Add-OSDStage` command. Add them alongside built-ins in the order you want them to run.
+Repository package types are `App`, `Script`, `Font`, `Certificate` and `Driver`. All use `Package.zip` and SHA-256 validation. App and Script packages run `Package/Install.ps1`; Font, Certificate and Driver packages use the module's type-specific handlers. Add them alongside built-ins in the order you want them processed.
+
+| Configure | Guide |
+| --- | --- |
+| Fonts, machine CA certificates and driver packages | [Repository packages](docs/repository.md), [certificates](docs/certificate-staging.md), [drivers](docs/driver-packages.md) |
+| Registry, machine variables and services | [Registry](docs/registry-staging.md), [variables](docs/environment-variables.md), [services](docs/services.md) |
+| Wi-Fi profiles | [XML and parameter input](docs/wifi-staging.md) |
+| Optional features, FoDs and inbox app removal | [Feature scope](docs/feature-status.md), [capabilities](docs/windows-capabilities.md), [inbox cleanup](docs/built-in-apps.md#windows-inbox-cleanup) |
+| Initial app associations and Start/taskbar pins | [Associations](docs/default-associations.md), [pins](docs/desktop-settings.md) |
 
 Configure your own catalog URL, then stage a package using its actual repository ID:
 
@@ -104,7 +112,7 @@ The URL and ID above are placeholders. No hosted sample repository or built-in s
 
 ## How it works
 
-![OSDStage workflow: stage apps and scripts in WinPE, acquire and run them through SetupComplete, then continue to OOBE](docs/images/osdstage-architecture.svg)
+![OSDStage workflow: stage software and device settings in WinPE, process the ordered queue through SetupComplete, then continue to OOBE](docs/images/osdstage-architecture.svg)
 
 | When | What OSDStage does |
 | --- | --- |
@@ -129,11 +137,9 @@ Use the [USB preparation guide](Examples/Prepare-UsbCache.md) to get started, [c
 
 ## Inspect before deployment. Keep the results afterward.
 
-**OSDStage Viewer** shows the staged queue, available packages, cache and logs. The **Package Type** column distinguishes `App` from `Script` in the Staged for device, Apps and Cache tabs. Use it in WinPE to review staging or on a preparation machine to inspect the cache. See the [Viewer guide](docs/viewer.md).
+The **Windows Viewer** (`Show-OSDStageUI`) shows the staged queue, available packages, cache and logs. The **Package Type** column identifies the selected package type. Use it in WinPE to review staging or on a preparation machine to inspect the cache. See the [Viewer guide](docs/viewer.md).
 
-![OSDStage Viewer in WinPE showing Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise staged in order, with Office configuration details](docs/images/viewer-staged-winpe.png)
-
-*A real WinPE staging session. The detail pane shows the selected Office configuration; channel, language and cached versions reflect that session. [See the Apps and Cache views](docs/viewer.md#screenshots-from-winpe).*
+The separate **web catalog viewer** browses built-in metadata and a user-supplied repository URL. It cannot inspect a local USB cache or target staging. See [the viewer distinction](docs/viewer.md#two-different-viewers).
 
 The deployed Windows system keeps its results without needing the module or Viewer:
 
@@ -157,13 +163,3 @@ See [results and troubleshooting](docs/getting-started.md#5-check-the-outcome) f
 Reading a packaged copy? The full guides and images are in the [online documentation](https://github.com/roryvossepoel/OSDStage/blob/main/docs/README.md).
 
 OSDStage is licensed under the [MIT License](LICENSE).
-
-Repository [driver packages](docs/driver-packages.md) preserve complete vendor INF payloads in `Package.zip` and use the existing USB cache with `Add-OSDStageDriver -Id`.
-
-Machine environment variables: [staging, PATH and runtime behavior](docs/environment-variables.md).
-
-Windows services: [one-shot startup and state configuration](docs/services.md).
-
-Start/taskbar pins: [first-use desktop configuration](docs/desktop-settings.md).
-
-Features on Demand: [Windows capabilities](docs/windows-capabilities.md) for Windows 11 25H2 and later.
