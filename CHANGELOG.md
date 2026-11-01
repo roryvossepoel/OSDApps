@@ -2,6 +2,8 @@
 
 ## 0.1.0
 
+- Add a compact English GitHub Pages website with a three-step quick start, task guides, FAQ and integrated read-only catalog. Bundle current metadata and icons; support custom catalog URLs, list/tile views and pagination without a prefilled organization repository. Build and validate pull requests before deployment from main.
+
 - Align documentation, FAQ and diagrams with the five repository package types and schema 2. Label pre-rename screenshots as historical evidence, distinguish both viewers, and correct manual release and cache-preparation guidance.
 
 - Point source downloads, module metadata, generated help, icons and documentation at the renamed roryvossepoel/OSDStage GitHub repository. Gallery publication remains manual.

@@ -12,8 +12,9 @@ OSDStage Viewer is the read-only interface opened by `Show-OSDStageUI`. It displ
 | Web catalog viewer | Public built-in metadata and a user-entered schema 2 catalog URL; tiles/list and pagination | Inspect the local disk, USB cache or deployed Windows results |
 
 The commands and tabs in the rest of this guide describe the **Windows Viewer**.
-The web viewer is a separate preview, not a module command or a published Pages
-site. It has no prefilled organization repository or demo catalog.
+The web viewer is included in the static website under `site/catalog`. It is not
+a module command. It has no prefilled organization repository or demo catalog.
+See [GitHub Pages](github-pages.md) for building, reviewing and publishing the site.
 
 ## Where to run the Windows Viewer
 
