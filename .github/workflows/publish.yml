@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       expected_version:
-        description: 'Exact Gallery version to publish, for example 0.29.1. The matching v<version> Git tag must already exist.'
+        description: 'Exact Gallery version to publish, for example 1.0.0-rc1. The matching v<version> Git tag must already exist.'
         required: true
         type: string
 
@@ -33,21 +33,21 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          $expectedVersion = $env:EXPECTED_VERSION.Trim() -replace '^v',''
+          $expectedVersion = $env:EXPECTED_VERSION
           $expectedTag = "v$expectedVersion"
-          $exactTag = (git describe --tags --exact-match HEAD 2>$null).Trim()
-
-          if ($LASTEXITCODE -ne 0 -or $exactTag -ne $expectedTag) {
-              throw "PSGallery publication must run from immutable tag '$expectedTag'. Checked out HEAD is not that exact tag."
+          $tagCommit = git rev-parse --verify "refs/tags/$expectedTag^{commit}"
+          if ($LASTEXITCODE -ne 0) { throw "Missing immutable release tag '$expectedTag'." }
+          $headCommit = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0 -or $tagCommit -ne $headCommit) {
+              throw "PSGallery publication must run from immutable tag '$expectedTag'."
           }
-
-          Write-Host "Publishing source is pinned to tag $exactTag at commit $env:GITHUB_SHA."
+          Write-Host "Publishing source is pinned to tag $expectedTag at commit $headCommit."
 
       - name: Install validation dependencies
         shell: pwsh
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module Pester -RequiredVersion 6.2.0 -Scope CurrentUser -Force -SkipPublisherCheck
           Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
 
       - name: Validate tagged source
@@ -68,14 +68,11 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          $expectedVersion = $env:EXPECTED_VERSION.Trim() -replace '^v',''
+          $expectedVersion = $env:EXPECTED_VERSION
           $manifestPath = Join-Path $PWD 'dist\OSDStage\OSDStage.psd1'
-          $manifest = Test-ModuleManifest -Path $manifestPath -ErrorAction Stop
-          $galleryVersion = $manifest.Version.ToString()
-
-          if ($expectedVersion -ne $galleryVersion) {
-              throw "Expected version '$expectedVersion' does not match built module version '$galleryVersion'."
-          }
+          Test-ModuleManifest -Path $manifestPath -ErrorAction Stop | Out-Null
+          $release = ./build/Get-ReleaseVersion.ps1 -ManifestPath $manifestPath -ExpectedVersion $expectedVersion
+          $galleryVersion = $release.Version
 
           "gallery_version=$galleryVersion" >> $env:GITHUB_OUTPUT
           Write-Host "Release package validation passed for OSDStage $galleryVersion."
@@ -88,11 +85,13 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $version = $env:GALLERY_VERSION
+          $moduleVersion = ($version -split '-', 2)[0]
+          $allowPrerelease = $version.Contains('-')
           $modulePath = Join-Path $PWD 'dist\OSDStage'
 
           function Find-PublishedVersion {
               try {
-                  Find-Module -Name OSDStage -RequiredVersion $version -Repository PSGallery -ErrorAction Stop
+                  Find-Module -Name OSDStage -RequiredVersion $version -AllowPrerelease:$allowPrerelease -Repository PSGallery -ErrorAction Stop
               }
               catch {
                   if ($_.Exception.Message -match 'No match was found|Unable to find module|No match found') { return $null }
@@ -116,7 +115,7 @@ jobs:
                   }
                   New-Item -ItemType Directory -Path $downloadPath -Force -ErrorAction Stop | Out-Null
                   try {
-                      Save-Module -Name OSDStage -RequiredVersion $version -Repository PSGallery -Path $downloadPath -Force -ErrorAction Stop
+                      Save-Module -Name OSDStage -RequiredVersion $version -AllowPrerelease:$allowPrerelease -Repository PSGallery -Path $downloadPath -Force -ErrorAction Stop
                       $downloaded = $true
                       break
                   }
@@ -132,7 +131,7 @@ jobs:
 
               # Retrieval can be delayed after a successful push. Content mismatches
               # are not retrieval failures and must fail immediately without a retry.
-              $publishedPath = Join-Path $downloadPath "OSDStage\$version"
+              $publishedPath = Join-Path $downloadPath "OSDStage\$moduleVersion"
               if (-not (Test-Path -LiteralPath $publishedPath -PathType Container)) {
                   throw "Published OSDStage $version was not downloaded for verification."
               }

@@ -1,6 +1,6 @@
 # Online WinPE deployment
 
-> Development candidate: Gallery installation examples apply after the first OSDStage publication. For the current candidate, use a reviewed CI module artifact; see [Getting started](../docs/getting-started.md#before-you-start).
+> Release candidate: these online Gallery instructions apply after publication of the OSDStage preview is verified. Use `-AllowPrerelease`.
 
 [Examples](README.md) · [USB preparation](Prepare-UsbCache.md) · [Offline alternative](WinPE-Offline.md)
 
@@ -11,7 +11,7 @@ This example uses the current PowerShell Gallery release and three x64 built-ins
 ## 1. Import the module and stage built-ins
 
 ```powershell
-Install-Module OSDStage -Force -SkipPublisherCheck
+Install-Module OSDStage -AllowPrerelease -Force -SkipPublisherCheck
 Import-Module OSDStage -Force
 
 Add-OSDStageMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us

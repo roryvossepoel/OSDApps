@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       expected_version:
-        description: 'Expected release version, for example 0.29.1. Leave empty to use ModuleVersion.'
+        description: 'Exact release version, for example 1.0.0-rc1. Leave empty to use the manifest.'
         required: false
         type: string
 
@@ -17,44 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  version-change:
-    runs-on: windows-latest
-    outputs:
-      publish: ${{ steps.version.outputs.publish }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - name: Check whether the module version increased
-        id: version
-        shell: pwsh
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BEFORE_SHA: ${{ github.event.before }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          if ($env:EVENT_NAME -eq 'workflow_dispatch') {
-              'publish=true' >> $env:GITHUB_OUTPUT
-              exit 0
-          }
-          if ($env:BEFORE_SHA -notmatch '^[0-9a-f]{40}$' -or $env:BEFORE_SHA -match '^0+$') {
-              throw 'Cannot establish the previous main version. Use a reviewed manual release.'
-          }
-          $previousText = git show "$($env:BEFORE_SHA):OSDStage.psd1"
-          if ($LASTEXITCODE -ne 0) { throw 'Cannot read the previous module manifest.' }
-          $match = [regex]::Match(($previousText -join "`n"), '(?m)^\s*ModuleVersion\s*=\s*[''"](?<version>\d+\.\d+\.\d+(?:\.\d+)?)[''"]')
-          if (-not $match.Success) { throw 'Cannot read the previous module version.' }
-          $previous = [version]$match.Groups['version'].Value
-          $current = [version](Import-PowerShellDataFile ./OSDStage.psd1).ModuleVersion
-          if ($current -lt $previous) { throw 'The module version must not decrease.' }
-          $publish = $current -gt $previous
-          "publish=$($publish.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
-          Write-Host "Module version: $previous -> $current. Publish: $publish."
-
   release:
-    needs: version-change
-    if: needs.version-change.outputs.publish == 'true'
     runs-on: windows-latest
 
     steps:
@@ -90,26 +53,13 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          $manifest = Test-ModuleManifest ./OSDStage.psd1 -ErrorAction Stop
-          $moduleVersion = $manifest.Version.ToString()
-          $expectedVersion = [string]$env:EXPECTED_VERSION
+          Test-ModuleManifest ./OSDStage.psd1 -ErrorAction Stop | Out-Null
+          $release = ./build/Get-ReleaseVersion.ps1 -ExpectedVersion $env:EXPECTED_VERSION
+          "release_version=$($release.Version)" >> $env:GITHUB_OUTPUT
+          "tag=$($release.Tag)" >> $env:GITHUB_OUTPUT
+          "prerelease=$($release.IsPrerelease.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          Write-Host "Resolved release: $($release.Tag)"
 
-          if ([string]::IsNullOrWhiteSpace($expectedVersion)) {
-              $expectedVersion = $moduleVersion
-          }
-
-          $expectedVersion = $expectedVersion.Trim() -replace '^v',''
-
-          if ($expectedVersion -ne $moduleVersion) {
-              throw "Expected version '$expectedVersion' does not match ModuleVersion '$moduleVersion'."
-          }
-
-          $tag = "v$expectedVersion"
-
-          "release_version=$expectedVersion" >> $env:GITHUB_OUTPUT
-          "tag=$tag" >> $env:GITHUB_OUTPUT
-
-          Write-Host "Resolved release: $tag"
 
       - name: Check existing tag and release
         id: existing
@@ -158,7 +108,7 @@ jobs:
         shell: pwsh
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module Pester -RequiredVersion 6.2.0 -Scope CurrentUser -Force -SkipPublisherCheck
           Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
 
       - name: Validate release candidate
@@ -175,6 +125,7 @@ jobs:
           TAG: ${{ steps.release.outputs.tag }}
           RELEASE_VERSION: ${{ steps.release.outputs.release_version }}
           TAG_EXISTS: ${{ steps.existing.outputs.tag_exists }}
+          IS_PRERELEASE: ${{ steps.release.outputs.prerelease }}
         run: |
           $ErrorActionPreference = 'Stop'
 
@@ -203,6 +154,8 @@ jobs:
               '--title', "OSDStage v$env:RELEASE_VERSION",
               '--notes-file', $releaseNotesPath
           )
+
+          if ($env:IS_PRERELEASE -eq 'true') { $arguments += @('--prerelease', '--latest=false') }
 
           if ($env:TAG_EXISTS -eq 'true') {
               $arguments += '--verify-tag'

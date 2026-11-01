@@ -34,7 +34,7 @@ if ($UsbRoot.TrimEnd('\') -ieq $env:SystemDrive) {
 $ModuleParent = Join-Path $UsbRoot 'Modules'
 New-Item -ItemType Directory -Path $ModuleParent -Force | Out-Null
 
-Save-Module -Name OSDStage -Repository PSGallery -Path $ModuleParent
+Save-Module -Name OSDStage -AllowPrerelease -Repository PSGallery -Path $ModuleParent
 
 $SavedVersions = @(Get-ChildItem -LiteralPath (Join-Path $UsbRoot 'Modules\OSDStage') -Directory |
     Where-Object { $_.Name -as [version] } |
