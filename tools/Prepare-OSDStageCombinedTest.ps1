@@ -14,7 +14,7 @@ try {
     New-Item -ItemType Directory -Path $temp -Force | Out-Null
     $archive=Join-Path $temp 'source.zip'
     [Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -Uri ('https://github.com/roryvossepoel/OSDApps/archive/' + $Revision + '.zip') -OutFile $archive -UseBasicParsing
+    Invoke-WebRequest -Uri ('https://github.com/roryvossepoel/OSDStage/archive/' + $Revision + '.zip') -OutFile $archive -UseBasicParsing
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [IO.Compression.ZipFile]::ExtractToDirectory($archive,(Join-Path $temp 'source'))
     $roots=@(Get-ChildItem -LiteralPath (Join-Path $temp 'source') -Directory | Where-Object {

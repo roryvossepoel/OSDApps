@@ -2,6 +2,8 @@
 
 ## 0.1.0
 
+- Point source downloads, module metadata, generated help, icons and documentation at the renamed roryvossepoel/OSDStage GitHub repository. Gallery publication remains manual.
+
 - Record the successful OSDStage empty-cache deployment and independent cleanup, registry, machine-variable and certificate checks. Complete the runner start/completion log label rename.
 
 - Introduce OSDStage as a new module identity with renamed commands, schema 2 repository/package manifests and fresh cache, staging, log and result paths. No OSDApps command aliases or data migration.
@@ -116,7 +118,7 @@ The entries below record the earlier OSDApps development history; command names 
 
 ### Validation
 
-- The implementation candidate passed 369 tests on each of Windows PowerShell 5.1 and PowerShell 7, with zero failures or skipped tests and all 31 packaged help topics verified ([CI](https://github.com/roryvossepoel/OSDApps/actions/runs/39157805653)). Release preparation and publication validate their own source again.
+- The implementation candidate passed 369 tests on each of Windows PowerShell 5.1 and PowerShell 7, with zero failures or skipped tests and all 31 packaged help topics verified ([CI](https://github.com/roryvossepoel/OSDStage/actions/runs/39157805653)). Release preparation and publication validate their own source again.
 - Physical Office configuration checks and a single-Office deployment through OOBE passed on 18 October 2026: fresh acquisition, installer exit code 0, matching installed version and completed cleanup. See the [validation evidence](docs/testing.md#office-configuration-compatibility-and-deployment--18-october-2026) for tested commits and scope.
 
 ## 0.43.0
@@ -212,7 +214,7 @@ The entries below record the earlier OSDApps development history; command names 
 ### Validation
 
 - Added Windows runtime tests proving continuation after a controlled installer exit code, continuation after a recorded PreInstall acquisition failure, all-installer blocking on a repository hash mismatch, staging retention after partial failure and absence of persistence-based retry mechanisms.
-- The release candidate passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, with **31/31 packaged command-help topics** verified on each engine and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38405028071)).
+- The release candidate passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, with **31/31 packaged command-help topics** verified on each engine and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDStage/actions/runs/38405028071)).
 - Two freshly applied x64 PCs passed a physical SetupComplete pair using the same eight-app queue and USB cache. A controlled repository installer failure on PC 1 was recorded once (exit code `42`), did not prevent the following Omnissa package from succeeding, produced a final failed result with 7 succeeded / 1 failed / 0 skipped, retained staging and created no retry persistence. PC 2 then completed the unchanged normal queue with **8/8 succeeded**, zero failed or skipped, correlated successful phase records, successful `OnSuccess` cleanup and no scheduled task, service or RunOnce entry.
 
 ## 0.36.0
@@ -233,7 +235,7 @@ The entries below record the earlier OSDApps development history; command names 
 ### Validation
 
 - Added file-backed tests for desired-state classification, offline health, corruption despite pins, repository alias conflicts and authoring, canonical alias staging, successful prune, empty desired state, valid pin retention, `WhatIf`, commit-failure rollback, dynamic named clearing and guarded Teams alias cleanup.
-- The release candidate passed **235/235 tests** on both Windows PowerShell 5.1 and PowerShell 7, with **31/31 packaged command-help topics** verified on each engine and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38364310573)).
+- The release candidate passed **235/235 tests** on both Windows PowerShell 5.1 and PowerShell 7, with **31/31 packaged command-help topics** verified on each engine and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDStage/actions/runs/38364310573)).
 - Full-Windows testing on a populated eight-entry USB cache passed offline and online desired-state health checks, prune `WhatIf`, a controlled transactional orphan prune with unchanged retained package hashes, and guarded migration of a temporary `BuiltIn\Teams` alias with the canonical Teams MSIX unchanged.
 - Two freshly applied x64 PCs passed the complete online eight-app SetupComplete path with the same USB flash drive. The recoverably cleared cold run repopulated a healthy cache in `PreInstall 215.3 s + Runner 364.8 s`; all six built-ins were updated. The subsequent warm run passed hard offline-readiness and completed in `PreInstall 45.3 s + Runner 364.1 s` with no built-in updates. Both correlated result sets reported **8/8 successful installations**, no runtime warnings or errors, successful `OnSuccess` cleanup and a final healthy eight-entry cache.
 
@@ -254,7 +256,7 @@ The entries below record the earlier OSDApps development history; command names 
 ### Validation
 
 - Added file-backed preflight, online/offline readiness, repository tamper, runtime mismatch, cache aggregation, result parsing and standalone Runner result tests for Windows PowerShell 5.1 and PowerShell 7 CI.
-- The release candidate passed **205/205 tests on each PowerShell engine**, with **30/30 packaged command-help topics** verified and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38284146281)). Publication validates the merged source again.
+- The release candidate passed **205/205 tests on each PowerShell engine**, with **30/30 packaged command-help topics** verified and no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDStage/actions/runs/38284146281)). Publication validates the merged source again.
 - The 0.35.0 release candidate passed a physical online deployment from a populated USB cache on 12 October 2026. `Test-OSDStageDeployment -RequireOfflineReady` passed before reboot; correlated PreInstall and final JSON results recorded **8/8 successful installations**, `PreInstall` in **53.9 s**, Runner in **369.0 s**, and the expected `OnSuccess` cleanup outcome. All six built-ins used cached content, Cisco Webex refreshed, the five signable built-ins passed expected-publisher validation, and both repository packages passed SHA-256 validation.
 - OSDStage 0.34.1 separately passed a physical cold/warm eight-app pair on the same date; it remains historical evidence for the earlier runtime.
 
@@ -281,7 +283,7 @@ The entries below record the earlier OSDApps development history; command names 
 
 - CI runs the full Pester suite, analyzer, distribution build and packaged-help checks separately on Windows PowerShell 5.1 and PowerShell 7. Empty, incomplete and discovery-failed test runs now fail the gate; detailed test and analyzer reports are retained.
 - Added file-backed tests for actual declined confirmations, new/existing destinations, same-version replacement previews, temporary-file cleanup, invalid input and simulated compression/extraction failures. Fixture installers must never execute.
-- The reviewed authoring candidate passed **194/194 tests on each PowerShell engine**, with **27/27 packaged command-help topics** verified ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38217563557)). Release-preparation and publication workflows validate their own source again; this earlier result is not a claim that a later release has already passed.
+- The reviewed authoring candidate passed **194/194 tests on each PowerShell engine**, with **27/27 packaged command-help topics** verified ([CI run](https://github.com/roryvossepoel/OSDStage/actions/runs/38217563557)). Release-preparation and publication workflows validate their own source again; this earlier result is not a claim that a later release has already passed.
 - Analyzer warning/informational findings remain; the validation gate reports no blocking errors for that candidate.
 
 ### Compatibility and scope

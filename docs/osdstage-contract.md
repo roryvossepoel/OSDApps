@@ -1,6 +1,6 @@
 # OSDStage contract
 
-OSDStage is a new module identity. There is no transition module, old-command alias layer or conversion of OSDApps catalogs, cache data or device staging. Existing tested deployment behavior is the baseline, but the renamed candidate still requires its own focused Windows acceptance run.
+OSDStage is a new module identity. There is no transition module, old-command alias layer or conversion of OSDApps catalogs, cache data or device staging. Existing tested deployment behavior is the baseline. The renamed candidate passed its focused empty-cache Windows deployment; see [the acceptance record](osdstage-rename-acceptance.md).
 
 ## Names and contracts
 
@@ -29,6 +29,6 @@ An empty OSDStage cache is a normal starting state. Existing integrity, transact
 
 ## Release and acceptance
 
-This branch changes source contracts, not the GitHub repository name or a published Gallery package. Existing source URLs continue to point at the current repository so source downloads remain usable. Release creation is manual; merging this branch does not publish OSDStage.
+The GitHub repository was renamed to [roryvossepoel/OSDStage](https://github.com/roryvossepoel/OSDStage) on 1 November 2026 after PRs #99 and #100 merged and main CI passed. Source, icon, help and module metadata URLs now use that canonical repository name. Release creation remains manual; these changes do not publish OSDStage to the Gallery.
 
-Before the first release, validate Windows PowerShell 5.1 and PowerShell 7 CI, then run a focused deployment from a fresh OSDStage cache and schema 2 catalog. Confirm content acquisition, ordered SetupComplete execution, renamed paths and cleanup. Existing historical acceptance records describe the earlier module, not a completed OSDStage device test. Viewer redesign, public Pages documentation and the actual repository/Gallery launch remain separate work.
+Windows PowerShell 5.1 and PowerShell 7 validation, fresh-cache content acquisition, ordered SetupComplete execution, renamed paths and independent cleanup checks have passed for the candidate recorded in [rename acceptance](osdstage-rename-acceptance.md). CI on later changes is separate evidence. Historical feature records remain scoped to their recorded candidates. Viewer publication, public Pages documentation and Gallery release remain separate work.

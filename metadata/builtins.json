@@ -31,7 +31,7 @@
       ],
       "CachePath": "BuiltIn/Microsoft365Apps",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/microsoft365.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/microsoft365.svg"
     },
     {
       "Id": "MicrosoftTeams",
@@ -50,7 +50,7 @@
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/MicrosoftTeams",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/microsoftteams.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/microsoftteams.svg"
     },
     {
       "Id": "AdobeAcrobatUnified",
@@ -68,7 +68,7 @@
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/AdobeAcrobatUnified/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/acrobatunified.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/acrobatunified.svg"
     },
     {
       "Id": "GoogleChromeEnterprise",
@@ -86,7 +86,7 @@
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/GoogleChromeEnterprise/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/chrome.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/chrome.svg"
     },
     {
       "Id": "MozillaFirefoxEnterprise",
@@ -110,7 +110,7 @@
       "DefaultLanguage": "en-US",
       "CachePath": "BuiltIn/MozillaFirefoxEnterprise/<channel>/<architecture>/<language>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/firefox.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/firefox.svg"
     },
     {
       "Id": "CiscoWebex",
@@ -128,7 +128,7 @@
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/CiscoWebex/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/ciscowebex.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/ciscowebex.svg"
     },
     {
       "Id": "ZoomWorkplace",
@@ -146,7 +146,7 @@
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/ZoomWorkplace/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/zoom.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/zoom.svg"
     },
     {
       "Id": "7Zip",
@@ -165,7 +165,7 @@
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/7Zip/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/7zip.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/7zip.svg"
     },
     {
       "Id": "VisualStudioCode",
@@ -183,7 +183,7 @@
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/VisualStudioCode/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/vscode.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/vscode.svg"
     },
     {
       "Id": "VisualCRedist",
@@ -201,7 +201,7 @@
       "DefaultArchitecture": null,
       "CachePath": "BuiltIn/VisualCRedist/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/visualc.svg",
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/visualc.svg",
       "ArchitectureRequired": true
     },
     {
@@ -220,7 +220,7 @@
       "DefaultArchitecture": null,
       "CachePath": "BuiltIn/DotNetRuntime/<runtime-type>/<channel>/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/dotnet.svg",
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/dotnet.svg",
       "ArchitectureRequired": true,
       "Channels": [
         "8.0",
@@ -249,7 +249,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/inboxcleanup.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/inboxcleanup.svg"
     },
     {
       "Id": "WindowsFeatures",
@@ -267,7 +267,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
     },
     {
       "Id": "WindowsCapabilities",
@@ -285,7 +285,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
     },
     {
       "Id": "MicrosoftCompanyPortal",
@@ -303,7 +303,7 @@
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/MicrosoftCompanyPortal/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/companyportal.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/companyportal.svg"
     },
     {
       "Id": "CMTraceOpen",
@@ -321,7 +321,7 @@
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/CMTraceOpen/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/cmtraceopen.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/cmtraceopen.svg"
     },
     {
       "Id": "WiFiProfiles",
@@ -339,7 +339,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
     },
     {
       "Id": "Certificates",
@@ -357,7 +357,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
     },
     {
       "Id": "EnvironmentVariables",
@@ -375,7 +375,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
     },
     {
       "Id": "Services",
@@ -393,7 +393,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
     },
     {
       "Id": "DesktopSettings",
@@ -411,7 +411,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg",
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg",
       "AdditionalAddCommands": [
         "Add-OSDStageTaskbarPins"
       ]
@@ -432,7 +432,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
     }
   ]
 }

@@ -77,7 +77,7 @@ The implementation candidate for 0.45.1 (manifest version 0.45.0, commit `0ed52e
 - PreInstall completed in 4.1 seconds; Runner completed in 151.1 seconds; their measured total was 155.2 seconds.
 - The Office installation item completed in 150.6 seconds with exit code 0. Registration and Word, Excel, PowerPoint and Outlook executables matched `16.0.20430.20180`.
 - Final status was Succeeded. Runtime staging and the cleanup helper were removed.
-- Implementation CI passed 416 tests on each of Windows PowerShell 5.1 and PowerShell 7, with no failures or skips and all 33 packaged help checks passing ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/39289473974)).
+- Implementation CI passed 416 tests on each of Windows PowerShell 5.1 and PowerShell 7, with no failures or skips and all 33 packaged help checks passing ([CI run](https://github.com/roryvossepoel/OSDStage/actions/runs/39289473974)).
 
 This validates online build checking, same-build cache reuse, installation and cleanup for the stated configuration. It does not independently validate every Office payload file, Office activation, interactive app behavior, other architectures or every configuration. Release-package validation is separate from this candidate deployment.
 
@@ -163,7 +163,7 @@ that every vendor update check succeeded or that no download occurred.
 
 ## OSDStage 0.39.0 cache and deployment validation — 15 October 2026
 
-The candidate from [PR #27](https://github.com/roryvossepoel/OSDApps/pull/27), commit `08206e105daea529893d348f5dfee750160210fa`, passed the following physical checks. These are separate from the automated test suite.
+The candidate from [PR #27](https://github.com/roryvossepoel/OSDStage/pull/27), commit `08206e105daea529893d348f5dfee750160210fa`, passed the following physical checks. These are separate from the automated test suite.
 
 | Check | Observed result |
 | --- | --- |
@@ -178,7 +178,7 @@ The deployment was a warm-cache integration run, not a cold download run. These 
 
 ## OSDStage 0.37.0 release-candidate validation — 13 October 2026
 
-The 0.37.0 candidate from [PR #25](https://github.com/roryvossepoel/OSDApps/pull/25) was built from commit `2a2b5f364de1efd9341a9728a975e4fe7428d841`. GitHub Actions passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38405028071)).
+The 0.37.0 candidate from [PR #25](https://github.com/roryvossepoel/OSDStage/pull/25) was built from commit `2a2b5f364de1efd9341a9728a975e4fe7428d841`. GitHub Actions passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDStage/actions/runs/38405028071)).
 
 ### Automated fault-isolation coverage
 
@@ -204,7 +204,7 @@ Together, these physical runs validate the intended one-shot boundary: an ordina
 
 ## OSDStage 0.36.0 release-candidate validation — 13 October 2026
 
-The 0.36.0 candidate from [PR #24](https://github.com/roryvossepoel/OSDApps/pull/24) was built from commit `03bbd8a2304a4c6f72d1253c0d2c5c4ac9637229` and installed as `E:\Modules\OSDStage\0.36.0`. Its source tree matched the locally reviewed and tested feature tree. GitHub Actions passed **235/235 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38364310573)).
+The 0.36.0 candidate from [PR #24](https://github.com/roryvossepoel/OSDStage/pull/24) was built from commit `03bbd8a2304a4c6f72d1253c0d2c5c4ac9637229` and installed as `E:\Modules\OSDStage\0.36.0`. Its source tree matched the locally reviewed and tested feature tree. GitHub Actions passed **235/235 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDStage/actions/runs/38364310573)).
 
 ### Cache health and reconciliation
 
@@ -493,9 +493,9 @@ This prototype evidence applies to the tested development PC. Integrated-helper 
 
 ## Sleep prevention deployment — 20 October 2026
 
-Implementation commit: `53f229e7b235e289a703fe7211d8f78e84125958` ([PR #47](https://github.com/roryvossepoel/OSDApps/pull/47)). The candidate retained module version 0.45.1; the feature ships in 0.46.0.
+Implementation commit: `53f229e7b235e289a703fe7211d8f78e84125958` ([PR #47](https://github.com/roryvossepoel/OSDStage/pull/47)). The candidate retained module version 0.45.1; the feature ships in 0.46.0.
 
-- [CI](https://github.com/roryvossepoel/OSDApps/actions/runs/39407865264) passed 440 tests on each of Windows PowerShell 5.1 and PowerShell 7, with no failures or skipped tests. The real native helper test also passed on both engines.
+- [CI](https://github.com/roryvossepoel/OSDStage/actions/runs/39407865264) passed 440 tests on each of Windows PowerShell 5.1 and PowerShell 7, with no failures or skipped tests. The real native helper test also passed on both engines.
 - On the development PC, the actual runtime helper passed normal completion, controlled failure, disabled mode and forced termination. Registered requests were released; disabled mode registered none. No power settings were changed.
 - Physical deployment `a02ec413-915e-4ad5-a2c6-b209a8f7c01e` completed from WinPE through OOBE. Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise each reported `CacheReused` and installer exit code 0.
 - PreInstall and Install each logged one successful `SleepPreventionStarted` and `SleepPreventionStopped` pair. No failed or skipped apps remained; staging and the cleanup helper were removed.
@@ -529,7 +529,7 @@ checks the correlated deployment in OOBE. Do not rerun SetupComplete.
 ## Visual Studio Code physical candidate validation (2026-10-20)
 
 The x64 candidate at `9e2d204d7d2c49ba6c8b3115071193dfd7da72bd`
-([PR #51](https://github.com/roryvossepoel/OSDApps/pull/51)) passed a physical
+([PR #51](https://github.com/roryvossepoel/OSDStage/pull/51)) passed a physical
 WinPE-to-OOBE deployment: `bb0e91a0-c45e-4fff-9743-cd4478ab362a`.
 The candidate retained module version 0.46.0; this built-in ships in 0.47.0.
 
@@ -540,7 +540,7 @@ The candidate retained module version 0.46.0; this built-in ships in 0.47.0.
 - The OOBE validator passed its installation and cleanup checks; staging was removed.
 - Validation was read-only and did not rerun SetupComplete.
 
-[Candidate CI](https://github.com/roryvossepoel/OSDApps/actions/runs/39479913392)
+[Candidate CI](https://github.com/roryvossepoel/OSDStage/actions/runs/39479913392)
 passed on Windows PowerShell 5.1 and PowerShell 7. This physical result covers
 x64 download and installation, not ARM64 installation, warm-cache reuse or
 interactive editor behavior. The 0.47.0 release includes 7Zip's physical
@@ -580,7 +580,7 @@ versions and completed staging/helper cleanup.
 
 The final run used commit `c2452dbafa4bab9b5b3b2ed6fd3e3ae08b651aae`, with
 `VisualCRedist-x86` and `VisualCRedist-x64` IDs and
-`BuiltIn/VisualCRedist/<architecture>` folders. [Candidate CI](https://github.com/roryvossepoel/OSDApps/actions/runs/39552403526)
+`BuiltIn/VisualCRedist/<architecture>` folders. [Candidate CI](https://github.com/roryvossepoel/OSDStage/actions/runs/39552403526)
 passed on Windows PowerShell 5.1 and PowerShell 7. The tested candidate still
 reported module version 0.47.0; release 0.48.0 contains this implementation.
 

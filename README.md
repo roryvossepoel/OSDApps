@@ -6,7 +6,7 @@
 
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/OSDStage?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/OSDStage)
 [![PowerShell Gallery total downloads](https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fwww.powershellgallery.com%2Fapi%2Fv2%2FFindPackagesById%28%29%3Fid%3D%27OSDStage%27&query=concat%28substring%28string%28sum%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%29%2C1%2C32%2A%28count%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%3E0%20and%20not%28%2F%2F%2A%5Blocal-name%28%29%3D%27link%27%5D%5B%40rel%3D%27next%27%5D%29%29%29%2Csubstring%28%27unavailable%27%2C1%2C11%2Anot%28count%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%3E0%20and%20not%28%2F%2F%2A%5Blocal-name%28%29%3D%27link%27%5D%5B%40rel%3D%27next%27%5D%29%29%29%29&label=Downloads&color=blue)](https://www.powershellgallery.com/packages/OSDStage)
-[![Module CI](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml)
+[![Module CI](https://github.com/roryvossepoel/OSDStage/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/roryvossepoel/OSDStage/actions/workflows/ci.yml)
 [![Windows PowerShell 5.1](https://img.shields.io/badge/Windows%20PowerShell-5.1-blue)](#install-from-powershell-gallery)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -154,7 +154,7 @@ See [results and troubleshooting](docs/getting-started.md#5-check-the-outcome) f
 - [Contributing](CONTRIBUTING.md): improvements and built-in requests.
 - [Changelog](CHANGELOG.md): release history.
 
-Reading a packaged copy? The full guides and images are in the [online documentation](https://github.com/roryvossepoel/OSDApps/blob/main/docs/README.md).
+Reading a packaged copy? The full guides and images are in the [online documentation](https://github.com/roryvossepoel/OSDStage/blob/main/docs/README.md).
 
 OSDStage is licensed under the [MIT License](LICENSE).
 

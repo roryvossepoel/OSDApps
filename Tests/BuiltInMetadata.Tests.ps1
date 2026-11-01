@@ -58,7 +58,7 @@ Describe 'Built-in metadata' {
 
     It 'keeps public raw icon URLs aligned with tracked SVG files' {
         foreach ($app in @($script:metadata.Packages)) {
-            $expectedUrl = 'https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/'
+            $expectedUrl = 'https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/'
             $app.IconUrl.StartsWith($expectedUrl) | Should -BeTrue
             $fileName = $app.IconUrl.Substring($expectedUrl.Length)
             $fileName.EndsWith('.svg') | Should -BeTrue

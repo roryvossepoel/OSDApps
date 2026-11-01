@@ -166,7 +166,7 @@ operator-confirmed user behavior remains separate evidence.
 DeploymentId: `41654f0d-451c-4444-8012-f6b2613f49ca`.
 The maintainer used the same `9ad0205` test module with only the manifest reader
 replaced by the reviewed fix from
-`c6f007436a2f20fe95bdf6b266931ea43637247d` ([PR #98](https://github.com/roryvossepoel/OSDApps/pull/98)).
+`c6f007436a2f20fe95bdf6b266931ea43637247d` ([PR #98](https://github.com/roryvossepoel/OSDStage/pull/98)).
 This is not a test of a newly published Gallery module. The repository-only
 results do not independently record an OS build/edition.
 

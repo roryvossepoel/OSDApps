@@ -47,7 +47,7 @@ function Get-MaintenanceValue {
 
 function Get-MaintenanceGitHub {
     param([string]$Resource)
-    Invoke-RestMethod -Uri "https://api.github.com/repos/roryvossepoel/OSDApps/$Resource" -Headers @{
+    Invoke-RestMethod -Uri "https://api.github.com/repos/roryvossepoel/OSDStage/$Resource" -Headers @{
         Accept='application/vnd.github+json'; 'User-Agent'='OSDStage-Maintenance'
     } -TimeoutSec 30 -ErrorAction Stop
 }

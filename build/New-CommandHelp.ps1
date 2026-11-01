@@ -188,7 +188,7 @@ try {
         $writer.WriteStartElement('command','relatedLinks',$commandNs)
         $writer.WriteStartElement('maml','navigationLink',$maml)
         Write-HelpText 'maml' 'linkText' $maml 'OSDStage documentation'
-        Write-HelpText 'maml' 'uri' $maml ('https://github.com/roryvossepoel/OSDApps/blob/main/' + $spec.Link)
+        Write-HelpText 'maml' 'uri' $maml ('https://github.com/roryvossepoel/OSDStage/blob/main/' + $spec.Link)
         $writer.WriteEndElement()
         $writer.WriteEndElement()
         $writer.WriteEndElement()
