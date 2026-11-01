@@ -1,4 +1,4 @@
-# Repository apps and scripts
+# Repository packages
 
 <a id="repository-apps"></a>
 
@@ -18,7 +18,7 @@ Repository synchronization can be used on a **full-Windows preparation machine**
 Repository/
 ├── catalog.json
 └── Packages/
-    └── <AppId>/
+    └── <Id>/
         └── <Version>/
             └── <Architecture>/
                 ├── manifest.json
@@ -35,7 +35,7 @@ any
 
 ## Root catalog
 
-`catalog.json` is an index. It points to the current package manifest for each app and architecture.
+`catalog.json` is an index. It points to the current package manifest for each package ID and architecture.
 
 Example:
 
@@ -91,7 +91,7 @@ Each deployable package keeps its metadata directly beside `Package.zip`.
 ```
 
 The `Vendor` property is optional descriptive package metadata. It is set in
-each app's `manifest.json`, alongside `DisplayName`. If omitted,
+each package's `manifest.json`, alongside `DisplayName`. If omitted,
 existing repositories remain fully compatible and the GUI shows a dash for an
 unknown vendor. The value is carried into USB `CacheCatalog.json` and the
 staged `DeviceManifest.json`; the GUI remains read-only.
@@ -105,7 +105,7 @@ Previously staged `DeviceManifest.json` files are not silently rewritten.
 
 `PackageType` is optional classification/semantic metadata with five supported values:
 `App`, `Script`, `Font`, `Certificate` and `Driver`. When it is absent, OSDStage uses `App` for
-backward compatibility. App and Script use the same `Package/Install.ps1` entry point, SHA-256 checks,
+the default package type. App and Script use the same `Package/Install.ps1` entry point, SHA-256 checks,
 cache and staging paths, ordered SetupComplete queue, success codes and failure
 handling. Font uses the same repository acquisition/integrity/staging pipeline,
 but execution is owned by OSDStage and does not call package-supplied PowerShell.

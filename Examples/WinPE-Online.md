@@ -1,5 +1,7 @@
 # Online WinPE deployment
 
+> Development candidate: Gallery installation examples apply after the first OSDStage publication. For the current candidate, use a reviewed CI module artifact; see [Getting started](../docs/getting-started.md#before-you-start).
+
 [Examples](README.md) · [USB preparation](Prepare-UsbCache.md) · [Offline alternative](WinPE-Offline.md)
 
 **Run on the target PC in WinPE after OSDCloud has applied Windows, before its first Windows boot.** Do not run this on the full-Windows preparation machine.
@@ -37,10 +39,10 @@ Removing the USB flash drive only after staging is not a clean no-cache test: ca
 
 ```powershell
 $CatalogUri = Read-Host 'Enter the HTTPS URL of your repository catalog.json'
-$RepoAppId = Read-Host 'Enter an app Id present in that repository'
+$RepoPackageId = Read-Host 'Enter a package Id present in that repository'
 
 Set-OSDStageConfiguration -CatalogUri $CatalogUri
-Add-OSDStage -Name $RepoAppId
+Add-OSDStage -Name $RepoPackageId
 ```
 
 Use your own published catalog and app Id. Notepad++ and Omnissa Horizon Client are examples of user-supplied packages, not built-ins supplied by OSDStage. The same command stages a repository package classified as `Script`.

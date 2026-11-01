@@ -2,11 +2,11 @@
 
 > Historical device evidence below was recorded with OSDApps, before the rename. Command and path examples are now written for OSDStage; the recorded commit IDs and deployment IDs refer to the original tests. This is not acceptance evidence for the renamed candidate.
 
-Technical stability and one combined deployment come before Viewer work, GitHub
-Pages and a possible rename. Earlier operator-confirmed tests remain evidence;
-missing retained logs alone are not a reason to reinstall a machine again.
-This new run checks interaction between retained features, not whether the earlier
-individual tests happened.
+This profile was used to validate interaction between retained features before
+the rename. The recorded results below remain scoped to those tested commits.
+The separate [OSDStage acceptance](osdstage-rename-acceptance.md) now covers the
+renamed candidate. Missing retained logs alone are not a reason to repeat an
+already accepted deployment.
 
 ## Test boundary
 
@@ -17,7 +17,7 @@ after sign-in. The launcher still owns the normal first Windows start.
 
 This is coverage of every retained configuration family with representative apps,
 not every installer, architecture, parameter set or failure mode in one run.
-Keep full Windows PowerShell 5.1 and PowerShell 7 CI, cache migration/transaction,
+Keep full Windows PowerShell 5.1 and PowerShell 7 CI, cache recovery/transaction,
 failure handling, integrity and secret-cleanup tests as separate release gates.
 A successful staging check is not a successful deployment; successful runner
 entries are not proof of the rendered desktop or working hardware.
@@ -37,7 +37,7 @@ The test itself does not choose the store or download a new trust anchor.
 
 Supply an existing supported Wi-Fi XML export locally. It may contain a clear-text
 key: keep it outside the repository and do not paste it in reports. The source XML
-belongs to the operator; runtime cleanup removes OSDStage' staged copy, not that
+belongs to the operator; runtime cleanup removes OSDStage's staged copy, not that
 source file. This run tests XML input; the parameter-generated variant remains
 covered separately. The test PC needs an enabled Wi-Fi adapter and its driver.
 Keep wired internet available for capability downloads; importing a Wi-Fi profile
@@ -116,7 +116,7 @@ Retain the staging record and the matching `ProgramData\OSDStage\Results` files.
 Review logs before sharing. Never archive the entire staging tree or original
 Wi-Fi XML as routine test evidence. If a defect is found, fix it and run the
 smallest relevant regression test before deciding whether another full deployment
-is needed. Viewer, Pages and rename remain deferred until technical acceptance.
+is needed. The recorded acceptance below and the separate OSDStage rename test have completed this gate; public documentation and viewer publication follow separately.
 
 ## Recorded acceptance on 31 October 2026
 

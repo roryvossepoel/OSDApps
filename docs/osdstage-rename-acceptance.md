@@ -60,5 +60,4 @@ candidate; the follow-up changes these to OSDStage Runner without changing
 execution or cleanup behavior. Automated CI on that follow-up remains separate
 from the physical evidence for the candidate SHA above.
 
-Repository renaming, Gallery publication and public Pages publication are
-separate actions, not implied by this acceptance record.
+The repository was subsequently renamed on 1 November 2026; see [the current contract](osdstage-contract.md). Gallery and public Pages publication remain separate actions, not implied by this acceptance record.

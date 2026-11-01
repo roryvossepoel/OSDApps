@@ -1,6 +1,6 @@
 # Built-in apps
 
-[Documentation](README.md) · [Getting started](getting-started.md) · [Repository apps and scripts](repository.md)
+[Documentation](README.md) · [Getting started](getting-started.md) · [Repository packages](repository.md)
 
 Built-in **software installers** use vendor-native acquisition and installation instead of the repository package contract. Built-in scripts, such as Windows Inbox Cleanup, ship with OSDStage itself and are staged directly without network access or an app repository.
 

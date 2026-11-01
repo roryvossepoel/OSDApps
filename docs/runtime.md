@@ -4,7 +4,7 @@
 
 OSDStage uses standalone scripts during SetupComplete. The module itself does **not** need to be installed in the deployed Windows installation.
 
-![App queue and install order](images/app-queue.svg)
+![Package queue and execution order](images/package-queue.svg)
 
 ## Runtime content
 
@@ -53,7 +53,7 @@ The signature scope is deliberately limited: Office `setup.exe`, Teams `teamsboo
 
 ### Runner
 
-Runner reads the ordered queue and installs from **local staging**. Before starting the first installer, it validates every available selected repository archive against its SHA-256. A mismatch aborts the complete queue. It then extracts each repository ZIP and executes `Package/Install.ps1`; it does not synchronize the repository after boot.
+Runner reads the ordered queue and installs from **local staging**. Before starting the first installer, it validates every available selected repository archive against its SHA-256. A mismatch aborts the complete queue. It then extracts each repository ZIP. App/Script packages execute `Package/Install.ps1`; Font, Certificate and Driver packages use their type-specific handlers. It does not synchronize the repository after boot.
 
 For built-ins it invokes the corresponding local installer/provisioning mechanism. Adobe's archive is extracted locally before Adobe Setup runs. Vendor MSI built-ins use Windows Installer with silent arguments. Installer exit codes, timeouts and missing app-local source are isolated to that queue entry; Runner records the error and proceeds to the next independent app. Invalid manifest state and integrity/trust failures stop the queue. Any failed or skipped entry makes the final deployment `Failed` and prevents cleanup.
 
@@ -117,7 +117,7 @@ $Result | Select-Object Status, SuccessfulPackageCount, FailedPackageCount, Skip
 $Result.Packages | Select-Object Id, Status, FailureType, ExitCode, Version, DurationSeconds, Integrity, CacheUsed, PackageUpdated
 ```
 
-The top-level status is `Running`, `Succeeded` or `Failed`. The final record includes the deployment ID, timestamps, duration, expected/success/failed/skipped counts, configured cleanup/log paths, the PreInstall phase record and one entry for every selected package. Each result includes `PackageType` (`App` or `Script`; missing package-type metadata defaults to `App`). Status is `Succeeded`, `Failed` or `Skipped`; `Skipped` means OSDStage deliberately did not invoke that package, for example because its PreInstall acquisition failed or a preceding critical safety failure aborted the queue. Runner updates through a temporary file and rename so readers do not observe partially written JSON.
+The top-level status is `Running`, `Succeeded` or `Failed`. The final record includes the deployment ID, timestamps, duration, expected/success/failed/skipped counts, configured cleanup/log paths, the PreInstall phase record and one entry for every selected package. Each result includes `PackageType` (`App`, `Script`, `Font`, `Certificate` or `Driver`; missing package-type metadata defaults to `App`). Status is `Succeeded`, `Failed` or `Skipped`; `Skipped` means OSDStage deliberately did not invoke that package, for example because its PreInstall acquisition failed or a preceding critical safety failure aborted the queue. Runner updates through a temporary file and rename so readers do not observe partially written JSON.
 
 `Integrity` records the check actually performed by Runner. Repository archives report SHA-256 validation; supported built-in publishers are validated in PreInstall and carried as phase context. Acquisition flags come only from the uniquely matching app in this deployment's `PreInstall.json`, never from a previous sync in `CacheInfo.json`. Both reports must have the same non-empty `DeploymentId`; missing or mismatched identities are ignored.
 

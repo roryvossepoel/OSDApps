@@ -1,6 +1,6 @@
 # Performance
 
-OSDStage records PreInstall and Runner durations separately. The measurements below describe the stated versions and conditions, not a performance guarantee for the current release.
+OSDStage records PreInstall and Runner durations separately. These historical timings were measured with OSDApps before the rename; command/path examples use current terminology. The measurements below describe the stated versions and conditions, not a performance guarantee for the current release.
 
 The [validation matrix](testing.md) includes newer 0.36.0 and 0.39.0 measurements and the recent Gallery workflow reports. Office replacement acquires a fresh complete generation. PreInstall can now skip that acquisition when a compatible generation matches the advertised CDN build or requested build pin; the measured Office-only reuse path is recorded below. The recent Gallery workflow reports include no new timings.
 
@@ -17,7 +17,7 @@ An x64 PC staged one Office app with MonthlyEnterprise / nl-nl, no exact build p
 
 The Office preparation item is part of PreInstall, not an additional phase. These are single-run observations for an Office-only queue, not directly comparable to the older multi-app benchmarks. Image deployment, WinPE staging, reboot and OOBE are excluded. See the [validation evidence](testing.md#office-online-warm-cache-reuse--19-october-2026).
 
-## OSDStage 0.35.0 release candidate — populated USB cache, online (12 October 2026)
+## Historical OSDApps 0.35.0 release candidate — populated USB cache, online (12 October 2026)
 
 A freshly reinstalled x64 PC completed the eight-app queue after hard offline-readiness preflight passed in WinPE. The populated USB cache remained attached and networking was available. All six built-ins recorded cache use; Cisco Webex refreshed while the other five cached packages were retained.
 

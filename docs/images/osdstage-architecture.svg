@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1000" viewBox="0 0 1200 1000" role="img" aria-labelledby="title desc">
   <title id="title">Stage in WinPE. Ready before OOBE.</title>
-  <desc id="desc">After OSDCloud applies Windows, stage built-in app configuration and repository app or script packages in WinPE. An optional USB flash drive cache reuses validated content. On first Windows boot, SetupComplete runs PreInstall to prepare built-ins and the runner to execute the ordered queue as SYSTEM. Results remain available when Windows continues to OOBE. There is no automatic retry after reboot.</desc>
+  <desc id="desc">After OSDCloud applies Windows, stage built-in app configuration and typed repository packages in WinPE. An optional USB flash drive cache reuses validated content. On first Windows boot, SetupComplete runs PreInstall to prepare built-ins and the runner to execute the ordered queue as SYSTEM. Results remain available when Windows continues to OOBE. There is no automatic retry after reboot.</desc>
   <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#425c75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
   <style>
     text { font-family: 'Segoe UI', Arial, sans-serif; fill: #172b42; }
@@ -18,7 +18,7 @@
   <rect x="56" y="44" width="5" height="22" rx="2.5" fill="#8db69d"/>
   <text x="76" y="62" class="brand">OSDStage / HOW IT WORKS</text>
   <text x="56" y="119" class="headline">Stage in WinPE. Ready before OOBE.</text>
-  <text x="58" y="157" class="body">Built-in apps and your repository. One ordered deployment.</text>
+  <text x="58" y="157" class="body">Software and device settings. One ordered deployment.</text>
 
   <rect x="56" y="194" width="1088" height="296" rx="16" fill="#fff" stroke="#cad6e3"/>
   <rect x="80" y="216" width="40" height="40" rx="12" fill="#203e60"/>
@@ -28,14 +28,14 @@
 
   <rect x="80" y="278" width="328" height="122" rx="12" fill="#eaf5ee" stroke="#8db69d"/>
   <g class="icon" stroke="#426c53" transform="translate(100 299)"><rect width="38" height="32" rx="5"/><path d="M0 10 H38 M11 22 L17 27 L28 17"/></g>
-  <text x="151" y="323" class="label">Built-in apps</text>
-  <text x="100" y="360" class="small">Stage vendor app configuration.</text>
-  <text x="100" y="385" class="small">Prepare content at first boot.</text>
+  <text x="151" y="323" class="label">Built-in options</text>
+  <text x="100" y="360" class="small">Stage apps or device settings.</text>
+  <text x="100" y="385" class="small">Pre-cache where required.</text>
 
   <rect x="436" y="278" width="328" height="122" rx="12" fill="#eef2fa" stroke="#9caed0"/>
   <g class="icon" stroke="#203e60" transform="translate(456 299)"><rect width="38" height="32" rx="5"/><path d="M9 9 L17 16 L9 23 M23 23 H30"/></g>
   <text x="507" y="323" class="label">Your repository</text>
-  <text x="456" y="360" class="small">Stage selected apps and scripts.</text>
+  <text x="456" y="360" class="small">Stage selected typed packages.</text>
   <text x="456" y="385" class="small">Validate package SHA-256.</text>
 
   <rect x="792" y="278" width="328" height="122" rx="12" fill="#fff6e6" stroke="#cfb57f"/>
@@ -64,7 +64,7 @@
   <path d="M572 697 H628" class="arrow"/>
   <rect x="640" y="622" width="480" height="150" rx="12" fill="#eef2fa" stroke="#9caed0"/>
   <text x="664" y="660" class="label">Runner / execute the queue</text>
-  <text x="664" y="695" class="small">Install apps and run scripts as SYSTEM.</text>
+  <text x="664" y="695" class="small">Apply packages and settings as SYSTEM.</text>
   <text x="664" y="723" class="small">Follow the queue and record each outcome.</text>
   <text x="664" y="751" class="small">No automatic retry after reboot.</text>
 

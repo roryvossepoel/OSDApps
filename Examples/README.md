@@ -1,5 +1,7 @@
 # Examples
 
+> Development candidate: Gallery installation examples apply after the first OSDStage publication. For the current candidate, use a reviewed CI module artifact; see [Getting started](../docs/getting-started.md#before-you-start).
+
 [Project](../README.md) · [Getting started](../docs/getting-started.md) · [Documentation](../docs/README.md)
 
 Choose an example for the environment you are using. These are reference workflows, not additional recorded hardware test results; the actual test evidence is in the [validation matrix](../docs/testing.md).

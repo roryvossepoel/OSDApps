@@ -4,30 +4,25 @@
 
 > Current rename acceptance: the OSDStage candidate passed the focused empty-cache deployment on 31 October 2026, including independent device checks. See [OSDStage rename acceptance](osdstage-rename-acceptance.md). The feature register below retains historical OSDApps evidence and planning context; that older evidence alone does not validate the rename.
 
-Decision snapshot: 31 October 2026. Implementation baseline: main at
-`f2073b2665ca2d8b2f19c83cc5e347cabdc895a1` (includes merged PRs #94 and #95).
+Current status: 1 November 2026. OSDStage has a new module identity and schema 2
+contracts. The combined, repository-only and renamed empty-cache deployments
+have recorded acceptance within their stated limits. The repository is now
+OSDStage; no migration or old-command aliases are planned. The module remains
+an unpublished development candidate. Identify test modules by commit.
 
-This register separates implemented behavior, practical evidence and decisions
-still to be made. It is not a release announcement or approval to build every
-candidate. The module manifest at this baseline is 0.51.0; merged features are
-not automatically available in the published Gallery package. Identify test
-modules by commit, not by the manifest version alone.
+## Current work order
 
-## Agreed order
+1. Maintain the technical contracts and recorded acceptance evidence below.
+2. Finish terminology, documentation and public presentation for OSDStage.
+3. Finalize the web catalog viewer and publish documentation through GitHub Pages.
+4. Review and explicitly initiate the first Gallery release.
 
-1. Establish technical module stability, run the selected combined acceptance
-   profile and record contracts, limits and results. Viewer, Pages and renaming
-   must wait for technical acceptance.
-2. Decide whether to rename the project, including command names and migration
-   impact, before finalizing the UI and public documentation.
-3. Finish the Viewer against the agreed feature set.
-4. Publish public documentation through GitHub Pages as part of that finalization.
+The module's Windows Viewer is read-only. The web catalog viewer is a separate
+preview with custom repository URL input, tiles/list and pagination. Neither is
+an interactive deployment editor. See [the viewer guide](viewer.md).
 
-Viewer development is deferred. [PR #39](https://github.com/roryvossepoel/OSDStage/pull/39)
-is the existing selection/configuration preview, not a completed staging UI.
-At this review it is draft, has merge conflicts and still needs manual WinPE
-usability validation. GitHub Pages and renaming have no implementation decision
-yet. Existing repository documentation continues to be maintained now.
+The tables retain earlier device evidence with its original commit and deployment
+IDs. Earlier test completion does not establish every architecture or variant.
 
 ## Deployment contract
 

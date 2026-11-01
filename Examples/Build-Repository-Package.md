@@ -1,5 +1,7 @@
 # From Install.ps1 to a repository package
 
+> Development candidate: Gallery installation examples apply after the first OSDStage publication. For the current candidate, use a reviewed CI module artifact; see [Getting started](../docs/getting-started.md#before-you-start).
+
 [Examples](README.md) · [Repository contract](../docs/repository.md)
 
 Run the authoring commands on a **full-Windows preparation machine**, not on a
@@ -40,7 +42,7 @@ Import-Module OSDStage -Force
 $Id = 'YourPackage'
 $Version = '1.0.0'
 $Architecture = 'x64'
-$PackageType = 'App' # App, Script or Font.
+$PackageType = 'App' # This Install.ps1 example uses App or Script; see typed packages below.
 $SourcePath = "C:\OSDStage\Source\$Id"
 $OutputPath = "C:\OSDStage\Build\$Id\$Version\$Architecture"
 $RepositoryPath = 'C:\OSDStage\Repository'
@@ -105,6 +107,8 @@ and invalid. Review and archive those superseded folders outside the candidate
 repository, then rerun validation. This guide does not automatically delete old
 packages or prune the USB cache. Keep older hosted versions available for clients
 that may still be using the previous catalog during publication.
+
+For Certificate and Driver payloads, use the dedicated [certificate](../docs/certificate-staging.md) and [driver](../docs/driver-packages.md) authoring instructions. In particular, a Certificate manifest must select its machine certificate store.
 
 ## 3. Publish static files
 

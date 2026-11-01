@@ -30,7 +30,7 @@ The Viewer can inspect an existing Windows target and cache in full Windows or s
 
 ## Two source models
 
-### Repository apps and scripts
+### Repository packages
 
 A repository is owner-managed static content: `catalog.json`, per-app manifests and package archives. During WinPE staging the module resolves a compatible variant, downloads or reuses its `Package.zip`, checks the manifest SHA-256 and copies it to local device staging.
 
@@ -182,7 +182,7 @@ Optional repository Vendor metadata is descriptive. It is not a signing certific
 
 ## Device manifest
 
-Repository packages can be classified as `App` or `Script`. Both execute `Package/Install.ps1` as SYSTEM, with the same hash checks and one-shot failure handling; the type is presentation and reporting metadata. Scripts must be unattended and must not trigger a restart.
+Repository packages can be `App`, `Script`, `Font`, `Certificate` or `Driver`. App and Script execute `Package/Install.ps1` as SYSTEM. Font, Certificate and Driver use dedicated machine-context handlers; they do not require a custom Install.ps1. All repository payloads share SHA-256 checks and one-shot failure handling. Scripts must be unattended and must not trigger a restart.
 
 The manifest has a stable per-staging `DeploymentId` and one ordered `Packages` array containing `Source=BuiltIn` or `Source=Repository` entries. PreInstall filters the built-ins for preparation; Runner processes the full array from top to bottom and uses the identity to correlate phase results.
 
@@ -190,4 +190,4 @@ Adding a new Id appends it. Re-adding an existing Id replaces its entry and move
 
 `Set-OSDStageConfiguration` is session-scoped. Add commands capture runtime settings in the manifest so SetupComplete does not need the module or the original PowerShell session.
 
-For exact package fields, see [Repository apps and scripts](repository.md), [Built-in apps](built-in-apps.md) and the [public metadata contract](public-metadata.md). For proven scenarios and remaining limitations, see [Validation matrix](testing.md).
+For exact package fields, see [Repository packages](repository.md), [Built-in apps](built-in-apps.md) and the [public metadata contract](public-metadata.md). For proven scenarios and remaining limitations, see [Validation matrix](testing.md).

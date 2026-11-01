@@ -4,17 +4,17 @@ OSDStage uses GitHub Actions for validation and PowerShell Gallery publishing.
 
 ## Public descriptions
 
-The module description and Gallery tags live in `OSDStage.psd1`. Align their wording with the README when preparing the next module release. Updates reach the Gallery with that new version; an existing release is not republished in place. Do not edit the manifest just to publish documentation: a manifest change on `main` triggers the release workflow.
+The module description and Gallery tags live in `OSDStage.psd1`. Align their wording with the README when preparing the next module release. Updates reach the Gallery with that new version; an existing release is not republished in place. Documentation can be merged without publishing. The release workflow is manual-only; changing the manifest or merging a PR does not start a release.
 
 Use this concise description for the GitHub repository's **About** field:
 
-> Your apps. Ready before OOBE. Stage apps and PowerShell scripts in WinPE after OSDCloud applies Windows, using built-in integrations or your own repository and optional USB flash drive caching.
+> Stage software and device configuration before OOBE, with built-in integrations, repository packages and optional OSDCloud USB caching.
 
 Keep the README focused on the first successful deployment. Use version-independent installation commands there; retain exact versions in release notes and test evidence. The Downloads badge uses Shields.io to sum Gallery-reported per-version downloads directly, without a workflow or separate branch. It shows `unavailable` rather than an incomplete total when the feed is paginated. See [badge maintenance](../CONTRIBUTING.md#gallery-download-badge).
 
 ## Continuous integration
 
-Every push to `main`, pull request, or manually started CI run validates:
+CI runs on pushes to `main`, pull requests and manual dispatch. Additions/modifications confined to `metadata/icons/*.svg` validate the icons and skip the two PowerShell suites. Mixed changes, deletions, renames and manual runs take the full validation path. Full validation covers:
 
 - Module manifest, PSScriptAnalyzer and the complete Pester suite.
 - Documentation syntax, local links and public command/parameter names.
@@ -39,12 +39,13 @@ The version in `OSDStage.psd1` and the corresponding top-level section in `CHANG
 
 1. Update `ModuleVersion` and its `ReleaseNotes` field together with `CHANGELOG.md`.
 2. Run and review CI on the pull request.
-3. Merge into `main`. A change to `OSDStage.psd1` automatically starts **Create GitHub Release**.
-4. The release workflow validates the current main commit, re-runs the test suite, and creates the immutable `v<version>` tag with version-specific release notes.
-5. After successful release creation, the workflow automatically dispatches **Publish PowerShell Gallery**.
-6. The publish workflow builds from the immutable tag, runs tests, publishes, downloads the Gallery package, and compares SHA256 hashes against all packaged release files.
+3. Merge into `main` and verify its CI. This does not publish anything.
+4. When publication is intended, manually dispatch **Create GitHub Release** from `main`, with `expected_version` matching the reviewed manifest.
+5. The release workflow validates the current main commit, re-runs the test suite, and creates the immutable `v<version>` tag with version-specific release notes.
+6. After successful release creation, the workflow automatically dispatches **Publish PowerShell Gallery**.
+7. The publish workflow builds from the immutable tag, runs tests, publishes, downloads the Gallery package, and compares SHA256 hashes against all packaged release files.
 
-Both workflows can also be dispatched manually when appropriate. A manually dispatched publish requires an already existing matching release tag. A Gallery version is immutable: never attempt to overwrite a published version. Pre-existing versions are treated as explicit conflicts, while a post-push 409 is reconciled only when the published files match the release.
+Both workflows expose manual dispatch. Starting the release workflow can automatically dispatch Gallery publication after it creates a new release; it is not just a build-only check. A manually dispatched publish requires an already existing matching release tag. A Gallery version is immutable: never attempt to overwrite a published version. Pre-existing versions are treated as explicit conflicts, while a post-push 409 is reconciled only when the published files match the release.
 
 ### Gallery verification delays
 
@@ -65,7 +66,7 @@ further action. Do not republish or retag an existing version; the pre-existing
 version guard still rejects that operation. This workflow-only change does not
 publish a new module version or alter an already completed workflow run.
 
-A normal `main` push without an `OSDStage.psd1` change does not trigger a new release. Documentation-only or unreleased fixes remain pending until a later version bump.
+No `main` push triggers release creation, including a manifest version change. Changes remain unpublished until the explicit release workflow is started. Before the first OSDStage release, check for an existing `v<version>` tag inherited from earlier development; tags must not be overwritten or moved.
 
 ## Release documentation checklist
 

@@ -2,6 +2,41 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Viewer](viewer.md) · [Runtime](runtime.md)
 
+## What can OSDStage stage?
+
+Software and explicit device configuration before OOBE: vendor apps, repository
+App/Script packages, fonts, machine CA certificates, drivers, registry values,
+machine variables, services, Wi-Fi profiles, Windows optional features and
+capabilities, inbox app removal, initial file/protocol associations and Start/taskbar pins.
+Nothing is selected just because another app was installed. See [feature scope](feature-status.md)
+for supported variants and recorded acceptance. Wallpaper/lock-screen branding,
+regional defaults, time zone and language-pack injection are outside the agreed scope.
+
+## Which viewer do these instructions describe?
+
+`Show-OSDStageUI` opens the Windows deployment inspector. The separate web catalog
+viewer accepts a repository URL and supports tiles, lists and pagination, but
+cannot read local device staging, USB caches or installation results. Neither
+viewer deploys packages. See [the two viewers](viewer.md#two-different-viewers).
+
+## Are Windows features, capabilities and language packs the same thing?
+
+No. `Add-OSDStageWindowsFeature` enables/disables named optional features.
+`Add-OSDStageWindowsCapability` adds/removes capabilities (Features on Demand),
+with Windows-managed online acquisition when required. A Windows display-language
+pack is a separate servicing concern; OSDStage does not inject language packs.
+See [capabilities](windows-capabilities.md) and [the language evaluation](language-evaluation.md).
+
+## Do I need to prepare every USB stick first?
+
+For a normal online run, no separate cache-preparation pass is needed. OSDStage
+uses a detected volume labeled `OSDCloud` automatically and resolves its drive
+letter each time. Repository Add commands acquire their selected content;
+most vendor built-ins acquire during full-Windows PreInstall. Company Portal
+and CMTrace Open still require full-Windows pre-caching. Fully offline deployment
+requires matching verified content in advance. Loading the module and preparing
+bootable OSDCloud media are separate from caching payloads.
+
 ## Which commands belong on the preparation machine and which belong in WinPE?
 
 Use a **full Windows preparation machine** to install/save the module, build repository packages and run built-in `Sync-OSDStage*` commands. Use **WinPE on the target PC** for deployment staging after OSDCloud has applied Windows and before its first Windows boot.
@@ -45,7 +80,7 @@ See [Architecture](architecture.md) and [Microsoft 365 Apps options](built-in-ap
 
 The public `Sync-OSDStageMicrosoftTeams` command **rejects WinPE**. Downloading Teams files may be technically possible there, but that is not the supported OSDStage built-in synchronization path.
 
-All built-ins follow the same division: stage in WinPE; refresh through full-Windows Sync commands or standalone PreInstall. The MSI/EXE signature policy is enforced in full Windows, not bypassed by treating WinPE as another Sync environment.
+Vendor built-ins stage in WinPE and acquire through full-Windows Sync commands or, where supported, standalone PreInstall. Company Portal and CMTrace Open require pre-caching; configuration-only built-ins have no vendor download. The MSI/EXE signature policy is enforced in full Windows, not bypassed by treating WinPE as another Sync environment.
 
 ## What happens when an older USB has legacy built-in cache metadata?
 
@@ -77,12 +112,6 @@ An empty queue is expected before Add commands run, or after successful cleanup 
 An existing manifest means that target already has OSDStage staging; it does not by itself mean anything is installed. Inspect the target and entries before changing them. Re-adding an Id replaces its entry and moves it to the end of the queue. Use `Remove-OSDStageStaging` for intentional unstaging in WinPE; do not delete a whole SetupComplete file that may contain other commands.
 
 `Show-OSDStageUI -TestMode` inspects an existing isolated GUI test folder on full Windows. It does not create demonstration apps, and it must not be used for normal WinPE deployment.
-
-## What happens to an old BuiltIn\Teams USB cache?
-
-It is not migrated or used. Start with a fresh cache and synchronize
-`MicrosoftTeams` using the current module. Its canonical folder is
-`BuiltIn\MicrosoftTeams`; there are no retired built-in cache aliases.
 
 ## Do built-in apps require an OSDCloud USB flash drive?
 
@@ -159,8 +188,7 @@ Get-OSDStageCacheHealth -Offline
 
 Unlike `Clear-OSDStageCache -BuiltIn` alone, adding `-Prune` retains current built-in
 app directories, including their architecture, language and channel variants.
-It does not convert or repair their contents. This filename-contract update
-requires a fresh cache; clearing the managed cache is a separate operator action.
+It does not convert or repair their contents. Clearing the managed cache is a separate operator action; use synchronization to acquire valid current content.
 
 Filesystem links and transaction/recovery content are preserved for review.
 Unmanaged top-level directories are candidates for explicit pruning. There is
@@ -250,7 +278,7 @@ An empty Staged for device tab after cleanup does not mean installation failed. 
 
 ## Does a failed installation remove the source?
 
-No. The runtime retains source on failure so the manifest, payload and work directory can be inspected. Do not delete that evidence before collecting the relevant log. `CleanupMode=OnSuccess` in a completion line names the policy; use the cleanup events or filesystem state to verify cleanup itself.
+The runtime retains general staging on failure so the manifest, payload and work directory can be inspected. Credential-bearing Wi-Fi configuration is an exception: the Wi-Fi handler removes its staged configuration after an attempted import, including handled failures. Original exports and intentionally cached repository ZIPs remain the operator's responsibility. Do not delete that evidence before collecting the relevant log. `CleanupMode=OnSuccess` in a completion line names the policy; use the cleanup events or filesystem state to verify cleanup itself.
 
 ## Does SetupComplete retry a failed app after reboot?
 
@@ -261,12 +289,12 @@ No. SetupComplete is a one-shot Windows Setup phase and OSDStage does not create
 | File | Role |
 | --- | --- |
 | `catalog.json` | Online repository index |
-| `Packages/<Id>/<Version>/<Architecture>/manifest.json` | Per-package metadata, including archive hash, optional Vendor and optional `PackageType` (`App` or `Script`) |
+| `Packages/<Id>/<Version>/<Architecture>/manifest.json` | Schema 2 metadata: `Payload.FileName`, `Payload.Sha256`, optional Vendor and type `App`, `Script`, `Font`, `Certificate` or `Driver` |
 | `CacheCatalog.json` | Local repository-cache metadata snapshot |
 | `CacheInfo.json` | Per-built-in cache metadata |
-| `DeviceManifest.json` | The selected Windows target's ordered app queue and runtime configuration |
+| `DeviceManifest.json` | The selected Windows target's ordered `Packages` queue and runtime configuration |
 
-The old `CacheManifest.json` filename is not used. USB cache and device staging are separate locations.
+Catalogs use schema 2 with root `Packages` and per-ID `Architectures`. Public built-in metadata also uses `Packages`, but it is a separate catalog with command/acquisition fields. USB cache and device staging are separate locations.
 
 ## Can I request another built-in app?
 

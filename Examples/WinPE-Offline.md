@@ -1,5 +1,7 @@
 # Offline WinPE deployment
 
+> Development candidate: Gallery installation examples apply after the first OSDStage publication. For the current candidate, use a reviewed CI module artifact; see [Getting started](../docs/getting-started.md#before-you-start).
+
 [Examples](README.md) · [USB preparation](Prepare-UsbCache.md) · [Online alternative](WinPE-Online.md)
 
 **Run on the x64 target PC in WinPE after OSDCloud has applied Windows and before the first Windows boot.** This is not a preparation-machine script.
@@ -96,8 +98,8 @@ Do not run full-Windows built-in `Sync-OSDStage*` commands here. The content has
 Omit this section for built-ins-only deployment. The app must already exist as a valid, compatible package in `CacheCatalog.json` and the USB cache. `-SkipCacheRefresh` explicitly prevents a repository synchronization attempt.
 
 ```powershell
-$RepoAppId = Read-Host 'Enter a repository app Id already cached on this USB flash drive'
-Add-OSDStage -Name $RepoAppId -SkipCacheRefresh -WindowsPath $WindowsPath
+$RepoPackageId = Read-Host 'Enter a repository package Id already cached on this USB flash drive'
+Add-OSDStage -Name $RepoPackageId -SkipCacheRefresh -WindowsPath $WindowsPath
 ```
 
 This command validates requested repository archive hashes before staging. It does not create missing packages. When preparation and target architectures differ, verify the cached repository variant explicitly before deployment; this example assumes matching x64 media.
