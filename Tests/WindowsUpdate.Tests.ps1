@@ -57,7 +57,7 @@ Describe 'Conservative Windows Update selection and execution' {
     }
     It 'permits security, critical and definition classifications independently of display language' {
         foreach ($category in @('0fa1201d-4330-4fa8-8ae9-b877473b6441','e6cf1350-c01b-414d-a61f-263d14d133b4','e0789628-ce08-4437-be74-2495b842f43b')) {
-            (Get-OSDStageWindowsUpdateSelection (New-TestUpdate -Title '累積更新プログラム' -Category $category)).Selected | Should -BeTrue
+            (Get-OSDStageWindowsUpdateSelection (New-TestUpdate -Title ([string][char]0x66f4 + [char]0x65b0) -Category $category)).Selected | Should -BeTrue
         }
     }
     It 'allows cumulative updates that always require a later restart' {
@@ -74,6 +74,7 @@ Describe 'Conservative Windows Update selection and execution' {
     It 'fails closed on optional, preview, interactive or missing metadata' {
         foreach ($change in @(
             @{BrowseOnly=$true},@{AutoSelectOnWebSites=$false},@{Title='Cumulative Update Preview'},
+            @{Title=('Update aper'+[char]0x00e7+'u')},
             @{Title='Enablement package'},@{Categories=@()},@{BundledUpdates=$null},
             @{InstallationBehavior=[pscustomobject]@{CanRequestUserInput=$true;RebootBehavior=2}},
             @{InstallationBehavior=[pscustomobject]@{CanRequestUserInput=$false;RebootBehavior=99}}

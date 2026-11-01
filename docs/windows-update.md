@@ -55,6 +55,9 @@ OSDStage leaves update sources and policies unchanged: no WSUS bypass, service
 registration, target-release policy edits or Setup/OOBE registry changes. It
 operates on offers from the configured source, which may include other Microsoft
 products. Automatic driver metadata does not establish Intune approval.
+Driver filtering cannot prove that a normal vendor driver contains no embedded
+firmware logic. For a strict no-firmware requirement, leave drivers disabled;
+see [Microsoft's firmware distribution guidance](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/updating-device-firmware-using-windows-update).
 Windows Update payloads use Windows servicing's own cache, not the OSDCloud USB
 cache. Offline-ready preflight cannot succeed with this step selected.
 

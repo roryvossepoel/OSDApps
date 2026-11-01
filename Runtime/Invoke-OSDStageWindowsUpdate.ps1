@@ -60,7 +60,7 @@ function Get-OSDStageWindowsUpdateSelection {
             $Update.InstallationBehavior.CanRequestUserInput -ne $false -or
             $null -eq $Update.InstallationBehavior.RebootBehavior -or
             [int]$Update.InstallationBehavior.RebootBehavior -notin @(0,1,2)) { throw 'InteractiveOrUnknownRebootBehavior' }
-        if ([string]$Update.Title -match '(?i)preview|voorvertoning|vorschau|aperçu|enablement|feature\s+update|functie.update|firmware|\bBIOS\b|\bUEFI\b') { throw 'ExcludedTitle' }
+        if ([string]$Update.Title -match '(?i)preview|voorvertoning|vorschau|aper\u00e7u|enablement|feature\s+update|functie.update|firmware|\bBIOS\b|\bUEFI\b') { throw 'ExcludedTitle' }
         $categories=@($Update.Categories | Where-Object Type -eq 'UpdateClassification' | ForEach-Object { [string]$_.CategoryID })
         if ([int]$Update.Type -eq 1) {
             if ($categories.Count -eq 0 -or @($categories | Where-Object { $_ -notin $safe }).Count -gt 0) { throw 'ClassificationNotAllowed' }
