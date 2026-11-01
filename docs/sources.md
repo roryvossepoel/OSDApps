@@ -47,7 +47,7 @@ reboot completion or Autopilot handoff. Follow #109 for later evidence.
 | --- | --- | --- |
 | [Microsoft: export/import default associations](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/export-or-import-default-application-associations) and [DISM association servicing](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/dism-default-application-association-servicing-command-line-options) | Initial file/protocol associations | [Default associations](default-associations.md) |
 | [Microsoft: ConfigureStartPins](https://learn.microsoft.com/windows/client-management/mdm/policy-csp-start#configurestartpins) and [Start layout](https://learn.microsoft.com/windows/configuration/start/layout) | Initial Start pin configuration and supported builds | [Desktop settings](desktop-settings.md) |
-| [Microsoft: taskbar pinned apps](https://learn.microsoft.com/windows/configuration/taskbar/pinned-apps) | Taskbar layout and application timing | Desktop settings |
+| [Microsoft: taskbar pinned apps](https://learn.microsoft.com/windows/configuration/taskbar/pinned-apps) | Taskbar layout and timing | Desktop settings |
 | [Microsoft: PnPUtil syntax](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax) and [return values](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-return-values) | Driver package installation and result interpretation | [Driver packages](driver-packages.md) |
 | [CMTrace Open releases](https://github.com/adamgell/cmtraceopen/releases) | Upstream release and asset metadata | [CMTrace Open](cmtrace-open.md) |
 
