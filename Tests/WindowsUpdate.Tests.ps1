@@ -167,6 +167,7 @@ Describe 'Conservative Windows Update selection and execution' {
         $r.Status | Should -Be Deferred
         $r.InstalledCount | Should -Be 1
         $r.RebootRequired | Should -BeTrue
+        @($script:installOrder) | Should -Be @('Beveiligingsupdate')
         $r.Items[1].Status | Should -Be Deferred
         Should -Invoke Invoke-OSDStageWindowsUpdateAsync -Times 1 -Exactly -ParameterFilter {$Phase -eq 'Install'}
     }

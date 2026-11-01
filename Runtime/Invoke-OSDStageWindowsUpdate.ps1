@@ -249,7 +249,11 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
                 }
                 # Software before drivers. Install individually for accurate results,
                 # exclusive installers and a reboot boundary between updates.
-                foreach ($entry in @($selected | Sort-Object { [int]$_.Update.Type })) {
+                # Sort-Object is not stable on Windows PowerShell 5.1. Preserve
+                # discovery order within each type when partitioning the queue.
+                $installQueue=@($selected | Where-Object { [int]$_.Update.Type -eq 1 }) +
+                    @($selected | Where-Object { [int]$_.Update.Type -eq 2 })
+                foreach ($entry in $installQueue) {
                     if ($installer.IsBusy) { throw 'Windows Update installer became busy; no concurrent installation was started.' }
                     if ($report.RebootRequired -or $installer.RebootRequiredBeforeInstallation) {
                         $report.RebootRequired=$true;$entry.Item.Status='Deferred';continue
