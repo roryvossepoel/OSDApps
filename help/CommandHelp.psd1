@@ -250,6 +250,23 @@
             )
             Link = 'docs/environment-variables.md'
         }
+        'Add-OSDStageWindowsUpdate' = @{
+            Synopsis = 'Stage an experimental, conservative Windows Update pass as the last deployment step.'
+            Description = 'Uses the native Windows Update Agent with the configured update source. Allows automatic security, critical and definition updates with complete safe metadata; excludes upgrades, broad update classifications, previews and unknown bundles. Installs one pass without rebooting or scheduling later retries. The last staging call replaces earlier Windows Update options. Not yet physically validated for installation or Autopilot handoff.'
+            Environment = 'Stage in WinPE after OSDCloud. Runs last under native 64-bit SYSTEM during SetupComplete on Windows 11 25H2+; requires network access to the configured update source.'
+            Output = 'OSDStage.StagedApp. Runtime writes WindowsUpdate-Result.json and a progress log; deferred work and reboot requirements remain explicit.'
+            Parameters = @{
+                IncludeDrivers = 'Opt in to automatic hardware drivers in a restricted class/hardware allowlist. Firmware, System, Extension and SoftwareComponent classes are excluded. Does not mean Intune-approved drivers.'
+                ScanOnly = 'Record candidates and selection reasons without accepting EULAs, downloading or installing updates.'
+                TimeoutMinutes = 'Cancellation threshold per scan, download batch and individual installation, from 5 to 180 minutes. Default 30. WUA cancellation is cooperative; OSDStage waits for safe completion and does not forcibly terminate servicing.'
+            }
+            Examples = @(
+                @{Code='Add-OSDStageWindowsUpdate -ScanOnly';Remarks='First test: inspect update metadata and selection inside SetupComplete.'}
+                @{Code='Add-OSDStageWindowsUpdate';Remarks='Stage one conservative installation pass; first confirm physical acceptance for this test build.'}
+                @{Code='Add-OSDStageWindowsUpdate -IncludeDrivers';Remarks='Explicitly include supported automatic hardware-driver offers.'}
+            )
+            Link = 'docs/windows-update.md'
+        }
         'Add-OSDStageWindowsCapability' = @{
             Parameters = @{
                 Name = 'Exact Windows capability identities from Get-WindowsCapability, including locale/version separators. No wildcards or automatic selection.'

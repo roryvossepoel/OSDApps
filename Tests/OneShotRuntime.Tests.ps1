@@ -231,4 +231,54 @@ Describe 'One-shot fault-tolerant runtime' {
         ([regex]::Matches($setupComplete, '(?m)^powershell\.exe.*Invoke-OSDStagePreInstall\.ps1.*$')).Count | Should -Be 1
         ([regex]::Matches($setupComplete, '(?m)^powershell\.exe.*Invoke-OSDStageRunner\.ps1.*$')).Count | Should -Be 1
     }
+    It 'runs Windows Update last even when staged first and propagates deferred reboot results' -Skip:(-not (Get-Command powershell.exe -ErrorAction SilentlyContinue)) {
+        $root=Join-Path $TestDrive 'WindowsUpdateLast'
+        $stage=Join-Path $root 'Stage'
+        $updateRoot=Join-Path $stage 'BuiltIn\WindowsUpdate'
+        New-Item -ItemType Directory -Path $updateRoot -Force | Out-Null
+        $order=Join-Path $root 'order.txt'
+        $updateResult=Join-Path $root 'Results\WindowsUpdate-Result.json'
+        $installer=@'
+param($ConfigPath)
+$c=Get-Content $ConfigPath -Raw | ConvertFrom-Json
+Add-Content -LiteralPath $c.OrderPath -Value 'WindowsUpdate'
+@{DeploymentId=$c.DeploymentId;Status='Deferred';Outcome='RebootRequired';RebootRequired=$true;StartedAtUtc=[DateTime]::UtcNow.ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath $c.ResultPath
+exit 3010
+'@
+        $scriptFile=Join-Path $updateRoot 'Install.ps1'
+        $configFile=Join-Path $updateRoot 'config.json'
+        Set-Content $scriptFile $installer -Encoding UTF8
+        $update=[pscustomobject]@{Id='WindowsUpdate';Source='BuiltIn';PackageType='Script';Type='WindowsUpdateScript';WindowsUpdateSchema=1;Script='BuiltIn\WindowsUpdate\Install.ps1';Configuration='BuiltIn\WindowsUpdate\config.json';ScriptSha256=(Get-FileHash $scriptFile).Hash;ConfigurationSha256=('A'*64)}
+        $app=New-OneShotRepositoryPackage -Stage $stage -Id 'BeforeUpdates' -InstallScript ("Add-Content -LiteralPath $(ConvertTo-SingleQuotedPowerShellLiteral $order) -Value 'App'`nexit 0")
+        $fixture=New-OneShotDeploymentFixture -Root $root -Apps @($update,$app) -CleanupMode Never
+        @{SchemaVersion=2;DeploymentId=$fixture.DeploymentId;ResultPath=$updateResult;OrderPath=$order;IncludeDrivers=$false;ScanOnly=$false;TimeoutMinutes=5} | ConvertTo-Json | Set-Content $configFile -Encoding UTF8
+        $m=Get-Content (Join-Path $stage 'DeviceManifest.json') -Raw | ConvertFrom-Json
+        $m.Packages[0].ConfigurationSha256=(Get-FileHash $configFile).Hash
+        $m | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $stage 'DeviceManifest.json') -Encoding UTF8
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:runnerPath -StagedPath $stage
+        $LASTEXITCODE | Should -Be 0
+        @(Get-Content $order) | Should -Be @('App','WindowsUpdate')
+        $result=Get-Content $fixture.ResultPath -Raw | ConvertFrom-Json
+        $result.RebootRequired | Should -BeTrue
+        $result.Packages[-1].WindowsUpdateStatus | Should -Be Deferred
+        $result.Packages[-1].AcquisitionOutcome | Should -Be NotApplicable
+        $result.Packages[-1].ExitCode | Should -Be 3010
+
+        # An explicit partial selection must not bypass the dependency boundary.
+        Remove-Item $order
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:runnerPath -StagedPath $stage -Name WindowsUpdate
+        $LASTEXITCODE | Should -Be 1
+        Test-Path $order | Should -BeFalse
+
+        # A previous failed package suppresses the update pass.
+        $m.Packages[1]=New-OneShotRepositoryPackage -Stage $stage -Id 'BrokenBeforeUpdates' -InstallScript 'exit 42'
+        $m | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $stage 'DeviceManifest.json') -Encoding UTF8
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:runnerPath -StagedPath $stage
+        $LASTEXITCODE | Should -Be 1
+        Test-Path $order | Should -BeFalse
+        $result=Get-Content $fixture.ResultPath -Raw | ConvertFrom-Json
+        $result.Packages[-1].Status | Should -Be Skipped
+        $result.Packages[-1].FailureType | Should -Be PriorPackageFailure
+    }
+
 }

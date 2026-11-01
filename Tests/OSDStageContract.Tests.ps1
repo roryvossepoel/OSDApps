@@ -39,6 +39,7 @@ Describe 'OSDStage product and schema contract' {
             'Add-OSDStageRegistryValue',
             'Add-OSDStageWindowsFeature',
             'Add-OSDStageWindowsCapability',
+    'Add-OSDStageWindowsUpdate',
             'Add-OSDStageDefaultAssociation',
             'Add-OSDStageEnvironmentVariable',
             'Add-OSDStageDirectory',

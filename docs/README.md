@@ -32,6 +32,7 @@ OSDStage is CLI-first. Use PowerShell to configure, cache and stage software and
 | [Certificates](certificate-staging.md), [drivers](driver-packages.md), [fonts](repository.md) | Typed repository payloads and machine-wide installation |
 | [Wi-Fi](wifi-staging.md) | WLAN XML or parameters, profile import and credential cleanup |
 | [Start/taskbar pins](desktop-settings.md) | Explicit pin lists and documented limitations |
+| [Windows Update](windows-update.md) (experimental, unreleased) | Final quality-update pass, selection policy, reboot boundaries and test procedure |
 | [Windows capabilities](windows-capabilities.md) | Add/remove Features on Demand on Windows 11 25H2 and later |
 | [Runtime and cleanup](runtime.md) | SetupComplete, PreInstall, Runner, machine-readable results, configuration, logs and failure handling |
 | [FAQ and troubleshooting](faq.md) | Environment mistakes, cache and network failures, trust checks, logs and upgrades |

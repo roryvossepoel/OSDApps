@@ -227,7 +227,7 @@ function New-RunnerAppResult {
     # Only current, uniquely correlated PreInstall evidence may describe acquisition.
     # CacheInfo.json still supplies content identity, never per-deployment flags.
     $hasAcquisitionPhase = ([string]$App.Source -eq 'BuiltIn' -and
-        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript'))
+        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','WindowsUpdateScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript'))
     $acquisitionOutcome = if ($hasAcquisitionPhase) { 'Unknown' } else { 'NotApplicable' }
     $cacheUsed = $null
     $packageUpdated = $null
@@ -262,6 +262,10 @@ function New-RunnerAppResult {
         Architecture    = if ($App.Architecture) { [string]$App.Architecture } elseif ($cacheInfo -and $cacheInfo.Architecture) { [string]$cacheInfo.Architecture } else { $null }
         Status          = $Status
         ExitCode        = if ($Execution -and $null -ne $Execution.ExitCode) { [int]$Execution.ExitCode } else { $null }
+        RebootRequired  = ($Execution -and (($Execution.PSObject.Properties.Name -contains 'RebootRequired' -and $Execution.RebootRequired) -or $Execution.ExitCode -eq 3010))
+        WindowsUpdateStatus = if ($Execution -and $Execution.PSObject.Properties.Name -contains 'WindowsUpdateStatus') { $Execution.WindowsUpdateStatus } else { $null }
+        WindowsUpdateOutcome = if ($Execution -and $Execution.PSObject.Properties.Name -contains 'WindowsUpdateOutcome') { $Execution.WindowsUpdateOutcome } else { $null }
+        WindowsUpdateResultPath = if ($Execution -and $Execution.PSObject.Properties.Name -contains 'WindowsUpdateResultPath') { $Execution.WindowsUpdateResultPath } else { $null }
         DurationSeconds = [math]::Round($DurationSeconds, 1)
         Integrity       = if ($Execution -and $Execution.Integrity) { [string]$Execution.Integrity } else { $null }
         CacheUsed       = $cacheUsed
@@ -329,6 +333,7 @@ function Write-RunnerResult {
         SkippedPackageCount   = $skipped
         UnsuccessfulPackageCount = ($failed + $skipped)
         PreInstall                = $preInstallResult
+        RebootRequired        = (@($appResults | Where-Object RebootRequired -eq $true).Count -gt 0)
         Packages              = @($appResults | ForEach-Object { $_ })
         FailureType               = $FailureType
         Error                     = $ErrorMessage
@@ -414,6 +419,10 @@ try {
 
     $apps = if ($manifest.PSObject.Properties.Name -contains 'Packages') { @($manifest.Packages) } else { @() }
     if ($Name) { $apps = @($apps | Where-Object { $_.Id -in $Name }) }
+    if ($Name -and @($apps | Where-Object Type -eq 'WindowsUpdateScript').Count -gt 0 -and @($apps).Count -ne @($manifest.Packages).Count) {
+        throw (New-RunnerFailureException -Message 'Windows Update requires the full deployment queue; a partial Name selection is not allowed.' -FailureType 'ManifestInvalid' -Fatal)
+    }
+    $apps = @($apps | Where-Object Type -ne 'WindowsUpdateScript') + @($apps | Where-Object Type -eq 'WindowsUpdateScript')
 
     $deploymentId = [guid]::Empty
     if (-not [guid]::TryParse([string]$manifest.DeploymentId, [ref]$deploymentId)) {
@@ -434,7 +443,7 @@ try {
             if ([string]$record.Status -eq 'Failed') { $preInstallFailures[[string]$record.Id] = $record }
         }
     }
-    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle')
+    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','WindowsUpdateScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle')
     foreach ($app in $apps) {
         $id = [string]$app.Id
         $source = [string]$app.Source
@@ -473,6 +482,17 @@ try {
                 [string]$app.ScriptSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
                 [string]$app.ConfigurationSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
                 throw (New-RunnerFailureException -Message 'Invalid Windows Capabilities built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
+            }
+        }
+        if ($source -eq 'BuiltIn' -and
+            ([string]$app.Type -eq 'WindowsUpdateScript' -or $id -eq 'WindowsUpdate')) {
+            if ([int]$app.WindowsUpdateSchema -ne 1 -or $id -ne 'WindowsUpdate' -or [string]$app.Type -ne 'WindowsUpdateScript' -or
+                [string]$app.PackageType -ne 'Script' -or
+                [string]$app.Script -ne 'BuiltIn\WindowsUpdate\Install.ps1' -or
+                [string]$app.Configuration -ne 'BuiltIn\WindowsUpdate\config.json' -or
+                [string]$app.ScriptSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
+                [string]$app.ConfigurationSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+                throw (New-RunnerFailureException -Message 'Invalid Windows Update built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
             }
         }
         if ($source -eq 'BuiltIn' -and
@@ -646,6 +666,20 @@ try {
             }
         }
         Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Windows Capabilities script and configuration SHA-256 validated.' -Data @{ Id=$app.Id }
+    }
+
+    foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'WindowsUpdateScript' })) {
+        foreach ($entry in @(
+            @{ Relative='BuiltIn\WindowsUpdate\Install.ps1'; Hash=[string]$app.ScriptSha256 },
+            @{ Relative='BuiltIn\WindowsUpdate\config.json'; Hash=[string]$app.ConfigurationSha256 }
+        )) {
+            $file = Join-Path $StagedPath $entry.Relative
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $entry.Hash) {
+                throw (New-RunnerFailureException -Message ('Windows Update integrity failed for {0}.' -f $entry.Relative) -FailureType 'HashMismatch' -AppId ([string]$app.Id) -Fatal)
+            }
+        }
+        Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Windows Update script and configuration SHA-256 validated.' -Data @{ Id=$app.Id }
     }
 
     foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'DefaultAssociationScript' })) {
@@ -911,6 +945,23 @@ try {
                 }
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptComplete' -Message 'Windows capabilities completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='Sha256Validated' }
+            }
+            'WindowsUpdateScript' {
+                $root = Join-Path $StagedPath 'BuiltIn\WindowsUpdate'
+                $scriptFile = Join-Path $root 'Install.ps1'
+                $configFile = Join-Path $root 'config.json'
+                $updateConfig=Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ([string]$updateConfig.DeploymentId -ne [string]$manifest.DeploymentId) { throw 'Windows Update configuration belongs to another deployment.' }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptStart' -Message 'Running the final Windows Update pass.' -Data @{ Id=$app.Id }
+                $process = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"{0}"' -f $scriptFile),'-ConfigPath',('"{0}"' -f $configFile)) -WorkingDirectory $root -Wait -PassThru
+                if ($process.ExitCode -notin @(0,3010)) {
+                    throw ('Windows Update failed with exit code {0}.' -f $process.ExitCode)
+                }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptComplete' -Message 'Windows Update completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
+                $updateConfig=Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json
+                $updateReport=Get-Content -LiteralPath ([Environment]::ExpandEnvironmentVariables([string]$updateConfig.ResultPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ([string]$updateReport.DeploymentId -ne [string]$manifest.DeploymentId -or [string]$updateReport.Status -notin @('Succeeded','Deferred')) { throw 'Windows Update result is missing, failed or belongs to another deployment.' }
+                [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='Sha256Validated'; RebootRequired=[bool]$updateReport.RebootRequired; WindowsUpdateStatus=[string]$updateReport.Status; WindowsUpdateOutcome=[string]$updateReport.Outcome; WindowsUpdateResultPath=[string]$updateConfig.ResultPath }
             }
             'DefaultAssociationScript' {
                 $root = Join-Path $StagedPath 'BuiltIn\DefaultAssociations'
@@ -1356,6 +1407,11 @@ try {
 
     foreach ($app in $apps) {
         $id = [string]$app.Id
+        if ([string]$app.Type -eq 'WindowsUpdateScript' -and @($appResults | Where-Object Status -ne 'Succeeded').Count -gt 0) {
+            $appResults.Add((New-RunnerAppResult -App $app -Status 'Skipped' -FailureType 'PriorPackageFailure' -ErrorMessage 'Windows Update was not started because an earlier package failed or was skipped.'))
+            Save-RunnerResult -Status Running
+            continue
+        }
         if ([string]$app.Source -eq 'BuiltIn' -and $preInstallFailures.ContainsKey($id)) {
             $preInstallFailure = $preInstallFailures[$id]
             $message = if ($preInstallFailure.Error) {
@@ -1404,6 +1460,16 @@ try {
                 $failedExitCode = [int]$Matches[1]
             }
             $failedExecution = if ($null -ne $failedExitCode) { [pscustomobject]@{ ExitCode=$failedExitCode; Integrity=$null } } else { $null }
+            if ([string]$app.Type -eq 'WindowsUpdateScript') {
+                try {
+                    $failedUpdateConfig=Get-Content -LiteralPath (Join-Path $StagedPath 'BuiltIn\WindowsUpdate\config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+                    $failedUpdateReport=Get-Content -LiteralPath ([Environment]::ExpandEnvironmentVariables([string]$failedUpdateConfig.ResultPath)) -Raw -Encoding UTF8 | ConvertFrom-Json
+                    if ([string]$failedUpdateReport.DeploymentId -eq [string]$manifest.DeploymentId -and [DateTime]$failedUpdateReport.StartedAtUtc -ge [DateTime]$runnerStartedAtUtc) {
+                        $failedExecution=[pscustomobject]@{ExitCode=$failedExitCode;Integrity='Sha256Validated';RebootRequired=[bool]$failedUpdateReport.RebootRequired;WindowsUpdateStatus=[string]$failedUpdateReport.Status;WindowsUpdateOutcome=[string]$failedUpdateReport.Outcome;WindowsUpdateResultPath=[string]$failedUpdateConfig.ResultPath}
+                    }
+                }
+                catch { Write-RunnerLog -LogPath $logPath -Event 'WindowsUpdateResultReadFailed' -Level Warning -Message $_.Exception.Message }
+            }
             $appResults.Add((New-RunnerAppResult -App $app -Status 'Failed' -DurationSeconds $appStopwatch.Elapsed.TotalSeconds -Execution $failedExecution -FailureType $failure.FailureType -ErrorMessage $failure.Message))
             Write-RunnerLog -LogPath $logPath -Event 'AppInstallFailed' -Level 'Error' -Message $failure.Message -Data @{
                 Id = $app.Id

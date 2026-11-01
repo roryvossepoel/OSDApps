@@ -386,9 +386,13 @@
       "Acquisition": "BundledScript",
       "SyncPhase": "None",
       "AddCommand": "Add-OSDStageFile",
-      "AdditionalAddCommands": ["Add-OSDStageDirectory"],
+      "AdditionalAddCommands": [
+        "Add-OSDStageDirectory"
+      ],
       "SyncCommand": null,
-      "Architectures": ["any"],
+      "Architectures": [
+        "any"
+      ],
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
@@ -442,6 +446,24 @@
       "Acquisition": "BundledScript",
       "SyncPhase": "None",
       "AddCommand": "Add-OSDStageDefaultAssociation",
+      "SyncCommand": null,
+      "Architectures": [
+        "any"
+      ],
+      "DefaultArchitecture": "any",
+      "CachePath": null,
+      "RepositoryAlternative": false,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
+    },
+    {
+      "Id": "WindowsUpdate",
+      "DisplayName": "Windows Update (experimental)",
+      "Source": "BuiltIn",
+      "PackageType": "Script",
+      "Vendor": "OSDStage",
+      "Acquisition": "BundledScript",
+      "SyncPhase": "None",
+      "AddCommand": "Add-OSDStageWindowsUpdate",
       "SyncCommand": null,
       "Architectures": [
         "any"

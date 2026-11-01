@@ -346,6 +346,40 @@ function Test-OSDStageDeployment {
             if ($appNetworkRequired) { $networkRequired = $true }
             $detail = if ($appNetworkRequired) { 'Capabilities script/config are validated; Add may require Windows Update during SetupComplete. Offline readiness is not guaranteed.' } elseif ($payloadReady) { 'Windows Capabilities script and configuration are SHA-256 validated.' } else { 'Windows Capabilities definition, content or hash validation failed.' }
         }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'WindowsUpdateScript') {
+            $definitionValid = (
+                $id -eq 'WindowsUpdate' -and [int]$app.WindowsUpdateSchema -eq 1 -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\WindowsUpdate\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\WindowsUpdate\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\WindowsUpdate\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\WindowsUpdate\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $updateConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            Assert-OSDStageWindowsUpdateConfiguration -Configuration $updateConfig
+                            $integrityValid = ([string]$updateConfig.DeploymentId -eq [string]$manifest.DeploymentId)
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $appNetworkRequired = $true
+            if ($appNetworkRequired) { $networkRequired = $true }
+            $detail = if ($payloadReady) { 'Windows Update script/config are SHA-256 validated. The final SetupComplete step requires the configured update source; offline readiness is not supported.' } else { 'Windows Update definition, content or hash validation failed.' }
+        }
         elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'DefaultAssociationScript') {
             $definitionValid = (
                 $id -eq 'DefaultAssociations' -and [int]$app.DefaultAssociationSchema -eq 1 -and
@@ -624,7 +658,7 @@ function Test-OSDStageDeployment {
         if ($id -in @('MicrosoftCompanyPortal','CMTraceOpen') -and $definitionValid -and -not $payloadReady) { $networkRequired = $true }
         $offlinePayloadReady = $payloadReady -and -not $appNetworkRequired
         if (-not $offlinePayloadReady) { $allPayloadsReady = $false }
-        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript')) -or $payloadReady))
+        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','WindowsUpdateScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript')) -or $payloadReady))
         Add-DeploymentCheck -Name 'AppDefinition' -AppId $id -Passed $appRequiredStateValid -Required $true -Message "${id}: $detail"
         Add-DeploymentCheck -Name 'OfflinePayload' -AppId $id -Passed $offlinePayloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
 
