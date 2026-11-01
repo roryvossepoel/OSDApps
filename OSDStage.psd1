@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDStage.psm1'
-    ModuleVersion     = '0.1.0'
+    ModuleVersion     = '1.0.0'
     GUID              = 'e06a7e0b-f50e-4cd9-821c-97723b3f1730'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -72,10 +72,11 @@
     AliasesToExport   = @()
     PrivateData = @{
         PSData = @{
+            Prerelease = 'rc1'
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','AppDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','AppCache','AppPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDStage'
             LicenseUri = 'https://github.com/roryvossepoel/OSDStage/blob/main/LICENSE'
-            ReleaseNotes = 'First OSDStage release candidate: renamed module and cmdlets, schema v2 repository contracts, and fresh OSDStage cache and staging paths.'
+            ReleaseNotes = 'OSDStage 1.0.0-rc1 public release candidate: renamed module and cmdlets, schema v2 repository contracts, and fresh OSDStage cache and staging paths.'
             RequireLicenseAcceptance = $false
         }
     }

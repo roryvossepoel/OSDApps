@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0-rc1
+
+- First public OSDStage release candidate for the PowerShell Gallery installation and WinPE deployment test. Not a GA release.
+- Include built-in apps, schema 2 repository packages (App, Script, Font, Certificate and Driver), registry settings, machine variables, services, Wi-Fi, initial associations, Start/taskbar pins, optional features, capabilities and explicit inbox app cleanup.
+- Support prerelease identity consistently across manifest, immutable Git tag, GitHub prerelease and exact Gallery download verification. Preserve numeric PowerShell module folders and compare downloaded release files by SHA-256.
+- Document the online Gallery route with `-AllowPrerelease`; the USB content cache remains optional and automatically detected.
+- Existing physical x64 deployment evidence is retained in the validation documentation. The published Gallery-to-WinPE route is the remaining RC acceptance test; ARM64 has not been physically validated.
+
 ## 0.1.0
 
 - Add a compact English GitHub Pages website with a three-step quick start, task guides, FAQ and integrated read-only catalog. Bundle current metadata and icons; support custom catalog URLs, list/tile views and pagination without a prefilled organization repository. Build and validate pull requests before deployment from main.

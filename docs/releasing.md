@@ -37,15 +37,40 @@ The value must be a valid PowerShell Gallery API key with permission to publish 
 
 The version in `OSDStage.psd1` and the corresponding top-level section in `CHANGELOG.md` are prepared in a pull request. The release workflow reads the changelog section and uses it for the GitHub Release notes.
 
-1. Update `ModuleVersion` and its `ReleaseNotes` field together with `CHANGELOG.md`.
+1. Update `ModuleVersion`, optional `PrivateData.PSData.Prerelease`, `ReleaseNotes` and `CHANGELOG.md` together.
 2. Run and review CI on the pull request.
 3. Merge into `main` and verify its CI. This does not publish anything.
-4. When publication is intended, manually dispatch **Create GitHub Release** from `main`, with `expected_version` matching the reviewed manifest.
+4. When publication is intended, manually dispatch **Create GitHub Release** from `main`, with `expected_version` matching the complete reviewed version, such as `1.0.0-rc1`.
 5. The release workflow validates the current main commit, re-runs the test suite, and creates the immutable `v<version>` tag with version-specific release notes.
 6. After successful release creation, the workflow automatically dispatches **Publish PowerShell Gallery**.
 7. The publish workflow builds from the immutable tag, runs tests, publishes, downloads the Gallery package, and compares SHA256 hashes against all packaged release files.
 
 Both workflows expose manual dispatch. Starting the release workflow can automatically dispatch Gallery publication after it creates a new release; it is not just a build-only check. A manually dispatched publish requires an already existing matching release tag. A Gallery version is immutable: never attempt to overwrite a published version. Pre-existing versions are treated as explicit conflicts, while a post-push 409 is reconciled only when the published files match the release.
+
+### Preview and GA versions
+
+For the first public candidate, the manifest contains `ModuleVersion = '1.0.0'`
+and `PrivateData.PSData.Prerelease = 'rc1'`. The shared release-version resolver
+produces `1.0.0-rc1` for the changelog section, `expected_version`, Gallery and
+immutable tag `v1.0.0-rc1`. GitHub releases with a suffix are marked prerelease
+and are not promoted to latest. Both release workflows remain manual-only.
+
+Gallery discovery and download verification use `-AllowPrerelease` for a
+candidate. PowerShellGet saves its module under the numeric `OSDStage/1.0.0`
+folder; the verification compares every built file, including its manifest,
+against that downloaded package. This checks the prerelease label as well as
+the payload bytes. The read-only maintenance tool's Release mode currently
+checks stable releases only; use the publish workflow's verification for RCs.
+
+After a verified RC publication, test installation from Gallery in WinPE and
+complete the normal deployment once. For GA, remove the `Prerelease` field,
+prepare a `1.0.0` changelog section and release notes, then review and run the
+same release procedure with `expected_version=1.0.0`. Do not move the RC tag or
+republish it. Removing the suffix creates a separate stable Gallery version.
+
+Publication is not triggered by merging this preparation. Before dispatch,
+confirm main CI is green, the exact version/tag is unused and the repository's
+`PSGALLERY_API_KEY` can publish OSDStage. Never put the key in code or logs.
 
 ### Gallery verification delays
 

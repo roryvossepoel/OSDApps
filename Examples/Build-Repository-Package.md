@@ -36,7 +36,7 @@ upload anything to your hosting.
 ```powershell
 $ErrorActionPreference = 'Stop'
 
-Install-Module OSDStage -Force -SkipPublisherCheck
+Install-Module OSDStage -AllowPrerelease -Force -SkipPublisherCheck
 Import-Module OSDStage -Force
 
 $Id = 'YourPackage'
@@ -127,7 +127,7 @@ In WinPE after OSDCloud has applied Windows, load OSDStage and use the actual UR
 and ID from your repository:
 
 ```powershell
-Install-Module OSDStage -Force -SkipPublisherCheck
+Install-Module OSDStage -AllowPrerelease -Force -SkipPublisherCheck
 Import-Module OSDStage -Force
 
 Set-OSDStageConfiguration -CatalogUri 'https://packages.example.com/osdstage/catalog.json'

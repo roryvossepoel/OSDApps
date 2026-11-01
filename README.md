@@ -1,6 +1,6 @@
 # OSDStage
 
-> Development candidate. OSDStage has not been published to the PowerShell Gallery. Use the CI module artifact for testing; Gallery commands below apply after release. Repository and package manifests use schema 2. See [the OSDStage contract](docs/osdstage-contract.md).
+> Release candidate: preparing **1.0.0-rc1**. Gallery commands below apply after its publication is verified. Install previews with `-AllowPrerelease`. Repository and package manifests use schema 2. See [the OSDStage contract](docs/osdstage-contract.md).
 
 ![OSDStage — Your deployment. Ready before OOBE. Software and device configuration with optional USB caching.](docs/images/osdstage-banner.svg)
 
@@ -22,10 +22,10 @@ Stage software and device configuration in WinPE **after OSDCloud has applied Wi
 
 ## Install from PowerShell Gallery
 
-**After the first Gallery release**, run in PowerShell on your Windows preparation machine, or in online WinPE with PowerShellGet available. Until then, use the reviewed CI artifact as described in [Getting started](docs/getting-started.md#before-you-start).
+**After verified RC publication**, run in PowerShell on your Windows preparation machine, or in online WinPE with PowerShellGet available.
 
 ```powershell
-Install-Module OSDStage -Force -SkipPublisherCheck
+Install-Module OSDStage -Repository PSGallery -AllowPrerelease -Force -ErrorAction Stop
 Import-Module OSDStage -Force
 ```
 
@@ -38,7 +38,7 @@ For WinPE without Gallery access, [save the module to your USB flash drive](Exam
 **After Gallery publication, run this complete example in online WinPE, after OSDCloud has applied Windows and before the first reboot.** It stages three apps for the target PC:
 
 ```powershell
-Install-Module OSDStage -Force -SkipPublisherCheck
+Install-Module OSDStage -Repository PSGallery -AllowPrerelease -Force -ErrorAction Stop
 Import-Module OSDStage -Force
 
 Add-OSDStageMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us

@@ -12,8 +12,8 @@ Describe 'Gallery publication verification' {
         $script:publishStep = [scriptblock]::Create($source)
 
         # Execute the actual workflow step; all Gallery calls are isolated mocks.
-        function Find-Module { [CmdletBinding()] param($Name,$RequiredVersion,$Repository) }
-        function Save-Module { [CmdletBinding()] param($Name,$RequiredVersion,$Repository,$Path,[switch]$Force) }
+        function Find-Module { [CmdletBinding()] param($Name,$RequiredVersion,$Repository,[switch]$AllowPrerelease) }
+        function Save-Module { [CmdletBinding()] param($Name,$RequiredVersion,$Repository,$Path,[switch]$Force,[switch]$AllowPrerelease) }
         function Publish-Module { [CmdletBinding()] param($Path,$Repository,$NuGetApiKey,[switch]$Force) }
     }
 
@@ -45,9 +45,10 @@ Describe 'Gallery publication verification' {
                 throw "No match was found for OSDStage on attempt $script:downloadAttempts."
             }
             if ($script:contentFault -eq 'NoDirectory') { return }
-            $destination = Join-Path $Path "OSDStage\$RequiredVersion"
+            $destination = Join-Path $Path ("OSDStage\" + ($RequiredVersion -split '-', 2)[0])
             New-Item -ItemType Directory -Path $destination -Force | Out-Null
             Get-ChildItem -LiteralPath $script:fixtureModule -File | Copy-Item -Destination $destination
+            if ($script:contentFault -eq 'WrongPrerelease') { Set-Content -LiteralPath (Join-Path $destination 'OSDStage.psd1') -Value "@{ModuleVersion='1.0.0';PrivateData=@{PSData=@{Prerelease='rc2'}}}" }
             if ($script:contentFault -eq 'Mismatch') { Set-Content -LiteralPath (Join-Path $destination 'OSDStage.psm1') -Value '# different bytes' }
             if ($script:contentFault -eq 'Missing') { Remove-Item -LiteralPath (Join-Path $destination 'OSDStage.psm1') }
         }
@@ -67,6 +68,28 @@ Describe 'Gallery publication verification' {
         Should -Invoke Find-Module -Exactly 1
         Should -Invoke Save-Module -Exactly 3 -ParameterFilter { $Name -eq 'OSDStage' -and $RequiredVersion -eq '0.42.0' -and $Repository -eq 'PSGallery' }
         Should -Invoke Start-Sleep -Exactly 2 -ParameterFilter { $Seconds -eq 10 }
+    }
+
+    It 'verifies a prerelease in the numeric module folder and opts in to preview retrieval' {
+        $env:GALLERY_VERSION = '1.0.0-rc1'
+        Set-Content -LiteralPath (Join-Path $script:fixtureModule 'OSDStage.psd1') -Value "@{ModuleVersion='1.0.0';PrivateData=@{PSData=@{Prerelease='rc1'}}}"
+        { & $script:publishStep } | Should -Not -Throw
+        Should -Invoke Find-Module -Exactly 1 -ParameterFilter { $RequiredVersion -eq '1.0.0-rc1' -and $AllowPrerelease }
+        Should -Invoke Save-Module -Exactly 1 -ParameterFilter { $RequiredVersion -eq '1.0.0-rc1' -and $AllowPrerelease }
+        Should -Invoke Publish-Module -Exactly 1
+    }
+
+    It 'does not opt stable versions into preview retrieval' {
+        { & $script:publishStep } | Should -Not -Throw
+        Should -Invoke Save-Module -Exactly 1 -ParameterFilter { -not $AllowPrerelease }
+    }
+
+    It 'rejects a different prerelease manifest even when the numeric version matches' {
+        $env:GALLERY_VERSION = '1.0.0-rc1'
+        $script:contentFault = 'WrongPrerelease'
+        { & $script:publishStep } | Should -Throw '*does not match the release*OSDStage.psd1*'
+        Should -Invoke Save-Module -Exactly 1
+        Should -Invoke Start-Sleep -Exactly 0
     }
 
     It 'fails clearly after the bounded download attempts without repeating the push' {
