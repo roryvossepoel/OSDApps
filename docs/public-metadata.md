@@ -5,7 +5,7 @@ OSDStage publishes a stable, machine-readable **built-in catalog** at [`metadata
 **Public raw endpoint:**
 
 ```text
-https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/builtins.json
+https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/builtins.json
 ```
 
 This file is a **catalog of OSDStage' vendor-native built-in integrations**, **not** a listing of an organization's self-maintained app repository. For organization-managed apps, point a private or authorized viewer to that organization's own `catalog.json` and then resolve the linked package `manifest.json` files. The sample repository under `Examples/Repository` deliberately does not publish any private apps.
@@ -54,7 +54,7 @@ The public catalog includes 14 built-in integrations. This `CiscoWebex` entry il
   "DefaultArchitecture": "x64",
   "CachePath": "BuiltIn/CiscoWebex/<architecture>",
   "RepositoryAlternative": true,
-  "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/ciscowebex.svg"
+  "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/ciscowebex.svg"
 }
 ```
 

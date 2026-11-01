@@ -73,8 +73,8 @@
     PrivateData = @{
         PSData = @{
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','AppDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','AppCache','AppPackaging','Repository')
-            ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
-            LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
+            ProjectUri = 'https://github.com/roryvossepoel/OSDStage'
+            LicenseUri = 'https://github.com/roryvossepoel/OSDStage/blob/main/LICENSE'
             ReleaseNotes = 'First OSDStage release candidate: renamed module and cmdlets, schema v2 repository contracts, and fresh OSDStage cache and staging paths.'
             RequireLicenseAcceptance = $false
         }
