@@ -44,7 +44,7 @@ function Add-OSDStageSetupComplete {
     if ($PSCmdlet.ShouldProcess($stagedRoot, 'Stage OSDStage runtime scripts')) {
         New-Item -ItemType Directory -Path $scriptsPath -Force | Out-Null
         New-Item -ItemType Directory -Path $stagedRoot -Force | Out-Null
-        foreach ($helper in @('OSDStagePayloadFile.ps1','OSDStage7Zip.ps1','OSDStageVisualStudioCode.ps1','OSDStagePrerequisite.ps1','OSDStageFont.ps1','OSDStageCertificate.ps1','OSDStageDriver.ps1','Invoke-OSDStageBuiltInCacheTransaction.ps1')) {
+        foreach ($helper in @('OSDStageOnlineApps.ps1','OSDStagePayloadFile.ps1','OSDStage7Zip.ps1','OSDStageVisualStudioCode.ps1','OSDStagePrerequisite.ps1','OSDStageFont.ps1','OSDStageCertificate.ps1','OSDStageDriver.ps1','Invoke-OSDStageBuiltInCacheTransaction.ps1')) {
             Copy-Item -LiteralPath (Join-Path $moduleRoot (Join-Path 'Runtime' $helper)) -Destination (Join-Path $stagedRoot $helper) -Force
         }
         Copy-Item -LiteralPath $runnerSource -Destination (Join-Path $stagedRoot 'Invoke-OSDStageRunner.ps1') -Force

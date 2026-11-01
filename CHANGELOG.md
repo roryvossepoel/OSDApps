@@ -2,6 +2,8 @@
 
 ## Unreleased — after 1.0.0-rc1
 
+- Acquire and refresh Company Portal and CMTrace Open automatically during PreInstall, with optional OSDCloud USB caching and validated offline fallback. WinPE can stage both without prepared cache; fully offline preflight still requires verified content.
+
 - Use Deploy-OSDCloud-style timestamped `[INFO]`/`[WARN]`/`[ERROR]` lines and terminal-aware colors, with no extra blank lines between results, across cmdlet result types without replacing PowerShell objects or changing JSON properties. Preserve explicit detail/table views, diagnostics and failure details; distinguish staging, cache reuse, validation, authoring and cleanup. Configuration updates use a suppressible information message when `-PassThru` is omitted.
 
 - Add `Add-OSDStageDirectory` and `Add-OSDStageFile` for ordered, one-shot SetupComplete file operations. Support literal paths, directory creation/removal, text or source-file content, explicit `-Force` replacement and separate `-Recurse` removal. Include integrity-checked offline staging, per-operation results, help and a disposable test example. Physical acceptance passed on 1 November 2026: nine operations succeeded and all five independent content/removal checks passed. The published RC1 does not contain these commands.

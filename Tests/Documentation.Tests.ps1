@@ -126,10 +126,10 @@ Get-Date
         $companyPortal = @($catalog.Packages | Where-Object Id -eq 'MicrosoftCompanyPortal')
         $companyPortal.Count | Should -Be 1
         $companyPortal[0].Acquisition | Should -Be 'MicrosoftPreinstallKit'
-        $companyPortal[0].SyncPhase | Should -Be 'FullWindowsPreparation'
+        $companyPortal[0].SyncPhase | Should -Be 'FullWindowsPreInstall'
         $cmTrace = @($catalog.Packages | Where-Object Id -eq 'CMTraceOpen')
         $cmTrace.Count | Should -Be 1
-        $cmTrace[0].SyncPhase | Should -Be 'FullWindowsPreparation'
+        $cmTrace[0].SyncPhase | Should -Be 'FullWindowsPreInstall'
     }
 
     It 'does not treat PowerShell comments in code fences as document headings' {

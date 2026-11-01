@@ -43,7 +43,7 @@ Describe 'Canonical OSDStage terminology' {
         $expected = ('applic' + 'ation/vnd.github+json')
         foreach ($relative in @(
             'Runtime/OSDStage7Zip.ps1',
-            'Public/Sync-OSDStageCMTraceOpen.ps1',
+            'Runtime/OSDStageOnlineApps.ps1',
             'tools/Test-OSDStageMaintenance.ps1'
         )) {
             $content = Get-Content -LiteralPath (Join-Path $script:repositoryRoot $relative) -Raw -Encoding UTF8

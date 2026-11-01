@@ -91,16 +91,16 @@
         }
         'Add-OSDStageMicrosoftCompanyPortal' = @{
             Synopsis = 'Stage the Microsoft Company Portal offline Preinstall Kit for Windows provisioning.'
-            Description = 'Stages the Microsoft-supplied appbundle, offline license and five matching dependencies from a locally prepared OSDCloud cache. SetupComplete provisions the package for newly created users; it does not directly deploy into an existing signed-in user session.'
-            Environment = 'WinPE after OSDCloud has applied Windows, with the pre-prepared OSDCloud USB cache.'
+            Description = 'Stages intent and any verified cached Microsoft kit. Online PreInstall acquires or refreshes the official bundle, license and five matching dependencies, using an OSDCloud cache when available. SetupComplete provisions the package for newly created users; it does not directly deploy into an existing signed-in user session.'
+            Environment = 'WinPE after OSDCloud has applied Windows; online first boot or verified content for offline deployment.'
             Output = 'OSDStage.StagedApp with target, selected architecture and preinstall kit version. Staging does not prove provisioning succeeded.'
             Parameters = @{}
-            Examples = @(@{ Code = 'Add-OSDStageMicrosoftCompanyPortal -Architecture x64'; Remarks = 'Stage the x64 package from the prepared offline USB cache.' })
+            Examples = @(@{ Code = 'Add-OSDStageMicrosoftCompanyPortal -Architecture x64'; Remarks = 'Stage x64 Company Portal for automatic acquisition and provisioning.' })
             Link = 'docs/microsoft-company-portal.md'
         }
         'Sync-OSDStageMicrosoftCompanyPortal' = @{
             Synopsis = 'Prepare Microsoft Company Portal from the official offline Preinstall Kit.'
-            Description = 'Downloads the official Microsoft Preinstall Kit by default. Optionally accepts a local official ZIP through -KitPath. Retains the original bundle, license and dependency filenames, records SHA-256 hashes and exact filename metadata, and transactionally updates the USB cache. WinPE stages prepared content; SetupComplete provisions it without a network download.'
+            Description = 'Downloads the official Microsoft Preinstall Kit by default. Optionally accepts a local official ZIP through -KitPath. Retains the original bundle, license and dependency filenames, records SHA-256 hashes and exact filename metadata, and transactionally updates the USB cache. This optional preparation enables offline deployment. Online SetupComplete can also acquire and refresh the official kit automatically.'
             Environment = 'Full Windows preparation machine with the OSDCloud USB connected; internet access for automatic download, or a local official kit.'
             Output = 'Cache preparation record including selected architecture, bundle version and target cache path.'
             Parameters = @{ KitPath = 'Optional path to an official Microsoft kit ZIP. Omit this parameter for automatic Microsoft download.' }
@@ -109,11 +109,11 @@
         }
         'Add-OSDStageCMTraceOpen' = @{
             Synopsis = 'Stage a signed CMTrace Open MSI for setup before Windows OOBE.'
-            Description = 'Copies a previously synchronized, SHA-256-verified CMTrace Open MSI from the USB cache to the offline Windows installation and schedules the vendor MSI through the existing SetupComplete runner. Optionally enforces managed update-check settings.'
+            Description = 'Stages CMTrace Open intent and any verified cache. SetupComplete checks the latest stable release, refreshes an available OSDCloud cache or downloads locally without USB, and installs the verified MSI. Optionally controls vendor update checks.'
             Environment = 'WinPE after OSDCloud has applied Windows, with a populated OSDCloud USB cache.'
             Output = 'OSDStage.StagedApp containing the selected version and target Windows root. Staging does not establish installation success.'
             Parameters = @{ DisableUpdateChecks = 'When true, install with DISABLEUPDATECHECKS=1 so managed devices do not automatically check for in-app updates.' }
-            Examples = @(@{ Code = 'Add-OSDStageCMTraceOpen -Architecture x64 -DisableUpdateChecks $true'; Remarks = 'Stage the cached signed x64 MSI and disable vendor update checks for managed deployment.' })
+            Examples = @(@{ Code = 'Add-OSDStageCMTraceOpen -Architecture x64 -DisableUpdateChecks $true'; Remarks = 'Stage the x64 app for automatic acquisition and disable vendor update checks for managed deployment.' })
             Link = 'docs/cmtrace-open.md'
         }
         'Sync-OSDStageCMTraceOpen' = @{

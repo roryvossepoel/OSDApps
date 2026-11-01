@@ -11,7 +11,7 @@ Describe 'CMTrace Open built-in staging' {
         $app.PackageType | Should -Be 'App'
     }
 
-    It 'fails closed when cached MSI bytes do not match release SHA-256' {
+    It 'does not stage corrupt MSI bytes and queues an online refresh' {
         InModuleScope OSDStage {
             $cache = Join-Path $TestDrive 'InvalidCache'
             $source = Join-Path $cache 'BuiltIn\CMTraceOpen\x64'
@@ -24,8 +24,11 @@ Describe 'CMTrace Open built-in staging' {
             Mock Get-OSDStageCachePath { $cache }
             Mock Resolve-OSDStageWindowsPath { $TestDrive }
 
-            { Add-OSDStageCMTraceOpen -WindowsPath $TestDrive -Confirm:$false } |
-                Should -Throw '*SHA-256*'
+            $result = Add-OSDStageCMTraceOpen -WindowsPath $TestDrive -Confirm:$false
+            $result.CacheAvailable | Should -BeFalse
+            @(Get-ChildItem -LiteralPath $result.StagedPath -Filter '*.msi').Count | Should -Be 0
+            $manifest = Get-Content (Join-Path $TestDrive 'Windows/Temp/OSDStage/DeviceManifest.json') -Raw | ConvertFrom-Json
+            Test-OSDStageOnlineAppIntent $manifest.Packages[0] | Should -BeTrue
         }
     }
 
@@ -59,7 +62,7 @@ Describe 'CMTrace Open built-in staging' {
         }
     }
 
-    It 'rejects a different cached asset name before staging' {
+    It 'does not stage a different cached asset name and queues a refresh' {
         InModuleScope OSDStage {
             $cache = Join-Path $TestDrive 'WrongAssetCache'
             $source = Join-Path $cache 'BuiltIn\CMTraceOpen\x64'
@@ -74,8 +77,11 @@ Describe 'CMTrace Open built-in staging' {
             Mock Get-OSDStageCachePath { $cache }
             Mock Resolve-OSDStageWindowsPath { $TestDrive }
 
-            { Add-OSDStageCMTraceOpen -WindowsPath $TestDrive -Confirm:$false } |
-                Should -Throw '*official release*'
+            $result = Add-OSDStageCMTraceOpen -WindowsPath $TestDrive -Confirm:$false
+            $result.CacheAvailable | Should -BeFalse
+            @(Get-ChildItem -LiteralPath $result.StagedPath -Filter '*.msi').Count | Should -Be 0
+            $manifest = Get-Content (Join-Path $TestDrive 'Windows/Temp/OSDStage/DeviceManifest.json') -Raw | ConvertFrom-Json
+            Test-OSDStageOnlineAppIntent $manifest.Packages[0] | Should -BeTrue
         }
     }
 }

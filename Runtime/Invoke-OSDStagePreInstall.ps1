@@ -12,6 +12,7 @@ $sleepLog = $null
 $cacheLock = $null
 . (Join-Path $PSScriptRoot 'Restore-OSDStageCacheGeneration.ps1')
 . (Join-Path $PSScriptRoot 'OSDStagePayloadFile.ps1')
+. (Join-Path $PSScriptRoot 'OSDStageOnlineApps.ps1')
 . (Join-Path $PSScriptRoot 'OSDStage7Zip.ps1')
 . (Join-Path $PSScriptRoot 'OSDStageVisualStudioCode.ps1')
 . (Join-Path $PSScriptRoot 'OSDStagePrerequisite.ps1')
@@ -488,6 +489,56 @@ function Assert-PreInstallSignedPayload {
     Write-PreInstallLog -Event 'BuiltInSignatureVerified' -Message 'Built-in MSI/EXE Authenticode and expected publisher validated.' -Data @{Id=$Id;File=$Path;Publisher=$expected}
 }
 
+
+function Sync-PreInstallOnlineApp {
+    param([Parameter(Mandatory)]$App, [Parameter(Mandatory)][hashtable]$Acquisition)
+    $id = [string]$App.Id
+    $architecture = [string]$App.Architecture
+    if ($architecture -notin @('x64','arm64')) { throw [IO.InvalidDataException]::new('Unsupported online app architecture.') }
+    $relative = 'BuiltIn\' + $id + '\' + $architecture
+    $acquireBase = if ($usbRoot) { $usbRoot } else { $StagedPath }
+    $entry = $null
+    $sourceBase = $acquireBase
+    try {
+        if (-not $networkAvailable) { throw 'No network connection is available.' }
+        if ($id -eq 'MicrosoftCompanyPortal') {
+            $sync = Sync-OSDStageMicrosoftCompanyPortalGeneration -CachePath $acquireBase -Architecture $architecture -NoFallback -Download {
+                param($uri,$destination)
+                Save-PreInstallDownload -Uri $uri -DestinationDirectory $destination -ExpectedExtension '.zip' -Id 'MicrosoftCompanyPortal' -Description 'Company Portal Preinstall Kit' -TimeoutMinutes 30
+            }
+        } else {
+            $sync = Sync-OSDStageCMTraceOpenGeneration -CachePath $acquireBase -Architecture $architecture
+        }
+        $entry = Get-OSDStageOnlineAppCacheEntry -CachePath $acquireBase -Id $id -Architecture $architecture -VerifySignature
+        $outcome = if ($sync.PSObject.Properties['CacheReused'] -and $sync.CacheReused) { 'FallbackCacheUsed' } elseif ($sync.Updated) { 'Downloaded' } else { 'CacheReused' }
+        Set-PreInstallAcquisitionResult -Result $Acquisition -Outcome $outcome -CacheDecisionReason $(if($sync.Updated){'Official source checked; a newly downloaded generation passed validation.'}else{'Official source checked; cached content matches the available release or kit metadata and passed validation.'})
+    }
+    catch {
+        $refreshFailure = $_
+        # Prefer the local fallback, then independently validate the attached cache.
+        foreach ($fallback in @($StagedPath,$usbRoot) | Where-Object { $_ } | Select-Object -Unique) {
+            try {
+                $entry = Get-OSDStageOnlineAppCacheEntry -CachePath $fallback -Id $id -Architecture $architecture -VerifySignature
+                $sourceBase = $fallback
+                break
+            } catch { $entry = $null }
+        }
+        if (-not $entry) { throw "$id acquisition failed with no valid cache. $($refreshFailure.Exception.Message)" }
+        Set-PreInstallAcquisitionResult -Result $Acquisition -Outcome $(if($networkAvailable){'FallbackCacheUsed'}else{'OfflineCacheUsed'}) -RefreshError $refreshFailure
+    }
+    if ($sourceBase -ne $StagedPath) {
+        $localRoot = Join-Path $StagedPath $relative
+        if (Test-Path -LiteralPath $localRoot) { Remove-Item -LiteralPath $localRoot -Recurse -Force -ErrorAction Stop }
+        New-Item -ItemType Directory -Path $localRoot -Force -ErrorAction Stop | Out-Null
+        Copy-Item -Path (Join-Path (Join-Path $sourceBase $relative) '*') -Destination $localRoot -Recurse -Force -ErrorAction Stop
+    }
+    $entry = Get-OSDStageOnlineAppCacheEntry -CachePath $StagedPath -Id $id -Architecture $architecture -VerifySignature
+    foreach ($property in $entry.PSObject.Properties) {
+        $App | Add-Member -NotePropertyName $property.Name -NotePropertyValue $property.Value -Force
+    }
+    $App.PSObject.Properties.Remove('AcquisitionPending')
+}
+
 function Sync-PreInstallVendorMsi {
     param(
         [Parameter(Mandatory)][psobject]$App,
@@ -621,7 +672,7 @@ try {
     $sleepRequest = Start-OSDStageSleepPrevention -Enabled $preventSleep -Reason 'OSDStage PreInstall is acquiring app content.' -Log $sleepLog
 
     $apps=if($manifest.PSObject.Properties.Name -contains 'Packages'){@($manifest.Packages)}else{@()}
-    $builtInApps=@($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and [string]$_.Id -ne 'CMTraceOpen' })
+    $builtInApps=@($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript') })
     if($builtInApps.Count -eq 0){
         $preInstallStopwatch.Stop()
         Write-PreInstallLog -Event 'RefreshSkipped' -Message 'No built-in apps require acquisition. Nothing to refresh.'
@@ -646,6 +697,7 @@ try {
         $acquisition = @{ Outcome = 'Failed'; PackageUpdated = $null; CacheDecisionReason = $null; RefreshFailureType = $null; RefreshError = $null }
         try {
             switch($app.Id){
+            { $_ -in @('MicrosoftCompanyPortal','CMTraceOpen') } { Sync-PreInstallOnlineApp -App $app -Acquisition $acquisition }
             'Microsoft365Apps' {
                 $localRoot=Join-Path $StagedPath 'BuiltIn\Microsoft365Apps'
                 New-Item -ItemType Directory -Path $localRoot -Force | Out-Null

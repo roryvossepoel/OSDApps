@@ -15,6 +15,7 @@ Describe 'Per-deployment acquisition reporting' {
         $loop = $ast.Find({ param($node) $node -is [System.Management.Automation.Language.ForEachStatementAst] -and $node.Condition.Extent.Text -eq '$builtInApps' }, $true)
         if (-not $loop) { throw 'PreInstall app loop not found.' }
         $script:preparationLoop = [scriptblock]::Create($loop.Extent.Text)
+        . (Join-Path $moduleRoot 'Runtime\OSDStageOnlineApps.ps1')
         . (Join-Path $moduleRoot 'Runtime\Assert-OSDStageTransactionSpace.ps1')
         . (Join-Path $moduleRoot 'Runtime\Restore-OSDStageCacheGeneration.ps1')
         . (Join-Path $moduleRoot 'Runtime\Invoke-OSDStageBuiltInCacheTransaction.ps1')
@@ -501,4 +502,19 @@ Describe 'Per-deployment acquisition reporting' {
         $repositoryResult.AcquisitionOutcome | Should -Be NotApplicable
         $repositoryResult.CacheDecisionReason | Should -BeNullOrEmpty
     }
+    It 'records missing offline Portal and CMTrace as acquisition failures and continues the queue' {
+        $script:networkAvailable=$false
+        $script:builtInApps=@(
+            [pscustomobject]@{Id='MicrosoftCompanyPortal';Source='BuiltIn';Type='CompanyPortalAppxBundle';PackageType='App';Architecture='x64';AcquisitionPending=$true},
+            [pscustomobject]@{Id='CMTraceOpen';Source='BuiltIn';Type='VendorMsi';PackageType='App';Architecture='x64';AcquisitionPending=$true}
+        )
+        . $script:preparationLoop
+        $appResults.Count | Should -Be 2
+        @($appResults | Where-Object Status -eq Failed).Count | Should -Be 2
+        $script:preInstallResult=[pscustomobject]@{DeploymentId=$manifest.DeploymentId;Packages=@($appResults | ForEach-Object {$_})}
+        foreach($app in $builtInApps){
+            (New-RunnerAppResult -App $app -Status Failed).AcquisitionOutcome | Should -Be 'Failed'
+        }
+    }
+
 }

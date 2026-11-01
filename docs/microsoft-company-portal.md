@@ -1,10 +1,10 @@
 # Microsoft Company Portal (built-in)
 
-This optional integration provisions the official Microsoft Company Portal Preinstall Kit for **future Windows user profiles** during SetupComplete. OSDStage includes no Microsoft app binaries or licenses. Preparation happens on full Windows; WinPE and SetupComplete consume an already synchronized local cache.
+This optional integration provisions the official Microsoft Company Portal Preinstall Kit for **future Windows user profiles** during SetupComplete. OSDStage includes no Microsoft app binaries or licenses. WinPE stages deployment intent and any validated cached kit. During SetupComplete, PreInstall checks the official kit and refreshes the connected OSDCloud cache automatically, or downloads to the local Windows disk when no USB is present.
 
-## Preparation PC (full Windows)
+## Optional cache preparation (full Windows)
 
-Connect the OSDCloud USB device and run:
+For a fully offline deployment, connect the OSDCloud USB device and run:
 
 
 ~~~powershell
@@ -33,7 +33,7 @@ The tested Microsoft kit contained Company Portal **11.2.1495.0**. That is an ob
 Import-Module OSDStage
 Set-OSDStageConfiguration -CacheVolumeLabel OSDCloud -CleanupMode OnSuccess
 Add-OSDStageMicrosoftCompanyPortal -Architecture x64
-Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure
+Test-OSDStageDeployment -ThrowOnFailure
 ~~~
 
 During first boot, SetupComplete uses `Add-AppxProvisionedPackage -Online` with the app bundle, offline license and five dependencies, using `-Regions all`. Company Portal is then available to provision for new user profiles. Check after Autopilot sign-in:
@@ -49,5 +49,6 @@ Get-AppxPackage -Name Microsoft.CompanyPortal | Select-Object Name, Version, Sta
 - Windows PowerShell 5.1 and 7 CI passed on PR #67.
 - Physical x64 staging, offline provisioning and post-Autopilot user registration succeeded on PC1.
 - A separate full-Windows x64 test downloaded the kit directly from Microsoft with **no** `-KitPath`: `Updated=True`, `CacheReused=False`, seven cached files, version 11.2.1495.0.
-- No network download takes place in WinPE or SetupComplete.
+- WinPE does not download the kit. Online PreInstall checks HTTP ETag (or Last-Modified plus content length), validates cached files and downloads when changed or when usable metadata is unavailable. Fully offline deployment still requires prepared content and `Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure`.
+- Automatic PreInstall acquisition is a new path; the historical physical tests above covered prepared-cache installation. Validate cold-cache and refreshed-cache runs before release.
 - ARM64 uses `-Architecture arm64` with the same Microsoft kit, but has **not** been physically tested. Interactive Intune registration and Store-update behavior were not separately validated by the preparation test.

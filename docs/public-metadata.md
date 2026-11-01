@@ -28,7 +28,7 @@ The catalog has `SchemaVersion: 2`, `Project: "OSDStage"` and a root `Packages` 
 | `RepositoryAlternative` | Explain the organization-maintained alternative |
 | `IconUrl` | Repository-hosted SVG icon for the card; see the relevant attribution |
 
-For `MicrosoftCompanyPortal`, `Acquisition=MicrosoftPreinstallKit` covers the default automatic Microsoft download and the optional `-KitPath` local-kit fallback. Both prepare the cache on full Windows. Its `SyncPhase=FullWindowsPreparation` is intentional; it does not download during SetupComplete.
+For `MicrosoftCompanyPortal`, `Acquisition=MicrosoftPreinstallKit` covers the default automatic Microsoft download and the optional `-KitPath` local-kit fallback. The Sync command optionally prepares the cache on full Windows. `SyncPhase=FullWindowsPreInstall` also supports automatic first-boot acquisition and cache refresh; a prepared USB is not required for an online deployment.
 
 Use `Id` as the card key rather than display name. Render optional fields only when available. Coordinate schema changes with external consumers; old field aliases are not provided.
 

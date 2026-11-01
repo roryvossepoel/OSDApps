@@ -23,7 +23,7 @@ Keep architecture in its own field and directory. Different configurations use d
 
 ## Cache behavior
 
-Preparing a USB content cache is optional. Repository staging synchronizes selected content from the configured catalog unless explicitly told to skip refresh. Most built-ins stage intent in WinPE and acquire or refresh content during full-Windows PreInstall, with an available OSDCloud-labeled USB as cache. Company Portal and CMTrace Open retain their documented pre-cache requirement. Configuration-only commands do not need downloadable content.
+Preparing a USB content cache is optional. Repository staging synchronizes selected content from the configured catalog unless explicitly told to skip refresh. Most built-ins stage intent in WinPE and acquire or refresh content during full-Windows PreInstall, with an available OSDCloud-labeled USB as cache. Company Portal and CMTrace Open follow this automatic acquisition path too; pre-caching is required only for a fully offline deployment. Configuration-only commands do not need downloadable content.
 
 An empty OSDStage cache is a normal starting state. Existing integrity, transaction and incomplete-metadata recovery behavior remains in place within that cache. Renaming does not copy or delete an OSDApps cache. For disconnected deployment, populate the new cache explicitly before use.
 
