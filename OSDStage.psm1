@@ -8,6 +8,7 @@ $moduleRoot = $PSScriptRoot
 . (Join-Path $moduleRoot 'Runtime\OSDStageDriver.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDStageCertificate.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDStagePayloadFile.ps1')
+. (Join-Path $moduleRoot 'Runtime\OSDStageOnlineApps.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDStage7Zip.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDStageVisualStudioCode.ps1')
 . (Join-Path $moduleRoot 'Runtime\OSDStagePrerequisite.ps1')

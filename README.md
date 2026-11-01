@@ -55,7 +55,7 @@ OSDStage discovers the offline Windows installation, prepares SetupComplete and 
 - **With an OSDCloud-labeled USB flash drive:** matching cached content is staged as fallback. SetupComplete checks for updates and can refresh the cache. Leave the USB flash drive connected until OOBE appears.
 - **Without a USB flash drive:** SetupComplete downloads built-in content directly to local staging. Keep the PC online until OOBE appears.
 
-Company Portal and CMTrace Open are pre-cached exceptions: run their Sync commands on full Windows before WinPE staging. Neither downloads during SetupComplete.
+Company Portal and CMTrace Open also support online acquisition during SetupComplete. A detected OSDCloud USB cache is checked and refreshed automatically; without USB, content is acquired on the Windows disk. Prepare verified content in advance only when you need a fully offline deployment.
 
 Keep networking available for either online route. No module copy on the USB flash drive is needed when loading from the Gallery. For a fully disconnected deployment, [prepare matching content and save the module first](Examples/WinPE-Offline.md).
 
@@ -75,8 +75,8 @@ The optional Windows Inbox Cleanup script is staged with `Add-OSDStageWindowsInb
 | --- | --- |
 | Microsoft 365 Apps | `Add-OSDStageMicrosoft365Apps` |
 | Microsoft Teams | `Add-OSDStageMicrosoftTeams` |
-| Microsoft Company Portal (pre-cached) | `Add-OSDStageMicrosoftCompanyPortal` |
-| CMTrace Open (pre-cached) | `Add-OSDStageCMTraceOpen` |
+| Microsoft Company Portal | `Add-OSDStageMicrosoftCompanyPortal` |
+| CMTrace Open | `Add-OSDStageCMTraceOpen` |
 | Adobe Acrobat Unified | `Add-OSDStageAdobeAcrobatUnified` |
 | Google Chrome Enterprise | `Add-OSDStageGoogleChromeEnterprise` |
 | Mozilla Firefox Enterprise | `Add-OSDStageMozillaFirefoxEnterprise` |

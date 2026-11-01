@@ -175,7 +175,7 @@ function Test-OSDStageDeployment {
         if ($queueValid) { "App queue contains $($apps.Count) unique valid entries." } else { 'App queue is empty, contains duplicate IDs, or contains an invalid ID.' }
     )
 
-    $runtimeFiles = @('Invoke-OSDStagePreInstall.ps1', 'Invoke-OSDStageRunner.ps1', 'Restore-OSDStageCacheGeneration.ps1', 'Assert-OSDStageTransactionSpace.ps1', 'Enter-OSDStageCacheLock.ps1', 'Test-OSDStageOfficeCacheCompatibility.ps1', 'OSDStageSleepPrevention.ps1', 'OSDStagePayloadFile.ps1','OSDStage7Zip.ps1','OSDStageVisualStudioCode.ps1','OSDStagePrerequisite.ps1','OSDStageFont.ps1','OSDStageCertificate.ps1','OSDStageDriver.ps1', 'Invoke-OSDStageBuiltInCacheTransaction.ps1')
+    $runtimeFiles = @('OSDStageOnlineApps.ps1', 'Invoke-OSDStagePreInstall.ps1', 'Invoke-OSDStageRunner.ps1', 'Restore-OSDStageCacheGeneration.ps1', 'Assert-OSDStageTransactionSpace.ps1', 'Enter-OSDStageCacheLock.ps1', 'Test-OSDStageOfficeCacheCompatibility.ps1', 'OSDStageSleepPrevention.ps1', 'OSDStagePayloadFile.ps1','OSDStage7Zip.ps1','OSDStageVisualStudioCode.ps1','OSDStagePrerequisite.ps1','OSDStageFont.ps1','OSDStageCertificate.ps1','OSDStageDriver.ps1', 'Invoke-OSDStageBuiltInCacheTransaction.ps1')
     $runtimeMissing = @($runtimeFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stageRoot $_) -PathType Leaf) })
     Add-DeploymentCheck -Name 'RuntimeScripts' -Passed ($runtimeMissing.Count -eq 0) -Required $true -Message $(
         if ($runtimeMissing.Count -eq 0) { 'Standalone runtime scripts and shared cache helpers are staged.' } else { "Missing runtime script(s): $($runtimeMissing -join ', ')." }
@@ -245,6 +245,11 @@ function Test-OSDStageDeployment {
             }
             $payloadReady = ($payloadReady -and $integrityValid)
             $detail = if ($payloadReady) { 'Repository archive is present and SHA-256 validated.' } else { 'Repository archive is missing, malformed, or failed SHA-256 validation.' }
+        }
+        elseif (Test-OSDStageOnlineAppIntent -App $app) {
+            $definitionValid = $true
+            $networkRequired = $true
+            $detail = 'Online acquisition is required during SetupComplete; no validated payload is staged.'
         }
         elseif ($source -eq 'BuiltIn' -and $id -eq 'CMTraceOpen') {
             $expectedName = 'CMTrace-Open_{0}_{1}.msi' -f [string]$app.Version,[string]$app.Architecture
@@ -616,9 +621,10 @@ function Test-OSDStageDeployment {
             $detail = "Unsupported app source '$source'."
         }
 
+        if ($id -in @('MicrosoftCompanyPortal','CMTraceOpen') -and $definitionValid -and -not $payloadReady) { $networkRequired = $true }
         $offlinePayloadReady = $payloadReady -and -not $appNetworkRequired
         if (-not $offlinePayloadReady) { $allPayloadsReady = $false }
-        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
+        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript')) -or $payloadReady))
         Add-DeploymentCheck -Name 'AppDefinition' -AppId $id -Passed $appRequiredStateValid -Required $true -Message "${id}: $detail"
         Add-DeploymentCheck -Name 'OfflinePayload' -AppId $id -Passed $offlinePayloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
 

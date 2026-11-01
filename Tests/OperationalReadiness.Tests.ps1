@@ -25,6 +25,7 @@ Describe 'Operational readiness and deployment results' {
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Test-OSDStageOfficeCacheCompatibility.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStageSleepPrevention.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStagePayloadFile.ps1') -Destination $stage
+            Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStageOnlineApps.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStage7Zip.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStageVisualStudioCode.ps1') -Destination $stage
             Copy-Item -LiteralPath (Join-Path $script:moduleRoot 'Runtime\OSDStagePrerequisite.ps1') -Destination $stage

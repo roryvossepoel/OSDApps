@@ -227,8 +227,7 @@ function New-RunnerAppResult {
     # Only current, uniquely correlated PreInstall evidence may describe acquisition.
     # CacheInfo.json still supplies content identity, never per-deployment flags.
     $hasAcquisitionPhase = ([string]$App.Source -eq 'BuiltIn' -and
-        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and
-        [string]$App.Id -ne 'CMTraceOpen')
+        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript'))
     $acquisitionOutcome = if ($hasAcquisitionPhase) { 'Unknown' } else { 'NotApplicable' }
     $cacheUsed = $null
     $packageUpdated = $null
@@ -429,6 +428,12 @@ try {
         throw (New-RunnerFailureException -Message 'Device manifest contains an invalid or duplicate app Id.' -FailureType 'ManifestInvalid' -Fatal)
     }
 
+    $preInstallFailures = @{}
+    if ($preInstallResult) {
+        foreach ($record in @($preInstallResult.Packages)) {
+            if ([string]$record.Status -eq 'Failed') { $preInstallFailures[[string]$record.Id] = $record }
+        }
+    }
     $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle')
     foreach ($app in $apps) {
         $id = [string]$app.Id
@@ -548,7 +553,8 @@ try {
             }
         }
         if ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'CompanyPortalAppxBundle' -and
-            -not (Test-OSDStageCompanyPortalDefinition -App $app)) {
+            -not (Test-OSDStageCompanyPortalDefinition -App $app) -and
+            -not ((Test-OSDStageOnlineAppIntent -App $app) -and $preInstallFailures.ContainsKey($id))) {
             throw (New-RunnerFailureException -Message 'Invalid Company Portal built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
         }
         if ($source -eq 'BuiltIn' -and [string]$app.Type -notin $supportedBuiltInTypes) {
@@ -741,13 +747,15 @@ try {
     }
 
     foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'CompanyPortalAppxBundle' })) {
+        if ($preInstallFailures.ContainsKey([string]$app.Id)) { continue }
         try { Assert-OSDStageCompanyPortalFiles -App $app -StagedPath $StagedPath }
         catch { throw (New-RunnerFailureException -Message $_.Exception.Message -FailureType 'HashMismatch' -AppId ([string]$app.Id) -Fatal) }
         Write-RunnerLog -LogPath $logPath -Event 'BuiltInAppxIntegrityValidated' -Message 'Company Portal vendor bundle, license and dependencies validated.' -Data @{Id=$app.Id}
     }
 
-    # CMTrace Open is pre-cached on full Windows; validate again before invoking MSI.
+    # Validate the acquired or offline-cached release again before invoking MSI.
     foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Id -eq 'CMTraceOpen' })) {
+        if ($preInstallFailures.ContainsKey([string]$app.Id)) { continue }
         $expectedFile = 'CMTrace-Open_{0}_{1}.msi' -f [string]$app.Version,[string]$app.Architecture
         $relative = 'BuiltIn\CMTraceOpen\' + [string]$app.Architecture + '\' + $expectedFile
         if ([string]$app.Version -notmatch '^\d+\.\d+\.\d+$' -or

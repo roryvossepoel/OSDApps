@@ -293,7 +293,7 @@
       "Source": "BuiltIn",
       "Vendor": "Microsoft",
       "Acquisition": "MicrosoftPreinstallKit",
-      "SyncPhase": "FullWindowsPreparation",
+      "SyncPhase": "FullWindowsPreInstall",
       "AddCommand": "Add-OSDStageMicrosoftCompanyPortal",
       "SyncCommand": "Sync-OSDStageMicrosoftCompanyPortal",
       "Architectures": [
@@ -311,7 +311,7 @@
       "Source": "BuiltIn",
       "Vendor": "CMTrace Open",
       "Acquisition": "GitHubReleaseMsi",
-      "SyncPhase": "FullWindowsPreparation",
+      "SyncPhase": "FullWindowsPreInstall",
       "AddCommand": "Add-OSDStageCMTraceOpen",
       "SyncCommand": "Sync-OSDStageCMTraceOpen",
       "Architectures": [

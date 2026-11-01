@@ -2,7 +2,7 @@
 
 This optional built-in installs the CMTrace Open MSI sourced directly from [adamgell/cmtraceopen GitHub releases](https://github.com/adamgell/cmtraceopen/releases). No binary is committed to OSDStage.
 
-## Full Windows preparation
+## Optional full Windows preparation
 
 ```powershell
 Import-Module OSDStage
@@ -22,10 +22,10 @@ The confirmed upstream release on 24 October 2026 is **1.6.3**. Upstream asset S
 Import-Module OSDStage
 Set-OSDStageConfiguration -CacheVolumeLabel OSDCloud -CleanupMode OnSuccess
 Add-OSDStageCMTraceOpen -Architecture x64 -DisableUpdateChecks $true
-Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure
+Test-OSDStageDeployment -ThrowOnFailure
 ```
 
-The built-in uses a **pre-synchronized MSI**, rather than downloading the MSI during SetupComplete. OSDStage retains the upstream vendor filename (for x64 release 1.6.3, `CMTrace-Open_1.6.3_x64.msi`). Build a fresh cache; no generic-filename cache is accepted or converted. It reuses the existing built-in VendorMsi runner with `/qn /norestart` and optional `DISABLEUPDATECHECKS=1`. MSI hash and Authenticode checks run again before installation.
+The built-in stages intent and any validated cached MSI. Online PreInstall checks the latest stable upstream release, reuses an unchanged validated MSI or downloads a new one. It updates a connected OSDCloud cache automatically; without USB, it acquires directly to the Windows disk. OSDStage retains the upstream vendor filename (for x64 release 1.6.3, `CMTrace-Open_1.6.3_x64.msi`). Unsupported or corrupt cache is not staged as trusted content; online PreInstall downloads a fresh validated release. For a fully offline deployment, prepare content using Sync first and validate with `Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure`. It reuses the existing built-in VendorMsi runner with `/qn /norestart` and optional `DISABLEUPDATECHECKS=1`. MSI hash and Authenticode checks run again before installation.
 
 ## Validation and remaining tests
 
@@ -33,3 +33,4 @@ The built-in uses a **pre-synchronized MSI**, rather than downloading the MSI du
 - Physical x64 validation on PC1 succeeded: SetupComplete checked SHA-256 and Authenticode, silently installed CMTrace Open 1.6.3 with exit code 0, and the Windows uninstall inventory confirmed 1.6.3.
 - The update-check setting was passed as `DISABLEUPDATECHECKS=1` during the successful install.
 - ARM64 deployment and end-user functional behavior were not independently validated.
+- Automatic PreInstall acquisition is new; the historical physical tests above covered prepared-cache installation. Cold-cache and refreshed-cache deployment still need physical acceptance.

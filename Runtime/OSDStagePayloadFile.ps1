@@ -310,3 +310,20 @@ function Assert-OSDStageCompanyPortalFiles {
         }
     }
 }
+
+function Test-OSDStageOnlineAppIntent {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$App)
+    $pending = $App.PSObject.Properties['AcquisitionPending']
+    if (-not $pending -or $pending.Value -isnot [bool] -or -not $pending.Value -or
+        [string]$App.Source -ne 'BuiltIn' -or [string]$App.PackageType -ne 'App' -or
+        [string]$App.Architecture -notin @('x64','arm64')) { return $false }
+    $validType = ([string]$App.Id -eq 'CMTraceOpen' -and [string]$App.Type -eq 'VendorMsi') -or
+        ([string]$App.Id -eq 'MicrosoftCompanyPortal' -and [string]$App.Type -eq 'CompanyPortalAppxBundle')
+    if (-not $validType) { return $false }
+    # Pending intent cannot smuggle payload paths or pretend to have validated hashes.
+    foreach ($name in @('Package','License','Dependencies','FileHashes','ExpectedSha256')) {
+        if ($App.PSObject.Properties[$name] -and $App.PSObject.Properties[$name].Value) { return $false }
+    }
+    $true
+}

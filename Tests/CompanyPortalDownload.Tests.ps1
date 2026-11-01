@@ -4,6 +4,8 @@ Describe 'Microsoft Company Portal automatic Preinstall Kit download' {
         Import-Module (Join-Path $root 'OSDStage.psd1') -Force
     }
 
+    BeforeEach { Mock Invoke-WebRequest -ModuleName OSDStage { [pscustomobject]@{Headers=@{ETag='kit-v1'}} } }
+
     It 'allows synchronization without supplying KitPath' {
         $command = Get-Command Sync-OSDStageMicrosoftCompanyPortal -Module OSDStage
         $parameter = $command.Parameters['KitPath']
@@ -56,9 +58,14 @@ Describe 'Microsoft Company Portal automatic Preinstall Kit download' {
                 $path = Join-Path $result.CachePath $entry.Path
                 (Get-FileHash $path).Hash | Should -Be $entry.Sha256
             }
+            (Sync-OSDStageMicrosoftCompanyPortal -Architecture x64 -Confirm:$false).Updated | Should -BeFalse
+            Should -Invoke Save-OSDStageDownload -Times 1 -Exactly
+            Mock Invoke-WebRequest { [pscustomobject]@{Headers=@{ETag='kit-v2'}} }
+            (Sync-OSDStageMicrosoftCompanyPortal -Architecture x64 -Confirm:$false).Updated | Should -BeTrue
+            Should -Invoke Save-OSDStageDownload -Times 2 -Exactly
             $info.Files.Path | Should -Not -Contain 'Bundle.appxbundle'
             $info.Files.Path | Should -Not -Contain 'License.xml'
-            Should -Invoke Save-OSDStageDownload -Times 1 -Exactly -ParameterFilter { $ExpectedExtension -eq '.zip' -and $Uri -like 'https://download.microsoft.com/*' }
+            Should -Invoke Save-OSDStageDownload -Times 2 -Exactly -ParameterFilter { $ExpectedExtension -eq '.zip' -and $Uri -like 'https://download.microsoft.com/*' }
         }
     }
 

@@ -37,7 +37,7 @@ Describe 'Built-in metadata' {
                 $app.SyncPhase | Should -Be 'None'
             }
             elseif ($app.Id -in @('MicrosoftCompanyPortal','CMTraceOpen')) {
-                $app.SyncPhase | Should -Be 'FullWindowsPreparation'
+                $app.SyncPhase | Should -Be 'FullWindowsPreInstall'
             }
             else {
                 $app.SyncPhase | Should -Be 'FullWindowsPreInstall'

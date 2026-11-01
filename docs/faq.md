@@ -32,8 +32,8 @@ See [capabilities](windows-capabilities.md) and [the language evaluation](langua
 For a normal online run, no separate cache-preparation pass is needed. OSDStage
 uses a detected volume labeled `OSDCloud` automatically and resolves its drive
 letter each time. Repository Add commands acquire their selected content;
-most vendor built-ins acquire during full-Windows PreInstall. Company Portal
-and CMTrace Open still require full-Windows pre-caching. Fully offline deployment
+vendor built-ins, including Company Portal and CMTrace Open, acquire and check
+for updated content during full-Windows PreInstall. Fully offline deployment
 requires matching verified content in advance. Loading the module and preparing
 bootable OSDCloud media are separate from caching payloads.
 
@@ -80,7 +80,7 @@ See [Architecture](architecture.md) and [Microsoft 365 Apps options](built-in-ap
 
 The public `Sync-OSDStageMicrosoftTeams` command **rejects WinPE**. Downloading Teams files may be technically possible there, but that is not the supported OSDStage built-in synchronization path.
 
-Vendor built-ins stage in WinPE and acquire through full-Windows Sync commands or, where supported, standalone PreInstall. Company Portal and CMTrace Open require pre-caching; configuration-only built-ins have no vendor download. The MSI/EXE signature policy is enforced in full Windows, not bypassed by treating WinPE as another Sync environment.
+Vendor built-ins stage in WinPE and acquire through full-Windows Sync commands or, where supported, standalone PreInstall. Company Portal and CMTrace Open use the same online preparation phase; configuration-only built-ins have no vendor download. The MSI/EXE signature policy is enforced in full Windows, not bypassed by treating WinPE as another Sync environment.
 
 ## What happens when an older USB has legacy built-in cache metadata?
 
@@ -88,7 +88,7 @@ For built-ins that acquire a recorded primary payload, missing or unsupported `C
 
 A replacement is downloaded and validated before the old USB generation is retired. A failed refresh preserves the old generation; preserving it does not make it trusted or eligible for installation. OSDStage does not guess an installer filename or invent verification metadata for old bytes. Existing checks for hash mismatches, publisher signatures and filesystem links remain in force.
 
-An online run needs network access to obtain the replacement. If no supported, verified fallback exists while offline, acquisition reports that a download is required. `Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure` still rejects a deployment that needs a download; a legacy cache cannot satisfy an explicitly offline-only preflight. Company Portal, CMTrace Open and the separate Office cache model retain their own preparation and validation requirements.
+An online run needs network access to obtain the replacement. If no supported, verified fallback exists while offline, acquisition reports that a download is required. `Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure` still rejects a deployment that needs a download; a legacy cache cannot satisfy an explicitly offline-only preflight. Company Portal and CMTrace Open also stage online acquisition intent when old cache content cannot be validated. The separate Office cache model retains its compatibility and validation requirements.
 
 ## What if I need Office or Teams fully managed in WinPE?
 
@@ -115,7 +115,7 @@ An existing manifest means that target already has OSDStage staging; it does not
 
 ## Do built-in apps require an OSDCloud USB flash drive?
 
-Most built-ins can stage intent without a cache volume and acquire their content during online PreInstall. **Company Portal and CMTrace Open must be synchronized on full Windows first and staged from the populated cache.** They do not download during SetupComplete. Repository Add commands can use a temporary cache on the offline Windows disk when no USB cache is present.
+Built-in vendor apps, including Company Portal and CMTrace Open, can stage intent without a cache volume and acquire content during online PreInstall. A connected OSDCloud cache is refreshed automatically; without it, content is acquired on the local Windows disk. Verified cached content can be used offline or after a failed refresh, with that outcome recorded explicitly. Repository Add commands can use a temporary cache on the offline Windows disk when no USB cache is present.
 
 A volume with the configured label, `OSDCloud` by default, is automatically used as the cache when present. Keep module files and installer cache content conceptually separate: `\Modules` is a convenient module location; `\OSDStage` is the cache directory.
 
