@@ -20,3 +20,20 @@ function openGuide() {
 }
 window.addEventListener('hashchange', openGuide);
 openGuide();
+
+// Animate once as lower sections enter. Content stays visible without JS,
+// without IntersectionObserver, and when reduced motion is requested.
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+if (!reducedMotion.matches && 'IntersectionObserver' in window) {
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('scroll-revealed');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, {threshold: 0.08});
+  document.querySelectorAll('.flow-strip, .home-bottom, .instruction, .next-step, .site-footer').forEach(section => {
+    if (section.getBoundingClientRect().top >= window.innerHeight) observer.observe(section);
+  });
+}
