@@ -7,11 +7,11 @@ The staged queue is not proof of successful installation.
 
 ## Staged queue
 
-![Historical OSDApps Viewer: three staged applications](images/viewer-staged-winpe.png)
+![Historical OSDApps Viewer: three staged apps](images/viewer-staged-winpe.png)
 
 ## Available packages
 
-![Historical OSDApps Viewer: available applications](images/viewer-apps-winpe.png)
+![Historical OSDApps Viewer: available apps](images/viewer-apps-winpe.png)
 
 ## USB cache
 

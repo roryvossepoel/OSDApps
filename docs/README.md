@@ -27,7 +27,7 @@ OSDStage is CLI-first. Use PowerShell to configure, cache and stage software and
 | [Repository packages](repository.md) | Catalog/alias structure, package authoring, cache health, transactional reconciliation and SHA-256 integrity |
 | [Viewers](viewer.md) | Windows deployment inspector versus web catalog browser; read-only boundaries |
 | [Registry](registry-staging.md), [variables](environment-variables.md), [services](services.md) | Explicit machine settings applied once during SetupComplete |
-| [Certificates](certificate-staging.md), [drivers](driver-packages.md), [fonts](repository.md) | Typed repository payloads and machine-wide application |
+| [Certificates](certificate-staging.md), [drivers](driver-packages.md), [fonts](repository.md) | Typed repository payloads and machine-wide installation |
 | [Wi-Fi](wifi-staging.md) | WLAN XML or parameters, profile import and credential cleanup |
 | [Start/taskbar pins](desktop-settings.md) | Explicit pin lists and documented limitations |
 | [Windows capabilities](windows-capabilities.md) | Add/remove Features on Demand on Windows 11 25H2 and later |

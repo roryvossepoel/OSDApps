@@ -17,7 +17,7 @@ The catalog has `SchemaVersion: 2`, `Project: "OSDStage"` and a root `Packages` 
 | Field | Viewer use |
 | --- | --- |
 | `Id`, `DisplayName`, `Vendor` | Stable key and human-readable label |
-| `PackageType` | `App` for vendor applications or `Script` for built-in configuration handlers |
+| `PackageType` | `App` for vendor apps or `Script` for built-in configuration handlers |
 | `Source`, `Acquisition`, `SyncPhase` | Distinguish ownership and acquisition phase. `FullWindowsPreparation` means the cache must be prepared before WinPE; `FullWindowsPreInstall` permits first-boot acquisition; `None` identifies handlers with no downloadable content. |
 | `AddCommand`, `SyncCommand` | Show ready-to-copy PowerShell examples |
 | `Architectures`, `DefaultArchitecture` | Selectable architectures, not necessarily field-validated ones. DefaultArchitecture is null when an explicit selection is required. |
