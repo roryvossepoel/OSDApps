@@ -114,10 +114,21 @@ Describe 'Current-deployment cache flags (issue 74)' {
         $result.AcquisitionOutcome | Should -Be Unknown
     }
 
+    It 'reports current acquisition evidence for <Id>' -TestCases @(
+        @{Id='MicrosoftCompanyPortal';Type='CompanyPortalAppxBundle'}
+        @{Id='CMTraceOpen';Type='VendorMsi'}
+    ) {
+        param($Id,$Type)
+        $app.Id=$Id; $app.Type=$Type
+        $entry.Id=$Id
+        $result = New-RunnerAppResult -App $app -Status Succeeded
+        $result.AcquisitionOutcome | Should -Be CacheReused
+        $result.PackageUpdated | Should -BeFalse
+        $result.CacheUsed | Should -BeFalse
+    }
+
     It 'reports NotApplicable for <Id>, with no invented acquisition flags' -TestCases @(
         @{Id='WindowsInboxCleanup';Type='WindowsInboxCleanupScript';Source='BuiltIn'}
-        @{Id='MicrosoftCompanyPortal';Type='CompanyPortalAppxBundle';Source='BuiltIn'}
-        @{Id='CMTraceOpen';Type='VendorMsi';Source='BuiltIn'}
         @{Id='RegistrySettings';Type='RepositoryPackage';Source='Repository'}
     ) {
         param($Id,$Type,$Source)

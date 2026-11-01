@@ -179,3 +179,40 @@ Describe 'Standalone online app PreInstall routing' {
     }
 
 }
+
+Describe 'Runner handling of unsuccessful online preparation' {
+    It 'records both unprepared apps as failed without attempting installation' -Skip:($env:OS -ne 'Windows_NT') {
+        $stage=Join-Path $TestDrive 'pending-runner'
+        $resultPath=Join-Path $stage 'Results/Latest.json'
+        New-Item -ItemType Directory (Split-Path $resultPath -Parent) -Force | Out-Null
+        $deploymentId=[guid]::NewGuid().Guid
+        $packages=@(
+            @{Id='MicrosoftCompanyPortal';Source='BuiltIn';Type='CompanyPortalAppxBundle';PackageType='App';Architecture='x64';AcquisitionPending=$true},
+            @{Id='CMTraceOpen';Source='BuiltIn';Type='VendorMsi';PackageType='App';Architecture='x64';AcquisitionPending=$true}
+        )
+        @{SchemaVersion=2;DeploymentId=$deploymentId;Packages=$packages;Runtime=@{CleanupMode='Never';PreventSleep=$false;ResultPath=$resultPath;LogPath=(Join-Path $stage 'Runtime.log')}} |
+            ConvertTo-Json -Depth 10 | Set-Content (Join-Path $stage 'DeviceManifest.json') -Encoding UTF8
+        @{DeploymentId=$deploymentId;Phase='PreInstall';Status='CompletedWithErrors';Packages=@(
+            @{Id='MicrosoftCompanyPortal';Status='Failed';AcquisitionOutcome='Failed';Error='No source available';FailureType='RemoteAcquisition'},
+            @{Id='CMTraceOpen';Status='Failed';AcquisitionOutcome='Failed';Error='No source available';FailureType='RemoteAcquisition'}
+        )} | ConvertTo-Json -Depth 10 | Set-Content (Join-Path (Split-Path $resultPath -Parent) 'PreInstall.json') -Encoding UTF8
+        $start=[Diagnostics.ProcessStartInfo]::new()
+        $start.FileName=(Get-Process -Id $PID).Path
+        $start.Arguments='-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{0}" -StagedPath "{1}"' -f (Join-Path $root 'Runtime/Invoke-OSDStageRunner.ps1'),$stage
+        $start.UseShellExecute=$false; $start.CreateNoWindow=$true
+        $start.RedirectStandardOutput=$true; $start.RedirectStandardError=$true
+        $process=[Diagnostics.Process]::new(); $process.StartInfo=$start
+        try {
+            [void]$process.Start()
+            $stdout=$process.StandardOutput.ReadToEndAsync(); $stderr=$process.StandardError.ReadToEndAsync()
+            if(-not $process.WaitForExit(30000)){ $process.Kill(); throw 'Runner timed out.' }
+            [void][Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]@($stdout,$stderr),5000)
+            $process.ExitCode | Should -Be 1
+        } finally { if(-not $process.HasExited){$process.Kill()}; $process.Dispose() }
+        $result=Get-Content $resultPath -Raw | ConvertFrom-Json
+        $result.FailedPackageCount | Should -Be 2
+        $result.SkippedPackageCount | Should -Be 0
+        @($result.Packages | Where-Object AcquisitionOutcome -eq Failed).Count | Should -Be 2
+        @($result.Packages | Where-Object FailureType -eq RemoteAcquisition).Count | Should -Be 2
+    }
+}
