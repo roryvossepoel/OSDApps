@@ -126,7 +126,7 @@ Describe 'Maintenance USB inspection with the real module' {
         $script:usb = Join-Path $TestDrive 'Usb'
         $script:moduleRoot = Join-Path $usb "Modules/OSDStage/$version"
         New-Item -ItemType Directory -Path $moduleRoot -Force | Out-Null
-        foreach ($item in @('OSDStage.psd1','OSDStage.psm1','Public','Private','Runtime','metadata')) {
+        foreach ($item in @('OSDStage.psd1','OSDStage.psm1','OSDStage.format.ps1xml','Public','Private','Runtime','metadata')) {
             Copy-Item -LiteralPath (Join-Path $root $item) -Destination $moduleRoot -Recurse
         }
         $script:cache = Join-Path $usb 'OSDStage'
