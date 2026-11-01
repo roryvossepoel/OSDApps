@@ -12,11 +12,11 @@ function Add-OSDStageOnlineApp {
     $stage = Join-Path $target 'Windows\Temp\OSDStage'
     $relative = 'BuiltIn\' + $Id + '\' + $Architecture
     $destination = Join-Path $stage $relative
-    $cache = $null
-    try { $cache = Get-OSDStageCachePath } catch { Write-Verbose 'No cache volume; acquire directly during SetupComplete.' }
+    $detectedCachePath = $null
+    try { $detectedCachePath = Get-OSDStageCachePath } catch { Write-Verbose 'No cache volume; acquire directly during SetupComplete.' }
     $entry = $null
-    if ($cache) {
-        try { $entry = Get-OSDStageOnlineAppCacheEntry -CachePath $cache -Id $Id -Architecture $Architecture }
+    if ($detectedCachePath) {
+        try { $entry = Get-OSDStageOnlineAppCacheEntry -CachePath $detectedCachePath -Id $Id -Architecture $Architecture }
         catch { Write-Verbose 'Cache is unavailable or invalid; a validated download is required during SetupComplete.' }
     }
     $cached = $null -ne $entry
@@ -36,7 +36,7 @@ function Add-OSDStageOnlineApp {
     if (Test-Path -LiteralPath $destination) { Remove-Item -LiteralPath $destination -Recurse -Force -ErrorAction Stop }
     New-Item -ItemType Directory -Path $destination -Force -ErrorAction Stop | Out-Null
     if ($cached) {
-        Copy-Item -Path (Join-Path (Join-Path $cache $relative) '*') -Destination $destination -Recurse -Force -ErrorAction Stop
+        Copy-Item -Path (Join-Path (Join-Path $detectedCachePath $relative) '*') -Destination $destination -Recurse -Force -ErrorAction Stop
         Get-OSDStageOnlineAppCacheEntry -CachePath $stage -Id $Id -Architecture $Architecture | Out-Null
     }
     $manifestPath = Join-Path $stage 'DeviceManifest.json'
