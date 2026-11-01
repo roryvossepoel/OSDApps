@@ -6,6 +6,7 @@
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
     Description       = 'Stage software and device configuration before OOBE, with built-in integrations, repository packages and optional OSDCloud USB caching.'
     PowerShellVersion = '5.1'
+    FormatsToProcess  = @('OSDStage.format.ps1xml')
     FunctionsToExport = @(
         'Set-OSDStageConfiguration',
         'Get-OSDStageConfiguration',

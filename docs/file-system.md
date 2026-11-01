@@ -87,7 +87,15 @@ attempted. No reboot, recurring task or post-login repair is added.
 Use [the disposable test example](../Examples/Stage-OSDStageFileSystemTest.ps1)
 for physical acceptance. It only touches a unique test directory. Automated
 tests cover staging integrity, encodings, idempotence, replacement, recursive
-removal, read-only items, links and the Windows runner. Physical acceptance
-of this new feature remains pending.
+removal, read-only items, links and the Windows runner.
+
+Physical acceptance passed on **1 November 2026**: WinPE staging was valid and
+offline-ready, then all nine SetupComplete operations succeeded. Independent
+checks confirmed the replacement text (`after`), a zero-byte file, exact binary
+copy (`00-FF-0A-0D-80`), recursive directory removal and individual file removal.
+The test added an individual file create/remove pair to the seven-operation
+example. Read-only and link rejection remain automated-test evidence.
+Deployment ID: `82664f3f-ade5-426d-a523-21dd632c7a1c`.
+These commands are merged but are not in the published `1.0.0-rc1` module.
 
 [Back to documentation](README.md)

@@ -8,8 +8,9 @@ function New-OSDStageRepository {
     $appsPath = Join-Path $Path 'Packages'
     $catalogPath = Join-Path $Path 'catalog.json'
 
-    if ($PSCmdlet.ShouldProcess($Path, 'Create OSDStage repository structure')) {
-        New-Item -ItemType Directory -Path $appsPath -Force | Out-Null
+    $approved = $PSCmdlet.ShouldProcess($Path, 'Create OSDStage repository structure')
+    if ($approved) {
+        New-Item -ItemType Directory -Path $appsPath -Force -ErrorAction Stop | Out-Null
 
         if (-not (Test-Path -LiteralPath $catalogPath -PathType Leaf)) {
             [ordered]@{
@@ -18,14 +19,16 @@ function New-OSDStageRepository {
                 Packages  = @()
             } |
                 ConvertTo-Json -Depth 20 |
-                Set-Content -LiteralPath $catalogPath -Encoding UTF8
+                Set-Content -LiteralPath $catalogPath -Encoding UTF8 -ErrorAction Stop
         }
     }
 
-    [pscustomobject]@{
+    $result = [pscustomobject]@{
         PSTypeName = 'OSDStage.Repository'
         Path       = $Path
         Catalog    = $catalogPath
         PackagesPath   = $appsPath
     }
+    if (-not $approved) { $result.PSObject.TypeNames.Insert(0, 'OSDStage.RepositoryPlan') }
+    $result
 }

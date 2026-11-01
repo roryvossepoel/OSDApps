@@ -22,6 +22,7 @@ OSDStage is CLI-first. Use PowerShell to configure, cache and stage software and
 
 | Topic | Contents |
 | --- | --- |
+| [Console output](console-output.md) (unreleased) | Compact summaries, full result objects and diagnostic details |
 | [Built-in apps](built-in-apps.md) | Per-app configuration, architectures, vendor sources and signature/publisher policy |
 | [Initial default apps](default-associations.md) | File/protocol associations from parameters or XML, one-shot DISM import and physical acceptance |
 | [Repository packages](repository.md) | Catalog/alias structure, package authoring, cache health, transactional reconciliation and SHA-256 integrity |

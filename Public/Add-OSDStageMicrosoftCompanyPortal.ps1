@@ -53,6 +53,7 @@ function Add-OSDStageMicrosoftCompanyPortal {
     Add-OSDStageSetupComplete -WindowsPath $target -StagedRelativePath 'Windows\Temp\OSDStage' -Confirm:$false | Out-Null
 
     [pscustomobject]@{
+        PSTypeName='OSDStage.StagedApp'
         Name='MicrosoftCompanyPortal'; Source='BuiltIn'; PackageType='App'
         Version=[string]$info.Version; Architecture=$Architecture
         WindowsPath=$target; StagedPath=$destination
