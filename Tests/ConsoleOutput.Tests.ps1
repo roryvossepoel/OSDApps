@@ -43,6 +43,7 @@ Describe 'Compact default console output' {
         Format-Summary (New-Result CacheValidation @{CacheAvailable=$false; Valid=$false}) | Should -Be '[FAILED] Cache not found'
         Format-Summary (New-Result CacheValidation @{CacheAvailable=$true; Valid=$false; EntryCount=2; ValidEntryCount=1; InvalidEntryCount=1; SignatureChecksRequested=$true; SignatureChecksComplete=$false}) | Should -Be '[FAILED] Cache | 1/2 valid | 1 invalid | signatures incomplete'
         Format-Summary (New-Result CacheEntry @{Id='Broken'; Valid=$null}) | Should -Match '^\[UNKNOWN\]'
+        Format-Summary (New-Result CacheEntry @{Id='Unsigned'; Valid=$true; SignatureStatus='NotTrusted'}) | Should -Match '^\[REVIEW\].*signature NotTrusted'
         Format-Summary (New-Result DeploymentValidation @{Valid=$false; PackageCount=1; Checks=@([pscustomobject]@{Name='PayloadIntegrity';Required=$true;Passed=$false;Message='sensitive error'})}) | Should -Match 'failed checks: PayloadIntegrity'
         Format-Summary (New-Result RepositoryValidation @{Id='Broken';Valid=$false;HashValid=$false;Orphaned=$true}) | Should -Match 'failed: HashValid, Orphaned'
         Format-Summary (New-Result PackageValidation @{PackagePath='Package.zip';PackageType='Script';Valid=$false;PackageFolderExists=$true;InstallPs1Exists=$false}) | Should -Match 'Install.ps1 missing'

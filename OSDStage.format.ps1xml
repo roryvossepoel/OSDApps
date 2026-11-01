@@ -73,7 +73,14 @@
         }
         'OSDStage.RepositorySync' { '[SYNCED] Repository cache | {0}' -f (Read-Field 'FullName') }
         'OSDStage.App' { '[PACKAGE] {0} | {1} | {2}' -f $identity, (Read-Field 'Source'), (Read-Field 'Availability') }
-        'OSDStage.CacheEntry' { '[{0}] {1} | {2}' -f (Read-State 'Valid' 'VALID' 'INVALID'), $identity, (Read-Field 'Source') }
+        'OSDStage.CacheEntry' {
+            $state = Read-State 'Valid' 'VALID' 'INVALID'
+            $signature = Read-Field 'SignatureStatus'
+            # Valid describes payload integrity, not its publisher signature.
+            if ($state -eq 'VALID' -and $signature -and $signature -notin @('Valid','Not checked','Not assessed')) { $state = 'REVIEW' }
+            $detail = if ($signature) { ' | signature {0}' -f $signature } else { '' }
+            '[{0}] {1} | {2}{3}' -f $state, $identity, (Read-Field 'Source'), $detail
+        }
         'OSDStage.CacheHealthEntry' {
             '[{0}] {1} | integrity {2} | {3}' -f (Read-Field 'State'), $identity, (Read-Field 'Integrity'), (Read-Field 'Action')
         }
