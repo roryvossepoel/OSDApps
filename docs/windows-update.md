@@ -39,7 +39,7 @@ at execution time. The existing launcher controls the first Windows boot.
 | --- | --- |
 | Automatic Security Updates, Critical Updates, Definition Updates | Eligible when required metadata and every bundle member pass validation |
 | Upgrades, Feature Packs, Service Packs, general Updates and Update Rollups | Excluded; broad classifications can include enablement packages or non-security previews |
-| Optional/preview/interactive updates, mandatory-reboot handlers | Excluded |
+| Optional/preview/interactive updates, unknown reboot metadata | Excluded |
 | Missing, conflicting or unrecognized metadata, including bundled children | Skipped with a reason; never inferred safe from a title |
 | Drivers | Off by default |
 | Opted-in automatic hardware drivers | Restricted to Net, Display, Media, HIDClass, Bluetooth, Printer and Image classes with recognized PCI/USB/HID/Bluetooth/print hardware identities |
@@ -65,7 +65,8 @@ installs before drivers. Download and install results are checked per update;
 partial search/download success does not silently become success. An install
 failure stops the remaining update work.
 
-If WUA requires a restart, the report records it and any remaining updates are
+Updates that require a restart after installation remain eligible; requiring a
+restart is not permission to initiate one. If WUA requires a restart, the report records it and any remaining updates are
 deferred. There is no reboot call, OOBE task, background retry or restart loop.
 The outer deployment wrapper remains responsible for reboot decisions at a valid
 lifecycle point. SetupComplete must not be restarted expecting it to resume.
@@ -114,4 +115,5 @@ failure. Verify the release again after any later wrapper-controlled reboot.
 - [Classification GUIDs](https://learn.microsoft.com/en-us/powershell/module/updateservices/get-wsusclassification)
 - [Asynchronous WUA lifetime](https://learn.microsoft.com/en-us/windows/win32/wua_sdk/guidelines-for-asynchronous-wua-operations)
 - [BeginInstall](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdateinstaller-begininstall)
+- [Restart behavior metadata](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/ne-wuapi-installationrebootbehavior)
 - [SetupComplete constraints](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/add-a-custom-script-to-windows-setup)

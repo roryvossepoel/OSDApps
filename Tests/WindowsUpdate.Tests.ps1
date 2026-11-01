@@ -26,7 +26,7 @@ Describe 'Conservative Windows Update selection and execution' {
         $script:config=[pscustomobject]@{SchemaVersion=2;DeploymentId=[guid]::NewGuid().Guid;ResultPath=(Join-Path $TestDrive 'Results/WindowsUpdate-Result.json');IncludeDrivers=$false;ScanOnly=$false;TimeoutMinutes=5}
         $script:update=New-TestUpdate
         $script:updates=@($script:update)
-        $script:searchCode=2;$script:timedOut=$false;$script:downloadCode=2;$script:installCode=2;$script:reboot=$false
+        $script:searchCode=2;$script:timedOut=$false;$script:downloadCode=2;$script:installCode=2;$script:reboot=$false;$script:systemReboot=$false
         $script:installOrder=[Collections.Generic.List[string]]::new()
         $script:installer=[pscustomobject]@{IsBusy=$false;RebootRequiredBeforeInstallation=$false;ForceQuiet=$false;AllowSourcePrompts=$true;Updates=$null}
         $script:downloader=[pscustomobject]@{Updates=$null}
@@ -39,6 +39,7 @@ Describe 'Conservative Windows Update selection and execution' {
         Mock Write-OSDStageWindowsUpdateMessage {}
         Mock New-OSDStageWindowsUpdateComObject {
             if ($ProgId -eq 'Microsoft.Update.Session') { return $script:session }
+            if ($ProgId -eq 'Microsoft.Update.SystemInfo') { return [pscustomobject]@{RebootRequired=$script:systemReboot} }
             if ($ProgId -eq 'Microsoft.Update.UpdateColl') { return ,([Collections.ArrayList]::new()) }
             throw 'Unexpected COM object'
         }
@@ -59,6 +60,10 @@ Describe 'Conservative Windows Update selection and execution' {
             (Get-OSDStageWindowsUpdateSelection (New-TestUpdate -Title '累積更新プログラム' -Category $category)).Selected | Should -BeTrue
         }
     }
+    It 'allows cumulative updates that always require a later restart' {
+        $script:update.InstallationBehavior.RebootBehavior=1
+        (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeTrue
+    }
     It 'rejects feature upgrades, enablement classifications, unknown and conflicting classifications' {
         foreach ($category in @('3689bdc8-b205-4af4-8d4a-a63924c5e9d5','28bc880e-0592-4cbf-8f95-c79b17911d5f','b54e7d24-7add-428f-8b75-90a396fa584f','cd5ffd1e-e932-4e3a-bf74-18bf0b1bbd83','unknown')) {
             (Get-OSDStageWindowsUpdateSelection (New-TestUpdate -Title 'KB1234567' -Category $category)).Selected | Should -BeFalse
@@ -66,12 +71,12 @@ Describe 'Conservative Windows Update selection and execution' {
         $script:update.Categories+=@([pscustomobject]@{Type='UpdateClassification';CategoryID='3689bdc8-b205-4af4-8d4a-a63924c5e9d5'})
         (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeFalse
     }
-    It 'fails closed on optional, preview, interactive, mandatory-reboot or missing metadata' {
+    It 'fails closed on optional, preview, interactive or missing metadata' {
         foreach ($change in @(
             @{BrowseOnly=$true},@{AutoSelectOnWebSites=$false},@{Title='Cumulative Update Preview'},
             @{Title='Enablement package'},@{Categories=@()},@{BundledUpdates=$null},
             @{InstallationBehavior=[pscustomobject]@{CanRequestUserInput=$true;RebootBehavior=2}},
-            @{InstallationBehavior=[pscustomobject]@{CanRequestUserInput=$false;RebootBehavior=1}}
+            @{InstallationBehavior=[pscustomobject]@{CanRequestUserInput=$false;RebootBehavior=99}}
         )) {
             $u=New-TestUpdate
             foreach ($key in $change.Keys) { $u.$key=$change[$key] }
@@ -170,6 +175,15 @@ Describe 'Conservative Windows Update selection and execution' {
         $r.Status | Should -Be Failed
         $r.Items[0].InstallResultCode | Should -Be 4
         $r.RebootRequired | Should -BeTrue
+    }
+    It 'queries reboot state even when the installation API throws' {
+        $script:systemReboot=$true
+        Mock Invoke-OSDStageWindowsUpdateAsync { throw 'COM installation failure' } -ParameterFilter {$Phase -eq 'Install'}
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.Status | Should -Be Failed
+        $r.RebootRequired | Should -BeTrue
+        $r.RebootStateKnown | Should -BeTrue
+        $r.Items[0].Status | Should -Be InstallOutcomeUnknown
     }
     It 'records an unavailable update source and a busy installer as failures' {
         $script:installer.IsBusy=$true

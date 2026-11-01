@@ -54,10 +54,12 @@ function Get-OSDStageWindowsUpdateSelection {
         if ($Depth -gt 16) { throw 'BundleDepthExceeded' }
         if ($Update.IsInstalled -ne $false -or $Update.IsHidden -ne $false) { throw 'NotApplicable' }
         if ($Depth -eq 0 -and ($Update.BrowseOnly -ne $false -or $Update.AutoSelectOnWebSites -ne $true)) { throw 'NotAutomatic' }
+        # RebootBehavior=1 means a restart is required AFTER installation, not
+        # that WUA should initiate it. Cumulative updates must remain eligible.
         if ($null -eq $Update.InstallationBehavior -or
             $Update.InstallationBehavior.CanRequestUserInput -ne $false -or
             $null -eq $Update.InstallationBehavior.RebootBehavior -or
-            [int]$Update.InstallationBehavior.RebootBehavior -notin @(0,2)) { throw 'InteractiveOrMandatoryReboot' }
+            [int]$Update.InstallationBehavior.RebootBehavior -notin @(0,1,2)) { throw 'InteractiveOrUnknownRebootBehavior' }
         if ([string]$Update.Title -match '(?i)preview|voorvertoning|vorschau|aperçu|enablement|feature\s+update|functie.update|firmware|\bBIOS\b|\bUEFI\b') { throw 'ExcludedTitle' }
         $categories=@($Update.Categories | Where-Object Type -eq 'UpdateClassification' | ForEach-Object { [string]$_.CategoryID })
         if ([int]$Update.Type -eq 1) {
@@ -178,7 +180,7 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
         LogPath=$script:OSDStageWindowsUpdateLogPath
         ReleaseBefore=$null;ReleaseAfter=$null;ReleaseUnchanged=$null
         SearchResultCode=$null;FoundCount=0;SelectedCount=0;InstalledCount=0
-        RebootRequired=$false;RebootRequested=$false;TimedOut=$false;FurtherScanRequired=$true
+        RebootRequired=$false;RebootStateKnown=$false;RebootRequested=$false;TimedOut=$false;FurtherScanRequired=$true
         Items=@();Error=$null
     }
     try {
@@ -231,6 +233,8 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
                     [void]$downloads.Add($entry.Update)
                 }
                 $downloader=$session.CreateUpdateDownloader();$downloader.Updates=$downloads
+                foreach ($entry in $selected) { $entry.Item.Status='Downloading' }
+                Save-OSDStageWindowsUpdateReport $report $Configuration.ResultPath
                 Write-OSDStageWindowsUpdateMessage ("Downloading {0} selected update(s) before any driver changes." -f $selected.Count)
                 $download=Invoke-OSDStageWindowsUpdateAsync -Agent $downloader -Phase Download -TimeoutMinutes $Configuration.TimeoutMinutes
                 $report.TimedOut=$download.TimedOut
@@ -274,6 +278,16 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
     finally {
         if ($null -ne $report.ReleaseBefore) {
             try {
+                # Preserve a reboot requirement even if EndInstall throws after
+                # servicing changed the machine, or it already existed at scan time.
+                $systemInfo=New-OSDStageWindowsUpdateComObject 'Microsoft.Update.SystemInfo'
+                $pendingReboot=$systemInfo.RebootRequired
+                if ($pendingReboot -isnot [bool]) { throw 'WUA did not return a Boolean reboot state.' }
+                $report.RebootRequired=$report.RebootRequired -or $pendingReboot
+                $report.RebootStateKnown=$true
+            }
+            catch { Write-OSDStageWindowsUpdateMessage ('Unable to query final reboot state: '+$_.Exception.Message) WARN }
+            try {
                 $report.ReleaseAfter=Get-OSDStageWindowsUpdateRelease
                 $report.ReleaseUnchanged=($report.ReleaseBefore.DisplayVersion -eq $report.ReleaseAfter.DisplayVersion -and $report.ReleaseBefore.Build -eq $report.ReleaseAfter.Build)
                 if (-not $report.ReleaseUnchanged) { $report.Status='Failed';$report.Outcome='ReleaseChanged';$report.Error='Windows release/build changed during the update pass.' }
@@ -281,7 +295,9 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
             catch { $report.Status='Failed';$report.Error=$_.Exception.Message }
         }
         foreach ($item in $report.Items) {
-            if ($item.Status -in @('Downloaded','Installing') -or ($item.Status -eq 'Selected' -and -not $Configuration.ScanOnly)) { $item.Status='NotAttempted' }
+            if ($item.Status -eq 'Installing') { $item.Status='InstallOutcomeUnknown' }
+            elseif ($item.Status -eq 'Downloading') { $item.Status='DownloadOutcomeUnknown' }
+            elseif ($item.Status -eq 'Downloaded' -or ($item.Status -eq 'Selected' -and -not $Configuration.ScanOnly)) { $item.Status='NotAttempted' }
         }
         $watch.Stop();$report.DurationSeconds=[math]::Round($watch.Elapsed.TotalSeconds,1);$report.CompletedAtUtc=[DateTime]::UtcNow.ToString('o')
         Save-OSDStageWindowsUpdateReport $report $Configuration.ResultPath
