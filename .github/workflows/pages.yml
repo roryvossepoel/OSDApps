@@ -1,0 +1,60 @@
+name: GitHub Pages
+
+on:
+  pull_request:
+    paths: ['site/**', 'metadata/**', 'build/build_pages.py', 'build/test_pages.py', 'build/test_catalog.cjs', '.github/workflows/pages.yml']
+  push:
+    branches: [main]
+    paths: ['site/**', 'metadata/**', 'build/build_pages.py', 'build/test_pages.py', 'build/test_catalog.cjs', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and check website
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build static website
+        run: python3 build/build_pages.py
+      - name: Check website links, markup and bundled metadata
+        run: python3 -m unittest discover -s build -p test_pages.py -v
+      - name: Check catalog behavior
+        run: node build/test_catalog.cjs
+      - name: Check JavaScript syntax
+        run: |
+          node --check site/assets/site.js
+          node --check site/catalog/app.js
+      - name: Upload review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OSDStage-Website
+          path: dist/site
+          include-hidden-files: true
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/site
+
+  deploy:
+    name: Publish website
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

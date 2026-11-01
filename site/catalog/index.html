@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="OSDStage built-in and repository package browser">
+  <title>Catalog · OSDStage</title>
+  <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="icon" href="../assets/mark.svg" type="image/svg+xml">
+</head>
+<body class="catalog-page"><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><div class="nav-wrap"><a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">▰</span>OSDStage</a><nav class="site-nav" aria-label="Main navigation"><a href="../index.html">Home</a><a href="../get-started.html">Get started</a><a aria-current="page" href="../catalog/index.html">Catalog</a><a href="../guides.html">Guides</a><a href="../faq.html">FAQ</a></nav><a class="github-link" href="https://github.com/roryvossepoel/OSDStage">GitHub ↗</a></div></header>
+<main class="shell" id="main">
+<div class="page-intro"><p class="eyebrow">Find your next command</p><h1>The catalog. Your building blocks.</h1><p class="lead">Browse built-ins, or load your own repository. Nothing is installed from this page.</p></div>  <section class="metrics">
+    <article class="metric panel">
+      <div class="metric-icon blue"><span data-icon="grid"></span></div>
+      <div><span>Total entries</span><strong id="allCount">0</strong></div>
+    </article>
+    <article class="metric panel">
+      <div class="metric-icon purple"><span data-icon="cube"></span></div>
+      <div><span>Built-in entries</span><strong id="builtinCount">0</strong></div>
+    </article>
+    <article class="metric panel">
+      <div class="metric-icon green"><span data-icon="database"></span></div>
+      <div><span>Repository packages</span><strong id="repoCount">0</strong></div>
+    </article>
+    <article class="metric panel">
+      <div class="metric-icon blue"><span data-icon="monitor"></span></div>
+      <div><span>Architectures</span><strong id="archCount">0</strong></div>
+    </article>
+  </section>
+
+  <section class="panel toolbar">
+    <div class="searchbox">
+      <span data-icon="search"></span>
+      <input id="search" type="search" aria-label="Search entries" placeholder="Search packages, vendors, types, versions…">
+    </div>
+    <select id="sourceFilter" aria-label="Filter by source">
+      <option value="">All sources</option>
+      <option value="BuiltIn">Built-in</option>
+      <option value="Repository">Repository</option>
+    </select>
+    <select id="typeFilter" aria-label="Filter by package type">
+      <option value="">All types</option>
+      <option>App</option><option>Script</option><option>Font</option>
+      <option>Certificate</option><option>Driver</option>
+    </select>
+    <select id="archFilter" aria-label="Filter by architecture">
+      <option value="">All architectures</option>
+    </select>
+  </section>
+
+  <section class="panel repository-bar" aria-label="Repository catalog">
+    <form id="catalogForm" class="catalog-form">
+      <label for="catalogUrl">Your repository <span class="optional">optional</span></label>
+      <div class="catalog-inputs">
+        <input id="catalogUrl" type="url" placeholder="https://example.com/catalog.json" aria-describedby="repoStatus">
+        <button class="primary" type="submit">Load</button>
+        <button id="clearRepository" type="button" title="Remove repository packages from this view" hidden>Clear</button>
+      </div>
+    </form>
+    <div class="source-meta">
+      <a href="../metadata/builtins.json" target="_blank" rel="noreferrer">Built-in metadata ↗</a>
+      <a id="repoLink" hidden></a>
+      <span id="builtinStatus" class="inline-status" role="status" aria-live="polite" hidden></span>
+      <span id="repoStatus" class="inline-status" role="status" aria-live="polite" hidden></span>
+    </div>
+  </section>
+
+  <p class="catalog-help">Your catalog must use HTTPS and allow this site through CORS. <a href="../faq.html">Help with repository loading →</a></p>
+  <details id="loadErrors" class="panel load-errors" hidden>
+    <summary>Repository warnings and errors</summary>
+    <ul id="errorList"></ul>
+  </details>
+
+  <div class="results-toolbar">
+    <span id="resultSummary" role="status" aria-live="polite"></span>
+    <div class="results-controls">
+      <label for="pageSize">Per page</label>
+      <select id="pageSize">
+        <option value="12">12</option><option value="24">24</option>
+        <option value="48">48</option><option value="96">96</option><option value="all">All</option>
+      </select>
+      <div class="view-switch" role="group" aria-label="Display mode">
+        <button id="tileView" type="button" aria-pressed="true" aria-controls="cards">Tiles</button>
+        <button id="listView" type="button" aria-pressed="false" aria-controls="cards">List</button>
+      </div>
+    </div>
+  </div>
+  <section id="cards" class="cards" aria-label="Packages"></section>
+  <nav class="pagination" aria-label="Package pages">
+    <button id="previousPage" type="button" aria-controls="cards">← Previous</button>
+    <span id="pageSummary" aria-live="polite"></span>
+    <button id="nextPage" type="button" aria-controls="cards">Next →</button>
+  </nav>
+</main><footer class="site-footer"><span>OSDStage · Before OOBE.</span><div><a href="https://github.com/roryvossepoel/OSDStage/blob/main/LICENSE">MIT license</a><a href="https://github.com/roryvossepoel/OSDStage/issues">Report an issue ↗</a></div></footer>
+<noscript><p class="notice">Enable JavaScript to browse the catalog. The guides work without it.</p></noscript>
+<script src="app.js"></script>
+</body>
+</html>
