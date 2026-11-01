@@ -89,6 +89,7 @@ function Set-OSDStageConfiguration {
         }
         elseif ($InformationPreference -ne 'SilentlyContinue') { $InformationPreference }
         else { 'Continue' }
-        Write-Information '[CONFIGURED] Session configuration updated' -Tags OSDStage -InformationAction $informationAction
+        $message = '[{0}] [INFO] Session configuration updated.' -f (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss')
+        Write-Information $message -Tags OSDStage -InformationAction $informationAction
     }
 }
