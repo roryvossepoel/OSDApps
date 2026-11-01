@@ -45,5 +45,9 @@ function Sync-OSDStageRepository {
         -Prune:$Prune `
         -PinnedId $PinnedId `
         -WhatIf:$false `
-        -Confirm:$false
+        -Confirm:$false | ForEach-Object {
+            # Keep the FileInfo contract, adding only a default display type.
+            $_.PSObject.TypeNames.Insert(0, 'OSDStage.RepositorySync')
+            $_
+        }
 }

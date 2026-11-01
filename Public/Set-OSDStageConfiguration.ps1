@@ -77,6 +77,19 @@ function Set-OSDStageConfiguration {
     }
 
     if ($PassThru) {
-        Get-OSDStageConfiguration
+        $result = Get-OSDStageConfiguration
+        $result.PSObject.TypeNames.Insert(0, 'OSDStage.ConfigurationUpdated')
+        $result
+    }
+    else {
+        # Preserve the existing empty success stream. Information can be redirected
+        # or suppressed explicitly; PassThru uses the object's default view instead.
+        $informationAction = if ($PSBoundParameters.ContainsKey('InformationAction')) {
+            $PSBoundParameters.InformationAction
+        }
+        elseif ($InformationPreference -ne 'SilentlyContinue') { $InformationPreference }
+        else { 'Continue' }
+        $message = '[{0}] [INFO] Session configuration updated.' -f (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss')
+        Write-Information $message -Tags OSDStage -InformationAction $informationAction
     }
 }

@@ -175,7 +175,7 @@ function Clear-OSDStageCache {
         }
     }
 
-    [pscustomobject]@{
+    $result = [pscustomobject]@{
         PSTypeName  = 'OSDStage.CacheClearResult'
         CachePath   = $cachePath
         Scope       = $scope
@@ -185,6 +185,8 @@ function Clear-OSDStageCache {
         IncludeLogs = [bool]$IncludeLogs
         Removed     = @($removed)
     }
+    if ($WhatIfPreference) { $result.PSObject.TypeNames.Insert(0, 'OSDStage.CacheClearPlan') }
+    $result
     }
     finally { if ($cacheLock) { $cacheLock.Dispose() } }
 }

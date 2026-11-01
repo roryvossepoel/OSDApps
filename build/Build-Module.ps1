@@ -17,6 +17,7 @@ New-Item -ItemType Directory -Path $moduleOutput -Force | Out-Null
 $items = @(
     'OSDStage.psd1'
     'OSDStage.psm1'
+    'OSDStage.format.ps1xml'
     'Public'
     'Private'
     'Runtime'

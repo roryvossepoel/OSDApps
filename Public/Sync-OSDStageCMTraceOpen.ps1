@@ -35,7 +35,7 @@ function Sync-OSDStageCMTraceOpen {
         (Get-FileHash -LiteralPath $existing -Algorithm SHA256).Hash -eq $expected) {
         $signature = Get-AuthenticodeSignature -FilePath $existing
         if ($signature.Status -ne 'Valid') { throw 'CMTrace Open cached MSI signature invalid.' }
-        return [pscustomobject]@{Id='CMTraceOpen';Version=$version;Architecture=$Architecture;Updated=$false;CachePath=$target}
+        return [pscustomobject]@{PSTypeName='OSDStage.BuiltInCache';Id='CMTraceOpen';Version=$version;Architecture=$Architecture;Updated=$false;CachePath=$target}
     }
     $lock = Enter-OSDStageCacheLock -CachePath $cachePath -Operation 'CMTrace Open cache synchronization'
     $candidate = $target + '.osdstage-new-' + [guid]::NewGuid().ToString('N')
@@ -67,7 +67,7 @@ function Sync-OSDStageCMTraceOpen {
             throw
         }
         if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
-        [pscustomobject]@{Id='CMTraceOpen';Version=$version;Architecture=$Architecture;Updated=$true;CachePath=$target}
+        [pscustomobject]@{PSTypeName='OSDStage.BuiltInCache';Id='CMTraceOpen';Version=$version;Architecture=$Architecture;Updated=$true;CachePath=$target}
     }
     finally {
         if (Test-Path -LiteralPath $candidate) { Remove-Item -LiteralPath $candidate -Recurse -Force -ErrorAction SilentlyContinue }

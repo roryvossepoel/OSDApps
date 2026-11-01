@@ -95,6 +95,7 @@ function Sync-OSDStageMicrosoftCompanyPortal {
         finally { $bundle.Dispose() }
 
         [ordered]@{
+            PSTypeName='OSDStage.BuiltInCache'
             Id='MicrosoftCompanyPortal'; Version=$version; Architecture=$Architecture
             PayloadFileName=[string]$bundles[0].Name; LicenseFileName=[string]$licenses[0].Name
             Sha256=[string]$files[0].Sha256; Size=(Get-Item -LiteralPath (Join-Path $candidate ([string]$bundles[0].Name))).Length
@@ -119,6 +120,7 @@ function Sync-OSDStageMicrosoftCompanyPortal {
         if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction Stop }
 
         [pscustomobject]@{
+            PSTypeName='OSDStage.BuiltInCache'
             Id='MicrosoftCompanyPortal'; Version=$version; Architecture=$Architecture
             Cached=$true; Updated=$true; CacheReused=$false; CachePath=$target; Files=$files.Count
         }
@@ -133,7 +135,7 @@ function Sync-OSDStageMicrosoftCompanyPortal {
                 $healthy = $true
                 if ($healthy) {
                     Write-Warning ('Company Portal download failed; verified cache reused: {0}' -f $originalError.Exception.Message)
-                    return [pscustomobject]@{Id='MicrosoftCompanyPortal';Version=$previous.Version;Architecture=$Architecture;Cached=$true;Updated=$false;CacheReused=$true;CachePath=$target;Files=7}
+                    return [pscustomobject]@{PSTypeName='OSDStage.BuiltInCache';Id='MicrosoftCompanyPortal';Version=$previous.Version;Architecture=$Architecture;Cached=$true;Updated=$false;CacheReused=$true;CachePath=$target;Files=7}
                 }
             } catch { }
         }

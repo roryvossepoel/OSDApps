@@ -63,6 +63,7 @@ function Remove-OSDStageStaging {
     $toRemove = @($staged | Where-Object { [string]$_.Id -in $requested })
     if ($toRemove.Count -eq 0) {
         return [pscustomobject]@{
+            PSTypeName = 'OSDStage.UnstagedApps'
             WindowsPath = $target
             Removed = @()
             Remaining = @($staged | ForEach-Object { [string]$_.Id })

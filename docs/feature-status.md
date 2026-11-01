@@ -111,13 +111,13 @@ as independently verified. Early interruption before the runtime can leave
 restricted staging behind. Caller scripts/original exports are outside automatic
 cleanup, and the installed Windows WLAN profile necessarily remains.
 
-## New candidate — 1 November 2026
+## Files and directories accepted — 1 November 2026
 
-Files and directories are selected for implementation and physical testing after
-the RC1 acceptance run. `Add-OSDStageDirectory` and `Add-OSDStageFile` stage ordered
+Files and directories passed physical testing after the RC1 acceptance run. `Add-OSDStageDirectory` and `Add-OSDStageFile` stage ordered
 create/copy/remove operations with separate Force and Recurse options. See the
-[contract and test example](file-system.md). This is unreleased work; physical
-acceptance is pending and the published RC1 module is unchanged.
+[contract and test example](file-system.md). All nine SetupComplete operations
+succeeded, and all five independent content/removal checks passed. The published
+RC1 module is unchanged; these merged commands await a new release.
 
 ## Feature-scope closeout — 31 October 2026
 

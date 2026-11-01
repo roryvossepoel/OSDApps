@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+  <ViewDefinitions>
+    <View>
+      <Name>OSDStage.Summary</Name>
+      <ViewSelectedBy>
+        <TypeName>OSDStage.StagedApp</TypeName>
+        <TypeName>OSDStage.BuiltInCache</TypeName>
+        <TypeName>OSDStage.RepositorySync</TypeName>
+        <TypeName>OSDStage.App</TypeName>
+        <TypeName>OSDStage.CacheEntry</TypeName>
+        <TypeName>OSDStage.CacheHealth</TypeName>
+        <TypeName>OSDStage.CacheHealthEntry</TypeName>
+        <TypeName>OSDStage.CatalogStatus</TypeName>
+        <TypeName>OSDStage.Configuration</TypeName>
+        <TypeName>OSDStage.ConfigurationUpdated</TypeName>
+        <TypeName>OSDStage.DeploymentResult</TypeName>
+        <TypeName>OSDStage.DeploymentValidation</TypeName>
+        <TypeName>OSDStage.DeploymentCheck</TypeName>
+        <TypeName>OSDStage.CacheValidation</TypeName>
+        <TypeName>OSDStage.PackageValidation</TypeName>
+        <TypeName>OSDStage.RepositoryValidation</TypeName>
+        <TypeName>OSDStage.Package</TypeName>
+        <TypeName>OSDStage.Repository</TypeName>
+        <TypeName>OSDStage.RepositoryPlan</TypeName>
+        <TypeName>OSDStage.RepositoryPackage</TypeName>
+        <TypeName>OSDStage.CacheClearResult</TypeName>
+        <TypeName>OSDStage.CacheClearPlan</TypeName>
+        <TypeName>OSDStage.UnstagedApps</TypeName>
+      </ViewSelectedBy>
+      <CustomControl>
+        <CustomEntries>
+          <CustomEntry>
+            <CustomItem>
+              <ExpressionBinding>
+                <!-- Self-contained: no dependency on module-private helper functions.
+                     Only presentation changes; result properties are not modified. -->
+                <ScriptBlock><![CDATA[
+& {
+    param($item)
+    function Read-Field([string]$name) {
+        $property = $item.PSObject.Properties[$name]
+        if ($null -ne $property) { $property.Value }
+    }
+    function Read-Count([string]$name) {
+        $value = Read-Field $name
+        if ($null -eq $value) { return '?' }
+        [string]$value
+    }
+    function Read-State([string]$name, [string]$yes, [string]$no) {
+        $value = Read-Field $name
+        if ($value -isnot [bool]) { return 'UNKNOWN' }
+        if ($value) { $yes } else { $no }
+    }
+    $type = @($item.PSObject.TypeNames | Where-Object { $_ -like 'OSDStage.*' })[0]
+    $id = Read-Field 'Id'
+    if (-not $id) { $id = Read-Field 'Name' }
+    $version = Read-Field 'Version'
+    $architecture = Read-Field 'Architecture'
+    $identity = [string]$id
+    $variant = (@($version, $architecture) | Where-Object { $_ }) -join ', '
+    if ($variant) { $identity += ' (' + $variant + ')' }
+    $level = 'INFO'
+    $color = 39 # default foreground for information; cyan phase, green success, yellow warning, red failure
+    function Get-ValidationState([string]$name) {
+        Read-State $name 'valid' 'invalid'
+    }
+    $message = switch ($type) {
+        'OSDStage.StagedApp' {
+            $color = 92
+            $detail = if ($null -ne (Read-Field 'OperationCount')) {
+                '{0} operations queued' -f (Read-Count 'OperationCount')
+            } else { 'queued for SetupComplete' }
+            'Staged {0}: {1} on {2}' -f $identity, $detail, (Read-Field 'WindowsPath')
+        }
+        'OSDStage.BuiltInCache' {
+            $color = 92
+            $action = Read-State 'Updated' 'Updated cache' 'Reused cache'
+            if ($action -eq 'UNKNOWN') { $action = 'Synchronized cache' }
+            $detail = ''
+            if ((Read-Field 'CacheReused') -eq $true) { $level='WARN'; $color=93; $detail='; using validated cache fallback' }
+            '{0}: {1}{2}' -f $action, $identity, $detail
+        }
+        'OSDStage.RepositorySync' { $color=92; 'Repository cache synchronized: {0}' -f (Read-Field 'FullName') }
+        'OSDStage.App' { '{0}: {1}, {2}' -f $identity, (Read-Field 'Source'), (Read-Field 'Availability') }
+        'OSDStage.CacheEntry' {
+            $state = Get-ValidationState 'Valid'
+            $signature = Read-Field 'SignatureStatus'
+            $color=92
+            if ($state -eq 'invalid') { $level='ERROR'; $color=91 }
+            elseif ($state -eq 'UNKNOWN') { $level='WARN'; $color=93 }
+            if ($level -eq 'INFO' -and $signature -and $signature -notin @('Valid','Not checked','Not assessed')) { $level='WARN'; $color=93 }
+            $detail = if ($signature) { '; signature {0}' -f $signature } else { '' }
+            'Cache {0}: payload {1}, {2}{3}' -f $identity, $state, (Read-Field 'Source'), $detail
+        }
+        'OSDStage.CacheHealthEntry' {
+            if ((Read-Field 'Integrity') -in @('Missing','Corrupt','Unknown') -or (Read-Field 'Action') -eq 'Review') { $level='WARN'; $color=93 }
+            'Cache {0}: {1}; integrity {2}; action {3}' -f $identity, (Read-Field 'State'), (Read-Field 'Integrity'), (Read-Field 'Action')
+        }
+        'OSDStage.CacheHealth' {
+            if ((Read-Field 'CacheAvailable') -eq $false) { $level='WARN'; $color=93; 'Cache not found.' }
+            else {
+                $state = Read-State 'Healthy' 'healthy' 'needs review'
+                $color=92
+                if ($state -ne 'healthy') { $level='WARN'; $color=93 }
+                $scope = if ((Read-Field 'DesiredStateAvailable') -eq $true) { 'catalog compared' } else { 'catalog not compared' }
+                'Cache {0}: {1} entries, {2} corrupt, {3} incomplete; {4}.' -f $state, (Read-Count 'EntryCount'), (Read-Count 'CorruptCount'), (Read-Count 'IncompleteCount'), $scope
+            }
+        }
+        'OSDStage.CatalogStatus' {
+            if ((Read-Field 'Enabled') -eq $false) { 'Repository catalog is disabled.' }
+            elseif (-not (Read-Field 'Uri')) { 'Repository catalog is not configured.' }
+            else {
+                $state=Read-State 'Available' 'available' 'unavailable'
+                if ($state -ne 'available') { $level='WARN'; $color=93 }
+                'Repository catalog {0}: {1} packages, schema {2}.' -f $state, (Read-Count 'PackageCount'), (Read-Field 'SchemaVersion')
+            }
+        }
+        'OSDStage.Configuration' {
+            'Session configuration: built-ins {0}, repository {1}, cleanup {2}.' -f (Read-State 'EnableBuiltIns' 'on' 'off'), (Read-State 'EnableRepository' 'on' 'off'), (Read-Field 'CleanupMode')
+        }
+        'OSDStage.ConfigurationUpdated' { 'Session configuration updated.' }
+        'OSDStage.DeploymentResult' {
+            $state = Read-Field 'Status'
+            if (-not $state) { $state='unknown' }
+            switch ($state) {
+                'Succeeded' { $color=92 }
+                'Running' { $color=96 }
+                'Failed' { $level='ERROR'; $color=91 }
+                default { $level='WARN'; $color=93 }
+            }
+            'Deployment {0}: {1}/{2} succeeded, {3} failed, {4} skipped.' -f ([string]$state).ToLowerInvariant(), (Read-Count 'SuccessfulPackageCount'), (Read-Count 'ExpectedPackageCount'), (Read-Count 'FailedPackageCount'), (Read-Count 'SkippedPackageCount')
+        }
+        'OSDStage.DeploymentValidation' {
+            $state = Read-State 'Valid' 'ready' 'failed'
+            $color=92
+            $detail = if ($state -eq 'failed') {
+                $level='ERROR'; $color=91
+                $failed = @(Read-Field 'Checks' | Where-Object { $_.Required -and -not $_.Passed } | ForEach-Object { $_.Name } | Select-Object -Unique)
+                'failed checks: {0} (see Checks for details)' -f ($failed -join ', ')
+            } else {
+                if ($state -eq 'UNKNOWN') { $level='WARN'; $color=93 }
+                'offline {0}, network {1}' -f (Read-State 'OfflineReady' 'ready' 'not ready'), (Read-State 'NetworkRequired' 'required' 'not required')
+            }
+            'Deployment {0}: {1} packages; {2}.' -f $state, (Read-Count 'PackageCount'), $detail
+        }
+        'OSDStage.DeploymentCheck' {
+            $state=Read-State 'Passed' 'passed' 'failed'
+            $color=92
+            if ($state -ne 'passed') {
+                $level='WARN'; $color=93
+                if ($state -eq 'failed' -and (Read-Field 'Required') -eq $true) { $level='ERROR'; $color=91 }
+            }
+            'Check {0}: {1} ({2}).' -f $id, $state, (Read-State 'Required' 'required' 'optional')
+        }
+        'OSDStage.CacheValidation' {
+            if ((Read-Field 'CacheAvailable') -eq $false) { $level='ERROR'; $color=91; 'Cache not found.' }
+            else {
+                $state = Get-ValidationState 'Valid'
+                $color=92
+                if ($state -eq 'invalid') { $level='ERROR'; $color=91 }
+                elseif ($state -eq 'UNKNOWN') { $level='WARN'; $color=93 }
+                $signature = if ((Read-Field 'SignatureChecksRequested') -eq $true) {
+                    'signatures {0}' -f (Read-State 'SignatureChecksComplete' 'complete' 'incomplete')
+                } else { 'signatures not checked' }
+                'Cache {0}: {1}/{2} valid, {3} invalid; {4}.' -f $state, (Read-Count 'ValidEntryCount'), (Read-Count 'EntryCount'), (Read-Count 'InvalidEntryCount'), $signature
+            }
+        }
+        'OSDStage.PackageValidation' {
+            $state = Get-ValidationState 'Valid'
+            $color=92
+            $detail = if ($state -eq 'invalid') {
+                $level='ERROR'; $color=91
+                if ((Read-Field 'PackageFolderExists') -eq $false) { 'Package directory missing' }
+                elseif ((Read-Field 'PackageType') -in @('App','Script') -and (Read-Field 'InstallPs1Exists') -eq $false) { 'Install.ps1 missing' }
+                elseif ((Read-Field 'PackageType') -eq 'Font') { 'no supported font files' }
+                else { 'payload validation failed; see Error' }
+            } else {
+                if ($state -eq 'UNKNOWN') { $level='WARN'; $color=93 }
+                Read-Field 'PackageType'
+            }
+            'Package {0}: {1}; {2}.' -f (Read-Field 'PackagePath'), $state, $detail
+        }
+        'OSDStage.RepositoryValidation' {
+            $state=Get-ValidationState 'Valid'
+            $color=92
+            if ($state -eq 'invalid') { $level='ERROR'; $color=91 }
+            elseif ($state -eq 'UNKNOWN') { $level='WARN'; $color=93 }
+            $failed = @('ManifestExists','PackageExists','HashValid','PackageValid','ArchitectureValid','IdValid','SuccessCodesValid','PackageTypeValid','PayloadDefinitionValid' | Where-Object { (Read-Field $_) -eq $false })
+            if ((Read-Field 'DuplicateReference') -eq $true) { $failed += 'DuplicateReference' }
+            if ((Read-Field 'Orphaned') -eq $true) { $failed += 'Orphaned' }
+            $detail = if ($failed.Count) { '; failed: ' + ($failed -join ', ') } else { '' }
+            'Repository package {0}: {1}{2}.' -f $identity, $state, $detail
+        }
+        'OSDStage.Package' { $color=92; 'Created package {0}: {1}' -f $identity, (Read-Field 'PackagePath') }
+        'OSDStage.Repository' { $color=92; 'Repository ready: {0}' -f (Read-Field 'Path') }
+        'OSDStage.RepositoryPlan' { $color=96; 'Repository preparation not applied: {0}' -f (Read-Field 'Path') }
+        'OSDStage.RepositoryPackage' { $color=92; 'Added repository package: {0}' -f $identity }
+        'OSDStage.CacheClearPlan' { $color=96; 'Cache cleanup preview ({0}): not applied.' -f (Read-Field 'Scope') }
+        'OSDStage.CacheClearResult' {
+            $removed = @(Read-Field 'Removed').Count
+            $review = @(Read-Field 'Review').Count
+            $color=92
+            if ($review) { $level='WARN'; $color=93 }
+            'Cache cleanup: {0} items removed, {1} preserved for review.' -f $removed, $review
+        }
+        'OSDStage.UnstagedApps' {
+            $state=Read-State 'Changed' 'updated' 'unchanged'
+            if ($state -eq 'updated') { $color=92 }
+            'Queue {0}: {1} removed, {2} remaining.' -f $state, @(Read-Field 'Removed').Count, @(Read-Field 'Remaining').Count
+        }
+    }
+    # Sanitize metadata before adding our own terminal decoration.
+    $message = ([string]$message -replace '\x1b\[[0-?]*[ -/]*[@-~]', '' -replace '[\x00-\x1f\x7f-\x9f\u2028\u2029]', ' ').Trim()
+    $line = '[{0}] [{1}] {2}' -f (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss'), $level, $message
+    # No host writes from the formatter: assignments, redirects and explicit views
+    # retain normal PowerShell behavior. Unsupported hosts use the same plain text.
+    $useColor = $false
+    try {
+        $useColor = $Host.UI.SupportsVirtualTerminal -and -not [Console]::IsOutputRedirected -and -not (Test-Path Env:NO_COLOR) -and $env:TERM -ne 'dumb'
+        $style = Get-Variable PSStyle -ValueOnly -ErrorAction Ignore
+        if ($style -and [string]$style.OutputRendering -eq 'PlainText') { $useColor = $false }
+    } catch { $useColor = $false }
+    if ($useColor) { '{0}[{1}m{2}{0}[39m' -f [char]27, $color, $line } else { $line }
+} $_
+                ]]></ScriptBlock>
+              </ExpressionBinding>
+            </CustomItem>
+          </CustomEntry>
+        </CustomEntries>
+      </CustomControl>
+    </View>
+  </ViewDefinitions>
+</Configuration>
