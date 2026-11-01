@@ -181,7 +181,7 @@ Describe 'Standalone online app PreInstall routing' {
 }
 
 Describe 'Runner handling of unsuccessful online preparation' {
-    It 'records both unprepared apps as failed without attempting installation' -Skip:($env:OS -ne 'Windows_NT') {
+    It 'skips installation for both apps after failed acquisition' -Skip:($env:OS -ne 'Windows_NT') {
         $stage=Join-Path $TestDrive 'pending-runner'
         $resultPath=Join-Path $stage 'Results/Latest.json'
         New-Item -ItemType Directory (Split-Path $resultPath -Parent) -Force | Out-Null
@@ -210,8 +210,8 @@ Describe 'Runner handling of unsuccessful online preparation' {
             $process.ExitCode | Should -Be 1
         } finally { if(-not $process.HasExited){$process.Kill()}; $process.Dispose() }
         $result=Get-Content $resultPath -Raw | ConvertFrom-Json
-        $result.FailedPackageCount | Should -Be 2
-        $result.SkippedPackageCount | Should -Be 0
+        $result.FailedPackageCount | Should -Be 0
+        $result.SkippedPackageCount | Should -Be 2
         @($result.Packages | Where-Object AcquisitionOutcome -eq Failed).Count | Should -Be 2
         @($result.Packages | Where-Object FailureType -eq RemoteAcquisition).Count | Should -Be 2
     }
