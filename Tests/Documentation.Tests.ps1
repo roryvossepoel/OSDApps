@@ -9,7 +9,7 @@ Describe 'Documentation validation' {
         $result.FilesChecked | Should -BeGreaterThan 0
         $result.LocalLinksChecked | Should -BeGreaterThan 0
         $result.PowerShellBlocksParsed | Should -BeGreaterThan 0
-        $result.OSDAppsCallsChecked | Should -BeGreaterThan 0
+        $result.OSDStageCallsChecked | Should -BeGreaterThan 0
         $result.ExamplesExecuted | Should -BeFalse
         $result.ExternalLinksRequested | Should -BeFalse
     }
@@ -116,18 +116,18 @@ Get-Date
 
     It 'keeps Company Portal help and Apps metadata aligned with automatic acquisition' {
         $helpData = Import-PowerShellDataFile -Path (Join-Path $script:root 'help/CommandHelp.psd1')
-        $help = $helpData.Commands['Sync-OSDAppMicrosoftCompanyPortal']
+        $help = $helpData.Commands['Sync-OSDStageMicrosoftCompanyPortal']
         $help.Description | Should -Match 'Downloads.*Microsoft Preinstall Kit by default'
         $help.Description | Should -Match 'Optionally.*-KitPath'
         $help.Parameters.KitPath | Should -Match '^Optional'
-        $help.Examples[0].Code | Should -Be 'Sync-OSDAppMicrosoftCompanyPortal -Architecture x64'
+        $help.Examples[0].Code | Should -Be 'Sync-OSDStageMicrosoftCompanyPortal -Architecture x64'
         $catalog = Get-Content -LiteralPath (Join-Path $script:root 'metadata/builtins.json') -Raw | ConvertFrom-Json
-        $catalog.PSObject.Properties.Name | Should -Contain 'Apps'
-        $companyPortal = @($catalog.Apps | Where-Object Id -eq 'MicrosoftCompanyPortal')
+        $catalog.PSObject.Properties.Name | Should -Contain 'Packages'
+        $companyPortal = @($catalog.Packages | Where-Object Id -eq 'MicrosoftCompanyPortal')
         $companyPortal.Count | Should -Be 1
         $companyPortal[0].Acquisition | Should -Be 'MicrosoftPreinstallKit'
         $companyPortal[0].SyncPhase | Should -Be 'FullWindowsPreparation'
-        $cmTrace = @($catalog.Apps | Where-Object Id -eq 'CMTraceOpen')
+        $cmTrace = @($catalog.Packages | Where-Object Id -eq 'CMTraceOpen')
         $cmTrace.Count | Should -Be 1
         $cmTrace[0].SyncPhase | Should -Be 'FullWindowsPreparation'
     }

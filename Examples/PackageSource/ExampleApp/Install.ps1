@@ -12,5 +12,5 @@ $ErrorActionPreference = 'Stop'
 #
 # Return a normal process exit code or throw when installation fails.
 
-Write-Output 'Example OSD Apps package.'
+Write-Output 'Example OSDStage package.'
 exit 0

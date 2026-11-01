@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1100" height="640" viewBox="0 0 1100 640" role="img" aria-labelledby="title desc">
-  <title id="title">OSDApps 0.29.1 cold versus warm cache benchmark</title>
+  <title id="title">OSDStage 0.29.1 cold versus warm cache benchmark</title>
   <desc id="desc">Stacked bars comparing PreInstall refresh and Runner installation time for cold and warm cache deployments.</desc>
   <style>
     .title{font:700 30px 'Segoe UI',Arial,sans-serif;fill:#1f2937}
@@ -17,7 +17,7 @@
   </style>
 
   <rect width="1100" height="640" fill="#ffffff"/>
-  <text x="60" y="55" class="title">OSDApps 0.29.1 — cold vs warm cache</text>
+  <text x="60" y="55" class="title">OSDStage 0.29.1 — cold vs warm cache</text>
   <text x="60" y="84" class="subtitle">Same USB flash drive, same hardware, same app set</text>
 
   <rect x="760" y="34" width="280" height="82" rx="12" class="card"/>

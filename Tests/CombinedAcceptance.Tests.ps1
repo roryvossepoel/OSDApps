@@ -1,7 +1,7 @@
 Describe 'Combined acceptance result integrity' {
     BeforeAll {
         $script:root = Split-Path $PSScriptRoot -Parent
-        $script:validator = Join-Path $script:root 'tools/Test-OSDAppsCombinedResult.ps1'
+        $script:validator = Join-Path $script:root 'tools/Test-OSDStageCombinedResult.ps1'
         $script:acceptanceExpectedIds = @('RepositoryApp','RepositoryScript','TestFont','TestCA','TestDriver','GoogleChromeEnterprise','AdobeAcrobatUnified','RegistrySettings','EnvironmentVariables','Services','WindowsFeatures','WindowsCapabilities','WiFiProfiles','DesktopSettings','WindowsInboxCleanup','DefaultAssociations')
         function Save-Fixtures {
             $script:record | ConvertTo-Json -Depth 5 | Set-Content $script:recordPath
@@ -17,8 +17,8 @@ Describe 'Combined acceptance result integrity' {
         $script:record = [pscustomobject]@{DeploymentId=[guid]::NewGuid().ToString();Revision=('a'*40);ExpectedIds=$script:acceptanceExpectedIds;CleanupMode='OnSuccess'}
         $script:result = [pscustomobject]@{
             DeploymentId=$script:record.DeploymentId;Status='Succeeded';CleanupMode='OnSuccess'
-            ExpectedAppCount=16;SuccessfulAppCount=16;FailedAppCount=0;SkippedAppCount=0
-            Apps=@($script:acceptanceExpectedIds | ForEach-Object { [pscustomobject]@{Id=$_;Status='Succeeded'} })
+            ExpectedPackageCount=16;SuccessfulPackageCount=16;FailedPackageCount=0;SkippedPackageCount=0
+            Packages=@($script:acceptanceExpectedIds | ForEach-Object { [pscustomobject]@{Id=$_;Status='Succeeded'} })
         }
         Save-Fixtures
     }
@@ -36,27 +36,27 @@ Describe 'Combined acceptance result integrity' {
         { Invoke-Validation } | Should -Throw '*Invalid staging*'
     }
     It 'rejects a partial queue' {
-        $script:result.Apps = $script:result.Apps[0..14]; Save-Fixtures
+        $script:result.Packages = $script:result.Packages[0..14]; Save-Fixtures
         { Invoke-Validation } | Should -Throw '*expected package IDs*'
     }
     It 'rejects duplicate IDs even with a successful count' {
-        $script:result.Apps[0].Id = $script:result.Apps[1].Id; Save-Fixtures
+        $script:result.Packages[0].Id = $script:result.Packages[1].Id; Save-Fixtures
         { Invoke-Validation } | Should -Throw '*expected package IDs*'
     }
     It 'rejects skipped or failed entries behind a successful overall status' -ForEach @('Skipped','Failed','Running') {
-        $script:result.Apps[0].Status = $_; Save-Fixtures
+        $script:result.Packages[0].Status = $_; Save-Fixtures
         { Invoke-Validation } | Should -Throw '*every selected entry*'
     }
     It 'rejects a missing counter' {
-        $script:result.PSObject.Properties.Remove('FailedAppCount'); Save-Fixtures
+        $script:result.PSObject.Properties.Remove('FailedPackageCount'); Save-Fixtures
         { Invoke-Validation } | Should -Throw
     }
     It 'rejects a null counter instead of converting it to zero' {
-        $script:result.FailedAppCount = $null; Save-Fixtures
+        $script:result.FailedPackageCount = $null; Save-Fixtures
         { Invoke-Validation } | Should -Throw '*Invalid result counter*'
     }
     It 'rejects misleading success counters' {
-        $script:result.SuccessfulAppCount = 15; Save-Fixtures
+        $script:result.SuccessfulPackageCount = 15; Save-Fixtures
         { Invoke-Validation } | Should -Throw '*Unexpected result counter*'
     }
     It 'does not claim cleanup while staging still exists' {
@@ -75,7 +75,7 @@ Describe 'Combined acceptance result integrity' {
 }
 Describe 'Combined test context guards' {
     BeforeAll {
-        $script:runner = Join-Path (Split-Path $PSScriptRoot -Parent) 'tools/Invoke-OSDAppsCombinedTest.ps1'
+        $script:runner = Join-Path (Split-Path $PSScriptRoot -Parent) 'tools/Invoke-OSDStageCombinedTest.ps1'
         $script:parameters = @{CatalogUri='https://example.invalid/catalog.json';AppId='App';ScriptId='Script';FontId='Font';CertificateId='CA';DriverId='Driver';WiFiProfilePath='absent.xml'}
     }
     It 'refuses staging on the preparation PC before importing or changing anything' {
@@ -94,21 +94,21 @@ Describe 'Combined test context guards' {
 Describe 'Combined staging orchestration with isolated dependencies' {
     BeforeAll {
         $script:root = Split-Path $PSScriptRoot -Parent
-        $script:runner = Join-Path $script:root 'tools/Invoke-OSDAppsCombinedTest.ps1'
-        Import-Module (Join-Path $script:root 'OSDApps.psd1') -Force
-        $script:acceptanceModule = Get-Module OSDApps
-        $script:oldCombinedState = $global:OSDAppsCombinedTestState
+        $script:runner = Join-Path $script:root 'tools/Invoke-OSDStageCombinedTest.ps1'
+        Import-Module (Join-Path $script:root 'OSDStage.psd1') -Force
+        $script:acceptanceModule = Get-Module OSDStage
+        $script:oldCombinedState = $global:OSDStageCombinedTestState
         $script:oldArchitecture = $env:PROCESSOR_ARCHITECTURE
         $env:PROCESSOR_ARCHITECTURE = 'AMD64'
         if (-not (Get-Command Get-Volume -ErrorAction SilentlyContinue)) { function Get-Volume { } }
         $script:parameters = @{Phase='Stage';CatalogUri='https://example.invalid/catalog.json';AppId='App';ScriptId='Script';FontId='Font';CertificateId='CA';DriverId='Driver';WiFiProfilePath='fixture.xml';WindowsPath=$TestDrive}
         $script:acceptanceExpectedIds = @('App','Script','Font','CA','Driver','GoogleChromeEnterprise','AdobeAcrobatUnified','RegistrySettings','EnvironmentVariables','Services','WindowsFeatures','WindowsCapabilities','WiFiProfiles','DesktopSettings','WindowsInboxCleanup','DefaultAssociations')
     }
-    AfterAll { $global:OSDAppsCombinedTestState = $script:oldCombinedState; $env:PROCESSOR_ARCHITECTURE = $script:oldArchitecture; Remove-Module OSDApps -Force -ErrorAction SilentlyContinue }
+    AfterAll { $global:OSDStageCombinedTestState = $script:oldCombinedState; $env:PROCESSOR_ARCHITECTURE = $script:oldArchitecture; Remove-Module OSDStage -Force -ErrorAction SilentlyContinue }
     BeforeEach {
-        $global:OSDAppsCombinedTestState = @{Ids=$script:acceptanceExpectedIds}
-        $global:OSDAppsCombinedTestState.Order = [System.Collections.Generic.List[string]]::new()
-        $global:OSDAppsCombinedTestState.Cache = @(
+        $global:OSDStageCombinedTestState = @{Ids=$script:acceptanceExpectedIds}
+        $global:OSDStageCombinedTestState.Order = [System.Collections.Generic.List[string]]::new()
+        $global:OSDStageCombinedTestState.Cache = @(
             @{Id='App';PackageType='App'},@{Id='Script';PackageType='Script'},@{Id='Font';PackageType='Font'},
             @{Id='CA';PackageType='Certificate'},@{Id='Driver';PackageType='Driver'},
             @{Id='GoogleChromeEnterprise';PackageType='App'},@{Id='AdobeAcrobatUnified';PackageType='App'}
@@ -116,29 +116,29 @@ Describe 'Combined staging orchestration with isolated dependencies' {
         Mock Test-Path { $LiteralPath -like '*MiniNT' -or $LiteralPath -like '*TestRevision.txt' }
         Mock Get-Volume { [pscustomobject]@{FileSystemLabel='OSDCloud';DriveLetter='Z'} }
         Mock Get-Content { 'a'*40 } -ParameterFilter { $LiteralPath -like '*TestRevision.txt' }
-        Mock Get-Content { @{DeploymentId=[guid]::NewGuid().ToString();Apps=@($global:OSDAppsCombinedTestState.Ids | ForEach-Object { @{Id=$_} })} | ConvertTo-Json -Depth 5 } -ParameterFilter { $LiteralPath -like '*DeviceManifest.json' }
-        Mock Import-Module { Get-Module OSDApps }
+        Mock Get-Content { @{DeploymentId=[guid]::NewGuid().ToString();Packages=@($global:OSDStageCombinedTestState.Ids | ForEach-Object { @{Id=$_} })} | ConvertTo-Json -Depth 5 } -ParameterFilter { $LiteralPath -like '*DeviceManifest.json' }
+        Mock Import-Module { Get-Module OSDStage }
         Mock Remove-Module { }
-        Mock Set-OSDAppConfiguration { }
-        Mock Get-OSDAppCache { $global:OSDAppsCombinedTestState.Cache }
-        Mock Get-OSDApp {
-            $global:OSDAppsCombinedTestState.Cache | Where-Object Id -eq $Name[0] | ForEach-Object {
+        Mock Set-OSDStageConfiguration { }
+        Mock Get-OSDStageCache { $global:OSDStageCombinedTestState.Cache }
+        Mock Get-OSDStage {
+            $global:OSDStageCombinedTestState.Cache | Where-Object Id -eq $Name[0] | ForEach-Object {
                 [pscustomobject]@{Id=$_.Id;Source='Repository';PackageType=$_.PackageType;Availability='CachedOnly';Valid=$true}
             }
         }
-        Mock Sync-OSDAppRepository { }
-        Mock Sync-OSDAppGoogleChromeEnterprise { }
-        Mock Sync-OSDAppAdobeAcrobatUnified { }
-        Mock Read-OSDAppWiFiProfile { } -ModuleName OSDApps
-        Mock Resolve-OSDAppWindowsPath { $WindowsPath } -ModuleName OSDApps
-        foreach ($name in @('Add-OSDAppFont','Add-OSDAppCertificate','Add-OSDAppDriver','Add-OSDAppEnvironmentVariable','Add-OSDAppService','Add-OSDAppWindowsFeature','Add-OSDAppWindowsCapability','Add-OSDAppWiFiProfile','Add-OSDAppStartPins','Add-OSDAppTaskbarPins','Add-OSDAppWindowsInboxCleanup')) { Mock $name { } }
-        Mock Add-OSDApp { $global:OSDAppsCombinedTestState.Order.Add('App') }
-        Mock Add-OSDAppAdobeAcrobatUnified { $global:OSDAppsCombinedTestState.Order.Add('Adobe') }
-        Mock Add-OSDAppGoogleChromeEnterprise { $global:OSDAppsCombinedTestState.Order.Add('Chrome') }
-        Mock Add-OSDAppRegistryValue { $global:OSDAppsCombinedTestState.Order.Add('Registry') }
-        Mock Add-OSDAppRegistryKey { }
-        Mock Add-OSDAppDefaultAssociation { $global:OSDAppsCombinedTestState.Order.Add('Association') }
-        Mock Test-OSDAppDeployment { [pscustomobject]@{Valid=$true;NetworkRequired=$true} }
+        Mock Sync-OSDStageRepository { }
+        Mock Sync-OSDStageGoogleChromeEnterprise { }
+        Mock Sync-OSDStageAdobeAcrobatUnified { }
+        Mock Read-OSDStageWiFiProfile { } -ModuleName OSDStage
+        Mock Resolve-OSDStageWindowsPath { $WindowsPath } -ModuleName OSDStage
+        foreach ($name in @('Add-OSDStageFont','Add-OSDStageCertificate','Add-OSDStageDriver','Add-OSDStageEnvironmentVariable','Add-OSDStageService','Add-OSDStageWindowsFeature','Add-OSDStageWindowsCapability','Add-OSDStageWiFiProfile','Add-OSDStageStartPins','Add-OSDStageTaskbarPins','Add-OSDStageWindowsInboxCleanup')) { Mock $name { } }
+        Mock Add-OSDStage { $global:OSDStageCombinedTestState.Order.Add('App') }
+        Mock Add-OSDStageAdobeAcrobatUnified { $global:OSDStageCombinedTestState.Order.Add('Adobe') }
+        Mock Add-OSDStageGoogleChromeEnterprise { $global:OSDStageCombinedTestState.Order.Add('Chrome') }
+        Mock Add-OSDStageRegistryValue { $global:OSDStageCombinedTestState.Order.Add('Registry') }
+        Mock Add-OSDStageRegistryKey { }
+        Mock Add-OSDStageDefaultAssociation { $global:OSDStageCombinedTestState.Order.Add('Association') }
+        Mock Test-OSDStageDeployment { [pscustomobject]@{Valid=$true;NetworkRequired=$true} }
         Mock New-Item { }
         Mock Set-Content { }
         Mock Write-Host { }
@@ -147,58 +147,58 @@ Describe 'Combined staging orchestration with isolated dependencies' {
         Mock Test-Path { $false } -ParameterFilter { $LiteralPath -like '*MiniNT' }
         $prepareParameters = $script:parameters.Clone(); $prepareParameters.Phase = 'Prepare'
         & $script:runner @prepareParameters | Out-Null
-        Should -Invoke Sync-OSDAppRepository -Times 0 -Exactly
-        Should -Invoke Sync-OSDAppGoogleChromeEnterprise -Times 1 -Exactly
-        Should -Invoke Add-OSDApp -Times 0 -Exactly
+        Should -Invoke Sync-OSDStageRepository -Times 0 -Exactly
+        Should -Invoke Sync-OSDStageGoogleChromeEnterprise -Times 1 -Exactly
+        Should -Invoke Add-OSDStage -Times 0 -Exactly
     }
     It 'refreshes only the online selection while retaining other cached packages' {
         Mock Test-Path { $false } -ParameterFilter { $LiteralPath -like '*MiniNT' }
-        Mock Get-OSDApp { [pscustomobject]@{Id='App';Source='Repository';PackageType='App';Availability='Online';Valid=$null} } -ParameterFilter { $Name[0] -eq 'App' }
+        Mock Get-OSDStage { [pscustomobject]@{Id='App';Source='Repository';PackageType='App';Availability='Online';Valid=$null} } -ParameterFilter { $Name[0] -eq 'App' }
         $prepareParameters = $script:parameters.Clone(); $prepareParameters.Phase = 'Prepare'
         & $script:runner @prepareParameters | Out-Null
-        Should -Invoke Sync-OSDAppRepository -Times 1 -Exactly -ParameterFilter { $Name.Count -eq 1 -and $Name[0] -eq 'App' }
+        Should -Invoke Sync-OSDStageRepository -Times 1 -Exactly -ParameterFilter { $Name.Count -eq 1 -and $Name[0] -eq 'App' }
     }
     It 'rejects an invalid cache-only selection before any synchronization' {
         Mock Test-Path { $false } -ParameterFilter { $LiteralPath -like '*MiniNT' }
-        Mock Get-OSDApp { [pscustomobject]@{Id='Font';Source='Repository';PackageType='Font';Availability='InvalidCache';Valid=$false} } -ParameterFilter { $Name[0] -eq 'Font' }
+        Mock Get-OSDStage { [pscustomobject]@{Id='Font';Source='Repository';PackageType='Font';Availability='InvalidCache';Valid=$false} } -ParameterFilter { $Name[0] -eq 'Font' }
         $prepareParameters = $script:parameters.Clone(); $prepareParameters.Phase = 'Prepare'
         { & $script:runner @prepareParameters | Out-Null } | Should -Throw '*unavailable or its cache is invalid*'
-        Should -Invoke Sync-OSDAppRepository -Times 0 -Exactly
-        Should -Invoke Sync-OSDAppGoogleChromeEnterprise -Times 0 -Exactly
+        Should -Invoke Sync-OSDStageRepository -Times 0 -Exactly
+        Should -Invoke Sync-OSDStageGoogleChromeEnterprise -Times 0 -Exactly
     }
     It 'stages the complete queue with installers before association import' {
         & $script:runner @script:parameters | Out-Null
-        $global:OSDAppsCombinedTestState.Order.IndexOf('Association') | Should -BeGreaterThan $global:OSDAppsCombinedTestState.Order.IndexOf('Chrome')
-        $global:OSDAppsCombinedTestState.Order.IndexOf('Association') | Should -BeGreaterThan $global:OSDAppsCombinedTestState.Order.IndexOf('Adobe')
-        Should -Invoke Add-OSDAppWindowsCapability -Times 2 -Exactly
-        Should -Invoke Add-OSDAppEnvironmentVariable -Times 4 -Exactly
-        Should -Invoke Add-OSDAppWiFiProfile -Times 1 -Exactly
+        $global:OSDStageCombinedTestState.Order.IndexOf('Association') | Should -BeGreaterThan $global:OSDStageCombinedTestState.Order.IndexOf('Chrome')
+        $global:OSDStageCombinedTestState.Order.IndexOf('Association') | Should -BeGreaterThan $global:OSDStageCombinedTestState.Order.IndexOf('Adobe')
+        Should -Invoke Add-OSDStageWindowsCapability -Times 2 -Exactly
+        Should -Invoke Add-OSDStageEnvironmentVariable -Times 4 -Exactly
+        Should -Invoke Add-OSDStageWiFiProfile -Times 1 -Exactly
         Should -Invoke Set-Content -Times 1 -Exactly -ParameterFilter { $LiteralPath -like '*Combined-Staging.json' }
     }
     It 'refuses corrupt cache before any installer is staged' {
-        $global:OSDAppsCombinedTestState.Cache[0].Valid = $false
+        $global:OSDStageCombinedTestState.Cache[0].Valid = $false
         { & $script:runner @script:parameters } | Should -Throw '*invalid or ambiguous cached package*'
-        Should -Invoke Add-OSDApp -Times 0 -Exactly
+        Should -Invoke Add-OSDStage -Times 0 -Exactly
     }
     It 'refuses a repository type mismatch before staging' {
-        $global:OSDAppsCombinedTestState.Cache[4].PackageType = 'App'
+        $global:OSDStageCombinedTestState.Cache[4].PackageType = 'App'
         { & $script:runner @script:parameters } | Should -Throw '*invalid or ambiguous cached package*'
-        Should -Invoke Add-OSDApp -Times 0 -Exactly
+        Should -Invoke Add-OSDStage -Times 0 -Exactly
     }
     It 'preserves existing staging' {
-        Mock Test-Path { $true } -ParameterFilter { $LiteralPath -like '*Temp*OSDApps' }
+        Mock Test-Path { $true } -ParameterFilter { $LiteralPath -like '*Temp*OSDStage' }
         { & $script:runner @script:parameters } | Should -Throw '*Existing staging found*'
-        Should -Invoke Add-OSDApp -Times 0 -Exactly
+        Should -Invoke Add-OSDStage -Times 0 -Exactly
     }
     It 'validates Wi-Fi without staging earlier entries on failure' {
-        Mock Read-OSDAppWiFiProfile { throw 'Invalid profile.' } -ModuleName OSDApps
+        Mock Read-OSDStageWiFiProfile { throw 'Invalid profile.' } -ModuleName OSDStage
         { & $script:runner @script:parameters } | Should -Throw '*Invalid profile*'
-        Should -Invoke Add-OSDApp -Times 0 -Exactly
+        Should -Invoke Add-OSDStage -Times 0 -Exactly
     }
     It 'does not write a success record after a staging failure' {
-        Mock Add-OSDAppService { throw 'Injected staging failure.' }
+        Mock Add-OSDStageService { throw 'Injected staging failure.' }
         { & $script:runner @script:parameters } | Should -Throw '*Injected staging failure*'
         Should -Invoke Set-Content -Times 0 -Exactly
-        Should -Invoke Test-OSDAppDeployment -Times 0 -Exactly
+        Should -Invoke Test-OSDStageDeployment -Times 0 -Exactly
     }
 }

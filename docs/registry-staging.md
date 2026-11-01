@@ -1,7 +1,7 @@
 # Registry staging
 
-`Add-OSDAppRegistryKey` stages a key without adding or deleting values.
-`Add-OSDAppRegistryValue` stages a value and creates all missing parent keys when
+`Add-OSDStageRegistryKey` stages a key without adding or deleting values.
+`Add-OSDStageRegistryValue` stages a value and creates all missing parent keys when
 SetupComplete executes it. Neither cmdlet writes to the WinPE registry.
 
 Use these commands in WinPE after Windows has been applied. The normal module
@@ -23,13 +23,13 @@ are rejected. Shared keys remain shared according to Windows semantics.
 ## Examples
 
 ```powershell
-$key = 'HKLM:\SOFTWARE\OSDApps\Tests\RegistryStaging\Level1\Level2\Level3'
-Add-OSDAppRegistryKey -Path "$key\EmptyKey" -Registry64
-Add-OSDAppRegistryKey -Path "$key\EmptyKey" -Registry32
-Add-OSDAppRegistryValue -Path $key -Name Marker -Type String -Value 'CreatedIn64BitView' -Registry64
-Add-OSDAppRegistryValue -Path $key -Name Marker -Type String -Value 'CreatedIn32BitView' -Registry32
-Add-OSDAppRegistryValue -Path "$key\Default" -Name Marker -Type String -Value 'HostDefault'
-Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
+$key = 'HKLM:\SOFTWARE\OSDStage\Tests\RegistryStaging\Level1\Level2\Level3'
+Add-OSDStageRegistryKey -Path "$key\EmptyKey" -Registry64
+Add-OSDStageRegistryKey -Path "$key\EmptyKey" -Registry32
+Add-OSDStageRegistryValue -Path $key -Name Marker -Type String -Value 'CreatedIn64BitView' -Registry64
+Add-OSDStageRegistryValue -Path $key -Name Marker -Type String -Value 'CreatedIn32BitView' -Registry32
+Add-OSDStageRegistryValue -Path "$key\Default" -Name Marker -Type String -Value 'HostDefault'
+Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure
 ```
 
 Supported types are String, ExpandString, MultiString, Binary, DWord and QWord.
@@ -45,7 +45,7 @@ The commands build one local, SHA-256-verified `RegistrySettings` Script package
 using the existing `RepositoryPackage` execution contract. It is generated
 locally; no repository URL or cache is involved. Thus it appears as
 `Source=Repository`, `PackageType=Script`, `Id=RegistrySettings` in the existing
-runner and Viewer. The internal Package.zip is an OSDApps-owned script archive,
+runner and Viewer. The internal Package.zip is an OSDStage-owned script archive,
 not a renamed vendor download. It contains only code and registry configuration.
 The existing app installer runtime is unchanged by this feature.
 
@@ -54,8 +54,8 @@ views remain distinct. Calls that overlap a Default and explicit view are
 executed in recorded order; the final write wins where Windows resolves them to
 the same location. A key-only request never clears existing values.
 
-`AppCount` increases by one, not by the number of registry operations. The
-separate `%ProgramData%\OSDApps\Results\Registry-Result.json` reports each
+`PackageCount` increases by one, not by the number of registry operations. The
+separate `%ProgramData%\OSDStage\Results\Registry-Result.json` reports each
 operation, effective view, process bitness and Created/Updated/Unchanged outcome.
 The normal `Latest.json` records the Script exit code. Configuration is validated
 before any write. Individual runtime failures are reported and the Script exits
@@ -66,7 +66,7 @@ with failure; successful earlier writes are not rolled back.
 Automated tests cover staging without registry mutation, both host bitnesses,
 both explicit views, Default resolution, empty keys, read-back, repeated runs,
 updates, type conversion and invalid input. Real registry tests use only unique
-GUID-named subtrees under HKLM\SOFTWARE\OSDApps\Tests and remove those subtrees.
+GUID-named subtrees under HKLM\SOFTWARE\OSDStage\Tests and remove those subtrees.
 CI #528 passed 569 tests on each of Windows PowerShell 5.1 and PowerShell 7 for
 commit `3194fcca69d894df009d6c4c8d1b8bf72bbc4d9f`, with no failures or skipped tests.
 
@@ -97,7 +97,7 @@ The separately successful 14-entry app deployment remains separate evidence.
 
 For a registry-only physical test use the supplied launcher example and an empty
 Windows deployment. Keep the existing working USB module under its old folder;
-place this candidate in `OSDApps-Registry` alongside it. Do not erase app caches
+place this candidate in `OSDStage-Registry` alongside it. Do not erase app caches
 or publish to the Gallery to test this feature. The successful acceptance above
 does not require repeating the same deployment after documentation-only changes.
 

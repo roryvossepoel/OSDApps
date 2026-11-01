@@ -5,24 +5,24 @@ Certificates can use the same repository, versioning, SHA-256 verification and U
 On the preparation machine, put only public CA `.cer` or `.crt` files in the source directory (subdirectories are allowed). Scripts, private keys, PFX files, bundles and support files are rejected. Root requires self-issued CA certificates; CA accepts intermediate CA certificates. Validation does not establish trustworthiness, verify the self-signature, or evaluate expiry/revocation/the full chain; the publisher must approve the certificates.
 
 ```powershell
-$package = New-OSDAppPackage -Id CompanyRootCA -Version 1.0.0 `
+$package = New-OSDStagePackage -Id CompanyRootCA -Version 1.0.0 `
     -PackageType Certificate -SourcePath C:\Work\Certificates `
     -OutputPath C:\Work\Build\CompanyRootCA
 
-Add-OSDAppPackage -Id CompanyRootCA -DisplayName 'Company Root CA' `
+Add-OSDStagePackage -Id CompanyRootCA -DisplayName 'Company Root CA' `
     -Version 1.0.0 -Architecture any -PackageType Certificate `
     -CertificateStore Root -PackagePath $package.PackagePath `
     -RepositoryPath C:\Work\Repository
 ```
 
-Upload the repository as usual and sync its configured catalog to the USB cache with `Sync-OSDAppRepository -Name CompanyRootCA`. Use the volume label `OSDCloud`; no fixed drive letter is required. Republishing an existing variant without CertificateStore preserves that variant's store. A new variant must specify its store explicitly.
+Upload the repository as usual and sync its configured catalog to the USB cache with `Sync-OSDStageRepository -Name CompanyRootCA`. Use the volume label `OSDCloud`; no fixed drive letter is required. Republishing an existing variant without CertificateStore preserves that variant's store. A new variant must specify its store explicitly.
 
 In WinPE, after applying Windows:
 
 ```powershell
-Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud -CleanupMode Never
-Add-OSDAppCertificate -Id CompanyRootCA -SkipCacheRefresh
-Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
+Set-OSDStageConfiguration -CacheVolumeLabel OSDCloud -CleanupMode Never
+Add-OSDStageCertificate -Id CompanyRootCA -SkipCacheRefresh
+Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure
 ```
 
 The existing repository runner imports the package once during SetupComplete, after SHA-256 verification and validation of every certificate. It never runs package scripts. Duplicate thumbprints within a package are imported once; certificates already in the destination are reported as `AlreadyPresent`. Import failures are reported and remaining valid operations are attempted. There is no reboot, scheduled retry, or later repair pass.
@@ -36,12 +36,12 @@ The local-file interface remains available and uses the same import functions:
 In WinPE after OSDCloud applies Windows, stage public certificates for one SetupComplete import as SYSTEM:
 
 ```powershell
-Add-OSDAppCertificate -Path 'E:\Certificates\root.cer' -Store Root
-Add-OSDAppCertificate -Path 'E:\Certificates\intermediate.crt' -Store CA
-Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
+Add-OSDStageCertificate -Path 'E:\Certificates\root.cer' -Store Root
+Add-OSDStageCertificate -Path 'E:\Certificates\intermediate.crt' -Store CA
+Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure
 ```
 
-Replace example paths with your actual media path; OSDApps resolves the offline Windows installation automatically. The preparation PC is never the target. `-WindowsPath` can explicitly select an offline Windows volume. `-WhatIf` validates inputs without staging.
+Replace example paths with your actual media path; OSDStage resolves the offline Windows installation automatically. The preparation PC is never the target. `-WindowsPath` can explicitly select an offline Windows volume. `-WhatIf` validates inputs without staging.
 
 ## Scope
 

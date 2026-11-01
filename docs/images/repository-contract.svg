@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
   <title id="title">Your repository. Your packages.</title>
-  <desc id="desc">A static OSDApps repository contains a root catalog.json pointing to package manifests. Each manifest describes an app or script and records the SHA-256 of its adjacent Package.zip. The archive contains Package/Install.ps1 and any supporting files. Publish the repository over HTTP or HTTPS while preserving its paths.</desc>
+  <desc id="desc">A static OSDStage repository contains a root catalog.json pointing to package manifests. Each manifest describes an app or script and records the SHA-256 of its adjacent Package.zip. The archive contains Package/Install.ps1 and any supporting files. Publish the repository over HTTP or HTTPS while preserving its paths.</desc>
   <defs>
     <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#425c75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
   </defs>
@@ -17,7 +17,7 @@
   </style>
   <rect x="1" y="1" width="1198" height="898" rx="20" fill="#f6f8fb" stroke="#cad6e3"/>
   <rect x="56" y="44" width="5" height="22" rx="2.5" fill="#8db69d"/>
-  <text x="76" y="62" class="brand">OSDApps / REPOSITORY</text>
+  <text x="76" y="62" class="brand">OSDStage / REPOSITORY</text>
   <text x="56" y="119" class="headline">Your repository. Your packages.</text>
   <text x="58" y="157" class="body">Static files. Versioned content. One contract for apps and scripts.</text>
 
@@ -61,14 +61,14 @@
   <text x="80" y="606" class="mono">Repository/</text>
   <path d="M91 620 V665 M91 633 H110 M91 665 H110 M132 678 V735 M132 701 H151 M132 735 H151" stroke="#9caed0" stroke-width="2" fill="none"/>
   <text x="122" y="639" class="mono">catalog.json</text>
-  <text x="122" y="671" class="mono">Apps/&lt;Id&gt;/&lt;Version&gt;/&lt;Architecture&gt;/</text>
+  <text x="122" y="671" class="mono">Packages/&lt;Id&gt;/&lt;Version&gt;/&lt;Architecture&gt;/</text>
   <text x="163" y="707" class="mono">manifest.json</text>
   <text x="163" y="741" class="mono">Package.zip</text>
 
   <rect x="740" y="484" width="404" height="282" rx="16" fill="#e5edf7"/>
   <text x="764" y="526" class="label">You own the lifecycle.</text>
   <text x="764" y="568" class="small">Choose versions and publish updates.</text>
-  <text x="764" y="608" class="small">OSDApps checks the archive hash,</text>
+  <text x="764" y="608" class="small">OSDStage checks the archive hash,</text>
   <text x="764" y="635" class="small">stages the selected package, then runs</text>
   <text x="764" y="662" class="small">Install.ps1 as SYSTEM before OOBE.</text>
   <rect x="764" y="694" width="356" height="44" rx="9" fill="#fff"/>

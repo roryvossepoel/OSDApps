@@ -1,25 +1,25 @@
 [CmdletBinding()]
 param(
-    [string]$ModulePath = (Join-Path (Split-Path $PSScriptRoot -Parent) 'dist\OSDApps'),
+    [string]$ModulePath = (Join-Path (Split-Path $PSScriptRoot -Parent) 'dist\OSDStage'),
     [string]$HelpDataPath = (Join-Path (Split-Path $PSScriptRoot -Parent) 'help\CommandHelp.psd1')
 )
 
 $ErrorActionPreference = 'Stop'
 $moduleRoot = (Resolve-Path -LiteralPath $ModulePath).Path
 $data = Import-PowerShellDataFile -LiteralPath $HelpDataPath
-$manifestPath = Join-Path $moduleRoot 'OSDApps.psd1'
+$manifestPath = Join-Path $moduleRoot 'OSDStage.psd1'
 $manifest = Import-PowerShellDataFile -LiteralPath $manifestPath
-$helpPath = Join-Path $moduleRoot 'OSDApps-help.xml'
-if (-not (Test-Path -LiteralPath $helpPath -PathType Leaf)) { throw 'The built package has no OSDApps-help.xml.' }
-Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
+$helpPath = Join-Path $moduleRoot 'OSDStage-help.xml'
+if (-not (Test-Path -LiteralPath $helpPath -PathType Leaf)) { throw 'The built package has no OSDStage-help.xml.' }
+Remove-Module OSDStage -Force -ErrorAction SilentlyContinue
 $module = Import-Module $manifestPath -Force -PassThru
-if ($module.ModuleBase -ne $moduleRoot) { throw 'Wrong OSDApps module was imported.' }
+if ($module.ModuleBase -ne $moduleRoot) { throw 'Wrong OSDStage module was imported.' }
 
 $problems = [System.Collections.Generic.List[string]]::new()
 $count = 0
 foreach ($name in $manifest.FunctionsToExport) {
     $spec = $data.Commands[$name]
-    $topic = Get-Help -Name ('OSDApps\' + $name) -Full -ErrorAction Stop
+    $topic = Get-Help -Name ('OSDStage\' + $name) -Full -ErrorAction Stop
     if (([string]$topic.Synopsis).Trim() -ne ([string]$spec.Synopsis).Trim()) {
         $problems.Add("${name}: Get-Help did not load the packaged synopsis.")
     }

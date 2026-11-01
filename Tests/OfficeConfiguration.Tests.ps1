@@ -1,12 +1,12 @@
 Describe 'Office XML generation' {
     BeforeAll {
-        Import-Module (Join-Path (Split-Path -Parent $PSScriptRoot) 'OSDApps.psd1') -Force
+        Import-Module (Join-Path (Split-Path -Parent $PSScriptRoot) 'OSDStage.psd1') -Force
     }
 
     It 'generates default 64-bit Microsoft 365 Apps with enabled updates' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $path = Join-Path $TestDrive 'default.xml'
-            New-OSDAppOfficeConfiguration -Path $path
+            New-OSDStageOfficeConfiguration -Path $path
             [xml]$xml = Get-Content -LiteralPath $path -Raw
             $xml.Configuration.Add.OfficeClientEdition | Should -Be '64'
             $xml.Configuration.Add.Channel | Should -Be 'Current'
@@ -17,9 +17,9 @@ Describe 'Office XML generation' {
     }
 
     It 'generates Office, Visio and Project with Dutch language and updates disabled' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $path = Join-Path $TestDrive 'multiple.xml'
-            New-OSDAppOfficeConfiguration -Path $path -IncludeVisio -IncludeProject -Language nl-nl -Channel MonthlyEnterprise -Architecture x86 -UpdatesEnabled:$false -ExcludeApp Access
+            New-OSDStageOfficeConfiguration -Path $path -IncludeVisio -IncludeProject -Language nl-nl -Channel MonthlyEnterprise -Architecture x86 -UpdatesEnabled:$false -ExcludeApp Access
             [xml]$xml = Get-Content -LiteralPath $path -Raw
             $xml.Configuration.Add.OfficeClientEdition | Should -Be '32'
             $xml.Configuration.Add.Channel | Should -Be 'MonthlyEnterprise'
@@ -33,16 +33,16 @@ Describe 'Office XML generation' {
     }
 
     It 'rejects conflicting activation modes' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $path = Join-Path $TestDrive 'conflict.xml'
-            { New-OSDAppOfficeConfiguration -Path $path -SharedComputerLicensing:$true -DeviceBasedLicensing:$true } | Should -Throw
+            { New-OSDStageOfficeConfiguration -Path $path -SharedComputerLicensing:$true -DeviceBasedLicensing:$true } | Should -Throw
         }
     }
 
     It 'generates either supported activation property' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $path = Join-Path $TestDrive 'device.xml'
-            New-OSDAppOfficeConfiguration -Path $path -DeviceBasedLicensing:$true
+            New-OSDStageOfficeConfiguration -Path $path -DeviceBasedLicensing:$true
             [xml]$xml = Get-Content -LiteralPath $path -Raw
             $xml.Configuration.Property.Name | Should -Be 'DeviceBasedLicensing'
             $xml.Configuration.Property.Value | Should -Be '1'

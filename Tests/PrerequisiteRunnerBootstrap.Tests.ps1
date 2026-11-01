@@ -1,6 +1,6 @@
 Describe 'Standalone prerequisite runner bootstrap' {
     BeforeAll {
-        $script:runnerPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime\Invoke-OSDAppRunner.ps1'
+        $script:runnerPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'Runtime\Invoke-OSDStageRunner.ps1'
         $script:enginePath = (Get-Process -Id $PID).Path
     }
 
@@ -45,13 +45,13 @@ Describe 'Standalone prerequisite runner bootstrap' {
             Package = Join-Path $RelativeRoot $FileName
         }
         [ordered]@{
-            SchemaVersion = 1
+            SchemaVersion = 2
             DeploymentId = [guid]::NewGuid().Guid
             Runtime = @{
                 CleanupMode = 'Never'; PreventSleep = $false
                 LogPath = $logPath; ResultPath = $resultPath
             }
-            Apps = @($app)
+            Packages = @($app)
         } | ConvertTo-Json -Depth 10 |
             Set-Content -LiteralPath (Join-Path $stage 'DeviceManifest.json') -Encoding UTF8
 
@@ -96,16 +96,16 @@ Describe 'Standalone prerequisite runner bootstrap' {
         Test-Path -LiteralPath $resultPath -PathType Leaf | Should -BeTrue
         $result = Get-Content -LiteralPath $resultPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $result.Status | Should -Be 'Failed'
-        $result.ExpectedAppCount | Should -Be 1
-        $result.SuccessfulAppCount | Should -Be 0
-        $result.FailedAppCount | Should -Be 1
-        $result.SkippedAppCount | Should -Be 0
-        @($result.Apps).Count | Should -Be 1
-        $result.Apps[0].Id | Should -Be $Id
+        $result.ExpectedPackageCount | Should -Be 1
+        $result.SuccessfulPackageCount | Should -Be 0
+        $result.FailedPackageCount | Should -Be 1
+        $result.SkippedPackageCount | Should -Be 0
+        @($result.Packages).Count | Should -Be 1
+        $result.Packages[0].Id | Should -Be $Id
         # Before the bootstrap fix this is AppError: the spec helper is absent.
-        $result.Apps[0].FailureType | Should -Be 'HashMismatch'
-        $result.Apps[0].Error | Should -Match 'Vendor payload SHA-256 or size mismatch'
-        $result.Apps[0].Error | Should -Not -Match 'Get-OSDAppPrerequisiteSpec'
+        $result.Packages[0].FailureType | Should -Be 'HashMismatch'
+        $result.Packages[0].Error | Should -Match 'Vendor payload SHA-256 or size mismatch'
+        $result.Packages[0].Error | Should -Not -Match 'Get-OSDStagePrerequisiteSpec'
         (Get-Content -LiteralPath $logPath -Raw) | Should -Not -Match '\[BuiltInInstallStart\]'
     }
 }

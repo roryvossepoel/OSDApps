@@ -2,22 +2,22 @@
 
 <a id="repository-apps"></a>
 
-![OSDApps repository: catalog, package manifest, archive layout and static publishing](images/repository-contract.svg)
+![OSDStage repository: catalog, package manifest, archive layout and static publishing](images/repository-contract.svg)
 
-OSDApps repositories are static content. A separate repository service or PowerShell module is not required.
+OSDStage repositories are static content. A separate repository service or PowerShell module is not required.
 
-OSDApps defines the repository contract, provides examples, and includes optional authoring helpers to create and validate the required folders and JSON.
+OSDStage defines the repository contract, provides examples, and includes optional authoring helpers to create and validate the required folders and JSON.
 
-App names used in examples, such as `OmnissaHorizonClient` and `NotepadPlusPlus`, represent packages from an organization's own repository. They are not built-in OSDApps apps and are not distributed or maintained by this project.
+App names used in examples, such as `OmnissaHorizonClient` and `NotepadPlusPlus`, represent packages from an organization's own repository. They are not built-in OSDStage apps and are not distributed or maintained by this project.
 
-Repository synchronization can be used on a **full-Windows preparation machine** to pre-cache media or in **WinPE** while staging a target. OSDApps resolves the requested repository package, refreshes or reuses the optional OSDCloud USB cache, validates the package, and stages it into the offline Windows installation before the first boot. SetupComplete then installs the staged local package; repository content is not refreshed again in full Windows.
+Repository synchronization can be used on a **full-Windows preparation machine** to pre-cache media or in **WinPE** while staging a target. OSDStage resolves the requested repository package, refreshes or reuses the optional OSDCloud USB cache, validates the package, and stages it into the offline Windows installation before the first boot. SetupComplete then installs the staged local package; repository content is not refreshed again in full Windows.
 
 ## Repository layout
 
 ```text
 Repository/
 ├── catalog.json
-└── Apps/
+└── Packages/
     └── <AppId>/
         └── <Version>/
             └── <Architecture>/
@@ -41,18 +41,18 @@ Example:
 
 ```json
 {
-  "SchemaVersion": 1,
+  "SchemaVersion": 2,
   "GeneratedAt": "2026-10-06T00:00:00Z",
-  "Apps": [
+  "Packages": [
     {
       "Id": "ExampleApp",
       "Aliases": [
         "RetiredExampleApp"
       ],
-      "Packages": [
+      "Architectures": [
         {
           "Architecture": "x64",
-          "Manifest": "Apps/ExampleApp/1.0.0/x64/manifest.json"
+          "Manifest": "Packages/ExampleApp/1.0.0/x64/manifest.json"
         }
       ]
     }
@@ -72,7 +72,7 @@ Each deployable package keeps its metadata directly beside `Package.zip`.
 
 ```json
 {
-  "SchemaVersion": 1,
+  "SchemaVersion": 2,
   "Id": "ExampleApp",
   "DisplayName": "Example App",
   "Vendor": "Example Software",
@@ -83,7 +83,7 @@ Each deployable package keeps its metadata directly beside `Package.zip`.
     0,
     3010
   ],
-  "Archive": {
+  "Payload": {
     "FileName": "Package.zip",
     "Sha256": "<SHA256>"
   }
@@ -98,17 +98,17 @@ staged `DeviceManifest.json`; the GUI remains read-only.
 
 You can add or correct `Vendor` in an existing published package manifest
 without repackaging `Package.zip` or changing its SHA-256 hash. Publish the
-updated manifest and run `Sync-OSDAppRepository -Name <Id>` on the Windows
+updated manifest and run `Sync-OSDStageRepository -Name <Id>` on the Windows
 development machine (or normal WinPE repository sync) to refresh its cached
 metadata. The existing cache archive is reused when its SHA-256 still matches.
 Previously staged `DeviceManifest.json` files are not silently rewritten.
 
 `PackageType` is optional classification/semantic metadata with five supported values:
-`App`, `Script`, `Font`, `Certificate` and `Driver`. When it is absent, OSDApps uses `App` for
+`App`, `Script`, `Font`, `Certificate` and `Driver`. When it is absent, OSDStage uses `App` for
 backward compatibility. App and Script use the same `Package/Install.ps1` entry point, SHA-256 checks,
 cache and staging paths, ordered SetupComplete queue, success codes and failure
 handling. Font uses the same repository acquisition/integrity/staging pipeline,
-but execution is owned by OSDApps and does not call package-supplied PowerShell.
+but execution is owned by OSDStage and does not call package-supplied PowerShell.
 
 When an existing package variant is republished, omitting `-PackageType`
 preserves its current classification. A newly published package defaults to
@@ -116,7 +116,7 @@ preserves its current classification. A newly published package defaults to
 
 Use `Font` for machine-wide font collections. A Font package needs at least one
 `.ttf` or `.otf` file under `Package/`; `.ttc` is not supported in the initial
-contract. OSDApps recursively discovers supported font files, copies them into
+contract. OSDStage recursively discovers supported font files, copies them into
 `%WINDIR%\Fonts`, writes the machine font registration under
 `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts`, and notifies the
 running Windows session. Other files in the archive are ignored by the font
@@ -130,7 +130,7 @@ packages write a dedicated `Font-<Id>-Result.json` next to `Latest.json`.
 Use `Script` for machine-context configuration, debloat or remediation logic
 that must run once during SetupComplete. Such scripts run as SYSTEM, must not
 restart or shut down Windows, and should not target `HKCU`: no normal end-user
-profile is active in this phase. OSDApps records the result but does not provide
+profile is active in this phase. OSDStage records the result but does not provide
 automatic rollback for changes made by a script.
 
 The package URL is derived from the manifest location. A separate `SourcePath` property is not used.
@@ -155,7 +155,7 @@ CorporateFonts/
 ```
 
 Published archives always wrap source files under `Package/`. App/Script require
-`Package/Install.ps1`; Font does not. Font installation is performed by OSDApps,
+`Package/Install.ps1`; Font does not. Font installation is performed by OSDStage,
 not by an archive-supplied script.
 
 ## Deployment lifecycle
@@ -172,7 +172,7 @@ First boot / SetupComplete
 → validate staged package again
 → extract Package.zip
 → App/Script: run Package/Install.ps1
-→ Font: install supported TTF/OTF files through the OSDApps font runtime
+→ Font: install supported TTF/OTF files through the OSDStage font runtime
 ```
 
 This makes repository apps deterministic at first boot: the package that was selected and cached in WinPE is the package that SetupComplete installs.
@@ -182,8 +182,8 @@ This makes repository apps deterministic at first boot: the package that was sel
 From 0.43.0, choose the repository target explicitly when the preparation machine and target differ:
 
 ```powershell
-Sync-OSDAppRepository -Name 'YourPackageId' -Architecture x64
-Get-OSDAppCacheHealth -Architecture x64
+Sync-OSDStageRepository -Name 'YourPackageId' -Architecture x64
+Get-OSDStageCacheHealth -Architecture x64
 ```
 
 Both commands use the host architecture when `-Architecture` is omitted. Supported target values are `x64` and `arm64`; an exact catalog variant is preferred over `any`. `any` describes a neutral package, not a target architecture. If no compatible variant exists, synchronization fails before changing the cache. Offline health inspection checks locally recorded content and does not select a desired variant.
@@ -191,21 +191,21 @@ Both commands use the host architecture when `-Architecture` is omitted. Support
 The existing layout stores one variant per repository Id. Changing target architecture for that Id replaces its cached content through the same transaction and hash checks. It does not retain parallel x64/ARM64 versions. Selective sync preserves unrelated Ids; `-Prune` still reconciles the complete catalog, with explicit pins retaining valid exceptions. Use the same target for preview and execution:
 
 ```powershell
-Get-OSDAppCacheHealth -Architecture x64
-Sync-OSDAppRepository -Architecture x64 -Prune -WhatIf
+Get-OSDStageCacheHealth -Architecture x64
+Sync-OSDStageRepository -Architecture x64 -Prune -WhatIf
 # After reviewing the intended target and removals:
-Sync-OSDAppRepository -Architecture x64 -Prune -Confirm
+Sync-OSDStageRepository -Architecture x64 -Prune -Confirm
 ```
 
 This is a preparation choice, not a persisted deployment setting. WinPE staging still resolves repository variants for its host architecture. Built-in synchronizers retain their own architecture options. Use separate media if both variants of the same Id must remain cached.
 
 ## Cache health and reconciliation
 
-Inspecting health is read-only. With a desired catalog, OSDApps compares the
+Inspecting health is read-only. With a desired catalog, OSDStage compares the
 physical cache, `CacheCatalog.json`, canonical IDs and aliases:
 
 ```powershell
-$Health = Get-OSDAppCacheHealth -CatalogPath C:\OSDApps\Repository\catalog.json
+$Health = Get-OSDStageCacheHealth -CatalogPath C:\OSDStage\Repository\catalog.json
 $Health | Select-Object Healthy, CatalogError, CacheCatalogError, ActiveCount, PinnedCount, ObsoleteCount, OrphanedCount, RenamedCount, IncompleteCount, CorruptCount, RemovableSizeMB
 $Health.Entries |
     Where-Object Action -ne 'None' |
@@ -217,11 +217,11 @@ configured `CatalogUri`, omit both catalog arguments. To verify only the local
 cache without a repository request:
 
 ```powershell
-Get-OSDAppCacheHealth -Offline
+Get-OSDStageCacheHealth -Offline
 ```
 
 A valid locally cataloged package remains `Active` during that offline check;
-OSDApps does not call it obsolete merely because desired state was not queried.
+OSDStage does not call it obsolete merely because desired state was not queried.
 The health states are:
 
 | State | Meaning |
@@ -246,11 +246,11 @@ the complete catalog:
 
 ```powershell
 # Configured CatalogUri and intended OSDCloud cache volume required.
-Sync-OSDAppRepository -Prune -WhatIf
-Sync-OSDAppRepository -Prune -Confirm
+Sync-OSDStageRepository -Prune -WhatIf
+Sync-OSDStageRepository -Prune -Confirm
 ```
 
-`-Prune` cannot be combined with `-Name`. OSDApps first resolves the complete
+`-Prune` cannot be combined with `-Name`. OSDStage first resolves the complete
 plan for the selected architecture (the host architecture by default) and downloads and SHA-256-validates every replacement.
 Stale folders are moved into the same-volume transaction backup, new packages
 are promoted, and `CacheCatalog.json` is the commit point. A failure before
@@ -260,13 +260,13 @@ An exceptional package can be retained by canonical ID only when its existing
 archive is still valid:
 
 ```powershell
-Sync-OSDAppRepository -Prune -PinnedId LegacyApp -WhatIf
-Sync-OSDAppRepository -Prune -PinnedId LegacyApp -Confirm
+Sync-OSDStageRepository -Prune -PinnedId LegacyApp -WhatIf
+Sync-OSDStageRepository -Prune -PinnedId LegacyApp -Confirm
 ```
 
 Unknown, missing, corrupt and alias pins are rejected. Repository pruning does
 not clear built-in caches, device staging or the source repository. A successful
-`Sync-OSDAppMicrosoftTeams` and standalone PreInstall separately remove the
+`Sync-OSDStageMicrosoftTeams` and standalone PreInstall separately remove the
 retired `BuiltIn\Teams` folder only after the canonical
 `BuiltIn\MicrosoftTeams` payload is complete and its bootstrapper passes the
 existing trust check. A PreInstall cleanup failure is logged but does not fail
@@ -276,28 +276,28 @@ an otherwise usable deployment.
 
 For a complete walkthrough from your own `Install.ps1` to a published package, see [Build a repository package](../Examples/Build-Repository-Package.md).
 
-The complete structure may be created manually. OSDApps also includes convenience helpers.
+The complete structure may be created manually. OSDStage also includes convenience helpers.
 
 Create an empty repository:
 
 ```powershell
-New-OSDAppRepository -Path C:\OSDApps\Repository
+New-OSDStageRepository -Path C:\OSDStage\Repository
 ```
 
 Build a package:
 
 ```powershell
-New-OSDAppPackage `
+New-OSDStagePackage `
     -Id ExampleApp `
     -Version 1.0.0 `
-    -SourcePath C:\OSDApps\Packages\ExampleApp `
-    -OutputPath C:\OSDApps\Build\ExampleApp
+    -SourcePath C:\OSDStage\Packages\ExampleApp `
+    -OutputPath C:\OSDStage\Build\ExampleApp
 ```
 
 Publish it into the repository:
 
 ```powershell
-Add-OSDAppPackage `
+Add-OSDStagePackage `
     -Id ExampleApp `
     -Alias RetiredExampleApp `
     -DisplayName 'Example App' `
@@ -305,14 +305,14 @@ Add-OSDAppPackage `
     -Version 1.0.0 `
     -Architecture x64 `
     -PackageType App `
-    -PackagePath C:\OSDApps\Build\ExampleApp\Package.zip `
-    -RepositoryPath C:\OSDApps\Repository
+    -PackagePath C:\OSDStage\Build\ExampleApp\Package.zip `
+    -RepositoryPath C:\OSDStage\Repository
 ```
 
 The helper:
 
 1. validates the fixed `Package/Install.ps1` archive layout;
-2. creates `Apps/<Id>/<Version>/<Architecture>`;
+2. creates `Packages/<Id>/<Version>/<Architecture>`;
 3. copies `Package.zip`;
 4. calculates SHA-256;
 5. writes `manifest.json`, including the selected package type;
@@ -325,58 +325,58 @@ Supplying an explicitly empty alias array removes them.
 Publish a font package without an Install.ps1:
 
 ```powershell
-New-OSDAppPackage `
+New-OSDStagePackage `
     -Id CorporateFonts `
     -Version 1.0.0 `
     -PackageType Font `
-    -SourcePath C:\OSDApps\Packages\CorporateFonts `
-    -OutputPath C:\OSDApps\Build\CorporateFonts
+    -SourcePath C:\OSDStage\Packages\CorporateFonts `
+    -OutputPath C:\OSDStage\Build\CorporateFonts
 
-Add-OSDAppPackage `
+Add-OSDStagePackage `
     -Id CorporateFonts `
     -DisplayName 'Corporate Fonts' `
     -Version 1.0.0 `
     -Architecture any `
     -PackageType Font `
-    -PackagePath C:\OSDApps\Build\CorporateFonts\Package.zip `
-    -RepositoryPath C:\OSDApps\Repository
+    -PackagePath C:\OSDStage\Build\CorporateFonts\Package.zip `
+    -RepositoryPath C:\OSDStage\Repository
 ```
 
-Stage it in WinPE with `Add-OSDAppFont -Id CorporateFonts`.
+Stage it in WinPE with `Add-OSDStageFont -Id CorporateFonts`.
 
 Publish a script package with the same authoring commands:
 
 ```powershell
-New-OSDAppPackage `
+New-OSDStagePackage `
     -Id ConfigureWindows `
     -Version 1.0.0 `
-    -SourcePath C:\OSDApps\Packages\ConfigureWindows `
-    -OutputPath C:\OSDApps\Build\ConfigureWindows
+    -SourcePath C:\OSDStage\Packages\ConfigureWindows `
+    -OutputPath C:\OSDStage\Build\ConfigureWindows
 
-Add-OSDAppPackage `
+Add-OSDStagePackage `
     -Id ConfigureWindows `
     -DisplayName 'Configure Windows' `
     -Version 1.0.0 `
     -Architecture x64 `
     -PackageType Script `
-    -PackagePath C:\OSDApps\Build\ConfigureWindows\Package.zip `
-    -RepositoryPath C:\OSDApps\Repository
+    -PackagePath C:\OSDStage\Build\ConfigureWindows\Package.zip `
+    -RepositoryPath C:\OSDStage\Repository
 ```
 
-Stage it with the existing command: `Add-OSDApp -Name ConfigureWindows`.
+Stage it with the existing command: `Add-OSDStage -Name ConfigureWindows`.
 
 ## Validation
 
 Validate an individual archive:
 
 ```powershell
-Test-OSDAppPackage C:\OSDApps\Build\ExampleApp\Package.zip
+Test-OSDStagePackage C:\OSDStage\Build\ExampleApp\Package.zip
 ```
 
 Validate the complete repository:
 
 ```powershell
-Test-OSDAppRepository C:\OSDApps\Repository
+Test-OSDStageRepository C:\OSDStage\Repository
 ```
 
 Repository validation checks:
@@ -395,7 +395,7 @@ Repository validation checks:
 
 ## Built-in or repository?
 
-Repository apps are not limited to niche or custom software. They can also be used for apps that OSDApps supports as built-ins when an organization prefers to own the package lifecycle itself.
+Repository apps are not limited to niche or custom software. They can also be used for apps that OSDStage supports as built-ins when an organization prefers to own the package lifecycle itself.
 
 For example, Microsoft 365 Apps can be deployed either way:
 
@@ -430,23 +430,23 @@ The resulting repository is ordinary static content. Publish the contents of `Re
 For example:
 
 ```text
-https://example.blob.core.windows.net/osdapps/catalog.json
-https://example.blob.core.windows.net/osdapps/Apps/ExampleApp/1.0.0/x64/manifest.json
-https://example.blob.core.windows.net/osdapps/Apps/ExampleApp/1.0.0/x64/Package.zip
+https://example.blob.core.windows.net/osdstage/catalog.json
+https://example.blob.core.windows.net/osdstage/Packages/ExampleApp/1.0.0/x64/manifest.json
+https://example.blob.core.windows.net/osdstage/Packages/ExampleApp/1.0.0/x64/Package.zip
 ```
 
 Configure a deployment session with:
 
 ```powershell
-Set-OSDAppConfiguration -CatalogUri 'https://example.blob.core.windows.net/osdapps/catalog.json'
+Set-OSDStageConfiguration -CatalogUri 'https://example.blob.core.windows.net/osdstage/catalog.json'
 ```
 
 ## Examples
 
 [Examples](../Examples/README.md) includes an empty catalog template and a package-layout placeholder. Supply your own unattended `Install.ps1` and payload; the placeholder does not install an app.
 
-`Add-OSDAppPackage` writes a local repository. Uploading it to your hosting is a separate step. Publish package archives and manifests before updating `catalog.json`, so clients never discover references to files that are not yet available.
+`Add-OSDStagePackage` writes a local repository. Uploading it to your hosting is a separate step. Publish package archives and manifests before updating `catalog.json`, so clients never discover references to files that are not yet available.
 
-Certificate packages contain only public CA `.cer`/`.crt` files under `Package/`. Publish with `-PackageType Certificate -CertificateStore Root` (or `CA`); both stores are under LocalMachine. Stage with `Add-OSDAppCertificate -Id`. See [certificate packages](certificate-staging.md) for the complete workflow.
+Certificate packages contain only public CA `.cer`/`.crt` files under `Package/`. Publish with `-PackageType Certificate -CertificateStore Root` (or `CA`); both stores are under LocalMachine. Stage with `Add-OSDStageCertificate -Id`. See [certificate packages](certificate-staging.md) for the complete workflow.
 
-Driver packages use the same `Package.zip`, manifest, version and cache pipeline. Use `-PackageType Driver` and stage with `Add-OSDAppDriver -Id`. See [driver packages](driver-packages.md) for complete payload requirements and native import reporting.
+Driver packages use the same `Package.zip`, manifest, version and cache pipeline. Use `-PackageType Driver` and stage with `Add-OSDStageDriver -Id`. See [driver packages](driver-packages.md) for complete payload requirements and native import reporting.

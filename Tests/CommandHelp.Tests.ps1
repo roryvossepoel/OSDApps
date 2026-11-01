@@ -2,15 +2,15 @@ Describe 'Packaged command-help source contract' {
     BeforeAll {
         $script:root = Split-Path $PSScriptRoot -Parent
         $script:helpData = Import-PowerShellDataFile -LiteralPath (Join-Path $script:root 'help\CommandHelp.psd1')
-        $script:manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $script:root 'OSDApps.psd1')
-        Import-Module (Join-Path $script:root 'OSDApps.psd1') -Force
-        $script:module = Get-Module OSDApps
+        $script:manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $script:root 'OSDStage.psd1')
+        Import-Module (Join-Path $script:root 'OSDStage.psd1') -Force
+        $script:module = Get-Module OSDStage
         $script:common = @('Verbose','Debug','ErrorAction','WarningAction','InformationAction','ProgressAction',
             'ErrorVariable','WarningVariable','InformationVariable','OutVariable','OutBuffer','PipelineVariable','WhatIf','Confirm')
     }
 
     It 'contains exactly the exported function set, not private or invented commands' {
-        $script:helpData.SchemaVersion | Should -Be 1
+        $script:helpData.SchemaVersion | Should -Be 2
         @(Compare-Object @($script:manifest.FunctionsToExport | Sort-Object) @($script:helpData.Commands.Keys | Sort-Object)).Count | Should -Be 0
     }
 
@@ -44,7 +44,7 @@ Describe 'Packaged command-help source contract' {
         }
     }
 
-    It 'parses every help example and checks OSDApps command parameter names without running it' {
+    It 'parses every help example and checks OSDStage command parameter names without running it' {
         foreach ($name in $script:manifest.FunctionsToExport) {
             foreach ($example in $script:helpData.Commands[$name].Examples) {
                 $tokens = $null
@@ -55,7 +55,7 @@ Describe 'Packaged command-help source contract' {
                 $calls = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] },$true)
                 foreach ($call in $calls) {
                     $callName = $call.GetCommandName()
-                    if ($callName -notmatch '^[A-Za-z]+-OSDApp') { continue }
+                    if ($callName -notmatch '^[A-Za-z]+-OSDStage') { continue }
                     $callName | Should -BeIn @($script:manifest.FunctionsToExport)
                     $command = $script:module.ExportedFunctions[$callName]
                     foreach ($element in $call.CommandElements) {
@@ -69,13 +69,13 @@ Describe 'Packaged command-help source contract' {
     }
 
     It 'keeps literal Boolean and pipeline-variable syntax in examples' {
-        $script:helpData.Commands['Add-OSDAppCiscoWebex'].Examples[0].Code | Should -Match '\$false'
-        $script:helpData.Commands['Test-OSDAppRepository'].Examples[0].Code | Should -Match '\$_\.Valid'
+        $script:helpData.Commands['Add-OSDStageCiscoWebex'].Examples[0].Code | Should -Match '\$false'
+        $script:helpData.Commands['Test-OSDStageRepository'].Examples[0].Code | Should -Match '\$_\.Valid'
     }
 
     It 'does not claim that Offline disables trust verification or that cached means installed' {
-        $script:helpData.Commands['Show-OSDAppUI'].Parameters.Offline | Should -Match 'signature checks stay enabled'
-        $script:helpData.Commands['Get-OSDAppCache'].Description | Should -Match 'SignatureStatus is separate'
-        $script:helpData.Commands['Add-OSDApp'].Output | Should -Match 'not installation proof'
+        $script:helpData.Commands['Show-OSDStageUI'].Parameters.Offline | Should -Match 'signature checks stay enabled'
+        $script:helpData.Commands['Get-OSDStageCache'].Description | Should -Match 'SignatureStatus is separate'
+        $script:helpData.Commands['Add-OSDStage'].Output | Should -Match 'not installation proof'
     }
 }

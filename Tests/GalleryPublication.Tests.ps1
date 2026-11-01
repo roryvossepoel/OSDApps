@@ -25,10 +25,10 @@ Describe 'Gallery publication verification' {
         $env:GALLERY_VERSION = '0.42.0'
         $env:PSGALLERY_API_KEY = 'fixture-only'
         $workspace = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
-        $script:fixtureModule = Join-Path $workspace 'dist\OSDApps'
+        $script:fixtureModule = Join-Path $workspace 'dist\OSDStage'
         New-Item -ItemType Directory -Path $fixtureModule -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path $fixtureModule 'OSDApps.psd1') -Value "@{ModuleVersion='0.42.0'}"
-        Set-Content -LiteralPath (Join-Path $fixtureModule 'OSDApps.psm1') -Value '# fixture payload'
+        Set-Content -LiteralPath (Join-Path $fixtureModule 'OSDStage.psd1') -Value "@{ModuleVersion='0.42.0'}"
+        Set-Content -LiteralPath (Join-Path $fixtureModule 'OSDStage.psm1') -Value '# fixture payload'
         Push-Location -LiteralPath $workspace
         $script:downloadAttempts = 0
         $script:failuresBeforeSuccess = 0
@@ -42,14 +42,14 @@ Describe 'Gallery publication verification' {
             if (Test-Path -LiteralPath (Join-Path $Path 'partial.txt')) { throw 'Previous partial download was not removed.' }
             if ($script:downloadAttempts -le $script:failuresBeforeSuccess) {
                 Set-Content -LiteralPath (Join-Path $Path 'partial.txt') -Value partial
-                throw "No match was found for OSDApps on attempt $script:downloadAttempts."
+                throw "No match was found for OSDStage on attempt $script:downloadAttempts."
             }
             if ($script:contentFault -eq 'NoDirectory') { return }
-            $destination = Join-Path $Path "OSDApps\$RequiredVersion"
+            $destination = Join-Path $Path "OSDStage\$RequiredVersion"
             New-Item -ItemType Directory -Path $destination -Force | Out-Null
             Get-ChildItem -LiteralPath $script:fixtureModule -File | Copy-Item -Destination $destination
-            if ($script:contentFault -eq 'Mismatch') { Set-Content -LiteralPath (Join-Path $destination 'OSDApps.psm1') -Value '# different bytes' }
-            if ($script:contentFault -eq 'Missing') { Remove-Item -LiteralPath (Join-Path $destination 'OSDApps.psm1') }
+            if ($script:contentFault -eq 'Mismatch') { Set-Content -LiteralPath (Join-Path $destination 'OSDStage.psm1') -Value '# different bytes' }
+            if ($script:contentFault -eq 'Missing') { Remove-Item -LiteralPath (Join-Path $destination 'OSDStage.psm1') }
         }
     }
 
@@ -65,7 +65,7 @@ Describe 'Gallery publication verification' {
         { & $script:publishStep } | Should -Not -Throw
         Should -Invoke Publish-Module -Exactly 1
         Should -Invoke Find-Module -Exactly 1
-        Should -Invoke Save-Module -Exactly 3 -ParameterFilter { $Name -eq 'OSDApps' -and $RequiredVersion -eq '0.42.0' -and $Repository -eq 'PSGallery' }
+        Should -Invoke Save-Module -Exactly 3 -ParameterFilter { $Name -eq 'OSDStage' -and $RequiredVersion -eq '0.42.0' -and $Repository -eq 'PSGallery' }
         Should -Invoke Start-Sleep -Exactly 2 -ParameterFilter { $Seconds -eq 10 }
     }
 
@@ -79,14 +79,14 @@ Describe 'Gallery publication verification' {
 
     It 'rejects a hash mismatch immediately rather than retrying content verification' {
         $script:contentFault = 'Mismatch'
-        { & $script:publishStep } | Should -Throw '*does not match the release*OSDApps.psm1*'
+        { & $script:publishStep } | Should -Throw '*does not match the release*OSDStage.psm1*'
         Should -Invoke Save-Module -Exactly 1
         Should -Invoke Start-Sleep -Exactly 0
     }
 
     It 'rejects a downloaded package with a missing release file immediately' {
         $script:contentFault = 'Missing'
-        { & $script:publishStep } | Should -Throw '*missing file*OSDApps.psm1*'
+        { & $script:publishStep } | Should -Throw '*missing file*OSDStage.psm1*'
         Should -Invoke Save-Module -Exactly 1
         Should -Invoke Start-Sleep -Exactly 0
     }

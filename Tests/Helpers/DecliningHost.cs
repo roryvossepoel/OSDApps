@@ -7,14 +7,14 @@ using System.Management.Automation;
 using System.Management.Automation.Host;
 using System.Security;
 
-namespace OSDApps.Tests.Issue17
+namespace OSDStage.Tests.Issue17
 {
     public sealed class DecliningHost : PSHost
     {
         private readonly Guid id = Guid.NewGuid();
         public readonly DecliningUI Interaction = new DecliningUI();
         public override Guid InstanceId { get { return id; } }
-        public override string Name { get { return "OSDApps confirmation test"; } }
+        public override string Name { get { return "OSDStage confirmation test"; } }
         public override Version Version { get { return new Version(1, 0); } }
         public override PSHostUserInterface UI { get { return Interaction; } }
         public override CultureInfo CurrentCulture { get { return CultureInfo.GetCultureInfo("en-US"); } }

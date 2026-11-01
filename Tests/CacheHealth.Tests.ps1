@@ -1,8 +1,8 @@
 Describe 'Desired-state cache health' {
     BeforeAll {
         $script:moduleRoot = Split-Path -Parent $PSScriptRoot
-        Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
-        Import-Module (Join-Path $script:moduleRoot 'OSDApps.psd1') -Force
+        Remove-Module OSDStage -Force -ErrorAction SilentlyContinue
+        Import-Module (Join-Path $script:moduleRoot 'OSDStage.psd1') -Force
 
         function global:New-CacheHealthRepository {
             param(
@@ -14,21 +14,21 @@ Describe 'Desired-state cache health' {
             foreach ($definition in $App) {
                 $id = [string]$definition.Id
                 $version = [string]$definition.Version
-                $packageRoot = Join-Path $Root "Apps\$id\$version\x64"
+                $packageRoot = Join-Path $Root "Packages\$id\$version\x64"
                 New-Item -ItemType Directory -Path $packageRoot -Force | Out-Null
                 $archivePath = Join-Path $packageRoot 'Package.zip'
                 Set-Content -LiteralPath $archivePath -Value "repository-$id-$version" -Encoding ASCII
                 $hash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
                 @{
-                    SchemaVersion=1; Id=$id; DisplayName=$id; Version=$version
+                    SchemaVersion=2; Id=$id; DisplayName=$id; Version=$version
                     Architecture='x64'; SuccessCodes=@(0,3010)
-                    Archive=@{FileName='Package.zip';Sha256=$hash}
+                    Payload=@{FileName='Package.zip';Sha256=$hash}
                 } | ConvertTo-Json -Depth 10 |
                     Set-Content -LiteralPath (Join-Path $packageRoot 'manifest.json') -Encoding UTF8
 
                 $catalogApp = [ordered]@{
                     Id=$id
-                    Packages=@(@{Architecture='x64';Manifest="Apps/$id/$version/x64/manifest.json"})
+                    Architectures=@(@{Architecture='x64';Manifest="Packages/$id/$version/x64/manifest.json"})
                 }
                 if ($definition.PSObject.Properties.Name -contains 'Aliases') {
                     $catalogApp['Aliases'] = @($definition.Aliases)
@@ -38,9 +38,9 @@ Describe 'Desired-state cache health' {
 
             $catalogPath = Join-Path $Root 'catalog.json'
             @{
-                SchemaVersion=1
+                SchemaVersion=2
                 GeneratedAt='2026-10-13T00:00:00Z'
-                Apps=$catalogApps
+                Packages=$catalogApps
             } | ConvertTo-Json -Depth 20 |
                 Set-Content -LiteralPath $catalogPath -Encoding UTF8
             $catalogPath
@@ -61,7 +61,7 @@ Describe 'Desired-state cache health' {
             $entry = [ordered]@{
                 Id=$Id; DisplayName=$Id; Version=$Version; Architecture='x64'
                 SuccessCodes=@(0,3010)
-                Archive=@{FileName='Package.zip';Sha256=(Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash}
+                Payload=@{FileName='Package.zip';Sha256=(Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash}
             }
             if ($Aliases) { $entry['Aliases'] = @($Aliases) }
             [pscustomobject]$entry
@@ -77,11 +77,11 @@ Describe 'Desired-state cache health' {
         $cache = Join-Path $TestDrive 'OfflineCache'
         $package = Add-CacheHealthPackage -CachePath $cache -Id AppA -Version 1.0.0
         @{
-            SchemaVersion=1; GeneratedAt='2026-10-13T00:00:00Z'; Packages=@($package)
+            SchemaVersion=2; GeneratedAt='2026-10-13T00:00:00Z'; Packages=@($package)
         } | ConvertTo-Json -Depth 20 |
             Set-Content -LiteralPath (Join-Path $cache 'CacheCatalog.json') -Encoding UTF8
 
-        $health = Get-OSDAppCacheHealth -CachePath $cache -Offline
+        $health = Get-OSDStageCacheHealth -CachePath $cache -Offline
 
         $health.CacheAvailable | Should -BeTrue
         $health.DesiredStateAvailable | Should -BeFalse
@@ -103,17 +103,17 @@ Describe 'Desired-state cache health' {
         $gone = Add-CacheHealthPackage -CachePath $cache -Id GoneApp -Version 1.0.0
 
         # Make CurrentApp byte-identical to its desired archive and metadata.
-        Copy-Item -LiteralPath (Join-Path $repository 'Apps\CurrentApp\2.0.0\x64\Package.zip') `
+        Copy-Item -LiteralPath (Join-Path $repository 'Packages\CurrentApp\2.0.0\x64\Package.zip') `
             -Destination (Join-Path $cache 'Packages\CurrentApp\Package.zip') -Force
-        $current.Archive.Sha256 = (Get-FileHash -LiteralPath (Join-Path $cache 'Packages\CurrentApp\Package.zip') -Algorithm SHA256).Hash
+        $current.Payload.Sha256 = (Get-FileHash -LiteralPath (Join-Path $cache 'Packages\CurrentApp\Package.zip') -Algorithm SHA256).Hash
         New-Item -ItemType Directory -Path (Join-Path $cache 'Packages\LooseFolder') -Force | Out-Null
         Set-Content -LiteralPath (Join-Path $cache 'Packages\LooseFolder\Package.zip') -Value 'unregistered' -Encoding ASCII
         @{
-            SchemaVersion=1; GeneratedAt='2026-10-13T00:00:00Z'; Packages=@($current,$old,$gone)
+            SchemaVersion=2; GeneratedAt='2026-10-13T00:00:00Z'; Packages=@($current,$old,$gone)
         } | ConvertTo-Json -Depth 20 |
             Set-Content -LiteralPath (Join-Path $cache 'CacheCatalog.json') -Encoding UTF8
 
-        $health = Get-OSDAppCacheHealth -CachePath $cache -CatalogPath $catalogPath
+        $health = Get-OSDStageCacheHealth -CachePath $cache -CatalogPath $catalogPath
         $byId = @{}
         foreach ($entry in @($health.Entries | Where-Object Source -eq 'Repository')) { $byId[$entry.Id] = $entry }
 
@@ -134,12 +134,12 @@ Describe 'Desired-state cache health' {
         $cache = Join-Path $TestDrive 'CorruptPinnedCache'
         $package = Add-CacheHealthPackage -CachePath $cache -Id PinnedApp -Version 1.0.0
         @{
-            SchemaVersion=1; GeneratedAt='2026-10-13T00:00:00Z'; Packages=@($package)
+            SchemaVersion=2; GeneratedAt='2026-10-13T00:00:00Z'; Packages=@($package)
         } | ConvertTo-Json -Depth 20 |
             Set-Content -LiteralPath (Join-Path $cache 'CacheCatalog.json') -Encoding UTF8
         Set-Content -LiteralPath (Join-Path $cache 'Packages\PinnedApp\Package.zip') -Value 'tampered' -Encoding ASCII
 
-        $health = Get-OSDAppCacheHealth -CachePath $cache -Offline -PinnedId PinnedApp
+        $health = Get-OSDStageCacheHealth -CachePath $cache -Offline -PinnedId PinnedApp
 
         $health.Healthy | Should -BeFalse
         $health.CorruptCount | Should -Be 1
@@ -163,7 +163,7 @@ Describe 'Desired-state cache health' {
         @{Id='Microsoft365Apps';Version=$version;Architecture='x64'} | ConvertTo-Json |
             Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Encoding UTF8
 
-        $health = Get-OSDAppCacheHealth -CachePath $cache -Offline
+        $health = Get-OSDStageCacheHealth -CachePath $cache -Offline
         $entry = @($health.Entries | Where-Object Id -eq 'Microsoft365Apps')[0]
 
         $health.Healthy | Should -BeFalse
@@ -176,7 +176,7 @@ Describe 'Desired-state cache health' {
         $cache = Join-Path $TestDrive 'UnknownPinCache'
         New-Item -ItemType Directory -Path $cache -Force | Out-Null
 
-        $health = Get-OSDAppCacheHealth -CachePath $cache -Offline -PinnedId MissingApp
+        $health = Get-OSDStageCacheHealth -CachePath $cache -Offline -PinnedId MissingApp
         $entry = @($health.Entries | Where-Object Id -eq 'MissingApp')[0]
 
         $health.Healthy | Should -BeFalse
@@ -193,7 +193,7 @@ Describe 'Desired-state cache health' {
         Set-Content -LiteralPath (Join-Path $transaction 'recovery.bin') -Value 'recovery' -Encoding ASCII
         Set-Content -LiteralPath (Join-Path $cache 'CacheCatalog.json') -Value '{not-json' -Encoding UTF8
 
-        $health = Get-OSDAppCacheHealth -CachePath $cache -Offline
+        $health = Get-OSDStageCacheHealth -CachePath $cache -Offline
         $entry = @($health.Entries | Where-Object Source -eq 'Transaction')[0]
 
         $health.Healthy | Should -BeFalse
@@ -214,7 +214,7 @@ Describe 'Desired-state cache health' {
         @{Id='MicrosoftTeams';Version='1.0.0';Architecture='x64';SyncedAt='2026-10-13T00:00:00Z'} |
             ConvertTo-Json | Set-Content -LiteralPath (Join-Path $wrongRoot 'CacheInfo.json') -Encoding UTF8
 
-        $health = Get-OSDAppCacheHealth -CachePath $cache -Offline
+        $health = Get-OSDStageCacheHealth -CachePath $cache -Offline
         $entry = @($health.Entries | Where-Object { $_.Source -eq 'BuiltIn' -and $_.Id -eq 'WrongFolder' })[0]
 
         $entry.State | Should -Be 'Orphaned'

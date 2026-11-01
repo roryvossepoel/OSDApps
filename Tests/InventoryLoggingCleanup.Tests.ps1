@@ -1,11 +1,11 @@
 Describe 'Inventory and client logging analyzer cleanup' {
     BeforeAll {
         $script:moduleRoot = Split-Path $PSScriptRoot -Parent
-        Import-Module (Join-Path $script:moduleRoot 'OSDApps.psd1') -Force
+        Import-Module (Join-Path $script:moduleRoot 'OSDStage.psd1') -Force
     }
 
     It 'writes byte-identical CMTrace records using Event and EventName' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             Mock Get-Date { [datetime]::SpecifyKind([datetime]'2026-01-02T03:04:05', [DateTimeKind]::Utc) }
             $legacyPath = Join-Path $TestDrive 'legacy.log'
             $namedPath = Join-Path $TestDrive 'named.log'
@@ -15,10 +15,10 @@ Describe 'Inventory and client logging analyzer cleanup' {
                 Message = 'Cache inspection'
                 Data = @{ Z = @(1,2); A = 'first' }
             }
-            @(Write-OSDAppLog -LogPath $legacyPath -Event 'CacheInspected' @parameters).Count | Should -Be 0
-            @(Write-OSDAppLog -LogPath $namedPath -EventName 'CacheInspected' @parameters).Count | Should -Be 0
+            @(Write-OSDStageLog -LogPath $legacyPath -Event 'CacheInspected' @parameters).Count | Should -Be 0
+            @(Write-OSDStageLog -LogPath $namedPath -EventName 'CacheInspected' @parameters).Count | Should -Be 0
             (Get-FileHash -LiteralPath $legacyPath).Hash | Should -Be (Get-FileHash -LiteralPath $namedPath).Hash
-            $row = ConvertFrom-OSDAppUILogLine -Line (Get-Content -LiteralPath $legacyPath)
+            $row = ConvertFrom-OSDStageUILogLine -Line (Get-Content -LiteralPath $legacyPath)
             $row.Event | Should -Be 'CacheInspected'
             $row.Component | Should -Be 'Cache'
             $row.Level | Should -Be 'Warning'
@@ -27,33 +27,33 @@ Describe 'Inventory and client logging analyzer cleanup' {
     }
 
     It 'accepts legacy Event splatting and preserves single-line escaping' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $path = Join-Path $TestDrive 'splat.log'
             $parameters = @{
                 LogPath = $path; Component = 'Client'; Event = 'Inspect'
                 Message = "first`nsecond ]LOG]!> text"
             }
-            Write-OSDAppLog @parameters
+            Write-OSDStageLog @parameters
             $lines = @(Get-Content -LiteralPath $path)
             $lines.Count | Should -Be 1
-            $row = ConvertFrom-OSDAppUILogLine -Line $lines[0]
+            $row = ConvertFrom-OSDStageUILogLine -Line $lines[0]
             $row.Event | Should -Be 'Inspect'
             $row.Message | Should -Be 'first second ]LOG]! > text'
         }
     }
 
     It 'keeps an event-only record readable by the Viewer parser' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $path = Join-Path $TestDrive 'event-only.log'
-            Write-OSDAppLog -LogPath $path -Component 'Client' -Event 'Ready'
-            $row = ConvertFrom-OSDAppUILogLine -Line (Get-Content -LiteralPath $path)
+            Write-OSDStageLog -LogPath $path -Component 'Client' -Event 'Ready'
+            $row = ConvertFrom-OSDStageUILogLine -Line (Get-Content -LiteralPath $path)
             $row.Event | Should -Be 'Ready'
             $row.Message | Should -BeNullOrEmpty
         }
     }
 
     It 'selects the explicit architecture and channel without changing input inventory' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $app = [pscustomobject]@{ Id='MozillaFirefoxEnterprise'; Architecture='x64'; Channel='Rapid' }
             $entries = @(
                 [pscustomobject]@{Id=$app.Id; Architecture='x86'; Channel='Rapid'; Version='1.0'; Valid=$true},
@@ -62,46 +62,46 @@ Describe 'Inventory and client logging analyzer cleanup' {
                 [pscustomobject]@{Id=$app.Id; Architecture='x64'; Channel='Rapid'; Version='4.0'; Valid=$true}
             )
             $before = ConvertTo-Json -InputObject $entries -Depth 5 -Compress
-            Get-OSDAppUICachedVersion -App $app -CacheEntries $entries | Should -Be '4.0'
+            Get-OSDStageUICachedVersion -App $app -CacheEntries $entries | Should -Be '4.0'
             (ConvertTo-Json -InputObject $entries -Depth 5 -Compress) | Should -Be $before
         }
     }
 
     It 'does not pick an arbitrary version from ambiguous architectures' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $app = [pscustomobject]@{Id='GoogleChromeEnterprise'; Architecture='Auto'}
             $entries = @(
                 [pscustomobject]@{Id=$app.Id; Architecture='x86'; Version='1.0'; Valid=$true},
                 [pscustomobject]@{Id=$app.Id; Architecture='x64'; Version='2.0'; Valid=$true}
             )
-            Get-OSDAppUICachedVersion -App $app -CacheEntries $entries | Should -Be '-'
+            Get-OSDStageUICachedVersion -App $app -CacheEntries $entries | Should -Be '-'
         }
     }
 
     It 'preserves missing and Current-only cached version labels' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $app = [pscustomobject]@{Id='GoogleChromeEnterprise'; Architecture='x64'}
-            Get-OSDAppUICachedVersion -App $app -CacheEntries @() | Should -Be '-'
+            Get-OSDStageUICachedVersion -App $app -CacheEntries @() | Should -Be '-'
             $entry = [pscustomobject]@{Id=$app.Id; Architecture='x64'; Version='Current'; Valid=$true}
-            Get-OSDAppUICachedVersion -App $app -CacheEntries @($entry) | Should -Be 'Not recorded'
+            Get-OSDStageUICachedVersion -App $app -CacheEntries @($entry) | Should -Be 'Not recorded'
         }
     }
 
     It 'retains the existing display-only legacy Teams match without mutating the entry' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $app = [pscustomobject]@{Id='MicrosoftTeams'; Architecture='x64'}
             $entry = [pscustomobject]@{Id='Teams'; Architecture='x64'; Version='1.2.3.4'; Valid=$true}
-            Get-OSDAppUICachedVersion -App $app -CacheEntries @($entry) | Should -Be '1.2.3.4'
+            Get-OSDStageUICachedVersion -App $app -CacheEntries @($entry) | Should -Be '1.2.3.4'
             $entry.Id | Should -Be 'Teams'
         }
     }
 
     It 'retains one trimmed MSI version and reports a failed view close only on the verbose stream' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $file = Join-Path $TestDrive 'cleanup.msi'
             Set-Content -LiteralPath $file -Value 'sentinel, not an installer' -Encoding ASCII
             $before = (Get-FileHash -LiteralPath $file).Hash
-            Mock Test-OSDAppWinPE { $false }
+            Mock Test-OSDStageWinPE { $false }
             Mock New-Object {
                 $record = [pscustomobject]@{}
                 $record | Add-Member ScriptMethod StringData { param([int]$column) ' 123.4.5 ' }
@@ -120,10 +120,10 @@ Describe 'Inventory and client logging analyzer cleanup' {
                 $installer
             } -ParameterFilter { $ComObject -eq 'WindowsInstaller.Installer' }
 
-            $normal = @(Get-OSDAppMsiProductVersion -Path $file -Verbose:$false)
+            $normal = @(Get-OSDStageMsiProductVersion -Path $file -Verbose:$false)
             $normal.Count | Should -Be 1
             $normal[0] | Should -Be '123.4.5'
-            $withDiagnostics = @(Get-OSDAppMsiProductVersion -Path $file -Verbose 4>&1)
+            $withDiagnostics = @(Get-OSDStageMsiProductVersion -Path $file -Verbose 4>&1)
             @($withDiagnostics | Where-Object { $_ -is [string] }).Count | Should -Be 1
             @($withDiagnostics | Where-Object {
                 $_ -is [System.Management.Automation.VerboseRecord] -and
@@ -140,10 +140,10 @@ Describe 'Inventory and client logging analyzer cleanup' {
             'PSPossibleIncorrectComparisonWithNull'
         )
         foreach ($relative in @(
-            'Private/Write-OSDAppLog.ps1',
-            'Private/OSDAppUIFormatting.ps1',
-            'Private/Get-OSDAppCachedPackageVersion.ps1',
-            'Public/Test-OSDAppRepository.ps1'
+            'Private/Write-OSDStageLog.ps1',
+            'Private/OSDStageUIFormatting.ps1',
+            'Private/Get-OSDStageCachedPackageVersion.ps1',
+            'Public/Test-OSDStageRepository.ps1'
         )) {
             $findings = @(Invoke-ScriptAnalyzer -Path (Join-Path $script:moduleRoot $relative) -IncludeRule $rules)
             $findings.Count | Should -Be 0 -Because "$relative must retain the reviewed cleanup"

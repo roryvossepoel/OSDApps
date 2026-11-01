@@ -1,6 +1,8 @@
 # Validation matrix
 
-This page records version-specific maintenance checks and real OSDApps deployment scenarios after OSDCloud applies Windows. **Staging success alone is not an installation success**: the Windows `SetupComplete.cmd` phases must finish and the individual app results must be checked.
+> Historical device evidence below was recorded with OSDApps, before the rename. Command and path examples are now written for OSDStage; the recorded commit IDs and deployment IDs refer to the original tests. This is not acceptance evidence for the renamed candidate.
+
+This page records version-specific maintenance checks and real OSDStage deployment scenarios after OSDCloud applies Windows. **Staging success alone is not an installation success**: the Windows `SetupComplete.cmd` phases must finish and the individual app results must be checked.
 
 For current operating instructions, use [Choose the right check](maintenance.md#choose-the-right-check) and the [online WinPE example](../Examples/WinPE-Online.md). The [0.45.0 all-app cold procedure](all-apps-cold-validation.md) is retained as a historical, version-pinned test; it is not the next required test or a current-release quick start.
 
@@ -13,24 +15,24 @@ For current operating instructions, use [Choose the right check](maintenance.md#
 
 ## Company Portal and CMTrace Open combined x64 candidate — 24–25 October 2026
 
-The operator validated the combined feature-candidate module on **PC1, x64**, after OSDCloud applied Windows. WinPE staged four entries. During the first Windows boot, SetupComplete reported `Status=Succeeded`, `SuccessfulAppCount=4`, `FailedAppCount=0` and `SkippedAppCount=0`, with exit code 0 for each:
+The operator validated the combined feature-candidate module on **PC1, x64**, after OSDCloud applied Windows. WinPE staged four entries. During the first Windows boot, SetupComplete reported `Status=Succeeded`, `SuccessfulPackageCount=4`, `FailedPackageCount=0` and `SkippedPackageCount=0`, with exit code 0 for each:
 
 | Queue entry | Physical result |
 | --- | --- |
 | `WindowsInboxCleanup` | Ran as SYSTEM. Three selected packages (`Microsoft.BingWeather`, `Microsoft.MicrosoftSolitaireCollection`, `Microsoft.GamingApp`) removed; no failures or remaining provisioned/registered instances. |
 | `MicrosoftCompanyPortal` | Bundle 11.2.1495.0 provisioned with its offline license and five dependencies. `Get-AppxProvisionedPackage` verified provisioning; the operator subsequently confirmed availability for the signed-in Autopilot user. |
 | `CMTraceOpen` | MSI 1.6.3 passed SetupComplete SHA-256 and Authenticode validation; installed silently from vendor filename `CMTrace-Open_1.6.3_x64.msi`; exit code 0; Windows uninstall inventory confirmed 1.6.3. |
-| `DisplayLinkGraphicsHotDesking` | Separate **repository** package (not a new OSDApps built-in) completed with exit code 0. Repository version was 12.3.5143.0; Windows uninstall entry reported DisplayLink Graphics 12.3.5011.0. No device-attached driver functionality was established. |
+| `DisplayLinkGraphicsHotDesking` | Separate **repository** package (not a new OSDStage built-in) completed with exit code 0. Repository version was 12.3.5143.0; Windows uninstall entry reported DisplayLink Graphics 12.3.5011.0. No device-attached driver functionality was established. |
 
-The OSDApps runtime log recorded `InstallComplete` and scheduled `CleanupMode=OnSuccess` cleanup; this excerpt did **not** independently confirm cleanup completion.
+The OSDStage runtime log recorded `InstallComplete` and scheduled `CleanupMode=OnSuccess` cleanup; this excerpt did **not** independently confirm cleanup completion.
 
-On **25 October 2026**, a separate full-Windows USB-preparation test validated `Sync-OSDAppMicrosoftCompanyPortal -Architecture x64` **without** `-KitPath`. The synchronizer downloaded the official Microsoft Preinstall Kit directly from `download.microsoft.com`, selected seven cache files, returned `Updated=True` and `CacheReused=False`, and reported version **11.2.1495.0**. The downloaded ZIP's SHA-256 was `2CED91D35BF33CCD9E8E76377BF1F24E41B6238547AB43675955EED1757A8F9B`.
+On **25 October 2026**, a separate full-Windows USB-preparation test validated `Sync-OSDStageMicrosoftCompanyPortal -Architecture x64` **without** `-KitPath`. The synchronizer downloaded the official Microsoft Preinstall Kit directly from `download.microsoft.com`, selected seven cache files, returned `Updated=True` and `CacheReused=False`, and reported version **11.2.1495.0**. The downloaded ZIP's SHA-256 was `2CED91D35BF33CCD9E8E76377BF1F24E41B6238547AB43675955EED1757A8F9B`.
 
 The physical deployment and automatic Microsoft download are **two separate tests**. This evidence does not establish ARM64 behavior, Company Portal interaction with Intune or Store updates, or DisplayLink hardware operation. The eventual release version can differ from the test candidate's internal manifest.
 
 ## Windows Inbox Cleanup built-in — 24 October 2026
 
-The opt-in `WindowsInboxCleanup` built-in was exercised on a physical deployment using the PR #65 test module before release version 0.50.0. The operator reported that OSDCloud staging and `Test-OSDAppDeployment -RequireOfflineReady` both succeeded, with `Valid=True` and `OfflineReady=True`.
+The opt-in `WindowsInboxCleanup` built-in was exercised on a physical deployment using the PR #65 test module before release version 0.50.0. The operator reported that OSDCloud staging and `Test-OSDStageDeployment -RequireOfflineReady` both succeeded, with `Valid=True` and `OfflineReady=True`.
 
 - During the first Windows boot, SetupComplete ran the built-in as `NT AUTHORITY\SYSTEM` and returned exit code `0`.
 - The structured cleanup report recorded `Removed=13`, `Absent=0`, `Skipped=0` and `Failed=0`; checks immediately after execution showed no provisioned or registered instances for the selected packages.
@@ -42,7 +44,7 @@ These observations validate the tested x64 deployment path and chosen 13-package
 
 ## Vendor source metadata — 23 October 2026
 
-[`Test-OSDApps-VendorSources.ps1`](../tools/Test-OSDApps-VendorSources.ps1) completed on the Windows preparation PC using a temporary Gallery **0.49.1** module: **15 checks passed, 0 failed, 0 cache write operations**. No installer was downloaded or run, and no USB cache was inspected or changed. The [maintenance guide](maintenance.md#check-vendor-source-metadata) describes the selected variants and report fields.
+[`Test-OSDStage-VendorSources.ps1`](../tools/Test-OSDStage-VendorSources.ps1) completed on the Windows preparation PC using a temporary Gallery **0.49.1** module: **15 checks passed, 0 failed, 0 cache write operations**. No installer was downloaded or run, and no USB cache was inspected or changed. The [maintenance guide](maintenance.md#check-vendor-source-metadata) describes the selected variants and report fields.
 
 | Metadata source | Advertised version |
 | --- | --- |
@@ -82,7 +84,7 @@ This validates online build checking, same-build cache reuse, installation and c
 ## Scenario coverage
 
 This matrix records detailed deployment evidence for the stated versions. The
-[recent Gallery workflow reports](#osdapps-0430-gallery-and-online-deployment-reports--16-october-2026)
+[recent Gallery workflow reports](#osdstage-0430-gallery-and-online-deployment-reports--16-october-2026)
 are listed separately because their evidence is less detailed.
 
 | Scenario | Status | Evidence / expected behavior |
@@ -95,7 +97,7 @@ are listed separately because their evidence is less detailed.
 
 ## Zoom Workplace cold deployment — 19 October 2026
 
-The operator ran `tools/Test-OSDAppsZoom.ps1` from reviewed commit
+The operator ran `tools/Test-OSDStageZoom.ps1` from reviewed commit
 `f3532990d84b5ac3441cdedbed6062125a85ccbb` on a fresh x64 Windows deployment.
 The candidate still reported module version `0.44.0`; Zoom is introduced in
 release `0.45.0`. Deployment ID: `4a3bafa8-c9c8-4b00-9040-24031520df2f`.
@@ -135,7 +137,7 @@ This validates the configuration decisions and a real online Office deployment;
 it is not a physical incompatible-configuration failure injection, a complete
 eight-app regression, or exhaustive verification of every cache payload file.
 
-## OSDApps 0.43.0 Gallery and online deployment reports — 16 October 2026
+## OSDStage 0.43.0 Gallery and online deployment reports — 16 October 2026
 
 The operator reported the following checks while using the Gallery-based
 workflow. These reports supplement the historical matrix above; they do not
@@ -159,7 +161,7 @@ as proof of a cold cache rebuild, a fully offline deployment, all architectures,
 or a fresh complete eight-app regression run. Cache use does not by itself prove
 that every vendor update check succeeded or that no download occurred.
 
-## OSDApps 0.39.0 cache and deployment validation — 15 October 2026
+## OSDStage 0.39.0 cache and deployment validation — 15 October 2026
 
 The candidate from [PR #27](https://github.com/roryvossepoel/OSDApps/pull/27), commit `08206e105daea529893d348f5dfee750160210fa`, passed the following physical checks. These are separate from the automated test suite.
 
@@ -174,7 +176,7 @@ The two Chrome downloads had the same SHA-256 (`2734DC5577DCBAB49BE037E5A074AEF9
 
 The deployment was a warm-cache integration run, not a cold download run. These checks do not simulate a physical power interruption or prove licensing and every app's later interactive behavior.
 
-## OSDApps 0.37.0 release-candidate validation — 13 October 2026
+## OSDStage 0.37.0 release-candidate validation — 13 October 2026
 
 The 0.37.0 candidate from [PR #25](https://github.com/roryvossepoel/OSDApps/pull/25) was built from commit `2a2b5f364de1efd9341a9728a975e4fe7428d841`. GitHub Actions passed **240/240 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38405028071)).
 
@@ -196,21 +198,21 @@ Two freshly applied x64 PCs used the same online OSDCloud USB flash drive and th
 
 On PC 1, only the staged `NotepadPlusPlus` queue slot was replaced with a controlled repository-style failure probe whose installer wrote a marker and exited with code `42`. SetupComplete recorded that entry once as `Failed` with `FailureType=InstallerFailed`, then continued to the following `OmnissaHorizonClient` entry, which succeeded. The final record contained eight results: seven succeeded, one failed and none were skipped. It reported final status `Failed` with `FailureType=AppFailures`; staging and the probe archive were retained, and no scheduled task, service or RunOnce retry was created. Runtime evidence included `AppInstallFailed`, the later Omnissa completion, `InstallCompletedWithErrors` and `CleanupSkipped`.
 
-PC 2 ran the unchanged eight-app queue as a normal control. Correlated PreInstall and Runner records shared deployment ID `4474a976-162c-49b3-8ab3-945b24316ebe` and both reported `Succeeded`. PreInstall completed in **217.1 seconds** and Runner in **359.1 seconds**. All eight apps succeeded, with zero failed and zero skipped. `OnSuccess` removed `C:\Windows\Temp\OSDApps`, the temporary cleanup helper removed itself, and the post-OOBE check found no OSDApps scheduled task, service or RunOnce entry.
+PC 2 ran the unchanged eight-app queue as a normal control. Correlated PreInstall and Runner records shared deployment ID `4474a976-162c-49b3-8ab3-945b24316ebe` and both reported `Succeeded`. PreInstall completed in **217.1 seconds** and Runner in **359.1 seconds**. All eight apps succeeded, with zero failed and zero skipped. `OnSuccess` removed `C:\Windows\Temp\OSDStage`, the temporary cleanup helper removed itself, and the post-OOBE check found no OSDStage scheduled task, service or RunOnce entry.
 
 Together, these physical runs validate the intended one-shot boundary: an ordinary installer failure is isolated, later independent work still executes during the same SetupComplete pass, the unsuccessful deployment preserves evidence without arranging a retry, and the normal path retains its successful cleanup behavior. This pair does not simulate a power interruption and does not prove licensing, user sign-in or every app's later interactive behavior. Raw device logs and the controlled test package are not committed to the public repository.
 
-## OSDApps 0.36.0 release-candidate validation — 13 October 2026
+## OSDStage 0.36.0 release-candidate validation — 13 October 2026
 
-The 0.36.0 candidate from [PR #24](https://github.com/roryvossepoel/OSDApps/pull/24) was built from commit `03bbd8a2304a4c6f72d1253c0d2c5c4ac9637229` and installed as `E:\Modules\OSDApps\0.36.0`. Its source tree matched the locally reviewed and tested feature tree. GitHub Actions passed **235/235 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38364310573)).
+The 0.36.0 candidate from [PR #24](https://github.com/roryvossepoel/OSDApps/pull/24) was built from commit `03bbd8a2304a4c6f72d1253c0d2c5c4ac9637229` and installed as `E:\Modules\OSDStage\0.36.0`. Its source tree matched the locally reviewed and tested feature tree. GitHub Actions passed **235/235 tests** on both Windows PowerShell 5.1 and PowerShell 7, verified **31/31** packaged help topics on both engines and reported no blocking analyzer errors ([CI run](https://github.com/roryvossepoel/OSDApps/actions/runs/38364310573)).
 
 ### Cache health and reconciliation
 
-The populated `E:\OSDApps` cache was first exercised on the full-Windows preparation machine:
+The populated `E:\OSDStage` cache was first exercised on the full-Windows preparation machine:
 
 - Offline inspection reported eight active entries, no obsolete, orphaned, renamed, incomplete or corrupt entries, and valid SHA-256 evidence for both repository packages.
-- Online desired-state inspection against the configured repository catalog reported the same healthy eight-entry state. `Sync-OSDAppRepository -Prune -WhatIf` made no changes.
-- A controlled unregistered `Packages\OSDAppsPruneProbe` folder was classified as `Orphaned`. `-WhatIf` preserved it; an actual transactional prune removed only that folder. Existing repository folder names and archive hashes were unchanged, and the final cache was healthy.
+- Online desired-state inspection against the configured repository catalog reported the same healthy eight-entry state. `Sync-OSDStageRepository -Prune -WhatIf` made no changes.
+- A controlled unregistered `Packages\OSDStagePruneProbe` folder was classified as `Orphaned`. `-WhatIf` preserved it; an actual transactional prune removed only that folder. Existing repository folder names and archive hashes were unchanged, and the final cache was healthy.
 - A controlled legacy `BuiltIn\Teams` folder was classified as `Renamed` with canonical ID `MicrosoftTeams`. Synchronizing Microsoft Teams validated the existing canonical cache, retained its MSIX hash and then removed only the alias. The final cache was healthy.
 
 The transaction log recorded `AcquireCount=0` and `PruneCount=1` for the controlled prune, followed by `PackagePruned` and `SyncComplete`. The Teams test recorded `CacheAliasPruned` only between `BuiltInSyncStart` and a successful `BuiltInSyncComplete`.
@@ -219,9 +221,9 @@ The transaction log recorded `AcquireCount=0` and `PruneCount=1` for the control
 
 Two freshly applied x64 Windows installations used the same online OSDCloud USB flash drive and the same ordered eight-app queue documented below. Both machines loaded the exact 0.36.0 module in WinPE, retained the USB and network connection through SetupComplete, and were checked after OOBE.
 
-For PC 1, the healthy active cache payload was moved to the recoverable `OSDApps-0.36.0-PreColdBackup` folder outside the active `OSDApps` root. The cold preflight reported `Valid=True`, `OfflineReady=False` and `NetworkRequired=True`, as expected. SetupComplete acquired all six built-ins, synchronized the USB cache and installed all six built-ins plus both SHA-256-validated repository packages.
+For PC 1, the healthy active cache payload was moved to the recoverable `OSDStage-0.36.0-PreColdBackup` folder outside the active `OSDStage` root. The cold preflight reported `Valid=True`, `OfflineReady=False` and `NetworkRequired=True`, as expected. SetupComplete acquired all six built-ins, synchronized the USB cache and installed all six built-ins plus both SHA-256-validated repository packages.
 
-PC 2 reused the cache populated by PC 1. Its strict `Test-OSDAppDeployment -RequireOfflineReady -MinimumFreeSpaceGB 10 -ThrowOnFailure` preflight reported `Valid=True`, `OfflineReady=True` and `NetworkRequired=False` before reboot.
+PC 2 reused the cache populated by PC 1. Its strict `Test-OSDStageDeployment -RequireOfflineReady -MinimumFreeSpaceGB 10 -ThrowOnFailure` preflight reported `Valid=True`, `OfflineReady=True` and `NetworkRequired=False` before reboot.
 
 | Cache state | PreInstall | Runner | Measured Windows total | Built-ins updated | Outcome |
 | --- | ---: | ---: | ---: | --- | --- |
@@ -234,9 +236,9 @@ On both PCs, the correlated PreInstall and final result records reported `Succee
 
 These two runs validate the online cold and warm SetupComplete paths for this release candidate. They do not add a new offline deployment result and do not prove licensing, user sign-in or later interactive app health. Raw device logs and organization-managed repository packages are not committed to the public repository.
 
-## OSDApps 0.35.0 release-candidate physical validation — 12 October 2026
+## OSDStage 0.35.0 release-candidate physical validation — 12 October 2026
 
-PC 1 was freshly reinstalled and staged in WinPE with the 0.35.0 release-candidate module loaded from `E:\Modules\OSDApps\0.35.0`. The populated USB cache remained attached and the machine remained online. Before reboot, `Test-OSDAppDeployment -RequireOfflineReady -MinimumFreeSpaceGB 10` passed for the complete eight-app queue.
+PC 1 was freshly reinstalled and staged in WinPE with the 0.35.0 release-candidate module loaded from `E:\Modules\OSDStage\0.35.0`. The populated USB cache remained attached and the machine remained online. Before reboot, `Test-OSDStageDeployment -RequireOfflineReady -MinimumFreeSpaceGB 10` passed for the complete eight-app queue.
 
 The first Windows boot then exercised the standalone PreInstall and Runner scripts plus the new result contract. The standalone and nested PreInstall records shared deployment ID `8d5a26e6-0ddd-46f4-8666-b4234097d20b`; both phases and the final result reported `Succeeded`.
 
@@ -253,13 +255,13 @@ The first Windows boot then exercised the standalone PreInstall and Runner scrip
 
 PreInstall completed in **53.9 s** and recorded `CacheUsed=True` for all six built-ins. Cisco Webex was the only built-in with `PackageUpdated=True`; the other five retained their cached packages. Runner completed in **369.0 s**, giving a measured Windows phase total of **422.9 s (7:03)**. The final result recorded eight expected, eight successful and zero failed apps.
 
-After SetupComplete and OOBE, the `OnSuccess` cleanup contract was checked separately: `C:\Windows\Temp\OSDApps` no longer existed, no `OSDApps-Cleanup-*.cmd` helper remained, and `%ProgramData%\OSDApps\Results\Latest.json` plus `%ProgramData%\OSDApps\Logs\Runtime.log` were preserved. The runtime log contained no warning or error entries.
+After SetupComplete and OOBE, the `OnSuccess` cleanup contract was checked separately: `C:\Windows\Temp\OSDStage` no longer existed, no `OSDStage-Cleanup-*.cmd` helper remained, and `%ProgramData%\OSDStage\Results\Latest.json` plus `%ProgramData%\OSDStage\Logs\Runtime.log` were preserved. The runtime log contained no warning or error entries.
 
 This is one physical release-candidate execution, not a performance benchmark. It validates preflight, staging, cache use, installer exit codes, correlated result reporting and cleanup. It does not prove licensing, user sign-in or every app's later interactive behavior. Raw device logs were reviewed but are not committed to the public repository.
 
-## OSDApps 0.34.1 cold/warm physical validation — 12 October 2026
+## OSDStage 0.34.1 cold/warm physical validation — 12 October 2026
 
-This pair used the same eight-app queue documented for the 0.34.0 release candidate and reused the populated removable cache between runs. Both were real SetupComplete executions. The `Test-OSDAppDeployment` and `Latest.json` contract first included in 0.35.0 were added afterward, so the evidence here comes from the 0.34.1 runtime log and filesystem outcome and does not validate those newer features.
+This pair used the same eight-app queue documented for the 0.34.0 release candidate and reused the populated removable cache between runs. Both were real SetupComplete executions. The `Test-OSDStageDeployment` and `Latest.json` contract first included in 0.35.0 were added afterward, so the evidence here comes from the 0.34.1 runtime log and filesystem outcome and does not validate those newer features.
 
 | Cache state | PreInstall | Runner | Measured Windows total | Cache observation | Outcome |
 | --- | ---: | ---: | ---: | --- | --- |
@@ -268,7 +270,7 @@ This pair used the same eight-app queue documented for the 0.34.0 release candid
 
 The phase total excludes image deployment, WinPE staging, reboot and OOBE. The warm observation establishes cache reuse for this run; it is not a general performance benchmark. Installer/provisioning success still does not prove licensing, later user sign-in or every interactive feature.
 
-## OSDApps 0.34.0 release-candidate physical validation — 11 October 2026
+## OSDStage 0.34.0 release-candidate physical validation — 11 October 2026
 
 These were **Windows SetupComplete executions on two freshly reinstalled x64 PCs**, not just WinPE staging or module unit tests. They exercised development commit `201595501b75875cfa316a989385cedb23ec28e9` from PR #14. The module's version label was still 0.33.0 in this prerelease commit; the tested feature code became the 0.34.0 release candidate after documentation and version preparation.
 
@@ -285,7 +287,7 @@ These were **Windows SetupComplete executions on two freshly reinstalled x64 PCs
 | 7 | `NotepadPlusPlus` | Repository | 8.9.8.1, x64 |
 | 8 | `OmnissaHorizonClient` | Repository | 8.16.2.36295, x64 |
 
-The two repository apps are private-repository **test content**, not bundled built-ins. They were synchronized to the USB cache and staged in WinPE, with archive SHA-256 checks. The built-ins were acquired/refreshed by the independent `Invoke-OSDAppPreInstall.ps1` runtime in full Windows.
+The two repository apps are private-repository **test content**, not bundled built-ins. They were synchronized to the USB cache and staged in WinPE, with archive SHA-256 checks. The built-ins were acquired/refreshed by the independent `Invoke-OSDStagePreInstall.ps1` runtime in full Windows.
 
 ### Measured results
 
@@ -298,19 +300,19 @@ The measured total is the sum of the two phases, **not** OSDCloud image app, Win
 
 **PC 1 — complete cold source acquisition.** ODT populated the Office cache (`Version=16.0.20326.20142`, `VersionChanged=True`). Teams, Chrome, Firefox, Cisco Webex and Adobe reported `PackageUpdated=True`. `BuiltInSignatureVerified` confirmed the expected publishers for Office ODT `setup.exe`, Teams `teamsbootstrapper.exe`, Google Chrome MSI, Firefox MSI and Cisco Webex MSI; the four downloaded MSI/bootstrapper candidates were also checked before the USB copy was accepted. `PreInstallComplete` recorded six built-ins and `InstallComplete` recorded eight successful installations with `CleanupMode=OnSuccess`.
 
-**PC 2 — no network.** LAN was physically disconnected before the first Windows boot and remained disconnected for SetupComplete. `CacheVolumeFound` confirmed `E:\OSDApps`, and `BuiltInRefreshSkipped` appeared **six times**, one for each built-in (Office, Teams, Chrome, Firefox, Cisco Webex and Adobe). The five signable staged MSI/EXE packages passed the expected-publisher gate while offline. All six built-in installs and both SHA-256-validated repository package installs returned code `0`, followed by `InstallComplete; AppCount=8; CleanupMode=OnSuccess`.
+**PC 2 — no network.** LAN was physically disconnected before the first Windows boot and remained disconnected for SetupComplete. `CacheVolumeFound` confirmed `E:\OSDStage`, and `BuiltInRefreshSkipped` appeared **six times**, one for each built-in (Office, Teams, Chrome, Firefox, Cisco Webex and Adobe). The five signable staged MSI/EXE packages passed the expected-publisher gate while offline. All six built-in installs and both SHA-256-validated repository package installs returned code `0`, followed by `InstallComplete; PackageCount=8; CleanupMode=OnSuccess`.
 
 ### Additional validation and boundaries
 
 - A separate warm-cache deployment completed four app installs successfully: Teams, Firefox, Notepad++ and Omnissa Horizon Client (`PreInstall 6.2 s`, `Runner 83.5 s`). A full-Windows Chrome cache sync retained an unchanged trusted MSI (`Updated=False`).
-- The Windows 11 OSDApps Viewer showed valid publisher signature states for the five signable built-in cache entries, separate from repository SHA-256 integrity; the two WinPE PCs exercised read-only inventory, app staging and cache inspection.
+- The Windows 11 OSDStage Viewer showed valid publisher signature states for the five signable built-in cache entries, separate from repository SHA-256 integrity; the two WinPE PCs exercised read-only inventory, app staging and cache inspection.
 - Authenticode coverage is intentionally **partial**: Teams MSIX and the Microsoft 365 Apps data tree are not cryptographically verified by the bootstrapper/ODT checks, and Adobe Acrobat's outer ZIP is `Not assessed`. No negative/tampered-package test was performed on hardware; such rejection behavior is covered by unit tests.
 - An `ExitCode=0` validates the installer/provisioning path, not product activation, all interactive features, or the effective installed Office update channel. Office's reported cold-cache build differs from the earlier cached build; neither result alone establishes channel correctness.
 - Raw device logs were reviewed during validation, but private machine logs and enterprise repository binaries are **not committed** into this public project.
 
-## Real-world end-to-end validation — OSDApps 0.30.0
+## Real-world end-to-end validation — OSDStage 0.30.0
 
-**Executed:** 9 October 2026, on freshly deployed Windows installations via OSDCloud v2. All four scenarios used OSDApps **0.30.0** from PowerShell Gallery, `CleanupMode=Never`, the same six app IDs, and the same installation order. These are four deployment executions, not repeated statistical benchmark samples.
+**Executed:** 9 October 2026, on freshly deployed Windows installations via OSDCloud v2. All four scenarios used OSDStage **0.30.0** from PowerShell Gallery, `CleanupMode=Never`, the same six app IDs, and the same installation order. These are four deployment executions, not repeated statistical benchmark samples.
 
 The app queue, in order:
 
@@ -321,7 +323,7 @@ The app queue, in order:
 5. `OmnissaHorizonClient` (organization-managed repository; x64)
 6. `NotepadPlusPlus` (organization-managed repository; x64)
 
-Omnissa Horizon Client and Notepad++ were **test repository packages**, not OSDApps built-ins.
+Omnissa Horizon Client and Notepad++ were **test repository packages**, not OSDStage built-ins.
 
 ### Measured Windows phases
 
@@ -338,9 +340,9 @@ Durations below are from the `PreInstallComplete` / `InstallComplete` events in 
 
 ### Per-test observations
 
-**Test 1 — USB removed after OSDCloud, before OSDApps staging.** The USB remained disconnected through SetupComplete. Four built-ins acquired content on the local OS disk; both repository packages were staged locally in WinPE and their SHA-256 hashes validated by Runner. PreInstall and Runner completed successfully. This validates the USB-optional path and the Office PreInstall self-copy fix.
+**Test 1 — USB removed after OSDCloud, before OSDStage staging.** The USB remained disconnected through SetupComplete. Four built-ins acquired content on the local OS disk; both repository packages were staged locally in WinPE and their SHA-256 hashes validated by Runner. PreInstall and Runner completed successfully. This validates the USB-optional path and the Office PreInstall self-copy fix.
 
-**Test 2 — cold USB cache.** The `OSDCloud` volume was present at `E:\OSDApps`. Both repository package cache entries passed the WinPE cache check; built-ins were acquired/synchronized to USB in full Windows. `CacheUsed=True`; PreInstall and Runner completed with six successful installs. The same USB was retained for the next scenarios.
+**Test 2 — cold USB cache.** The `OSDCloud` volume was present at `E:\OSDStage`. Both repository package cache entries passed the WinPE cache check; built-ins were acquired/synchronized to USB in full Windows. `CacheUsed=True`; PreInstall and Runner completed with six successful installs. The same USB was retained for the next scenarios.
 
 **Test 3 — warm USB cache.** PreInstall reported `CacheUsed=True`. Office build `16.0.20430.20146` was unchanged (`VersionChanged=False`). Teams, Chrome and Adobe reported `PackageUpdated=False`; Teams downloaded only the small bootstrapper, not the large MSIX again. PreInstall fell from 114.2 s (cold USB) to 41.7 s (warm USB). Runner times remained close.
 
@@ -356,7 +358,7 @@ The unchanged build number in test 4 does **not** mean the Office configuration 
 - Other offline conditions (such as no USB with fully staged source), alternate x86/arm64 variants, failure/recovery paths and repeated timed samples remain separate tests.
 - Source `Runtime.log` and WinPE staging checks were supplied during testing; raw environment logs were not added to the public repository.
 
-## Offline end-to-end validation — OSDApps 0.30.0 test 5 (9 October 2026)
+## Offline end-to-end validation — OSDStage 0.30.0 test 5 (9 October 2026)
 
 Test 5 started with a fully populated `OSDCloud` USB cache. All expected built-in source files were checked on the USB flash drive before reboot, and the two repository packages had already been staged. The network connection was physically disconnected before boot and remained unavailable throughout SetupComplete.
 
@@ -374,15 +376,15 @@ Cisco Webex was added with x64 and ARM64 non-localized MSI sources, an architect
 
 **Direct MSI test validated — 10 October 2026, Windows x64 development device.** The official non-localized Cisco x64 `Webex_en.msi` was downloaded successfully (259.9 MiB); Authenticode reported `Valid`, signed by Cisco Systems, Inc. Silent `msiexec /i ... /qn /norestart ALLUSERS=1 ACCEPT_EULA=TRUE AUTOSTART_WITH_WINDOWS=false` completed with exit code `0`; MSI registration showed **Webex 46.9.0.35800**. The full MSI log confirms the three installation properties, per-machine assignment, existing WebView2 Runtime and `MainEngineThread is returning 0` (server and client). Two internal Cisco custom actions (`WixRemoveFoldersEx` and `KillSpark`) logged a local `1603` but were explicitly translated to success by the package; there were no `Return value 3` fatal MSI actions.
 
-**Field validation — 10 October 2026, OSDApps 0.32.0 test build (`a2d111fcde4764486207629200a077d74a2fa6a5`), x64:**
+**Field validation — 10 October 2026, OSDStage 0.32.0 test build (`a2d111fcde4764486207629200a077d74a2fa6a5`), x64:**
 
 | Test | Verified observation | Result |
 | --- | --- | --- |
 | Direct x64 MSI on Windows | Cisco-signed, 259.9 MiB, v46.9.0.35800; silent all-users MSI returned 0 | Pass |
 | Online SetupComplete, USB **not detected** by runtime | `CacheAvailable=False`, `Target=Local`; PreInstall downloaded 272,531,456 bytes in 3.6 s (reported 73 MB/s); PreInstall 7.6 s; Runner 8.5 s; MSI returned 0; Webex 46.9.0.35800 registered | Pass — **local fallback**, not USB caching |
-| Cold USB cache from retained PreInstall runtime in Windows/OOBE | Cache created at `E:\OSDApps\BuiltIn\CiscoWebex\x64\Package.msi`; `CacheSynchronized=True`, `PackageUpdated=True`; 259.9 MiB present | Pass |
+| Cold USB cache from retained PreInstall runtime in Windows/OOBE | Cache created at `E:\OSDStage\BuiltIn\CiscoWebex\x64\Package.msi`; `CacheSynchronized=True`, `PackageUpdated=True`; 259.9 MiB present | Pass |
 | Warm USB cache from repeated PreInstall in Windows/OOBE | `PackageUpdated=False`, `CacheSynchronized=True`, no new download, SHA256 unchanged; observed duration 4.1 s | Pass |
-| Fully offline OSDCloud v2 / SetupComplete | In WinPE, USB and local staged MSI were present and **SHA256-identical** before reboot; physically disconnected network; Windows PreInstall logged `CacheAvailable=True`, `CacheVolumeFound` for `E:\OSDApps`, and `BuiltInRefreshSkipped` due to no network; PreInstall 3.5 s; installed from **local staged MSI**, `BuiltInInstallComplete ExitCode=0` in 8 s; Runner 8.5 s; `InstallComplete AppCount=1`; `CleanupSkipped` as configured (`Never`) | Pass |
+| Fully offline OSDCloud v2 / SetupComplete | In WinPE, USB and local staged MSI were present and **SHA256-identical** before reboot; physically disconnected network; Windows PreInstall logged `CacheAvailable=True`, `CacheVolumeFound` for `E:\OSDStage`, and `BuiltInRefreshSkipped` due to no network; PreInstall 3.5 s; installed from **local staged MSI**, `BuiltInInstallComplete ExitCode=0` in 8 s; Runner 8.5 s; `InstallComplete PackageCount=1`; `CleanupSkipped` as configured (`Never`) | Pass |
 
 The offline log demonstrates the USB cache was **detected** during SetupComplete, not that the installer ran directly from the USB volume; the payload had already been copied locally in WinPE. Both SetupComplete deployments used a one-app `CiscoWebex` queue. These measured durations cover only their named phases, not WinPE/OOBE or the entire deployment. The first online run did not populate the USB cache because the volume was not detected at runtime.
 
@@ -390,7 +392,7 @@ The offline log demonstrates the USB cache was **detected** during SetupComplete
 
 ## Repository script packages and bounded Office fallback — 0.38.0
 
-**Executed:** 13–14 October 2026 on x64 hardware, using OSDApps **0.38.0** from PR #26. The validation package was created externally for the test and is intentionally not included as a built-in or example package. It used `PackageType=Script`, architecture `any`, a SHA-256 protected `Package.zip`, an `Install.ps1` entry point and a harmless HKLM marker written as `NT AUTHORITY\SYSTEM`.
+**Executed:** 13–14 October 2026 on x64 hardware, using OSDStage **0.38.0** from PR #26. The validation package was created externally for the test and is intentionally not included as a built-in or example package. It used `PackageType=Script`, architecture `any`, a SHA-256 protected `Package.zip`, an `Install.ps1` entry point and a harmless HKLM marker written as `NT AUTHORITY\SYSTEM`.
 
 | Test | Verified observation | Result |
 | --- | --- | --- |
@@ -424,35 +426,35 @@ Still requiring separate end-to-end checks:
 ## Success criteria and logs
 
 1. WinPE stages the intended `DeviceManifest.json` queue and any available repository payload.
-2. `Test-OSDAppDeployment` reports `Valid=True`; an intentionally offline run also requires `OfflineReady=True`.
+2. `Test-OSDStageDeployment` reports `Valid=True`; an intentionally offline run also requires `OfflineReady=True`.
 3. USB cache is detected only when connected, or a local no-USB path is selected.
 4. Repository `Package.zip` files validate against their SHA-256 metadata.
-5. `SetupComplete.cmd` starts `Invoke-OSDAppPreInstall.ps1`; `PreInstallComplete` reports success.
-6. `Invoke-OSDAppRunner.ps1` installs the queued apps; each expected `*InstallComplete` has an accepted exit code.
+5. `SetupComplete.cmd` starts `Invoke-OSDStagePreInstall.ps1`; `PreInstallComplete` reports success.
+6. `Invoke-OSDStageRunner.ps1` installs the queued apps; each expected `*InstallComplete` has an accepted exit code.
 7. `Latest.json` and the final `InstallComplete` agree on final status and app counts.
 8. The configured `CleanupMode` is honored; local cleanup does not delete persistent logs or results.
 
 Windows runtime log:
 
 ```text
-%ProgramData%\OSDApps\Logs\Runtime.log
+%ProgramData%\OSDStage\Logs\Runtime.log
 ```
 
 Machine-readable result:
 
 ```text
-%ProgramData%\OSDApps\Results\Latest.json
+%ProgramData%\OSDStage\Results\Latest.json
 ```
 
 Module/cache log when USB is attached:
 
 ```text
-<OSDCloud>:\OSDApps\Logs\Client.log
+<OSDCloud>:\OSDStage\Logs\Client.log
 ```
 
 For a no-USB run, module-side logging may be on the Windows volume, while the standalone runner still uses the configured Windows runtime log.
 
-## Historical cold/warm benchmark — OSDApps 0.29.1
+## Historical cold/warm benchmark — OSDStage 0.29.1
 
 The earlier 0.29.1 benchmark is retained separately, using the same hardware, USB flash drive, app set and install order for its cold/warm pair.
 
@@ -467,16 +469,16 @@ See [Performance](performance.md) for the historical benchmark details and the u
 
 ## Isolated sleep prevention test
 
-Run `tools/Test-OSDAppsSleepPrevention.ps1` from a checkout of the implementation candidate in **elevated Windows PowerShell on a development PC**:
+Run `tools/Test-OSDStageSleepPrevention.ps1` from a checkout of the implementation candidate in **elevated Windows PowerShell on a development PC**:
 
 ```powershell
-.\tools\Test-OSDAppsSleepPrevention.ps1
+.\tools\Test-OSDStageSleepPrevention.ps1
 ```
 
 To exercise a helper from a downloaded or USB module, supply its actual path:
 
 ```powershell
-.\tools\Test-OSDAppsSleepPrevention.ps1 -HelperPath 'D:\Modules\OSDApps\<version>\Runtime\OSDAppSleepPrevention.ps1'
+.\tools\Test-OSDStageSleepPrevention.ps1 -HelperPath 'D:\Modules\OSDStage\<version>\Runtime\OSDStageSleepPrevention.ps1'
 ```
 
 The test uses the real shared helper and unique power-request reasons. It checks normal completion, controlled failure, explicit disablement and forced termination of its own child process. It reads `powercfg /requests`, never clears another app's request, and changes no apps, cache files, deployment manifests or power settings. The successful output confirms registration and cleanup, not actual sleep behavior. `-HoldSeconds 120` extends only the normal-completion scenario.
@@ -519,8 +521,8 @@ warm-cache reuse test. Native ARM64/x86 installation has not been physically tes
 That candidate used the prerelease identifier `SevenZip`. The subsequent naming
 change uses `7Zip` for commands, identifiers, cache paths and test filenames.
 It does not rename an already-created test cache or change existing test records.
-Use `tools/Test-OSDApps7Zip.ps1 -Phase Stage` on a fresh Windows deployment;
-its copied `C:\ProgramData\OSDApps\Tests\Test-OSDApps7Zip.ps1 -Phase Validate`
+Use `tools/Test-OSDStage7Zip.ps1 -Phase Stage` on a fresh Windows deployment;
+its copied `C:\ProgramData\OSDStage\Tests\Test-OSDStage7Zip.ps1 -Phase Validate`
 checks the correlated deployment in OOBE. Do not rerun SetupComplete.
 
 
@@ -546,12 +548,12 @@ candidate evidence and naming limitation documented above.
 
 ## Visual C++ and .NET prerequisite candidate
 
-`tools/Test-OSDAppsPrerequisites.ps1 -Phase Stage` stages four items on a fresh
+`tools/Test-OSDStagePrerequisites.ps1 -Phase Stage` stages four items on a fresh
 x64 WinPE deployment: Visual C++ x86 and x64 (two explicitly selected calls),
 .NET 10 Runtime x86, and .NET 10 Desktop Runtime x64. Each Add call selects exactly
 one architecture; the test deliberately covers both variants. Use the implementation checkout, not an older Gallery
 module. The script refuses an existing queue and copies its validator to
-`C:\ProgramData\OSDApps\Tests\Test-OSDAppsPrerequisites.ps1`.
+`C:\ProgramData\OSDStage\Tests\Test-OSDStagePrerequisites.ps1`.
 
 After reboot, run that copied script with `-Phase Validate` in 64-bit Windows
 PowerShell at OOBE. It correlates deployment results, checks Visual C++ registry

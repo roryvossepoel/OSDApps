@@ -5,9 +5,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Path $PSScriptRoot -Parent
-$manifestPath = Join-Path $root 'OSDApps.psd1'
+$manifestPath = Join-Path $root 'OSDStage.psd1'
 $manifest = Test-ModuleManifest -Path $manifestPath
-$moduleOutput = Join-Path $OutputPath 'OSDApps'
+$moduleOutput = Join-Path $OutputPath 'OSDStage'
 
 if (Test-Path -LiteralPath $moduleOutput) {
     Remove-Item -LiteralPath $moduleOutput -Recurse -Force
@@ -15,8 +15,8 @@ if (Test-Path -LiteralPath $moduleOutput) {
 New-Item -ItemType Directory -Path $moduleOutput -Force | Out-Null
 
 $items = @(
-    'OSDApps.psd1'
-    'OSDApps.psm1'
+    'OSDStage.psd1'
+    'OSDStage.psm1'
     'Public'
     'Private'
     'Runtime'
@@ -33,7 +33,7 @@ foreach ($item in $items) {
     }
 }
 
-$builtManifest = Join-Path $moduleOutput 'OSDApps.psd1'
+$builtManifest = Join-Path $moduleOutput 'OSDStage.psd1'
 Test-ModuleManifest -Path $builtManifest -ErrorAction Stop | Out-Null
 
 # External help is generated in the package; source functions are unchanged.
@@ -42,7 +42,7 @@ Test-ModuleManifest -Path $builtManifest -ErrorAction Stop | Out-Null
 # copies, proving their non-comment token streams remain byte-for-byte equal.
 & (Join-Path $PSScriptRoot 'Connect-PackagedHelp.ps1') -ModulePath $moduleOutput
 
-Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
+Remove-Module OSDStage -Force -ErrorAction SilentlyContinue
 Import-Module $builtManifest -Force -ErrorAction Stop
 
 [pscustomobject]@{

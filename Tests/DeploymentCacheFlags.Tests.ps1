@@ -1,7 +1,7 @@
 Describe 'Current-deployment cache flags (issue 74)' {
     BeforeAll {
         $root = Split-Path $PSScriptRoot -Parent
-        $script:runnerPath = Join-Path $root 'Runtime\Invoke-OSDAppRunner.ps1'
+        $script:runnerPath = Join-Path $root 'Runtime\Invoke-OSDStageRunner.ps1'
         $tokens = $null; $errors = $null
         $ast = [System.Management.Automation.Language.Parser]::ParseFile($script:runnerPath,[ref]$tokens,[ref]$errors)
         if (@($errors).Count) { throw 'Runner parser errors.' }
@@ -25,7 +25,7 @@ Describe 'Current-deployment cache flags (issue 74)' {
             Id=$app.Id;Status='Succeeded';AcquisitionOutcome='CacheReused'
             CacheUsed=$false;PackageUpdated=$false;CacheDecisionReason='Current run evidence.'
         }
-        $script:preInstallResult = [pscustomobject]@{DeploymentId=$manifest.DeploymentId;Apps=@($entry)}
+        $script:preInstallResult = [pscustomobject]@{DeploymentId=$manifest.DeploymentId;Packages=@($entry)}
     }
 
     It 'copies <Outcome> flags from the current phase, never from the stored sync' -TestCases @(
@@ -70,9 +70,9 @@ Describe 'Current-deployment cache flags (issue 74)' {
             'blank phase ID' { $preInstallResult.DeploymentId = ' ' }
             'another deployment' { $preInstallResult.DeploymentId = [guid]::NewGuid().Guid }
             'missing manifest ID' { $manifest.PSObject.Properties.Remove('DeploymentId') }
-            'missing app' { $preInstallResult.Apps = @() }
+            'missing app' { $preInstallResult.Packages = @() }
             'another app' { $entry.Id = 'OtherApp' }
-            'duplicate app' { $preInstallResult.Apps = @($entry,$entry) }
+            'duplicate app' { $preInstallResult.Packages = @($entry,$entry) }
             'missing fields' { $entry.PSObject.Properties.Remove('CacheUsed'); $entry.PSObject.Properties.Remove('PackageUpdated') }
             'null fields' { $entry.CacheUsed=$null; $entry.PackageUpdated=$null }
             'string fields' { $entry.CacheUsed='false'; $entry.PackageUpdated='false' }
@@ -148,9 +148,9 @@ Describe 'Current-deployment cache flags (issue 74)' {
             ConvertTo-Json | Set-Content (Join-Path $payloadRoot 'CacheInfo.json') -Encoding UTF8
         $id = [guid]::NewGuid().Guid
         @{
-            SchemaVersion=1;DeploymentId=$id
+            SchemaVersion=2;DeploymentId=$id
             Runtime=@{CleanupMode='Never';PreventSleep=$false;ResultPath=$resultPath;LogPath=$log}
-            Apps=@(@{
+            Packages=@(@{
                 Id='VisualCRedist-x64';Source='BuiltIn';Type='PrerequisiteExe';PackageType='App'
                 Family='VisualCRedist';Architecture='x64';RuntimeType='Runtime';Channel='14'
                 PayloadRoot='BuiltIn\VisualCRedist\x64';PayloadExtension='.exe';PayloadSha256=$hash
@@ -159,7 +159,7 @@ Describe 'Current-deployment cache flags (issue 74)' {
         } | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $stage 'DeviceManifest.json') -Encoding UTF8
         $phase = @{
             Phase='PreInstall';Status='Succeeded';DeploymentId=$id
-            Apps=@(@{Id='VisualCRedist-x64';Status='Succeeded';AcquisitionOutcome='CacheReused';PackageUpdated=$false;CacheUsed=$false})
+            Packages=@(@{Id='VisualCRedist-x64';Status='Succeeded';AcquisitionOutcome='CacheReused';PackageUpdated=$false;CacheUsed=$false})
         }
         if ($Correlation -eq 'missing') { $phase.Remove('DeploymentId') }
         if ($Correlation -eq 'other') { $phase.DeploymentId=[guid]::NewGuid().Guid }
@@ -186,15 +186,15 @@ Describe 'Current-deployment cache flags (issue 74)' {
         finally { if ($started -and -not $child.HasExited) { $child.Kill() }; $child.Dispose() }
         $result=Get-Content $resultPath -Raw | ConvertFrom-Json
         $result.DeploymentId | Should -Be $id
-        $result.Apps[0].FailureType | Should -Be HashMismatch
-        $result.Apps[0].AcquisitionOutcome | Should -Be $Expected
+        $result.Packages[0].FailureType | Should -Be HashMismatch
+        $result.Packages[0].AcquisitionOutcome | Should -Be $Expected
         if ($Correlation -eq 'current') {
-            $result.Apps[0].PackageUpdated | Should -BeFalse
-            $result.Apps[0].CacheUsed | Should -BeFalse
+            $result.Packages[0].PackageUpdated | Should -BeFalse
+            $result.Packages[0].CacheUsed | Should -BeFalse
             $result.PreInstall.DeploymentId | Should -Be $id
         } else {
-            ($null -eq $result.Apps[0].PackageUpdated) | Should -BeTrue
-            ($null -eq $result.Apps[0].CacheUsed) | Should -BeTrue
+            ($null -eq $result.Packages[0].PackageUpdated) | Should -BeTrue
+            ($null -eq $result.Packages[0].CacheUsed) | Should -BeTrue
             $result.PreInstall | Should -BeNullOrEmpty
             (Get-Content $log -Raw) | Should -Match 'PreInstallResultIgnored'
         }

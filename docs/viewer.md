@@ -1,8 +1,8 @@
-# OSDApps Viewer
+# OSDStage Viewer
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Troubleshooting](faq.md)
 
-OSDApps Viewer is the read-only interface opened by `Show-OSDAppUI`. It displays what the CLI has prepared: the device queue and configuration, built-in/repository apps, script packages, USB cache and existing logs. It does not add, remove, configure, download or install apps.
+OSDStage Viewer is the read-only interface opened by `Show-OSDStageUI`. It displays what the CLI has prepared: the device queue and configuration, built-in/repository apps, script packages, USB cache and existing logs. It does not add, remove, configure, download or install apps.
 
 ## Where to run it
 
@@ -12,13 +12,13 @@ See the [screenshots below](#screenshots-from-winpe) for a real WinPE session wi
 | --- | --- | --- |
 | Windows preparation machine | Connected USB cache, plus an existing target if supplied with `-WindowsPath` | Prepare and inspect deployment content. There is no need to install the Viewer on deployed devices. |
 | WinPE | Discovered offline Windows installation, or an explicit `-WindowsPath` | Inspect after OSDCloud has applied Windows and the CLI has staged apps. Do not use `-TestMode`. |
-| Full Windows with `-TestMode` | Existing `%TEMP%\OSDApps-GUI-Staging-Test` folder | Legacy isolated test-target inspection. The Viewer does not create the folder or stage sample apps. |
+| Full Windows with `-TestMode` | Existing `%TEMP%\OSDStage-GUI-Staging-Test` folder | Legacy isolated test-target inspection. The Viewer does not create the folder or stage sample apps. |
 
 Use an STA PowerShell session with Windows Forms available. The WinPE image also needs PowerShell and .NET support. Windows 11 and two x64 WinPE devices were exercised during 0.34.0 validation; those tests do not establish compatibility with every WinPE image or architecture.
 
 ## Open the Viewer
 
-**Windows preparation machine, with OSDApps installed:** start Windows PowerShell in STA if needed, then import the module inside that session.
+**Windows preparation machine, with OSDStage installed:** start Windows PowerShell in STA if needed, then import the module inside that session.
 
 ```powershell
 powershell.exe -STA -NoProfile
@@ -27,24 +27,24 @@ powershell.exe -STA -NoProfile
 In the new PowerShell session:
 
 ```powershell
-Import-Module OSDApps
-Show-OSDAppUI -Offline
+Import-Module OSDStage
+Show-OSDStageUI -Offline
 ```
 
 **WinPE:** use the module import in the [online](../Examples/WinPE-Online.md) or [offline](../Examples/WinPE-Offline.md) staging example, then run:
 
 ```powershell
-Show-OSDAppUI -Offline
+Show-OSDStageUI -Offline
 ```
 
 To inspect a particular Windows root, supply that root, not its `Windows` subdirectory:
 
 ```powershell
 # Replace D:\ with the prepared Windows volume you intend to inspect.
-Show-OSDAppUI -WindowsPath 'D:\' -Offline
+Show-OSDStageUI -WindowsPath 'D:\' -Offline
 ```
 
-For online repository discovery, set your actual `CatalogUri` through `Set-OSDAppConfiguration` in the same session and omit `-Offline`. The repository URL cannot be edited in the Viewer.
+For online repository discovery, set your actual `CatalogUri` through `Set-OSDStageConfiguration` in the same session and omit `-Offline`. The repository URL cannot be edited in the Viewer.
 
 ## Screenshots from WinPE
 
@@ -60,7 +60,7 @@ Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise are queue
 
 ![Apps tab: six built-in apps and two user-maintained repository packages, with cache and staging status](images/viewer-apps-winpe.png)
 
-The Apps tab combines built-ins and repository metadata. Notepad++ and Omnissa Horizon Client are packages supplied by the repository used for this session; they are not bundled with OSDApps. All packages shown here are apps. Script packages appear in the same view with `Package Type: Script` when present.
+The Apps tab combines built-ins and repository metadata. Notepad++ and Omnissa Horizon Client are packages supplied by the repository used for this session; they are not bundled with OSDStage. All packages shown here are apps. Script packages appear in the same view with `Package Type: Script` when present.
 
 ### Cache availability and integrity
 
@@ -102,11 +102,11 @@ The CLI can distinguish `Cached` from `CachedOnly`; the Viewer labels both as US
 
 ## Cache
 
-Cache lists entries from `\OSDApps` on the configured cache volume, separately from the Windows target's staging folder. It shows Display Name, Source, Package Type, Vendor, USB version, architecture, integrity, size and signature status. Row tooltips retain the exact signature file, signer and check scope where available.
+Cache lists entries from `\OSDStage` on the configured cache volume, separately from the Windows target's staging folder. It shows Display Name, Source, Package Type, Vendor, USB version, architecture, integrity, size and signature status. Row tooltips retain the exact signature file, signer and check scope where available.
 
 ### Versions
 
-On full Windows, the Viewer requests `Get-OSDAppCache -ResolveVersions` to inspect existing valid content without updating cache metadata. MSI packages can provide ProductVersion; Adobe's ZIP can provide the included patch build through `setup.ini`. Office and Teams use their recorded cache metadata. The Adobe version is a patch build, not necessarily the base MSI version.
+On full Windows, the Viewer requests `Get-OSDStageCache -ResolveVersions` to inspect existing valid content without updating cache metadata. MSI packages can provide ProductVersion; Adobe's ZIP can provide the included patch build through `setup.ini`. Office and Teams use their recorded cache metadata. The Adobe version is a patch build, not necessarily the base MSI version.
 
 WinPE relies on saved metadata rather than the full-Windows MSI inspection path. `Not recorded` means there is no usable specific version to display; it does not by itself mean the package is missing. A cached version is never presented as an independently verified installed version.
 
@@ -119,7 +119,7 @@ WinPE relies on saved metadata rather than the full-Windows MSI inspection path.
 | Signature: `Signature valid` | The supported MSI/EXE passed Windows Authenticode trust and the expected built-in publisher check. |
 | Signature: `Not assessed` | The format is outside this Authenticode inspection path, such as Adobe's outer ZIP. |
 | Signature: `N/A` | Repository ZIP signature inspection does not apply; see its separate SHA-256 result. |
-| Signature: `Unavailable in WinPE` | OSDApps did not invoke Windows signature verification in WinPE. |
+| Signature: `Unavailable in WinPE` | OSDStage did not invoke Windows signature verification in WinPE. |
 | Signature: `Not checked` | Signature inspection was deliberately skipped or no check result was requested. |
 
 Invalid, untrusted or unexpected-publisher results must not be interpreted as valid content. The CLI's entry-level `Valid` property describes app-specific local checks: file presence for some built-ins, generation consistency for Office, and hash/metadata checks for repository packages and several newer built-ins. The Viewer's compact integrity label does not enumerate every underlying check. Inspect `SignatureStatus` separately and see [what a cache check proves](maintenance.md#what-a-cache-check-proves) for the per-app scope. None of these local results establishes vendor freshness.
@@ -129,7 +129,7 @@ Invalid, untrusted or unexpected-publisher results must not be interpreted as va
 The Viewer checks supported built-in MSI/EXE signatures by default on full Windows. The public CLI keeps explicit opt-in inspection:
 
 ```powershell
-Get-OSDAppCache -ResolveVersions -VerifySignatures |
+Get-OSDStageCache -ResolveVersions -VerifySignatures |
     Select-Object Id, Version, Valid, SignatureStatus, SignatureScope, SignatureSigner
 ```
 
@@ -138,7 +138,7 @@ Office inspection covers **setup.exe only**; Teams covers **teamsbootstrapper.ex
 `-Offline` disables repository lookup, but Windows trust/revocation evaluation may still use the network. To suppress both catalog lookup and signature inspection by the Viewer:
 
 ```powershell
-Show-OSDAppUI -Offline -SkipSignatureVerification
+Show-OSDStageUI -Offline -SkipSignatureVerification
 ```
 
 This affects **viewing only**. It does not disable the signer policy enforced by built-in synchronization or SetupComplete, and it does not disconnect network adapters.
@@ -149,7 +149,7 @@ Logs reads up to 500 recent lines from a selected existing log and presents Time
 
 The Viewer discovers known USB/device log locations. A custom runtime `LogPath` may need to be opened separately with PowerShell or a log reader. It does not create a missing log or make a new deployment log before SetupComplete has run.
 
-See [Runtime and cleanup](runtime.md#logging) for paths and event meanings. `PreInstallComplete`, individual exit codes and `InstallComplete` are the installation evidence; the Apps/Staged tabs are not installed-software inventory.
+See [Runtime and cleanup](runtime.md#logging) for paths and event meanings. `PreInstallComplete`, individual exit codes and `InstallComplete` are the installation evidence; the Packages/Staged tabs are not installed-software inventory.
 
 ## Troubleshooting
 
@@ -165,7 +165,7 @@ See [Runtime and cleanup](runtime.md#logging) for paths and event meanings. `Pre
 To capture a Viewer exception without changing deployment state:
 
 ```powershell
-try { Show-OSDAppUI -Offline -ErrorAction Stop }
+try { Show-OSDStageUI -Offline -ErrorAction Stop }
 catch { $_ | Format-List * -Force; $_.ScriptStackTrace }
 ```
 

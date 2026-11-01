@@ -1,13 +1,13 @@
 Describe 'P1 client logging' {
     BeforeAll {
         $moduleRoot = Split-Path -Parent $PSScriptRoot
-        Import-Module (Join-Path $moduleRoot 'OSDApps.psd1') -Force
+        Import-Module (Join-Path $moduleRoot 'OSDStage.psd1') -Force
     }
 
     It 'keeps structured log records on one physical line' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $path = Join-Path $TestDrive 'Client\Logs\Client.log'
-            Write-OSDAppLog -LogPath $path -Component 'Sync' -Event 'Test' -Message "line 1$([char]10)line 2" -Data @{ Detail = "A$([char]13)$([char]10)B" }
+            Write-OSDStageLog -LogPath $path -Component 'Sync' -Event 'Test' -Message "line 1$([char]10)line 2" -Data @{ Detail = "A$([char]13)$([char]10)B" }
             $lines = @(Get-Content -LiteralPath $path)
             $lines.Count | Should -Be 1
             $lines[0] | Should -Match 'line 1 line 2'
@@ -16,7 +16,7 @@ Describe 'P1 client logging' {
     }
 
     It 'keeps one active log and at most three rotated files' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $dir = Join-Path $TestDrive 'Rotation'
             New-Item -ItemType Directory -Path $dir -Force | Out-Null
             $path = Join-Path $dir 'Client.log'
@@ -25,7 +25,7 @@ Describe 'P1 client logging' {
             Set-Content -LiteralPath "$path.2" -Value 'old-2'
             Set-Content -LiteralPath "$path.3" -Value 'old-3'
 
-            Write-OSDAppLog -LogPath $path -Component 'Sync' -Event 'Rotate' -Message 'rotated'
+            Write-OSDStageLog -LogPath $path -Component 'Sync' -Event 'Rotate' -Message 'rotated'
 
             (Test-Path -LiteralPath $path) | Should -BeTrue
             (Test-Path -LiteralPath "$path.1") | Should -BeTrue

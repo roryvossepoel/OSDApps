@@ -1,10 +1,10 @@
-# Releasing OSDApps
+# Releasing OSDStage
 
-OSDApps uses GitHub Actions for validation and PowerShell Gallery publishing.
+OSDStage uses GitHub Actions for validation and PowerShell Gallery publishing.
 
 ## Public descriptions
 
-The module description and Gallery tags live in `OSDApps.psd1`. Align their wording with the README when preparing the next module release. Updates reach the Gallery with that new version; an existing release is not republished in place. Do not edit the manifest just to publish documentation: a manifest change on `main` triggers the release workflow.
+The module description and Gallery tags live in `OSDStage.psd1`. Align their wording with the README when preparing the next module release. Updates reach the Gallery with that new version; an existing release is not republished in place. Do not edit the manifest just to publish documentation: a manifest change on `main` triggers the release workflow.
 
 Use this concise description for the GitHub repository's **About** field:
 
@@ -21,7 +21,7 @@ Every push to `main`, pull request, or manually started CI run validates:
 - Distributable module build and packaged `Get-Help` in a fresh process.
 - Example catalog metadata.
 
-Both Windows PowerShell 5.1 and PowerShell 7 run independently. Their module artifacts are named `OSDApps-Windows-PowerShell-5.1` and `OSDApps-PowerShell-7`; validation reports are uploaded separately. These jobs do not run physical WinPE deployments.
+Both Windows PowerShell 5.1 and PowerShell 7 run independently. Their module artifacts are named `OSDStage-Windows-PowerShell-5.1` and `OSDStage-PowerShell-7`; validation reports are uploaded separately. These jobs do not run physical WinPE deployments.
 
 ## Required GitHub secret
 
@@ -31,15 +31,15 @@ PowerShell Gallery publishing uses the repository secret:
 PSGALLERY_API_KEY
 ```
 
-The value must be a valid PowerShell Gallery API key with permission to publish the `OSDApps` package.
+The value must be a valid PowerShell Gallery API key with permission to publish the `OSDStage` package.
 
 ## Release process
 
-The version in `OSDApps.psd1` and the corresponding top-level section in `CHANGELOG.md` are prepared in a pull request. The release workflow reads the changelog section and uses it for the GitHub Release notes.
+The version in `OSDStage.psd1` and the corresponding top-level section in `CHANGELOG.md` are prepared in a pull request. The release workflow reads the changelog section and uses it for the GitHub Release notes.
 
 1. Update `ModuleVersion` and its `ReleaseNotes` field together with `CHANGELOG.md`.
 2. Run and review CI on the pull request.
-3. Merge into `main`. A change to `OSDApps.psd1` automatically starts **Create GitHub Release**.
+3. Merge into `main`. A change to `OSDStage.psd1` automatically starts **Create GitHub Release**.
 4. The release workflow validates the current main commit, re-runs the test suite, and creates the immutable `v<version>` tag with version-specific release notes.
 5. After successful release creation, the workflow automatically dispatches **Publish PowerShell Gallery**.
 6. The publish workflow builds from the immutable tag, runs tests, publishes, downloads the Gallery package, and compares SHA256 hashes against all packaged release files.
@@ -65,7 +65,7 @@ further action. Do not republish or retag an existing version; the pre-existing
 version guard still rejects that operation. This workflow-only change does not
 publish a new module version or alter an already completed workflow run.
 
-A normal `main` push without an `OSDApps.psd1` change does not trigger a new release. Documentation-only or unreleased fixes remain pending until a later version bump.
+A normal `main` push without an `OSDStage.psd1` change does not trigger a new release. Documentation-only or unreleased fixes remain pending until a later version bump.
 
 ## Release documentation checklist
 
@@ -74,7 +74,7 @@ A normal `main` push without an `OSDApps.psd1` change does not trigger a new rel
 - Confirm Pester and GitHub CI pass
 - Verify GitHub Release notes and PowerShell Gallery publication
 - Keep examples and public metadata aligned with the exported parameters
-- Verify the public `metadata/builtins.json` (`SchemaVersion: 1`) has entries for new apps with correct exported commands, cache paths and public icons
+- Verify the public `metadata/builtins.json` (`SchemaVersion: 2`) has entries for new apps with correct exported commands, cache paths and public icons
 - When a viewer reads the JSON from `main`, verify both JSON and icon assets after merge; do not break the schema without updating consumers
 - Distinguish supported architectures from field-validated architectures
 
@@ -104,7 +104,7 @@ Build the distributable module without publishing it:
 The default output is:
 
 ```text
-dist/OSDApps
+dist/OSDStage
 ```
 
 That directory is the exact module directory supplied to `Publish-Module`.

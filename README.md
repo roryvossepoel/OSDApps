@@ -1,14 +1,16 @@
-# OSDApps
+# OSDStage
 
-![OSDApps — Your apps. Ready before OOBE. Built-in apps and your own repository, with optional USB flash drive caching.](docs/images/osdapps-banner.svg)
+> Development candidate. OSDStage has not been published to the PowerShell Gallery. Use the CI module artifact for testing; Gallery commands below apply after release. Repository and package manifests use schema 2. See [the OSDStage contract](docs/osdstage-contract.md).
 
-[![PowerShell Gallery](https://img.shields.io/powershellgallery/v/OSDApps?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/OSDApps)
-[![PowerShell Gallery total downloads](https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fwww.powershellgallery.com%2Fapi%2Fv2%2FFindPackagesById%28%29%3Fid%3D%27OSDApps%27&query=concat%28substring%28string%28sum%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%29%2C1%2C32%2A%28count%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%3E0%20and%20not%28%2F%2F%2A%5Blocal-name%28%29%3D%27link%27%5D%5B%40rel%3D%27next%27%5D%29%29%29%2Csubstring%28%27unavailable%27%2C1%2C11%2Anot%28count%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%3E0%20and%20not%28%2F%2F%2A%5Blocal-name%28%29%3D%27link%27%5D%5B%40rel%3D%27next%27%5D%29%29%29%29&label=Downloads&color=blue)](https://www.powershellgallery.com/packages/OSDApps)
+![OSDStage — Your apps. Ready before OOBE. Built-in apps and your own repository, with optional USB flash drive caching.](docs/images/osdstage-banner.svg)
+
+[![PowerShell Gallery](https://img.shields.io/powershellgallery/v/OSDStage?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/OSDStage)
+[![PowerShell Gallery total downloads](https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fwww.powershellgallery.com%2Fapi%2Fv2%2FFindPackagesById%28%29%3Fid%3D%27OSDStage%27&query=concat%28substring%28string%28sum%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%29%2C1%2C32%2A%28count%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%3E0%20and%20not%28%2F%2F%2A%5Blocal-name%28%29%3D%27link%27%5D%5B%40rel%3D%27next%27%5D%29%29%29%2Csubstring%28%27unavailable%27%2C1%2C11%2Anot%28count%28%2F%2F%2A%5Blocal-name%28%29%3D%27VersionDownloadCount%27%5D%29%3E0%20and%20not%28%2F%2F%2A%5Blocal-name%28%29%3D%27link%27%5D%5B%40rel%3D%27next%27%5D%29%29%29%29&label=Downloads&color=blue)](https://www.powershellgallery.com/packages/OSDStage)
 [![Module CI](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/roryvossepoel/OSDApps/actions/workflows/ci.yml)
 [![Windows PowerShell 5.1](https://img.shields.io/badge/Windows%20PowerShell-5.1-blue)](#install-from-powershell-gallery)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Stage apps and PowerShell scripts in WinPE **after OSDCloud has applied Windows**. OSDApps runs them in order during the first Windows boot, just before OOBE starts. Use ready-made vendor integrations, your own repository packages, or both.
+Stage apps and PowerShell scripts in WinPE **after OSDCloud has applied Windows**. OSDStage runs them in order during the first Windows boot, just before OOBE starts. Use ready-made vendor integrations, your own repository packages, or both.
 
 - **Start with a few commands.** Built-in apps need no repository or custom installer wrapper.
 - **Reuse your downloads.** An optional USB cache serves multiple devices; validated replacements keep it current.
@@ -23,11 +25,11 @@ Stage apps and PowerShell scripts in WinPE **after OSDCloud has applied Windows*
 Run in PowerShell on your Windows preparation machine, or in online WinPE with PowerShellGet available:
 
 ```powershell
-Install-Module OSDApps -Force -SkipPublisherCheck
-Import-Module OSDApps -Force
+Install-Module OSDStage -Force -SkipPublisherCheck
+Import-Module OSDStage -Force
 ```
 
-`-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDApps installer signature checks.
+`-SkipPublisherCheck` bypasses PowerShellGet's module publisher comparison; it does not disable OSDStage installer signature checks.
 
 For WinPE without Gallery access, [save the module to your USB flash drive](Examples/Prepare-UsbCache.md) first. Installation uses your PowerShellGet defaults; use an elevated session if your installation scope requires it.
 
@@ -36,17 +38,17 @@ For WinPE without Gallery access, [save the module to your USB flash drive](Exam
 **Run this complete example in online WinPE, after OSDCloud has applied Windows and before the first reboot.** It stages three apps for the target PC:
 
 ```powershell
-Install-Module OSDApps -Force -SkipPublisherCheck
-Import-Module OSDApps -Force
+Install-Module OSDStage -Force -SkipPublisherCheck
+Import-Module OSDStage -Force
 
-Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
-Add-OSDAppAdobeAcrobatUnified
-Add-OSDAppGoogleChromeEnterprise
+Add-OSDStageMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us
+Add-OSDStageAdobeAcrobatUnified
+Add-OSDStageGoogleChromeEnterprise
 ```
 
 That's the queue: **Microsoft 365 Apps → Adobe Acrobat Unified → Google Chrome Enterprise**. These commands use x64 by default. Change the Office channel and language to suit your deployment; use the same settings when preparing its cache.
 
-OSDApps discovers the offline Windows installation, prepares SetupComplete and removes temporary staging after success by default. Apps are installed during the first Windows boot, not in WinPE. Continue your normal deployment reboot after staging completes without errors.
+OSDStage discovers the offline Windows installation, prepares SetupComplete and removes temporary staging after success by default. Apps are installed during the first Windows boot, not in WinPE. Continue your normal deployment reboot after staging completes without errors.
 
 **The three commands above work with or without a USB flash drive:**
 
@@ -57,79 +59,79 @@ Company Portal and CMTrace Open are pre-cached exceptions: run their Sync comman
 
 Keep networking available for either online route. No module copy on the USB flash drive is needed when loading from the Gallery. For a fully disconnected deployment, [prepare matching content and save the module first](Examples/WinPE-Offline.md).
 
-For an optional preflight check before rebooting, run `Test-OSDAppDeployment -ThrowOnFailure`. You can also inspect the queue in the Viewer:
+For an optional preflight check before rebooting, run `Test-OSDStageDeployment -ThrowOnFailure`. You can also inspect the queue in the Viewer:
 
 ```powershell
-Show-OSDAppUI -Offline
+Show-OSDStageUI -Offline
 ```
 
 The Viewer is read-only. Here, `-Offline` skips online repository discovery; it does not change the deployment's network behavior. Close the Viewer before rebooting.
 
 ## Built-in apps
 
-The optional Windows Inbox Cleanup script is staged with `Add-OSDAppWindowsInboxCleanup -Preset Tested13` or `-Remove @('Microsoft.BingWeather')`. It is never run implicitly. [Options and validation](docs/built-in-apps.md#windows-inbox-cleanup).
+The optional Windows Inbox Cleanup script is staged with `Add-OSDStageWindowsInboxCleanup -Preset Tested13` or `-Remove @('Microsoft.BingWeather')`. It is never run implicitly. [Options and validation](docs/built-in-apps.md#windows-inbox-cleanup).
 
 | App | Stage in WinPE |
 | --- | --- |
-| Microsoft 365 Apps | `Add-OSDAppMicrosoft365Apps` |
-| Microsoft Teams | `Add-OSDAppMicrosoftTeams` |
-| Microsoft Company Portal (pre-cached) | `Add-OSDAppMicrosoftCompanyPortal` |
-| CMTrace Open (pre-cached) | `Add-OSDAppCMTraceOpen` |
-| Adobe Acrobat Unified | `Add-OSDAppAdobeAcrobatUnified` |
-| Google Chrome Enterprise | `Add-OSDAppGoogleChromeEnterprise` |
-| Mozilla Firefox Enterprise | `Add-OSDAppMozillaFirefoxEnterprise` |
-| Cisco Webex | `Add-OSDAppCiscoWebex` |
-| Zoom Workplace | `Add-OSDAppZoomWorkplace` |
-| 7Zip | `Add-OSDApp7Zip` |
-| Visual Studio Code | `Add-OSDAppVisualStudioCode` |
-| Visual C++ v14 (x86 or x64) | `Add-OSDAppVisualCRedist -Architecture x64` |
-| .NET Runtime / Desktop Runtime | `Add-OSDAppDotNetRuntime -Architecture x64` |
+| Microsoft 365 Apps | `Add-OSDStageMicrosoft365Apps` |
+| Microsoft Teams | `Add-OSDStageMicrosoftTeams` |
+| Microsoft Company Portal (pre-cached) | `Add-OSDStageMicrosoftCompanyPortal` |
+| CMTrace Open (pre-cached) | `Add-OSDStageCMTraceOpen` |
+| Adobe Acrobat Unified | `Add-OSDStageAdobeAcrobatUnified` |
+| Google Chrome Enterprise | `Add-OSDStageGoogleChromeEnterprise` |
+| Mozilla Firefox Enterprise | `Add-OSDStageMozillaFirefoxEnterprise` |
+| Cisco Webex | `Add-OSDStageCiscoWebex` |
+| Zoom Workplace | `Add-OSDStageZoomWorkplace` |
+| 7Zip | `Add-OSDStage7Zip` |
+| Visual Studio Code | `Add-OSDStageVisualStudioCode` |
+| Visual C++ v14 (x86 or x64) | `Add-OSDStageVisualCRedist -Architecture x64` |
+| .NET Runtime / Desktop Runtime | `Add-OSDStageDotNetRuntime -Architecture x64` |
 
-Installers come directly from their vendors. Supported architectures and options differ by app; see the [built-in guide](docs/built-in-apps.md) for Office configuration, Firefox channels and other settings. OSDApps does not bundle vendor installers or provide product licenses.
+Installers come directly from their vendors. Supported architectures and options differ by app; see the [built-in guide](docs/built-in-apps.md) for Office configuration, Firefox channels and other settings. OSDStage does not bundle vendor installers or provide product licenses.
 
 ## Your apps. Your scripts. One queue.
 
-Use a repository for apps you package yourself and PowerShell scripts that configure the machine. Classify a package as `App` or `Script`; both use the same `Package.zip` layout, SHA-256 validation and `Add-OSDApp` command. Add them alongside built-ins in the order you want them to run.
+Use a repository for apps you package yourself and PowerShell scripts that configure the machine. Classify a package as `App` or `Script`; both use the same `Package.zip` layout, SHA-256 validation and `Add-OSDStage` command. Add them alongside built-ins in the order you want them to run.
 
 Configure your own catalog URL, then stage a package using its actual repository ID:
 
 ```powershell
-Set-OSDAppConfiguration -CatalogUri 'https://packages.example.com/osdapps/catalog.json'
-Add-OSDApp -Name 'YourPackageId'
+Set-OSDStageConfiguration -CatalogUri 'https://packages.example.com/osdstage/catalog.json'
+Add-OSDStage -Name 'YourPackageId'
 ```
 
 The URL and ID above are placeholders. No hosted sample repository or built-in script collection is included. Scripts run as **SYSTEM**, must be unattended and must not restart Windows. See [repository packaging](docs/repository.md) and the [package example](Examples/README.md#build-a-repository-package).
 
 ## How it works
 
-![OSDApps workflow: stage apps and scripts in WinPE, acquire and run them through SetupComplete, then continue to OOBE](docs/images/osdapps-architecture.svg)
+![OSDStage workflow: stage apps and scripts in WinPE, acquire and run them through SetupComplete, then continue to OOBE](docs/images/osdstage-architecture.svg)
 
-| When | What OSDApps does |
+| When | What OSDStage does |
 | --- | --- |
 | Optional preparation on a Windows PC | Save the module and download reusable content to an OSDCloud USB cache. |
 | WinPE, after applying Windows | Stage selected repository packages, built-in configuration and available cached content. Create one ordered queue and the standalone runtime. |
 | First Windows boot, during SetupComplete | PreInstall prepares built-in content. Runner installs apps and executes scripts from local staging in queue order. |
 | After processing | Keep per-package results and logs. Clean temporary staging on success and let the normal Windows setup flow continue. |
 
-SetupComplete runs **once**. OSDApps creates no automatic retry task, service or RunOnce entry. Ordinary package failures are recorded while independent entries continue; manifest, repository-integrity and supported-publisher trust failures stop processing. A failed or skipped entry retains staging for investigation. Reaching OOBE alone does not prove that every package succeeded.
+SetupComplete runs **once**. OSDStage creates no automatic retry task, service or RunOnce entry. Ordinary package failures are recorded while independent entries continue; manifest, repository-integrity and supported-publisher trust failures stop processing. A failed or skipped entry retains staging for investigation. Reaching OOBE alone does not prove that every package succeeded.
 
 ## A reusable cache you can inspect
 
-The optional cache lives under `\OSDApps` on the volume labeled `OSDCloud`. Prepare it on a Windows PC, then reuse it across deployments. Built-in updates validate a complete replacement before switching the active directory; repository updates verify package hashes before committing changes.
+The optional cache lives under `\OSDStage` on the volume labeled `OSDCloud`. Prepare it on a Windows PC, then reuse it across deployments. Built-in updates validate a complete replacement before switching the active directory; repository updates verify package hashes before committing changes.
 
 Check existing cache health without changing it:
 
 ```powershell
-Get-OSDAppCacheHealth -Offline
+Get-OSDStageCacheHealth -Offline
 ```
 
 Use the [USB preparation guide](Examples/Prepare-UsbCache.md) to get started, [cache reconciliation](docs/repository.md#cache-health-and-reconciliation) to retire repository content, and [cache generation recovery](docs/architecture.md#cache-generation-recovery) for interrupted updates. Only one process should write to a cache at a time.
 
 ## Inspect before deployment. Keep the results afterward.
 
-**OSDApps Viewer** shows the staged queue, available packages, cache and logs. The **Package Type** column distinguishes `App` from `Script` in the Staged for device, Apps and Cache tabs. Use it in WinPE to review staging or on a preparation machine to inspect the cache. See the [Viewer guide](docs/viewer.md).
+**OSDStage Viewer** shows the staged queue, available packages, cache and logs. The **Package Type** column distinguishes `App` from `Script` in the Staged for device, Apps and Cache tabs. Use it in WinPE to review staging or on a preparation machine to inspect the cache. See the [Viewer guide](docs/viewer.md).
 
-![OSDApps Viewer in WinPE showing Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise staged in order, with Office configuration details](docs/images/viewer-staged-winpe.png)
+![OSDStage Viewer in WinPE showing Microsoft 365 Apps, Adobe Acrobat Unified and Google Chrome Enterprise staged in order, with Office configuration details](docs/images/viewer-staged-winpe.png)
 
 *A real WinPE staging session. The detail pane shows the selected Office configuration; channel, language and cached versions reflect that session. [See the Apps and Cache views](docs/viewer.md#screenshots-from-winpe).*
 
@@ -137,8 +139,8 @@ The deployed Windows system keeps its results without needing the module or View
 
 | File | Purpose |
 | --- | --- |
-| `%ProgramData%\OSDApps\Results\Latest.json` | Overall result and individual package outcomes |
-| `%ProgramData%\OSDApps\Logs\Runtime.log` | Detailed acquisition, execution and cleanup events |
+| `%ProgramData%\OSDStage\Results\Latest.json` | Overall result and individual package outcomes |
+| `%ProgramData%\OSDStage\Logs\Runtime.log` | Detailed acquisition, execution and cleanup events |
 
 See [results and troubleshooting](docs/getting-started.md#5-check-the-outcome) for inspection commands. Recorded hardware tests and timing measurements are in the [validation matrix](docs/testing.md) and [performance notes](docs/performance.md).
 
@@ -154,9 +156,9 @@ See [results and troubleshooting](docs/getting-started.md#5-check-the-outcome) f
 
 Reading a packaged copy? The full guides and images are in the [online documentation](https://github.com/roryvossepoel/OSDApps/blob/main/docs/README.md).
 
-OSDApps is licensed under the [MIT License](LICENSE).
+OSDStage is licensed under the [MIT License](LICENSE).
 
-Repository [driver packages](docs/driver-packages.md) preserve complete vendor INF payloads in `Package.zip` and use the existing USB cache with `Add-OSDAppDriver -Id`.
+Repository [driver packages](docs/driver-packages.md) preserve complete vendor INF payloads in `Package.zip` and use the existing USB cache with `Add-OSDStageDriver -Id`.
 
 Machine environment variables: [staging, PATH and runtime behavior](docs/environment-variables.md).
 

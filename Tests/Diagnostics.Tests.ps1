@@ -1,6 +1,6 @@
 Describe 'Maintenance diagnostic bundle' {
     BeforeAll {
-        $tool = Join-Path (Split-Path $PSScriptRoot -Parent) 'tools/Test-OSDAppsMaintenance.ps1'
+        $tool = Join-Path (Split-Path $PSScriptRoot -Parent) 'tools/Test-OSDStageMaintenance.ps1'
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         function Read-Bundle {
             param($Path)

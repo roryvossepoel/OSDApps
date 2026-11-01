@@ -1,10 +1,10 @@
 # All-app cold deployment validation
 
-**Historical procedure for OSDApps 0.45.0.** This is not a current-release regression test or a required step after every update. Its [recorded successful cold run](testing.md#nine-app-cold-deployment--19-october-2026) is separate from the procedure. For current deployment instructions, use the [online WinPE example](../Examples/WinPE-Online.md); for inspections, use [Choose the right check](maintenance.md#choose-the-right-check).
+**Historical procedure for OSDStage 0.45.0.** This is not a current-release regression test or a required step after every update. Its [recorded successful cold run](testing.md#nine-app-cold-deployment--19-october-2026) is separate from the procedure. For current deployment instructions, use the [online WinPE example](../Examples/WinPE-Online.md); for inspections, use [Choose the right check](maintenance.md#choose-the-right-check).
 
-This operator test uses the published OSDApps **0.45.0** module from PowerShell
+This operator test uses the published OSDStage **0.45.0** module from PowerShell
 Gallery. Download
-[`Test-OSDAppsAllApps.ps1`](../tools/Test-OSDAppsAllApps.ps1) to the USB flash drive.
+[`Test-OSDStageAllApps.ps1`](../tools/Test-OSDStageAllApps.ps1) to the USB flash drive.
 It does not use the source module alongside the test script.
 
 ## Scope and preparation
@@ -16,8 +16,8 @@ Windows volume must have at least 25 GB free before staging. These conservative
 test thresholds are not a guarantee of capacity for future package versions.
 
 The test first loads the exact Gallery version and checks repository availability.
-It then renames the existing `OSDApps` directory to a unique
-`OSDApps-Backup-<timestamp>-<guid>` sibling directory and creates an empty cache.
+It then renames the existing `OSDStage` directory to a unique
+`OSDStage-Backup-<timestamp>-<guid>` sibling directory and creates an empty cache.
 The old cache is not deleted or automatically restored. A failure preserves the
 backup and diagnostic staging; do not rerun the entire staging script on that
 partially prepared deployment.
@@ -39,7 +39,7 @@ production configuration and a script package are outside this test.
 In WinPE PowerShell, use your actual repository URL:
 
 ```powershell
-.\Test-OSDAppsAllApps.ps1 -Phase Stage -CatalogUri 'https://example.org/osdapps/catalog.json'
+.\Test-OSDStageAllApps.ps1 -Phase Stage -CatalogUri 'https://example.org/osdstage/catalog.json'
 ```
 
 Only after `ALL APPS COLD STAGING PASSED - READY FOR REBOOT!`, run:
@@ -57,7 +57,7 @@ reboot. The USB module directories are not updated by this test.
 Open a command prompt with Shift+F10:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\ProgramData\OSDApps\Tests\Test-OSDAppsAllApps.ps1 -Phase Validate
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\ProgramData\OSDStage\Tests\Test-OSDStageAllApps.ps1 -Phase Validate
 ```
 
 The read-only checker prints acquisition and installer results, then requires

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" role="img" aria-labelledby="title desc">
-<title id="title">OSDApps cold and warm cache flow</title><desc id="desc">A cold cache is populated from repository and vendor sources; later deployments reuse and refresh the persistent USB cache.</desc>
+<title id="title">OSDStage cold and warm cache flow</title><desc id="desc">A cold cache is populated from repository and vendor sources; later deployments reuse and refresh the persistent USB cache.</desc>
 <style>text{font-family:Segoe UI,Arial,sans-serif;fill:#172033}.h{font-size:28px;font-weight:700}.sh{font-size:21px;font-weight:700}.t{font-size:16px;font-weight:600}.s{font-size:14px}.box{fill:#fff;stroke:#9fb1c8;stroke-width:2}.cold{fill:#f4f7fb;stroke:#6b83a3;stroke-width:2}.warm{fill:#eef7f2;stroke:#6a9a7d;stroke-width:2}.arrow{stroke:#4a5a73;stroke-width:3;fill:none;marker-end:url(#a)}</style>
 <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#4a5a73"/></marker></defs>
 <text x="600" y="42" text-anchor="middle" class="h">Persistent cache: first deployment vs following deployments</text>

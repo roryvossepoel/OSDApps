@@ -1,6 +1,6 @@
 # Initial default file and protocol associations
 
-`Add-OSDAppDefaultAssociation` stages initial defaults for new Windows users.
+`Add-OSDStageDefaultAssociation` stages initial defaults for new Windows users.
 Use it in WinPE after OSDCloud applies Windows, and put the entry after the
 installers that provide the selected handlers. This candidate supports Windows
 11 client with native 64-bit PowerShell during SetupComplete. It is experimental
@@ -8,11 +8,11 @@ until the physical acceptance test below passes.
 
 ## Explicit initial defaults only
 
-Installing an app and choosing its defaults are separate operations. OSDApps
+Installing an app and choosing its defaults are separate operations. OSDStage
 does not infer association selections from installed apps, their capabilities or
-installation order. Without an `Add-OSDAppDefaultAssociation` call, no association
+installation order. Without an `Add-OSDStageDefaultAssociation` call, no association
 entry or DISM association import is added. Windows and the vendor installers
-retain their normal behavior; OSDApps does not suppress their app registration.
+retain their normal behavior; OSDStage does not suppress their app registration.
 
 Only identifiers supplied through parameters or the selected XML are explicit
 overrides. A full XML export selects every association in that file, so use a
@@ -26,22 +26,22 @@ mode, recurring policy or correction task. Users can change their defaults later
 ## Multiple browsers and a separate PDF choice
 
 Stage all desired apps first, then explicitly choose a handler for the web
-protocols and HTML files. Installing another browser does not make OSDApps select
+protocols and HTML files. Installing another browser does not make OSDStage select
 it as the default. For example, in WinPE:
 
 ```powershell
-Add-OSDAppGoogleChromeEnterprise -Architecture x64
-Add-OSDAppMozillaFirefoxEnterprise -Architecture x64
-Add-OSDAppAdobeAcrobatUnified -Architecture x64
+Add-OSDStageGoogleChromeEnterprise -Architecture x64
+Add-OSDStageMozillaFirefoxEnterprise -Architecture x64
+Add-OSDStageAdobeAcrobatUnified -Architecture x64
 
 # Explicit initial browser choice; PDF is independent.
-Add-OSDAppDefaultAssociation -Identifier @('http','https','.htm','.html') -ProgId 'ChromeHTML' -AppName 'Google Chrome'
+Add-OSDStageDefaultAssociation -Identifier @('http','https','.htm','.html') -ProgId 'ChromeHTML' -AppName 'Google Chrome'
 
 # Explicit PDF choice; other Adobe file types are not selected here.
-Add-OSDAppDefaultAssociation -Identifier '.pdf' -ProgId 'Acrobat.Document.DC' -AppName 'Adobe Acrobat'
+Add-OSDStageDefaultAssociation -Identifier '.pdf' -ProgId 'Acrobat.Document.DC' -AppName 'Adobe Acrobat'
 ```
 
-Omit either association call to leave those identifiers without an OSDApps
+Omit either association call to leave those identifiers without an OSDStage
 override. Omit both to install the apps without staging association settings.
 To choose a different browser, supply that installed version's registered handler
 ID; there is no guessed browser-to-ProgId lookup. Later calls for the same
@@ -51,8 +51,8 @@ identifier replace earlier explicit selections, independently of app order.
 
 ```powershell
 # Example handler IDs: verify them against your installed app versions first.
-Add-OSDAppDefaultAssociation -Identifier '.pdf' -ProgId 'Acrobat.Document.DC' -AppName 'Adobe Acrobat'
-Add-OSDAppDefaultAssociation -Identifier @('.htm','.html','http','https') -ProgId 'ChromeHTML' -AppName 'Google Chrome'
+Add-OSDStageDefaultAssociation -Identifier '.pdf' -ProgId 'Acrobat.Document.DC' -AppName 'Adobe Acrobat'
+Add-OSDStageDefaultAssociation -Identifier @('.htm','.html','http','https') -ProgId 'ChromeHTML' -AppName 'Google Chrome'
 ```
 
 `Identifier` is an extension with its leading dot, or a protocol scheme without
@@ -71,7 +71,7 @@ result alone does not validate the mapping.
 Alternatively, select an existing DISM export:
 
 ```powershell
-Add-OSDAppDefaultAssociation -XmlPath 'C:\DeploymentData\DefaultAssociations.xml'
+Add-OSDStageDefaultAssociation -XmlPath 'C:\DeploymentData\DefaultAssociations.xml'
 ```
 
 Use the actual path available in WinPE. `Path` is an alias for `XmlPath`.
@@ -151,7 +151,7 @@ counts, native output, exit codes, errors and restart-needed state. Success is
 `RebootRequested=false`; it is not a claim that a user has opened a file.
 
 Baseline.xml, Merged.xml and native DISM logs live in the owned attempt folder
-under `Windows\Temp\OSDApps\BuiltIn\DefaultAssociations`. Normal CleanupMode
+under `Windows\Temp\OSDStage\BuiltIn\DefaultAssociations`. Normal CleanupMode
 applies; Never retains these files for inspection. DISM stores imported defaults
 in Windows, so the source XML need not remain after successful staging cleanup.
 Removing the queue entry before execution discards the pending selection;
@@ -163,7 +163,7 @@ Use a freshly applied x64 Windows image for the initial candidate test. Stage
 Adobe and Chrome before the associations, verifying that the example ProgIds
 match those versions. First test parameter input, then the equivalent selected
 XML in a separate fresh deployment when needed to establish both input routes.
-The [example](../Examples/Stage-OSDAppsDefaultAssociationsTest.ps1) supports both.
+The [example](../Examples/Stage-OSDStageDefaultAssociationsTest.ps1) supports both.
 
 Record the exact module commit, Windows build/edition, chosen handlers and
 DeploymentId. During the normal OOBE/first-sign-in flow manually confirm:

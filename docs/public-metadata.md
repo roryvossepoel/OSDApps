@@ -1,6 +1,6 @@
 # Public built-in metadata for viewers
 
-OSDApps publishes a stable, machine-readable **built-in catalog** at [`metadata/builtins.json`](../metadata/builtins.json). It is designed for external viewers, documentation pages and dashboards, without parsing the PowerShell module.
+OSDStage publishes a stable, machine-readable **built-in catalog** at [`metadata/builtins.json`](../metadata/builtins.json). It is designed for external viewers, documentation pages and dashboards, without parsing the PowerShell module.
 
 **Public raw endpoint:**
 
@@ -8,11 +8,11 @@ OSDApps publishes a stable, machine-readable **built-in catalog** at [`metadata/
 https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/builtins.json
 ```
 
-This file is a **catalog of OSDApps' vendor-native built-in integrations**, **not** a listing of an organization's self-maintained app repository. For organization-managed apps, point a private or authorized viewer to that organization's own `catalog.json` and then resolve the linked package `manifest.json` files. The sample repository under `Examples/Repository` deliberately does not publish any private apps.
+This file is a **catalog of OSDStage' vendor-native built-in integrations**, **not** a listing of an organization's self-maintained app repository. For organization-managed apps, point a private or authorized viewer to that organization's own `catalog.json` and then resolve the linked package `manifest.json` files. The sample repository under `Examples/Repository` deliberately does not publish any private apps.
 
 ## Stable schema and fields
 
-The current catalog uses `Apps[]`. This PR changes the OSDApps-owned field
+The current catalog uses `Apps[]`. This PR changes the OSDStage-owned field
 contract and is not backward-compatible with earlier consumers. There are no
 retired built-in cache aliases. Rebuild caches and update external consumers
 before adopting this branch; do not mix it with previously staged manifests.
@@ -48,8 +48,8 @@ The public catalog includes 14 built-in integrations. This `CiscoWebex` entry il
   "Vendor": "Cisco",
   "Acquisition": "VendorMsi",
   "SyncPhase": "FullWindowsPreInstall",
-  "AddCommand": "Add-OSDAppCiscoWebex",
-  "SyncCommand": "Sync-OSDAppCiscoWebex",
+  "AddCommand": "Add-OSDStageCiscoWebex",
+  "SyncCommand": "Sync-OSDStageCiscoWebex",
   "Architectures": ["x64", "arm64"],
   "DefaultArchitecture": "x64",
   "CachePath": "BuiltIn/CiscoWebex/<architecture>",

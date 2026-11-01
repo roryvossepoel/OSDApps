@@ -1,6 +1,6 @@
 # Architecture
 
-The maintained OSDApps architecture documentation lives in:
+The maintained OSDStage architecture documentation lives in:
 
 - [docs/architecture.md](docs/architecture.md)
 

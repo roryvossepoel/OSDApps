@@ -1,14 +1,14 @@
 # Machine environment variables
 
-Run `Add-OSDAppEnvironmentVariable` in WinPE after Windows has been applied. It stages one bundled `EnvironmentVariables` Script with SHA-256 checked configuration and runtime. No repository package, cache, download or environment change on the preparation PC/WinPE is needed. SetupComplete executes it once as SYSTEM in the installed Windows.
+Run `Add-OSDStageEnvironmentVariable` in WinPE after Windows has been applied. It stages one bundled `EnvironmentVariables` Script with SHA-256 checked configuration and runtime. No repository package, cache, download or environment change on the preparation PC/WinPE is needed. SetupComplete executes it once as SYSTEM in the installed Windows.
 
 ```powershell
-Add-OSDAppEnvironmentVariable -Name DeploymentRing -Value 'Pilot'
-Add-OSDAppEnvironmentVariable -Name ToolsRoot -Value '%ProgramData%\Tools' -ExpandString
-Add-OSDAppEnvironmentVariable -Name EmptySetting -Value ''
-Add-OSDAppEnvironmentVariable -Name LegacySetting -Remove
-Add-OSDAppEnvironmentVariable -AppendPath @('C:\Tools', '%ProgramData%\Tools\bin')
-Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
+Add-OSDStageEnvironmentVariable -Name DeploymentRing -Value 'Pilot'
+Add-OSDStageEnvironmentVariable -Name ToolsRoot -Value '%ProgramData%\Tools' -ExpandString
+Add-OSDStageEnvironmentVariable -Name EmptySetting -Value ''
+Add-OSDStageEnvironmentVariable -Name LegacySetting -Remove
+Add-OSDStageEnvironmentVariable -AppendPath @('C:\Tools', '%ProgramData%\Tools\bin')
+Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure
 ```
 
 Only **machine scope** is supported. Set/Remove for a name supersedes earlier staged intent for that name, case-insensitively. PATH appends run in staging order, after any preceding explicit PATH Set. Setting PATH via `-Name Path -Value ...` deliberately replaces it; use `-AppendPath` for additions. Removing a machine variable does not remove a same-named user variable.
@@ -19,9 +19,9 @@ PATH updates read the **raw machine registry value**, never `$env:Path` (which c
 
 The runtime writes HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment. It validates the complete configuration before any writes, then attempts each operation once, continuing after individual failures. Failures yield exit code 1 and preserve successful operations; no rollback, retry, scheduled task or forced reboot is introduced.
 
-After changes, a single bounded WM_SETTINGCHANGE/Environment notification is attempted. Notification failure is reported separately and does not invalidate successfully persisted values. **Existing processes and services, including the parent OSDApps runner and its subsequently inherited environment, are not refreshed.** Do not depend on these new variables in later app installers in the same run. Normal future sign-ins/new environment construction pick up the machine values; this feature does not restart services or promise immediate propagation to all processes.
+After changes, a single bounded WM_SETTINGCHANGE/Environment notification is attempted. Notification failure is reported separately and does not invalidate successfully persisted values. **Existing processes and services, including the parent OSDStage runner and its subsequently inherited environment, are not refreshed.** Do not depend on these new variables in later app installers in the same run. Normal future sign-ins/new environment construction pick up the machine values; this feature does not restart services or promise immediate propagation to all processes.
 
-`%ProgramData%\OSDApps\Results\EnvironmentVariables-Result.json` records deployment ID, name/action, outcome, changed state, registry kind, added PATH entry count, errors without values and notification outcome. `Latest.json` contains the normal package result. Environment **values are not emitted in runtime logs or results**, but are readable in the staged config and Windows registry. This is not a mechanism for deploying secrets. Cleanup follows the global CleanupMode; Never retains configuration for tests.
+`%ProgramData%\OSDStage\Results\EnvironmentVariables-Result.json` records deployment ID, name/action, outcome, changed state, registry kind, added PATH entry count, errors without values and notification outcome. `Latest.json` contains the normal package result. Environment **values are not emitted in runtime logs or results**, but are readable in the staged config and Windows registry. This is not a mechanism for deploying secrets. Cleanup follows the global CleanupMode; Never retains configuration for tests.
 
 Validation covers real registry operations on an isolated test key (including PATH), validation-before-mutation, continuation, idempotency, transaction rollback and tamper detection. Native PreInstall/runner integration uses unique temporary machine variables and cleans them up; it never changes the test host's machine PATH. A physical WinPE/deployment test remains the acceptance step.
 

@@ -1,11 +1,11 @@
 Describe 'Microsoft Company Portal automatic Preinstall Kit download' {
     BeforeAll {
         $root = Split-Path $PSScriptRoot -Parent
-        Import-Module (Join-Path $root 'OSDApps.psd1') -Force
+        Import-Module (Join-Path $root 'OSDStage.psd1') -Force
     }
 
     It 'allows synchronization without supplying KitPath' {
-        $command = Get-Command Sync-OSDAppMicrosoftCompanyPortal -Module OSDApps
+        $command = Get-Command Sync-OSDStageMicrosoftCompanyPortal -Module OSDStage
         $parameter = $command.Parameters['KitPath']
         $parameter | Should -Not -BeNullOrEmpty
         @($parameter.Attributes | Where-Object {
@@ -14,7 +14,7 @@ Describe 'Microsoft Company Portal automatic Preinstall Kit download' {
     }
 
     It 'automatically downloads a synthetic kit and retains every original vendor filename' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             Add-Type -AssemblyName System.IO.Compression
             Add-Type -AssemblyName System.IO.Compression.FileSystem
             $cache = Join-Path $TestDrive 'ColdCache'
@@ -35,16 +35,16 @@ Describe 'Microsoft Company Portal automatic Preinstall Kit download' {
             }
             $script:vendorKit = Join-Path $TestDrive 'CompanyPortal-Universal-PreinstallKit.zip'
             [IO.Compression.ZipFile]::CreateFromDirectory($kitRoot,$script:vendorKit)
-            Mock Test-OSDAppWinPE { $false }
-            Mock Get-OSDAppCachePath { $cache }
-            Mock Enter-OSDAppCacheLock { $null }
-            Mock Save-OSDAppDownload {
+            Mock Test-OSDStageWinPE { $false }
+            Mock Get-OSDStageCachePath { $cache }
+            Mock Enter-OSDStageCacheLock { $null }
+            Mock Save-OSDStageDownload {
                 $file = Join-Path $DestinationDirectory (Split-Path $script:vendorKit -Leaf)
                 New-Item -ItemType Directory -Path $DestinationDirectory -Force | Out-Null
                 Copy-Item -LiteralPath $script:vendorKit -Destination $file
                 Get-Item -LiteralPath $file
             }
-            $result = Sync-OSDAppMicrosoftCompanyPortal -Architecture x64 -Confirm:$false
+            $result = Sync-OSDStageMicrosoftCompanyPortal -Architecture x64 -Confirm:$false
             $result.Updated | Should -BeTrue
             $result.CacheReused | Should -BeFalse
             $result.Files | Should -Be 7
@@ -58,12 +58,12 @@ Describe 'Microsoft Company Portal automatic Preinstall Kit download' {
             }
             $info.Files.Path | Should -Not -Contain 'Bundle.appxbundle'
             $info.Files.Path | Should -Not -Contain 'License.xml'
-            Should -Invoke Save-OSDAppDownload -Times 1 -Exactly -ParameterFilter { $ExpectedExtension -eq '.zip' -and $Uri -like 'https://download.microsoft.com/*' }
+            Should -Invoke Save-OSDStageDownload -Times 1 -Exactly -ParameterFilter { $ExpectedExtension -eq '.zip' -and $Uri -like 'https://download.microsoft.com/*' }
         }
     }
 
     It 'reuses only a hash-verified x64 cache when the official download is unavailable' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $cache = Join-Path $TestDrive 'Cache'
             $target = Join-Path $cache 'BuiltIn\MicrosoftCompanyPortal\x64'
             New-Item -ItemType Directory -Path (Join-Path $target 'Dependencies') -Force | Out-Null
@@ -84,21 +84,21 @@ Describe 'Microsoft Company Portal automatic Preinstall Kit download' {
             } | ConvertTo-Json -Depth 6 |
                 Set-Content -LiteralPath (Join-Path $target 'CacheInfo.json') -Encoding UTF8
 
-            Mock Test-OSDAppWinPE { $false }
-            Mock Get-OSDAppCachePath { $cache }
-            Mock Enter-OSDAppCacheLock { $null }
-            Mock Save-OSDAppDownload { throw 'Microsoft download unavailable' }
+            Mock Test-OSDStageWinPE { $false }
+            Mock Get-OSDStageCachePath { $cache }
+            Mock Enter-OSDStageCacheLock { $null }
+            Mock Save-OSDStageDownload { throw 'Microsoft download unavailable' }
 
-            $result = Sync-OSDAppMicrosoftCompanyPortal -Architecture x64 -Confirm:$false -WarningAction SilentlyContinue
+            $result = Sync-OSDStageMicrosoftCompanyPortal -Architecture x64 -Confirm:$false -WarningAction SilentlyContinue
             $result.CacheReused | Should -BeTrue
             $result.Updated | Should -BeFalse
             $result.Files | Should -Be 7
-            Should -Invoke Save-OSDAppDownload -Times 1 -Exactly
+            Should -Invoke Save-OSDStageDownload -Times 1 -Exactly
 
             Add-Content -LiteralPath (Join-Path $target 'Dependencies\one.appx') -Value 'tampered bytes'
-            { Sync-OSDAppMicrosoftCompanyPortal -Architecture x64 -Confirm:$false -WarningAction SilentlyContinue } |
+            { Sync-OSDStageMicrosoftCompanyPortal -Architecture x64 -Confirm:$false -WarningAction SilentlyContinue } |
                 Should -Throw '*Microsoft download unavailable*'
-            Should -Invoke Save-OSDAppDownload -Times 2 -Exactly
+            Should -Invoke Save-OSDStageDownload -Times 2 -Exactly
         }
     }
 }

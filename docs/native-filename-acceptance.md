@@ -11,7 +11,7 @@ From the candidate repository directory, with Windows PowerShell 5.1, PowerShell
 7, Pester 6.2.0 and PSScriptAnalyzer available in their respective hosts:
 
 ```powershell
-.\tools\Test-OSDAppsMega.ps1
+.\tools\Test-OSDStageMega.ps1
 ```
 
 Require both engine reports to pass, no skipped/not-run tests, successful package
@@ -25,30 +25,30 @@ media or delete unrelated files. Cache reset is an explicit operator action,
 not something the module migrates or performs automatically.
 
 Import the candidate module by its actual local path rather than from Gallery.
-For this example, the complete candidate source is in `C:\Work\OSDApps`:
+For this example, the complete candidate source is in `C:\Work\OSDStage`:
 
 ```powershell
 $ErrorActionPreference = 'Stop'
-Import-Module C:\Work\OSDApps\OSDApps.psd1 -Force
-Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud
+Import-Module C:\Work\OSDStage\OSDStage.psd1 -Force
+Set-OSDStageConfiguration -CacheVolumeLabel OSDCloud
 
-Sync-OSDAppMicrosoft365Apps -Architecture x64 -Channel MonthlyEnterprise -Language nl-nl
-Sync-OSDAppMicrosoftTeams -Architecture x64
-Sync-OSDAppGoogleChromeEnterprise -Architecture x64
-Sync-OSDAppMozillaFirefoxEnterprise -Architecture x64 -Channel Rapid -Language en-US
-Sync-OSDAppAdobeAcrobatUnified -Architecture x64
-Sync-OSDAppCiscoWebex -Architecture x64
-Sync-OSDAppZoomWorkplace -Architecture x64
-Sync-OSDApp7Zip -Architecture x64
-Sync-OSDAppVisualStudioCode -Architecture x64
-Sync-OSDAppVisualCRedist -Architecture x64
-Sync-OSDAppDotNetRuntime -Architecture x64 -Channel 10.0 -RuntimeType Desktop
-Sync-OSDAppMicrosoftCompanyPortal -Architecture x64
-Sync-OSDAppCMTraceOpen -Architecture x64
+Sync-OSDStageMicrosoft365Apps -Architecture x64 -Channel MonthlyEnterprise -Language nl-nl
+Sync-OSDStageMicrosoftTeams -Architecture x64
+Sync-OSDStageGoogleChromeEnterprise -Architecture x64
+Sync-OSDStageMozillaFirefoxEnterprise -Architecture x64 -Channel Rapid -Language en-US
+Sync-OSDStageAdobeAcrobatUnified -Architecture x64
+Sync-OSDStageCiscoWebex -Architecture x64
+Sync-OSDStageZoomWorkplace -Architecture x64
+Sync-OSDStage7Zip -Architecture x64
+Sync-OSDStageVisualStudioCode -Architecture x64
+Sync-OSDStageVisualCRedist -Architecture x64
+Sync-OSDStageDotNetRuntime -Architecture x64 -Channel 10.0 -RuntimeType Desktop
+Sync-OSDStageMicrosoftCompanyPortal -Architecture x64
+Sync-OSDStageCMTraceOpen -Architecture x64
 
-Get-OSDAppCache -VerifySignatures |
+Get-OSDStageCache -VerifySignatures |
     Format-Table Id, Version, Valid, SignatureStatus -AutoSize
-Test-OSDAppCache -VerifySignatures
+Test-OSDStageCache -VerifySignatures
 ```
 
 Stop on any failure. Inspect each recorded vendor filename, hash and byte size.
@@ -57,7 +57,7 @@ keeps its vendor-managed layout and recorded configuration profile. Inbox cleanu
 is bundled with the module and has no vendor cache to synchronize.
 
 Copy the complete candidate module to a separate USB folder, for example
-`X:\Modules\OSDAppsCandidate`, replacing `X:` with the actual USB drive letter.
+`X:\Modules\OSDStageCandidate`, replacing `X:` with the actual USB drive letter.
 Do not mix files from another module version or previous staging.
 
 ## Stage on the disposable target in WinPE
@@ -71,26 +71,26 @@ $ErrorActionPreference = 'Stop'
 if (-not (Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Control\MiniNT')) {
     throw 'Run this staging block in WinPE on the disposable target.'
 }
-Import-Module X:\Modules\OSDAppsCandidate\OSDApps.psd1 -Force
-Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud -CleanupMode Never
+Import-Module X:\Modules\OSDStageCandidate\OSDStage.psd1 -Force
+Set-OSDStageConfiguration -CacheVolumeLabel OSDCloud -CleanupMode Never
 
-Add-OSDAppVisualCRedist -Architecture x64
-Add-OSDAppDotNetRuntime -Architecture x64 -Channel 10.0 -RuntimeType Desktop
-Add-OSDAppMicrosoft365Apps -Architecture x64 -Channel MonthlyEnterprise -Language nl-nl
-Add-OSDAppMicrosoftTeams -Architecture x64
-Add-OSDAppGoogleChromeEnterprise -Architecture x64
-Add-OSDAppMozillaFirefoxEnterprise -Architecture x64 -Channel Rapid -Language en-US
-Add-OSDAppAdobeAcrobatUnified -Architecture x64
-Add-OSDAppCiscoWebex -Architecture x64
-Add-OSDAppZoomWorkplace -Architecture x64
-Add-OSDApp7Zip -Architecture x64
-Add-OSDAppVisualStudioCode -Architecture x64
-Add-OSDAppMicrosoftCompanyPortal -Architecture x64
-Add-OSDAppCMTraceOpen -Architecture x64
-Add-OSDAppWindowsInboxCleanup -Preset Tested13 -DiagnoseOnly
+Add-OSDStageVisualCRedist -Architecture x64
+Add-OSDStageDotNetRuntime -Architecture x64 -Channel 10.0 -RuntimeType Desktop
+Add-OSDStageMicrosoft365Apps -Architecture x64 -Channel MonthlyEnterprise -Language nl-nl
+Add-OSDStageMicrosoftTeams -Architecture x64
+Add-OSDStageGoogleChromeEnterprise -Architecture x64
+Add-OSDStageMozillaFirefoxEnterprise -Architecture x64 -Channel Rapid -Language en-US
+Add-OSDStageAdobeAcrobatUnified -Architecture x64
+Add-OSDStageCiscoWebex -Architecture x64
+Add-OSDStageZoomWorkplace -Architecture x64
+Add-OSDStage7Zip -Architecture x64
+Add-OSDStageVisualStudioCode -Architecture x64
+Add-OSDStageMicrosoftCompanyPortal -Architecture x64
+Add-OSDStageCMTraceOpen -Architecture x64
+Add-OSDStageWindowsInboxCleanup -Preset Tested13 -DiagnoseOnly
 
-Test-OSDAppDeployment -RequireOfflineReady -ThrowOnFailure
-Show-OSDAppUI -Offline
+Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure
+Show-OSDStageUI -Offline
 ```
 
 This queue contains 14 built-ins. Cleanup runs in diagnosis mode; removal needs a
@@ -120,21 +120,21 @@ top-level status:
 
 ```powershell
 $ErrorActionPreference = 'Stop'
-$result = Get-Content C:\ProgramData\OSDApps\Results\Latest.json -Raw | ConvertFrom-Json
-$manifest = Get-Content C:\Windows\Temp\OSDApps\DeviceManifest.json -Raw | ConvertFrom-Json
-$expected = @($manifest.Apps.Id)
-$actual = @($result.Apps.Id)
+$result = Get-Content C:\ProgramData\OSDStage\Results\Latest.json -Raw | ConvertFrom-Json
+$manifest = Get-Content C:\Windows\Temp\OSDStage\DeviceManifest.json -Raw | ConvertFrom-Json
+$expected = @($manifest.Packages.Id)
+$actual = @($result.Packages.Id)
 if ($result.Status -ne 'Succeeded' -or
     $result.DeploymentId -ne $manifest.DeploymentId -or
     $expected.Count -ne 14 -or $actual.Count -ne 14 -or
     @($actual | Select-Object -Unique).Count -ne 14 -or
     @(Compare-Object $expected $actual).Count -ne 0 -or
-    $result.ExpectedAppCount -ne 14 -or $result.SuccessfulAppCount -ne 14 -or
-    $result.FailedAppCount -ne 0 -or $result.SkippedAppCount -ne 0 -or
-    @($result.Apps | Where-Object Status -ne Succeeded).Count -ne 0) {
+    $result.ExpectedPackageCount -ne 14 -or $result.SuccessfulPackageCount -ne 14 -or
+    $result.FailedPackageCount -ne 0 -or $result.SkippedPackageCount -ne 0 -or
+    @($result.Packages | Where-Object Status -ne Succeeded).Count -ne 0) {
     throw 'Deployment acceptance failed. Preserve all reports and logs.'
 }
-$result.Apps | Format-Table Id, PackageType, Status, ExitCode, Integrity -AutoSize
+$result.Packages | Format-Table Id, PackageType, Status, ExitCode, Integrity -AutoSize
 ```
 
 Check installed app versions independently, then sign in through Autopilot and

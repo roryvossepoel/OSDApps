@@ -1,6 +1,6 @@
 Describe 'Microsoft 365 Apps PreInstall timeout enforcement' {
     BeforeAll {
-        $script:runtimePath = Join-Path (Split-Path -Parent $PSScriptRoot) 'Runtime\Invoke-OSDAppPreInstall.ps1'
+        $script:runtimePath = Join-Path (Split-Path -Parent $PSScriptRoot) 'Runtime\Invoke-OSDStagePreInstall.ps1'
         $script:runtime = Get-Content -LiteralPath $script:runtimePath -Raw
         $tokens = $null
         $errors = $null

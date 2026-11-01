@@ -28,11 +28,11 @@ $Usb = @(Get-Volume | Where-Object {
 })
 if ($Usb.Count -ne 1) { throw 'Expected exactly one OSDCloud cache volume.' }
 $UsbRoot = "$($Usb[0].DriveLetter):\"
-$SavedVersions = @(Get-ChildItem -LiteralPath (Join-Path $UsbRoot 'Modules\OSDApps') -Directory |
+$SavedVersions = @(Get-ChildItem -LiteralPath (Join-Path $UsbRoot 'Modules\OSDStage') -Directory |
     Where-Object { $_.Name -as [version] } |
     Sort-Object { [version]$_.Name } -Descending)
-if ($SavedVersions.Count -eq 0) { throw 'No saved OSDApps version found on this USB.' }
-$ModulePath = Join-Path $SavedVersions[0].FullName 'OSDApps.psd1'
+if ($SavedVersions.Count -eq 0) { throw 'No saved OSDStage version found on this USB.' }
+$ModulePath = Join-Path $SavedVersions[0].FullName 'OSDStage.psd1'
 if (-not (Test-Path -LiteralPath $ModulePath -PathType Leaf)) {
     throw 'Saved module missing. Complete the Windows USB preparation example first.'
 }
@@ -50,17 +50,17 @@ if ($Targets.Count -ne 1) {
     throw "Offline Windows target is not unique: $($Targets -join ', ')"
 }
 $WindowsPath = $Targets[0]
-$ManifestPath = Join-Path $WindowsPath 'Windows\Temp\OSDApps\DeviceManifest.json'
+$ManifestPath = Join-Path $WindowsPath 'Windows\Temp\OSDStage\DeviceManifest.json'
 if (Test-Path -LiteralPath $ManifestPath) {
     throw 'A device queue already exists. Inspect it before starting a new example.'
 }
 
-Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
+Remove-Module OSDStage -Force -ErrorAction SilentlyContinue
 Import-Module $ModulePath -Force -ErrorAction Stop
-Set-OSDAppConfiguration -CacheVolumeLabel OSDCloud -CleanupMode OnSuccess
+Set-OSDStageConfiguration -CacheVolumeLabel OSDCloud -CleanupMode OnSuccess
 
 $RequiredIds = @('Microsoft365Apps','AdobeAcrobatUnified','GoogleChromeEnterprise')
-$Entries = @(Get-OSDAppCache -Name $RequiredIds)
+$Entries = @(Get-OSDStageCache -Name $RequiredIds)
 foreach ($Id in $RequiredIds) {
     $Matching = @($Entries | Where-Object {
         $_.Id -eq $Id -and $_.Source -eq 'BuiltIn' -and
@@ -84,12 +84,12 @@ The network guard checks whether Windows reports an available interface; it is n
 **Run in the same WinPE session after step 1 succeeds.** These commands write the offline Windows staging queue and copy available cache content:
 
 ```powershell
-Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us -WindowsPath $WindowsPath
-Add-OSDAppAdobeAcrobatUnified -WindowsPath $WindowsPath
-Add-OSDAppGoogleChromeEnterprise -WindowsPath $WindowsPath
+Add-OSDStageMicrosoft365Apps -Channel MonthlyEnterprise -Language en-us -WindowsPath $WindowsPath
+Add-OSDStageAdobeAcrobatUnified -WindowsPath $WindowsPath
+Add-OSDStageGoogleChromeEnterprise -WindowsPath $WindowsPath
 ```
 
-Do not run full-Windows built-in `Sync-OSDApp*` commands here. The content has already been prepared; the first Windows boot uses the staged fallback when networking remains unavailable.
+Do not run full-Windows built-in `Sync-OSDStage*` commands here. The content has already been prepared; the first Windows boot uses the staged fallback when networking remains unavailable.
 
 ## 3. Optionally stage a previously cached repository app
 
@@ -97,7 +97,7 @@ Omit this section for built-ins-only deployment. The app must already exist as a
 
 ```powershell
 $RepoAppId = Read-Host 'Enter a repository app Id already cached on this USB flash drive'
-Add-OSDApp -Name $RepoAppId -SkipCacheRefresh -WindowsPath $WindowsPath
+Add-OSDStage -Name $RepoAppId -SkipCacheRefresh -WindowsPath $WindowsPath
 ```
 
 This command validates requested repository archive hashes before staging. It does not create missing packages. When preparation and target architectures differ, verify the cached repository variant explicitly before deployment; this example assumes matching x64 media.
@@ -105,17 +105,17 @@ This command validates requested repository archive hashes before staging. It do
 ## 4. Review and continue the offline deployment
 
 ```powershell
-(Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json).Apps |
+(Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json).Packages |
     Select-Object Id, Source, PackageType, Architecture, Channel, Language, Version
 
 # Optional read-only Viewer, with Windows Forms and an STA session available.
-Show-OSDAppUI -WindowsPath $WindowsPath -Offline
+Show-OSDStageUI -WindowsPath $WindowsPath -Offline
 ```
 
 Require a complete staged payload before continuing:
 
 ```powershell
-Test-OSDAppDeployment -WindowsPath $WindowsPath -RequireOfflineReady -ThrowOnFailure
+Test-OSDStageDeployment -WindowsPath $WindowsPath -RequireOfflineReady -ThrowOnFailure
 ```
 
 Review the queue, then close the Viewer. Reboot through your normal deployment process only after staging succeeds. This example does not reboot automatically. Keep the USB flash drive attached and LAN/Wi-Fi disconnected through SetupComplete.

@@ -1,7 +1,7 @@
 Describe 'Repository authoring -WhatIf safety (#17)' {
     BeforeAll {
         $root = Split-Path $PSScriptRoot -Parent
-        Import-Module (Join-Path $root 'OSDApps.psd1') -Force
+        Import-Module (Join-Path $root 'OSDStage.psd1') -Force
     }
 
     BeforeEach {
@@ -14,7 +14,7 @@ Describe 'Repository authoring -WhatIf safety (#17)' {
     }
 
     It 'does not create an archive or output directory when previewing a new package' {
-        $outcome = @(New-OSDAppPackage -Id ExampleApp -Version 1.0.0 -SourcePath $script:source -OutputPath $script:build -WhatIf)
+        $outcome = @(New-OSDStagePackage -Id ExampleApp -Version 1.0.0 -SourcePath $script:source -OutputPath $script:build -WhatIf)
         Test-Path -LiteralPath $script:build | Should -BeFalse
         $outcome.Count | Should -Be 0
     }
@@ -24,32 +24,32 @@ Describe 'Repository authoring -WhatIf safety (#17)' {
         $archive = Join-Path $script:build 'Package.zip'
         [IO.File]::WriteAllBytes($archive, [byte[]](1,2,3,4,5))
         $before = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
-        $outcome = @(New-OSDAppPackage -Id ExampleApp -Version 2.0.0 -SourcePath $script:source -OutputPath $script:build -WhatIf)
+        $outcome = @(New-OSDStagePackage -Id ExampleApp -Version 2.0.0 -SourcePath $script:source -OutputPath $script:build -WhatIf)
         (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash | Should -Be $before
         $outcome.Count | Should -Be 0
     }
 
     It 'does not create a repository or a catalog when previewing a new package publication' {
-        $package = New-OSDAppPackage -Id ExampleApp -Version 1.0.0 -SourcePath $script:source -OutputPath $script:build
-        $outcome = @(Add-OSDAppPackage -Id ExampleApp -DisplayName 'Example' -Version 1.0.0 -PackagePath $package.PackagePath -RepositoryPath $script:repo -WhatIf)
+        $package = New-OSDStagePackage -Id ExampleApp -Version 1.0.0 -SourcePath $script:source -OutputPath $script:build
+        $outcome = @(Add-OSDStagePackage -Id ExampleApp -DisplayName 'Example' -Version 1.0.0 -PackagePath $package.PackagePath -RepositoryPath $script:repo -WhatIf)
         Test-Path -LiteralPath $script:repo | Should -BeFalse
         $outcome.Count | Should -Be 0
     }
 
     It 'preserves an existing repository and its catalog when previewing another version' {
-        $package = New-OSDAppPackage -Id ExampleApp -Version 1.0.0 -SourcePath $script:source -OutputPath $script:build
-        New-OSDAppRepository -Path $script:repo | Out-Null
-        Add-OSDAppPackage -Id ExampleApp -DisplayName 'Example' -Version 1.0.0 -PackagePath $package.PackagePath -RepositoryPath $script:repo | Out-Null
+        $package = New-OSDStagePackage -Id ExampleApp -Version 1.0.0 -SourcePath $script:source -OutputPath $script:build
+        New-OSDStageRepository -Path $script:repo | Out-Null
+        Add-OSDStagePackage -Id ExampleApp -DisplayName 'Example' -Version 1.0.0 -PackagePath $package.PackagePath -RepositoryPath $script:repo | Out-Null
         $catalog = Join-Path $script:repo 'catalog.json'
         $original = (Get-FileHash -LiteralPath $catalog -Algorithm SHA256).Hash
-        $published = Join-Path $script:repo 'Apps\ExampleApp\1.0.0\x64\Package.zip'
+        $published = Join-Path $script:repo 'Packages\ExampleApp\1.0.0\x64\Package.zip'
         $originalZip = (Get-FileHash -LiteralPath $published -Algorithm SHA256).Hash
 
-        $outcome = @(Add-OSDAppPackage -Id ExampleApp -DisplayName 'Changed' -Version 2.0.0 -PackagePath $package.PackagePath -RepositoryPath $script:repo -WhatIf)
+        $outcome = @(Add-OSDStagePackage -Id ExampleApp -DisplayName 'Changed' -Version 2.0.0 -PackagePath $package.PackagePath -RepositoryPath $script:repo -WhatIf)
 
         (Get-FileHash -LiteralPath $catalog -Algorithm SHA256).Hash | Should -Be $original
         (Get-FileHash -LiteralPath $published -Algorithm SHA256).Hash | Should -Be $originalZip
-        Test-Path -LiteralPath (Join-Path $script:repo 'Apps\ExampleApp\2.0.0') | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $script:repo 'Packages\ExampleApp\2.0.0') | Should -BeFalse
         $outcome.Count | Should -Be 0
     }
 }

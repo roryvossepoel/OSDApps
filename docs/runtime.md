@@ -2,7 +2,7 @@
 
 [Documentation](README.md) · [Architecture](architecture.md) · [Troubleshooting](faq.md)
 
-OSDApps uses standalone scripts during SetupComplete. The module itself does **not** need to be installed in the deployed Windows installation.
+OSDStage uses standalone scripts during SetupComplete. The module itself does **not** need to be installed in the deployed Windows installation.
 
 ![App queue and install order](images/app-queue.svg)
 
@@ -11,33 +11,33 @@ OSDApps uses standalone scripts during SetupComplete. The module itself does **n
 The public Add cmdlets prepare the selected offline Windows target. Runtime source normally lives under:
 
 ```text
-<Windows target>\Windows\Temp\OSDApps\
+<Windows target>\Windows\Temp\OSDStage\
     DeviceManifest.json
-    Invoke-OSDAppPreInstall.ps1
-    Invoke-OSDAppRunner.ps1
-    Restore-OSDAppCacheGeneration.ps1
-    Assert-OSDAppTransactionSpace.ps1
-    Enter-OSDAppCacheLock.ps1
-    Test-OSDAppOfficeCacheCompatibility.ps1
-    OSDAppSleepPrevention.ps1
+    Invoke-OSDStagePreInstall.ps1
+    Invoke-OSDStageRunner.ps1
+    Restore-OSDStageCacheGeneration.ps1
+    Assert-OSDStageTransactionSpace.ps1
+    Enter-OSDStageCacheLock.ps1
+    Test-OSDStageOfficeCacheCompatibility.ps1
+    OSDStageSleepPrevention.ps1
     Packages\
     BuiltIn\
     Work\
 ```
 
-This is **device staging**, separate from the optional `\OSDApps` USB cache. `DeviceManifest.json` contains one ordered `Apps` array. PreInstall processes its built-ins; Runner processes the full queue in order.
+This is **device staging**, separate from the optional `\OSDStage` USB cache. `DeviceManifest.json` contains one ordered `Packages` array. PreInstall processes its built-ins; Runner processes the full queue in order.
 
 ## SetupComplete order
 
 `SetupComplete.cmd` calls the phases in this order:
 
-1. Run `Invoke-OSDAppPreInstall.ps1` to prepare built-in content.
-2. Stop on a fatal PreInstall exit code; otherwise run `Invoke-OSDAppRunner.ps1`.
+1. Run `Invoke-OSDStagePreInstall.ps1` to prepare built-in content.
+2. Stop on a fatal PreInstall exit code; otherwise run `Invoke-OSDStageRunner.ps1`.
 3. Check the Runner exit code and retain the recorded outcome.
 
-The CLI stages these scripts and updates its owned SetupComplete blocks. Do not replace the whole SetupComplete file to change OSDApps settings; other deployment tooling may have its own commands there.
+The CLI stages these scripts and updates its owned SetupComplete blocks. Do not replace the whole SetupComplete file to change OSDStage settings; other deployment tooling may have its own commands there.
 
-This is a **one-shot execution path**. Windows Setup does not resume `SetupComplete.cmd` after a reboot, and OSDApps does not create a scheduled task, RunOnce value, service or other persistence mechanism to retry it. A retained staging directory is diagnostic/recovery evidence, not a pending automatic run.
+This is a **one-shot execution path**. Windows Setup does not resume `SetupComplete.cmd` after a reboot, and OSDStage does not create a scheduled task, RunOnce value, service or other persistence mechanism to retry it. A retained staging directory is diagnostic/recovery evidence, not a pending automatic run.
 
 ### PreInstall
 
@@ -64,11 +64,11 @@ Installer/provisioning success is not independent evidence of app activation, us
 **Set these values in the WinPE staging session before adding apps:**
 
 ```powershell
-Set-OSDAppConfiguration `
+Set-OSDStageConfiguration `
     -CleanupMode OnSuccess `
     -CacheVolumeLabel 'OSDCloud' `
-    -LogPath '%ProgramData%\OSDApps\Logs\Runtime.log' `
-    -ResultPath '%ProgramData%\OSDApps\Results\Latest.json'
+    -LogPath '%ProgramData%\OSDStage\Logs\Runtime.log' `
+    -ResultPath '%ProgramData%\OSDStage\Results\Latest.json'
 ```
 
 Configure a real `CatalogUri` in the same session when staging online repository apps. It is not needed for built-ins-only deployment.
@@ -91,7 +91,7 @@ The request is released in `finally` on success and failure. Windows closes the 
 To disable it, set the session configuration **before staging apps**:
 
 ```powershell
-Set-OSDAppConfiguration -PreventSleep $false
+Set-OSDStageConfiguration -PreventSleep $false
 ```
 
 Use `-PreventSleep $true` to enable it again. The Add commands copy this Boolean into `DeviceManifest.json` under `Runtime.PreventSleep`. Missing values in older manifests default to `true`; non-Boolean values are rejected. Changing session configuration after staging does not change an existing deployment by itself.
@@ -107,17 +107,17 @@ The [isolated development-PC test](testing.md#isolated-sleep-prevention-test) lo
 PreInstall writes a phase record, and Runner atomically replaces `Latest.json` as the queue progresses. The final result is outside the staging directory by default and therefore survives `CleanupMode OnSuccess`:
 
 ```text
-%ProgramData%\OSDApps\Results\Latest.json
+%ProgramData%\OSDStage\Results\Latest.json
 ```
 
 ```powershell
-$Result = Get-OSDAppDeploymentResult
+$Result = Get-OSDStageDeploymentResult
 $Result.Status
-$Result | Select-Object Status, SuccessfulAppCount, FailedAppCount, SkippedAppCount
-$Result.Apps | Select-Object Id, Status, FailureType, ExitCode, Version, DurationSeconds, Integrity, CacheUsed, PackageUpdated
+$Result | Select-Object Status, SuccessfulPackageCount, FailedPackageCount, SkippedPackageCount
+$Result.Packages | Select-Object Id, Status, FailureType, ExitCode, Version, DurationSeconds, Integrity, CacheUsed, PackageUpdated
 ```
 
-The top-level status is `Running`, `Succeeded` or `Failed`. The final record includes the deployment ID, timestamps, duration, expected/success/failed/skipped counts, configured cleanup/log paths, the PreInstall phase record and one entry for every selected package. Each result includes `PackageType` (`App` or `Script`; missing package-type metadata defaults to `App`). Status is `Succeeded`, `Failed` or `Skipped`; `Skipped` means OSDApps deliberately did not invoke that package, for example because its PreInstall acquisition failed or a preceding critical safety failure aborted the queue. Runner updates through a temporary file and rename so readers do not observe partially written JSON.
+The top-level status is `Running`, `Succeeded` or `Failed`. The final record includes the deployment ID, timestamps, duration, expected/success/failed/skipped counts, configured cleanup/log paths, the PreInstall phase record and one entry for every selected package. Each result includes `PackageType` (`App` or `Script`; missing package-type metadata defaults to `App`). Status is `Succeeded`, `Failed` or `Skipped`; `Skipped` means OSDStage deliberately did not invoke that package, for example because its PreInstall acquisition failed or a preceding critical safety failure aborted the queue. Runner updates through a temporary file and rename so readers do not observe partially written JSON.
 
 `Integrity` records the check actually performed by Runner. Repository archives report SHA-256 validation; supported built-in publishers are validated in PreInstall and carried as phase context. Acquisition flags come only from the uniquely matching app in this deployment's `PreInstall.json`, never from a previous sync in `CacheInfo.json`. Both reports must have the same non-empty `DeploymentId`; missing or mismatched identities are ignored.
 
@@ -154,17 +154,17 @@ Teams can report `CacheReused` for its MSIX while downloading the bootstrapper;
 reuse does not mean zero network traffic. These checks do not authenticate or
 verify every nested payload file.
 
-The embedded `PreInstall` record adds `FallbackAppCount`,
-`OfflineCacheAppCount` and `HasAcquisitionWarnings`. A fallback can
+The embedded `PreInstall` record adds `FallbackPackageCount`,
+`OfflineCachePackageCount` and `HasAcquisitionWarnings`. A fallback can
 therefore coexist with a final `Status=Succeeded`: all installations succeeded,
 but one or more refreshes did not. `OnSuccess` cleanup still follows installation
 success, and the persistent result retains the warning after source cleanup.
-These are additive fields in result schema `1.0`.
+These are additive fields in result schema `2.0`.
 
 ```powershell
-$Result = Get-OSDAppDeploymentResult
-$Result.PreInstall | Select-Object Status, HasAcquisitionWarnings, FallbackAppCount, OfflineCacheAppCount
-$Result.Apps | Select-Object Id, Status, AcquisitionOutcome, CacheDecisionReason, RefreshFailureType, RefreshError, ExitCode, Error
+$Result = Get-OSDStageDeploymentResult
+$Result.PreInstall | Select-Object Status, HasAcquisitionWarnings, FallbackPackageCount, OfflineCachePackageCount
+$Result.Packages | Select-Object Id, Status, AcquisitionOutcome, CacheDecisionReason, RefreshFailureType, RefreshError, ExitCode, Error
 ```
 
 `CacheDecisionReason` explains the decision made during this deployment. It is
@@ -219,13 +219,13 @@ The USB cache is separate and is not deleted by local source cleanup. The persis
 The default persistent runtime log is:
 
 ```text
-%ProgramData%\OSDApps\Logs\Runtime.log
+%ProgramData%\OSDStage\Logs\Runtime.log
 ```
 
 Module/cache actions with USB use:
 
 ```text
-<cache volume>:\OSDApps\Logs\Client.log
+<cache volume>:\OSDStage\Logs\Client.log
 ```
 
 Runtime `LogPath` can be configured. The Viewer discovers known default locations, so custom paths may need to be read separately. Logs are CMTrace-compatible. The runtime rotates the active log and retains numbered `.1`, `.2` and `.3` archives.
@@ -267,7 +267,7 @@ Office's standalone refresh timeout is 20 minutes by default. Adobe installation
 To choose a different Adobe installation timeout, set it **when staging in WinPE**:
 
 ```powershell
-Add-OSDAppAdobeAcrobatUnified -InstallTimeoutMinutes 20
+Add-OSDStageAdobeAcrobatUnified -InstallTimeoutMinutes 20
 ```
 
 ## Vendor MSI built-ins

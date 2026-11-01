@@ -1,8 +1,8 @@
 Describe 'Registry execution in isolated Windows hosts' {
     BeforeAll {
         $script:root = Split-Path $PSScriptRoot -Parent
-        . (Join-Path $script:root 'Runtime\OSDAppRegistry.ps1')
-        $script:runtime = Join-Path $script:root 'Runtime\Invoke-OSDAppRegistry.ps1'
+        . (Join-Path $script:root 'Runtime\OSDStageRegistry.ps1')
+        $script:runtime = Join-Path $script:root 'Runtime\Invoke-OSDStageRegistry.ps1'
         function Invoke-RegistryTestHost {
             param([string]$HostPath,[string]$ConfigPath,[string]$ReportPath)
             $si = [Diagnostics.ProcessStartInfo]::new()
@@ -33,7 +33,7 @@ Describe 'Registry execution in isolated Windows hosts' {
         $hostPath=Join-Path $env:SystemRoot ($Folder + '\WindowsPowerShell\v1.0\powershell.exe')
         Test-Path $hostPath | Should -BeTrue
         $leaf='RegistryCI-' + [guid]::NewGuid().ToString('N')
-        $sub='SOFTWARE\OSDApps\Tests\' + $leaf
+        $sub='SOFTWARE\OSDStage\Tests\' + $leaf
         $path='HKLM:\' + $sub + '\Level1\Level2\Level3'
         $ops=@()
         foreach ($view in @('Registry32','Registry64','Default')) {
@@ -41,16 +41,16 @@ Describe 'Registry execution in isolated Windows hosts' {
             if ($view -ne 'Default') { $flags[$view]=$true }
             $p=if ($view -eq 'Default') { $path + '\Default' } else { $path }
             $number=if ($view -eq 'Registry32') {32} elseif ($view -eq 'Registry64') {64} else {0}
-            $ops+=New-OSDAppRegistryOperation -Action Key -Path ($p+'\Empty') @flags
-            $ops+=New-OSDAppRegistryOperation -Action Value -Path $p -Name Marker -Type String -Value $view @flags
-            $ops+=New-OSDAppRegistryOperation -Action Value -Path $p -Name Number -Type DWord -Value $number @flags
+            $ops+=New-OSDStageRegistryOperation -Action Key -Path ($p+'\Empty') @flags
+            $ops+=New-OSDStageRegistryOperation -Action Value -Path $p -Name Marker -Type String -Value $view @flags
+            $ops+=New-OSDStageRegistryOperation -Action Value -Path $p -Name Number -Type DWord -Value $number @flags
         }
-        $ops+=New-OSDAppRegistryOperation -Action Value -Path $path -Name Expanded -Type ExpandString -Value '%SystemRoot%\Temp' -Registry64
-        $ops+=New-OSDAppRegistryOperation -Action Value -Path $path -Name Multi -Type MultiString -Value @('first','second') -Registry32
-        $ops+=New-OSDAppRegistryOperation -Action Value -Path $path -Name Bytes -Type Binary -Value ([byte[]]@(0,17,255)) -Registry64
-        $ops+=New-OSDAppRegistryOperation -Action Value -Path $path -Name '' -Type String -Value 'unnamed' -Registry64
-        $ops+=New-OSDAppRegistryOperation -Action Value -Path $path -Name MaxQWord -Type QWord -Value '18446744073709551615' -Registry64
-        $config=[pscustomobject]@{SchemaVersion=1;Operations=@($ops);DeploymentId=[guid]::NewGuid().Guid}
+        $ops+=New-OSDStageRegistryOperation -Action Value -Path $path -Name Expanded -Type ExpandString -Value '%SystemRoot%\Temp' -Registry64
+        $ops+=New-OSDStageRegistryOperation -Action Value -Path $path -Name Multi -Type MultiString -Value @('first','second') -Registry32
+        $ops+=New-OSDStageRegistryOperation -Action Value -Path $path -Name Bytes -Type Binary -Value ([byte[]]@(0,17,255)) -Registry64
+        $ops+=New-OSDStageRegistryOperation -Action Value -Path $path -Name '' -Type String -Value 'unnamed' -Registry64
+        $ops+=New-OSDStageRegistryOperation -Action Value -Path $path -Name MaxQWord -Type QWord -Value '18446744073709551615' -Registry64
+        $config=[pscustomobject]@{SchemaVersion=2;Operations=@($ops);DeploymentId=[guid]::NewGuid().Guid}
         $configPath=Join-Path $TestDrive ($leaf+'.json'); $reportPath=Join-Path $TestDrive ($leaf+'-result.json')
         try {
             $config | ConvertTo-Json -Depth 15 | Set-Content -LiteralPath $configPath -Encoding UTF8
@@ -74,10 +74,10 @@ Describe 'Registry execution in isolated Windows hosts' {
             $dkey=Read-RegistryTestKey -SubKey ($sub+'\Level1\Level2\Level3\Default') -View $defaultView
             try { $dkey.GetValue('Marker') | Should -Be 'Default' } finally { $dkey.Dispose() }
             # Change only a 32-bit value; a key-only request must preserve it later.
-            $changed=New-OSDAppRegistryOperation -Action Value -Path $path -Name Marker -Type String -Value 'Changed32' -Registry32
-            (Invoke-OSDAppRegistryOperation -Operation $changed).Outcome | Should -Be 'Updated'
-            $keyOnly=New-OSDAppRegistryOperation -Action Key -Path $path -Registry32
-            (Invoke-OSDAppRegistryOperation -Operation $keyOnly).Outcome | Should -Be 'Unchanged'
+            $changed=New-OSDStageRegistryOperation -Action Value -Path $path -Name Marker -Type String -Value 'Changed32' -Registry32
+            (Invoke-OSDStageRegistryOperation -Operation $changed).Outcome | Should -Be 'Updated'
+            $keyOnly=New-OSDStageRegistryOperation -Action Key -Path $path -Registry32
+            (Invoke-OSDStageRegistryOperation -Operation $keyOnly).Outcome | Should -Be 'Unchanged'
             $key=Read-RegistryTestKey -SubKey ($sub+'\Level1\Level2\Level3') -View Registry64
             try { $key.GetValue('Marker') | Should -Be 'Registry64' } finally { $key.Dispose() }
             $key=Read-RegistryTestKey -SubKey ($sub+'\Level1\Level2\Level3') -View Registry32
@@ -93,7 +93,7 @@ Describe 'Registry execution in isolated Windows hosts' {
     }
 
     It 'refuses an unloaded HKU hive without creating it' -Skip:($env:OS -ne 'Windows_NT') {
-        $op=New-OSDAppRegistryOperation -Action Key -Path 'HKU:\S-1-5-21-999999999-999999999-999999999-9999\Software\OSDApps'
-        { Invoke-OSDAppRegistryOperation -Operation $op } | Should -Throw '*not loaded*'
+        $op=New-OSDStageRegistryOperation -Action Key -Path 'HKU:\S-1-5-21-999999999-999999999-999999999-9999\Software\OSDStage'
+        { Invoke-OSDStageRegistryOperation -Operation $op } | Should -Throw '*not loaded*'
     }
 }

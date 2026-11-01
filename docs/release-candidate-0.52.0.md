@@ -1,5 +1,7 @@
 # Candidate review and release handoff
 
+> Historical device evidence below was recorded with OSDApps, before the rename. Command and path examples are now written for OSDStage; the recorded commit IDs and deployment IDs refer to the original tests. This is not acceptance evidence for the renamed candidate.
+
 ## Status and scope
 
 Review date: 25 October 2026. Proposed next version: **0.52.0**.
@@ -18,8 +20,8 @@ with a new claim that their exact build has been deployed.
 
 ### Breaking contract
 
-- Use App and Apps consistently for OSDApps-owned terminology and JSON fields.
-  The catalog and deployment collection is `Apps`; PackageType is `App` or
+- Use App and Apps consistently for OSDStage-owned terminology and JSON fields.
+  The catalog and deployment collection is `Packages`; PackageType is `App` or
   `Script`. Update external catalog producers, consumers and launcher checks
   to the new contract. Resetting a USB cache does not update an online catalog.
 - Retain original vendor payload filenames through download, cache metadata,
@@ -28,14 +30,14 @@ with a new claim that their exact build has been deployed.
 - Do not migrate or read obsolete generic-name vendor caches. Prepare a new
   cache with the new module. Caches already rebuilt and validated for this
   candidate do not need another reset.
-- `Package.zip` remains the OSDApps-owned archive format for custom apps and
+- `Package.zip` remains the OSDStage-owned archive format for custom apps and
   scripts, including the generated RegistrySettings script. It is not a
   renamed vendor installer.
 
 ### Added
 
-- `Add-OSDAppRegistryKey` stages a key-only operation without clearing values.
-- `Add-OSDAppRegistryValue` stages a typed value and creates missing parent
+- `Add-OSDStageRegistryKey` stages a key-only operation without clearing values.
+- `Add-OSDStageRegistryValue` stages a typed value and creates missing parent
   keys during execution. Supported types: String, ExpandString, MultiString,
   Binary, DWord and QWord.
 - Optional mutually exclusive `-Registry32` and `-Registry64` select a view;

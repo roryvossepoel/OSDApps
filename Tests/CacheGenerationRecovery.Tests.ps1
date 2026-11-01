@@ -2,7 +2,7 @@ BeforeAll { . (Join-Path $PSScriptRoot 'Helpers/NativePayloadFixtures.ps1') }
 Describe 'Interrupted built-in cache directory swap recovery' {
     BeforeAll {
         $moduleRoot = Split-Path -Parent $PSScriptRoot
-        . (Join-Path $moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1')
+        . (Join-Path $moduleRoot 'Runtime\Restore-OSDStageCacheGeneration.ps1')
         $validate = {
             param($candidate)
             $file = Join-Path $candidate 'payload.txt'
@@ -12,7 +12,7 @@ Describe 'Interrupted built-in cache directory swap recovery' {
         }
         function New-RecoveryFixture {
             param([string]$Root)
-            $backup = "$Root.osdapps-old-$([guid]::NewGuid().ToString('N'))"
+            $backup = "$Root.osdstage-old-$([guid]::NewGuid().ToString('N'))"
             New-Item -ItemType Directory -Path $backup -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $backup 'payload.txt') -Value 'valid-old' -Encoding ASCII
             $backup
@@ -23,15 +23,15 @@ Describe 'Interrupted built-in cache directory swap recovery' {
         $root = Join-Path $TestDrive 'BeforePromotion\Active'
         $old = New-RecoveryFixture $root
         $hash = (Get-FileHash -LiteralPath (Join-Path $old 'payload.txt')).Hash
-        $new = "$root.osdapps-new-$([guid]::NewGuid().ToString('N'))"
+        $new = "$root.osdstage-new-$([guid]::NewGuid().ToString('N'))"
         New-Item -ItemType Directory -Path $new | Out-Null
         Set-Content -LiteralPath (Join-Path $new 'partial.txt') -Value 'partial'
-        $result = Restore-OSDAppCacheGeneration -Root $root -Validate $validate
+        $result = Restore-OSDStageCacheGeneration -Root $root -Validate $validate
         $result.Recovered | Should -BeTrue
         (Get-FileHash -LiteralPath (Join-Path $root 'payload.txt')).Hash | Should -Be $hash
         Test-Path -LiteralPath $old | Should -BeFalse
         Test-Path -LiteralPath $new | Should -BeTrue
-        @(Restore-OSDAppCacheGeneration -Root $root -Validate { throw 'must not run twice' }).Count | Should -Be 0
+        @(Restore-OSDStageCacheGeneration -Root $root -Validate { throw 'must not run twice' }).Count | Should -Be 0
     }
 
     It 'does not replace active content when interruption was after promotion' {
@@ -39,17 +39,17 @@ Describe 'Interrupted built-in cache directory swap recovery' {
         $old = New-RecoveryFixture $root
         New-Item -ItemType Directory -Path $root | Out-Null
         Set-Content -LiteralPath (Join-Path $root 'payload.txt') -Value 'new-active'
-        Restore-OSDAppCacheGeneration -Root $root -Validate { throw 'must not inspect old while active exists' }
+        Restore-OSDStageCacheGeneration -Root $root -Validate { throw 'must not inspect old while active exists' }
         (Get-Content -LiteralPath (Join-Path $root 'payload.txt') -Raw).Trim() | Should -Be 'new-active'
         Test-Path -LiteralPath $old | Should -BeTrue
     }
 
     It 'never promotes only-new content or folders with unrelated backup names' {
         $root = Join-Path $TestDrive 'OnlyNew\Active'
-        $new = "$root.osdapps-new-$([guid]::NewGuid().ToString('N'))"
-        $unrelated = "$root.osdapps-old-user-backup"
+        $new = "$root.osdstage-new-$([guid]::NewGuid().ToString('N'))"
+        $unrelated = "$root.osdstage-old-user-backup"
         New-Item -ItemType Directory -Path $new,$unrelated -Force | Out-Null
-        Restore-OSDAppCacheGeneration -Root $root -Validate { throw 'must not run' }
+        Restore-OSDStageCacheGeneration -Root $root -Validate { throw 'must not run' }
         Test-Path -LiteralPath $root | Should -BeFalse
         Test-Path -LiteralPath $new | Should -BeTrue
         Test-Path -LiteralPath $unrelated | Should -BeTrue
@@ -59,7 +59,7 @@ Describe 'Interrupted built-in cache directory swap recovery' {
         $root = Join-Path $TestDrive 'Ambiguous\Active'
         $one = New-RecoveryFixture $root
         $two = New-RecoveryFixture $root
-        { Restore-OSDAppCacheGeneration -Root $root -Validate $validate } | Should -Throw '*found 2*'
+        { Restore-OSDStageCacheGeneration -Root $root -Validate $validate } | Should -Throw '*found 2*'
         Test-Path -LiteralPath $root | Should -BeFalse
         Test-Path -LiteralPath $one | Should -BeTrue
         Test-Path -LiteralPath $two | Should -BeTrue
@@ -68,7 +68,7 @@ Describe 'Interrupted built-in cache directory swap recovery' {
     It 'preserves a rejected old generation without creating an empty active directory' {
         $root = Join-Path $TestDrive 'Invalid\Active'
         $old = New-RecoveryFixture $root
-        { Restore-OSDAppCacheGeneration -Root $root -Validate { throw 'bad signature or payload' } } | Should -Throw '*found 0*'
+        { Restore-OSDStageCacheGeneration -Root $root -Validate { throw 'bad signature or payload' } } | Should -Throw '*found 0*'
         Test-Path -LiteralPath $root | Should -BeFalse
         Test-Path -LiteralPath $old | Should -BeTrue
     }
@@ -77,7 +77,7 @@ Describe 'Interrupted built-in cache directory swap recovery' {
         $root = Join-Path $TestDrive 'MoveFailure\Active'
         $old = New-RecoveryFixture $root
         Mock Move-Item { throw 'simulated locked destination' }
-        { Restore-OSDAppCacheGeneration -Root $root -Validate $validate } | Should -Throw '*locked destination*'
+        { Restore-OSDStageCacheGeneration -Root $root -Validate $validate } | Should -Throw '*locked destination*'
         Test-Path -LiteralPath $old | Should -BeTrue
         Test-Path -LiteralPath $root | Should -BeFalse
     }
@@ -86,17 +86,17 @@ Describe 'Interrupted built-in cache directory swap recovery' {
 Describe 'Built-in recovery validation' {
     BeforeAll {
         $moduleRoot = Split-Path -Parent $PSScriptRoot
-        . (Join-Path $moduleRoot 'Runtime\Restore-OSDAppCacheGeneration.ps1')
-        . (Join-Path $moduleRoot 'Private\Test-OSDAppOfficeCacheGeneration.ps1')
-        . (Join-Path $moduleRoot 'Private\Get-OSDAppMicrosoftTeamsPackageVersion.ps1')
+        . (Join-Path $moduleRoot 'Runtime\Restore-OSDStageCacheGeneration.ps1')
+        . (Join-Path $moduleRoot 'Private\Test-OSDStageOfficeCacheGeneration.ps1')
+        . (Join-Path $moduleRoot 'Private\Get-OSDStageMicrosoftTeamsPackageVersion.ps1')
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         $validators = @{
             SignatureValidator = { param($appId,$file) }
             OfficeValidator = {
                 param($officeRoot,$version,$architecture)
-                Test-OSDAppOfficeCacheGeneration -OfficeRoot $officeRoot -ExpectedVersion $version -Architecture $architecture | Out-Null
+                Test-OSDStageOfficeCacheGeneration -OfficeRoot $officeRoot -ExpectedVersion $version -Architecture $architecture | Out-Null
             }
-            TeamsVersionReader = { param($file) Get-OSDAppMicrosoftTeamsPackageVersion -Path $file }
+            TeamsVersionReader = { param($file) Get-OSDStageMicrosoftTeamsPackageVersion -Path $file }
         }
         function New-BuiltInRecoveryFixture {
             param([string]$Root,[string]$Id)
@@ -134,7 +134,7 @@ Describe 'Built-in recovery validation' {
                     'AdobeAcrobatUnified' { 'Acrobat_DC_Web_x64_WWMUI.zip' }
                     default { 'googlechromestandaloneenterprise64.msi' }
                 }
-                Set-OSDAppsTestPayloadInfo -Path (Join-Path $Root $filename) -Id $Id -Metadata @{Version='1.2.3.4'}
+                Set-OSDStageTestPayloadInfo -Path (Join-Path $Root $filename) -Id $Id -Metadata @{Version='1.2.3.4'}
             }
         }
     }
@@ -145,14 +145,14 @@ Describe 'Built-in recovery validation' {
     ) {
         $root = Join-Path $TestDrive $Id
         New-BuiltInRecoveryFixture -Root $root -Id $Id
-        { Assert-OSDAppRecoverableBuiltInGeneration -Root $root -Id $Id @validators } | Should -Not -Throw
+        { Assert-OSDStageRecoverableBuiltInGeneration -Root $root -Id $Id @validators } | Should -Not -Throw
     }
 
     It 'rejects hybrid Office CAB metadata before restoring an old generation' {
         $root = Join-Path $TestDrive HybridOffice
         New-BuiltInRecoveryFixture -Root $root -Id Microsoft365Apps
         Set-Content -LiteralPath (Join-Path $root 'Office\Data\v64.cab') -Value wrong
-        { Assert-OSDAppRecoverableBuiltInGeneration -Root $root -Id Microsoft365Apps @validators } | Should -Throw '*does not match*'
+        { Assert-OSDStageRecoverableBuiltInGeneration -Root $root -Id Microsoft365Apps @validators } | Should -Throw '*does not match*'
     }
 
     It 'rejects a Teams MSIX version that differs from cache metadata' {
@@ -161,7 +161,7 @@ Describe 'Built-in recovery validation' {
         $info = Get-Content (Join-Path $root 'CacheInfo.json') -Raw | ConvertFrom-Json
         $info.Version = '9.9.9.9'
         $info | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json')
-        { Assert-OSDAppRecoverableBuiltInGeneration -Root $root -Id MicrosoftTeams @validators } | Should -Throw '*does not match*'
+        { Assert-OSDStageRecoverableBuiltInGeneration -Root $root -Id MicrosoftTeams @validators } | Should -Throw '*does not match*'
     }
 
     It 'rejects a publisher validation failure' {
@@ -169,67 +169,67 @@ Describe 'Built-in recovery validation' {
         New-BuiltInRecoveryFixture -Root $root -Id GoogleChromeEnterprise
         $rejecting = $validators.Clone()
         $rejecting.SignatureValidator = { throw 'publisher rejected' }
-        { Assert-OSDAppRecoverableBuiltInGeneration -Root $root -Id GoogleChromeEnterprise @rejecting } | Should -Throw '*publisher rejected*'
+        { Assert-OSDStageRecoverableBuiltInGeneration -Root $root -Id GoogleChromeEnterprise @rejecting } | Should -Throw '*publisher rejected*'
     }
 
     It 'rejects malformed cache metadata rather than treating files alone as a complete generation' {
         $root = Join-Path $TestDrive MalformedMetadata
         New-BuiltInRecoveryFixture -Root $root -Id GoogleChromeEnterprise
         Set-Content -LiteralPath (Join-Path $root 'CacheInfo.json') -Value '{'
-        { Assert-OSDAppRecoverableBuiltInGeneration -Root $root -Id GoogleChromeEnterprise @validators } | Should -Throw
+        { Assert-OSDStageRecoverableBuiltInGeneration -Root $root -Id GoogleChromeEnterprise @validators } | Should -Throw
     }
 }
 
 Describe 'Recovery integration before acquisition' {
     BeforeAll {
         $moduleRoot = Split-Path -Parent $PSScriptRoot
-        Import-Module (Join-Path $moduleRoot 'OSDApps.psd1') -Force
+        Import-Module (Join-Path $moduleRoot 'OSDStage.psd1') -Force
     }
 
     It 'restores the previous module cache before a network failure can prevent downloading' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $root = Join-Path $TestDrive 'ModuleRecovery\x64'
-            $old = "$root.osdapps-old-$([guid]::NewGuid().ToString('N'))"
+            $old = "$root.osdstage-old-$([guid]::NewGuid().ToString('N'))"
             New-Item -ItemType Directory -Path $old -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Value 'old-msi'
             @{Id='GoogleChromeEnterprise';Cached=$true;Version='1.0';Architecture='x64'} | ConvertTo-Json |
                 Set-Content -LiteralPath (Join-Path $old 'CacheInfo.json')
-            Set-OSDAppsTestPayloadInfo -Path (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Id GoogleChromeEnterprise
-            Set-OSDAppsTestPayloadInfo -Path (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Id GoogleChromeEnterprise
+            Set-OSDStageTestPayloadInfo -Path (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Id GoogleChromeEnterprise
+            Set-OSDStageTestPayloadInfo -Path (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Id GoogleChromeEnterprise
         $hash = (Get-FileHash -LiteralPath (Join-Path $old 'googlechromestandaloneenterprise64.msi')).Hash
-            Mock Assert-OSDAppBuiltInSignature { return }
-            Mock Get-OSDAppRemoteFileMetadata { throw 'simulated unavailable network' }
+            Mock Assert-OSDStageBuiltInSignature { return }
+            Mock Get-OSDStageRemoteFileMetadata { throw 'simulated unavailable network' }
             {
-                Sync-OSDAppVendorBuiltInCache -Id GoogleChromeEnterprise -Root $root -PackageUri 'https://example.invalid/googlechromestandaloneenterprise64.msi' -Architecture x64 -ExpectedExtension '.msi' -Activity Test -SignedPackage
+                Sync-OSDStageVendorBuiltInCache -Id GoogleChromeEnterprise -Root $root -PackageUri 'https://example.invalid/googlechromestandaloneenterprise64.msi' -Architecture x64 -ExpectedExtension '.msi' -Activity Test -SignedPackage
             } | Should -Throw '*unavailable network*'
             (Get-FileHash -LiteralPath (Join-Path $root 'googlechromestandaloneenterprise64.msi')).Hash | Should -Be $hash
             Test-Path -LiteralPath $old | Should -BeFalse
-            Should -Invoke Assert-OSDAppBuiltInSignature -Exactly 1
+            Should -Invoke Assert-OSDStageBuiltInSignature -Exactly 1
         }
     }
 
     It 'does not restore or download anything under public WhatIf' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $cache = Join-Path $TestDrive 'WhatIfRecovery'
             $root = Join-Path $cache 'BuiltIn\MicrosoftTeams'
-            $old = "$root.osdapps-old-$([guid]::NewGuid().ToString('N'))"
+            $old = "$root.osdstage-old-$([guid]::NewGuid().ToString('N'))"
             New-Item -ItemType Directory -Path $old -Force | Out-Null
-            Mock Test-OSDAppWinPE { $false }
-            Mock Get-OSDAppCachePath { $cache }
-            Mock Restore-OSDAppBuiltInCache { throw 'must not mutate under WhatIf' }
-            Sync-OSDAppMicrosoftTeams -WhatIf
+            Mock Test-OSDStageWinPE { $false }
+            Mock Get-OSDStageCachePath { $cache }
+            Mock Restore-OSDStageBuiltInCache { throw 'must not mutate under WhatIf' }
+            Sync-OSDStageMicrosoftTeams -WhatIf
             Test-Path -LiteralPath $old | Should -BeTrue
             Test-Path -LiteralPath $root | Should -BeFalse
-            Should -Invoke Restore-OSDAppBuiltInCache -Exactly 0
+            Should -Invoke Restore-OSDStageBuiltInCache -Exactly 0
         }
     }
 
     It 'stages the exact shared recovery helper with SetupComplete' {
-        InModuleScope OSDApps {
+        InModuleScope OSDStage {
             $windows = Join-Path $TestDrive 'RecoveryRuntimeStaging'
-            Add-OSDAppSetupComplete -WindowsPath $windows -Confirm:$false | Out-Null
-            $source = Join-Path (Split-Path (Get-Module OSDApps).Path -Parent) 'Runtime\Restore-OSDAppCacheGeneration.ps1'
-            $staged = Join-Path $windows 'Windows\Temp\OSDApps\Restore-OSDAppCacheGeneration.ps1'
+            Add-OSDStageSetupComplete -WindowsPath $windows -Confirm:$false | Out-Null
+            $source = Join-Path (Split-Path (Get-Module OSDStage).Path -Parent) 'Runtime\Restore-OSDStageCacheGeneration.ps1'
+            $staged = Join-Path $windows 'Windows\Temp\OSDStage\Restore-OSDStageCacheGeneration.ps1'
             (Get-FileHash -LiteralPath $staged).Hash | Should -Be (Get-FileHash -LiteralPath $source).Hash
         }
     }
@@ -238,9 +238,9 @@ Describe 'Recovery integration before acquisition' {
 Describe 'Standalone PreInstall recovery with no network' {
     BeforeAll {
         $root = Split-Path -Parent $PSScriptRoot
-        . (Join-Path $root 'Runtime\Restore-OSDAppCacheGeneration.ps1')
+        . (Join-Path $root 'Runtime\Restore-OSDStageCacheGeneration.ps1')
         $tokens = $null; $errors = $null
-        $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'Runtime\Invoke-OSDAppPreInstall.ps1'),[ref]$tokens,[ref]$errors)
+        $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'Runtime\Invoke-OSDStagePreInstall.ps1'),[ref]$tokens,[ref]$errors)
         foreach ($name in @('Restore-PreInstallBuiltInCache','Test-LocalMsiSource','Sync-PreInstallVendorMsi','Set-PreInstallAcquisitionResult','Get-PreInstallFailureType')) {
             $node = $ast.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name},$true)
             . ([scriptblock]::Create($node.Extent.Text))
@@ -256,12 +256,12 @@ Describe 'Standalone PreInstall recovery with no network' {
         $networkAvailable = $false
         $relative = 'BuiltIn\GoogleChromeEnterprise\x64'
         $active = Join-Path $usbRoot $relative
-        $old = "$active.osdapps-old-$([guid]::NewGuid().ToString('N'))"
+        $old = "$active.osdstage-old-$([guid]::NewGuid().ToString('N'))"
         New-Item -ItemType Directory -Path $old -Force | Out-Null
         Set-Content -LiteralPath (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Value 'offline-msi'
         @{Id='GoogleChromeEnterprise';Cached=$true;Version='1.0';Architecture='x64'} | ConvertTo-Json |
             Set-Content -LiteralPath (Join-Path $old 'CacheInfo.json')
-        Set-OSDAppsTestPayloadInfo -Path (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Id GoogleChromeEnterprise
+        Set-OSDStageTestPayloadInfo -Path (Join-Path $old 'googlechromestandaloneenterprise64.msi') -Id GoogleChromeEnterprise
         $hash = (Get-FileHash -LiteralPath (Join-Path $old 'googlechromestandaloneenterprise64.msi')).Hash
         Mock Assert-PreInstallSignedPayload { return }
         Mock Write-PreInstallLog { return }

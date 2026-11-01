@@ -17,7 +17,7 @@ $checkedLinks = 0
 $checkedBlocks = 0
 $checkedCalls = 0
 $commands = @{}
-$manifestPath = Join-Path $Root 'OSDApps.psd1'
+$manifestPath = Join-Path $Root 'OSDStage.psd1'
 if (Test-Path -LiteralPath $manifestPath) {
     $module = Import-Module $manifestPath -Force -PassThru -ErrorAction Stop
     foreach ($name in $module.ExportedFunctions.Keys) { $commands[$name] = $module.ExportedFunctions[$name] }
@@ -63,7 +63,7 @@ foreach ($file in $Files) {
         if ($relative -in @('CHANGELOG.md','docs/testing.md','docs/performance.md')) { continue }
         foreach ($call in $ast.FindAll({param($node) $node -is [System.Management.Automation.Language.CommandAst]},$true)) {
             $name = $call.GetCommandName()
-            if ($name -notmatch '^[A-Za-z]+-OSDApp[0-9A-Za-z]*$' -or $commands.Count -eq 0) { continue }
+            if ($name -notmatch '^[A-Za-z]+-OSDStage[0-9A-Za-z]*$' -or $commands.Count -eq 0) { continue }
             $checkedCalls++
             if (-not $commands.ContainsKey($name)) { $problems.Add("${relative}: unknown public command $name"); continue }
             foreach ($element in $call.CommandElements) {
@@ -98,7 +98,7 @@ if ($problems.Count) { throw ($problems -join [Environment]::NewLine) }
     FilesChecked = @($Files).Count
     LocalLinksChecked = $checkedLinks
     PowerShellBlocksParsed = $checkedBlocks
-    OSDAppsCallsChecked = $checkedCalls
+    OSDStageCallsChecked = $checkedCalls
     ExamplesExecuted = $false
     ExternalLinksRequested = $false
 }

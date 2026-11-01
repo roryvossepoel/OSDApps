@@ -24,7 +24,7 @@ $toolVersions | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $ResultsPat
 
 $settingsPath = Join-Path $root 'PSScriptAnalyzerSettings.psd1'
 $analysisTargets = @(
-    (Join-Path $root 'OSDApps.psm1'),
+    (Join-Path $root 'OSDStage.psm1'),
     (Join-Path $root 'Public'),
     (Join-Path $root 'Private'),
     (Join-Path $root 'Runtime'),
