@@ -42,6 +42,7 @@ OSDStage is CLI-first. Use PowerShell to configure, cache and stage software and
 | --- | --- |
 | [Architecture](architecture.md) | Acquisition, cache, local staging and the ordered device manifest |
 | [Feature scope and validation](feature-status.md) | Implemented features, practical evidence, outstanding decisions and deferred work |
+| [Sources and design references](sources.md) | Consulted documentation, upstream code, purposes and validation boundaries |
 | [GitHub Pages](github-pages.md) | Static website, web catalog, local checks and publication |
 | [Public metadata](public-metadata.md) | `metadata/builtins.json`, icons and external Viewer consumers |
 | [Contributing](../CONTRIBUTING.md) | Contribution and built-in app request policy |
