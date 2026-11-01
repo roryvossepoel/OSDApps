@@ -227,7 +227,7 @@ function New-RunnerAppResult {
     # Only current, uniquely correlated PreInstall evidence may describe acquisition.
     # CacheInfo.json still supplies content identity, never per-deployment flags.
     $hasAcquisitionPhase = ([string]$App.Source -eq 'BuiltIn' -and
-        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and
+        [string]$App.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and
         [string]$App.Id -ne 'CMTraceOpen')
     $acquisitionOutcome = if ($hasAcquisitionPhase) { 'Unknown' } else { 'NotApplicable' }
     $cacheUsed = $null
@@ -429,7 +429,7 @@ try {
         throw (New-RunnerFailureException -Message 'Device manifest contains an invalid or duplicate app Id.' -FailureType 'ManifestInvalid' -Fatal)
     }
 
-    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle')
+    $supportedBuiltInTypes = @('OfficeDeploymentTool','MicrosoftTeamsBootstrapper','AdobeAcrobatUnifiedZip','VendorMsi','7ZipExe','VisualStudioCodeExe','PrerequisiteExe','WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle')
     foreach ($app in $apps) {
         $id = [string]$app.Id
         $source = [string]$app.Source
@@ -490,6 +490,17 @@ try {
                 [string]$app.ScriptSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
                 [string]$app.ConfigurationSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
                 throw (New-RunnerFailureException -Message 'Invalid Environment Variables built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
+            }
+        }
+        if ($source -eq 'BuiltIn' -and
+            ([string]$app.Type -eq 'FileSystemScript' -or $id -eq 'FileSystem')) {
+            if ($id -ne 'FileSystem' -or [string]$app.Type -ne 'FileSystemScript' -or
+                [string]$app.PackageType -ne 'Script' -or
+                [string]$app.Script -ne 'BuiltIn\FileSystem\Install.ps1' -or
+                [string]$app.Configuration -ne 'BuiltIn\FileSystem\config.json' -or
+                [string]$app.ScriptSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
+                [string]$app.ConfigurationSha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+                throw (New-RunnerFailureException -Message 'Invalid File system built-in manifest.' -FailureType 'ManifestInvalid' -AppId $id -Fatal)
             }
         }
         if ($source -eq 'BuiltIn' -and
@@ -657,6 +668,20 @@ try {
             }
         }
         Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'Environment Variables script and configuration SHA-256 validated.' -Data @{ Id=$app.Id }
+    }
+
+    foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'FileSystemScript' })) {
+        foreach ($entry in @(
+            @{ Relative='BuiltIn\FileSystem\Install.ps1'; Hash=[string]$app.ScriptSha256 },
+            @{ Relative='BuiltIn\FileSystem\config.json'; Hash=[string]$app.ConfigurationSha256 }
+        )) {
+            $file = Join-Path $StagedPath $entry.Relative
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $entry.Hash) {
+                throw (New-RunnerFailureException -Message ('File system integrity failed for {0}.' -f $entry.Relative) -FailureType 'HashMismatch' -AppId ([string]$app.Id) -Fatal)
+            }
+        }
+        Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptIntegrityValidated' -Message 'File system script and configuration SHA-256 validated.' -Data @{ Id=$app.Id }
     }
 
     foreach ($app in @($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' -and [string]$_.Type -eq 'ServiceScript' })) {
@@ -901,6 +926,18 @@ try {
                     throw ('Environment Variables failed with exit code {0}.' -f $process.ExitCode)
                 }
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptComplete' -Message 'machine environment variable configuration completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
+                [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='Sha256Validated' }
+            }
+            'FileSystemScript' {
+                $root = Join-Path $StagedPath 'BuiltIn\FileSystem'
+                $scriptFile = Join-Path $root 'Install.ps1'
+                $configFile = Join-Path $root 'config.json'
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptStart' -Message 'Applying file system configuration.' -Data @{ Id=$app.Id }
+                $process = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"{0}"' -f $scriptFile),'-ConfigPath',('"{0}"' -f $configFile)) -WorkingDirectory $root -Wait -PassThru
+                if ($process.ExitCode -ne 0) {
+                    throw ('File system failed with exit code {0}.' -f $process.ExitCode)
+                }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInScriptComplete' -Message 'file system configuration completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
                 [pscustomobject]@{ ExitCode=$process.ExitCode; Integrity='Sha256Validated' }
             }
             'ServiceScript' {

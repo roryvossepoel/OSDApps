@@ -111,6 +111,14 @@ as independently verified. Early interruption before the runtime can leave
 restricted staging behind. Caller scripts/original exports are outside automatic
 cleanup, and the installed Windows WLAN profile necessarily remains.
 
+## New candidate — 1 November 2026
+
+Files and directories are selected for implementation and physical testing after
+the RC1 acceptance run. `Add-OSDStageDirectory` and `Add-OSDStageFile` stage ordered
+create/copy/remove operations with separate Force and Recurse options. See the
+[contract and test example](file-system.md). This is unreleased work; physical
+acceptance is pending and the published RC1 module is unchanged.
+
 ## Feature-scope closeout — 31 October 2026
 
 No additional feature candidate remains selected for investigation in this

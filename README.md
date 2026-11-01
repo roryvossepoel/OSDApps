@@ -97,6 +97,7 @@ Repository package types are `App`, `Script`, `Font`, `Certificate` and `Driver`
 | --- | --- |
 | Fonts, machine CA certificates and driver packages | [Repository packages](docs/repository.md), [certificates](docs/certificate-staging.md), [drivers](docs/driver-packages.md) |
 | Registry, machine variables and services | [Registry](docs/registry-staging.md), [variables](docs/environment-variables.md), [services](docs/services.md) |
+| Files and directories (unreleased) | [Create, copy and remove](docs/file-system.md) |
 | Wi-Fi profiles | [XML and parameter input](docs/wifi-staging.md) |
 | Optional features, FoDs and inbox app removal | [Feature scope](docs/feature-status.md), [capabilities](docs/windows-capabilities.md), [inbox cleanup](docs/built-in-apps.md#windows-inbox-cleanup) |
 | Initial app associations and Start/taskbar pins | [Associations](docs/default-associations.md), [pins](docs/desktop-settings.md) |
