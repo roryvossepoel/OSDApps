@@ -405,6 +405,38 @@ function Test-OSDStageDeployment {
             $payloadReady = $definitionValid -and $integrityValid
             $detail = if ($payloadReady) { 'Environment Variables script and configuration are SHA-256 validated.' } else { 'Environment Variables definition, content or hash validation failed.' }
         }
+        elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'FileSystemScript') {
+            $definitionValid = (
+                $id -eq 'FileSystem' -and
+                [string]$app.PackageType -eq 'Script' -and
+                [string]$app.Script -eq 'BuiltIn\FileSystem\Install.ps1' -and
+                [string]$app.Configuration -eq 'BuiltIn\FileSystem\config.json' -and
+                [string]$app.ScriptSha256 -match '^[A-Fa-f0-9]{64}$' -and
+                [string]$app.ConfigurationSha256 -match '^[A-Fa-f0-9]{64}$'
+            )
+            $integrityValid = $false
+            if ($definitionValid) {
+                $scriptFile = Join-Path $stageRoot 'BuiltIn\FileSystem\Install.ps1'
+                $configFile = Join-Path $stageRoot 'BuiltIn\FileSystem\config.json'
+                if ((Test-Path -LiteralPath $scriptFile -PathType Leaf) -and
+                    (Test-Path -LiteralPath $configFile -PathType Leaf)) {
+                    $integrityValid = (
+                        (Get-FileHash -LiteralPath $scriptFile -Algorithm SHA256).Hash -eq [string]$app.ScriptSha256 -and
+                        (Get-FileHash -LiteralPath $configFile -Algorithm SHA256).Hash -eq [string]$app.ConfigurationSha256
+                    )
+                    if ($integrityValid) {
+                        try {
+                            $featureConfig = Get-Content -LiteralPath $configFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+                            Assert-OSDStageFileSystemConfiguration -Configuration $featureConfig
+                            $integrityValid = ([string]$featureConfig.DeploymentId -eq [string]$manifest.DeploymentId)
+                        }
+                        catch { $integrityValid = $false }
+                    }
+                }
+            }
+            $payloadReady = $definitionValid -and $integrityValid
+            $detail = if ($payloadReady) { 'File system script and configuration are SHA-256 validated.' } else { 'File system definition, content or hash validation failed.' }
+        }
         elseif ($source -eq 'BuiltIn' -and [string]$app.Type -eq 'ServiceScript') {
             $definitionValid = (
                 $id -eq 'Services' -and
@@ -586,7 +618,7 @@ function Test-OSDStageDeployment {
 
         $offlinePayloadReady = $payloadReady -and -not $appNetworkRequired
         if (-not $offlinePayloadReady) { $allPayloadsReady = $false }
-        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
+        $appRequiredStateValid = ($definitionValid -and (($source -ne 'Repository' -and [string]$app.Type -notin @('WindowsInboxCleanupScript','WindowsFeatureScript','WindowsCapabilityScript','DefaultAssociationScript','EnvironmentVariableScript','FileSystemScript','ServiceScript','DesktopSettingsScript','WiFiProfileScript','CertificateScript','CompanyPortalAppxBundle') -and $id -ne 'CMTraceOpen') -or $payloadReady))
         Add-DeploymentCheck -Name 'AppDefinition' -AppId $id -Passed $appRequiredStateValid -Required $true -Message "${id}: $detail"
         Add-DeploymentCheck -Name 'OfflinePayload' -AppId $id -Passed $offlinePayloadReady -Required ([bool]$RequireOfflineReady) -Message "${id}: $detail"
 

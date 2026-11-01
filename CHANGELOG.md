@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — after 1.0.0-rc1
+
+- Add `Add-OSDStageDirectory` and `Add-OSDStageFile` for ordered, one-shot SetupComplete file operations. Support literal paths, directory creation/removal, text or source-file content, explicit `-Force` replacement and separate `-Recurse` removal. Include integrity-checked offline staging, per-operation results, help and a disposable test example. Physical acceptance remains pending; the published RC1 does not contain these commands.
+
 ## 1.0.0-rc1
 
 - First public OSDStage release candidate for the PowerShell Gallery installation and WinPE deployment test. Not a GA release.

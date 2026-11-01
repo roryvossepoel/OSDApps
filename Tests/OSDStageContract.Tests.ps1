@@ -41,6 +41,8 @@ Describe 'OSDStage product and schema contract' {
             'Add-OSDStageWindowsCapability',
             'Add-OSDStageDefaultAssociation',
             'Add-OSDStageEnvironmentVariable',
+            'Add-OSDStageDirectory',
+            'Add-OSDStageFile',
             'Add-OSDStageService',
             'Add-OSDStageStartPins',
             'Add-OSDStageTaskbarPins',

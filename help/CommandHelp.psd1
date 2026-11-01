@@ -192,6 +192,44 @@
             )
             Link = 'docs/services.md'
         }
+        'Add-OSDStageDirectory' = @{
+            Synopsis = 'Stage directory creation or removal for SetupComplete.'
+            Description = 'Appends ordered operations to one integrity-checked FileSystem entry. Creates missing parent directories and leaves existing directories unchanged. Remove is idempotent for absent paths. Recurse is required for nonempty directories; Force only permits read-only removal and never implies Recurse. Rejects reparse points, type conflicts, drive roots and deployment-owned paths. Runs once under SYSTEM without reboot or later enforcement.'
+            Environment = 'WinPE after OSDCloud has applied Windows; executes in full Windows during SetupComplete.'
+            Output = 'OSDStage.StagedApp with total operation count and destination paths.'
+            Parameters = @{
+                Path = 'One or more literal local destination paths. Use single-quoted machine references such as %ProgramData%\Contoso for expansion in full Windows. Wildcards, UNC paths and user variables are not supported.'
+                Remove = 'Remove each selected directory. An already absent directory succeeds.'
+                Recurse = 'Explicitly include descendants when removing a nonempty directory. Only valid with Remove.'
+                Force = 'Permit removal of read-only items. Does not imply Recurse, bypass ACLs or change item types. Has no additional effect when creating a directory.'
+            }
+            Examples = @(
+                @{ Code = 'Add-OSDStageDirectory -Path ''%ProgramData%\Contoso\Tools'''; Remarks = 'Create the directory and any missing parents during SetupComplete.' },
+                @{ Code = 'Add-OSDStageDirectory -Path ''%ProgramData%\Contoso\Old'' -Remove -Recurse -Force'; Remarks = 'Explicitly remove the selected directory tree, including read-only items.' }
+            )
+            Link = 'docs/file-system.md'
+        }
+        'Add-OSDStageFile' = @{
+            Synopsis = 'Stage text, copied file content or file removal for SetupComplete.'
+            Description = 'Appends ordered operations to one FileSystem entry. Content defaults to an empty UTF-8 file without BOM or implicit newline. SourcePath snapshots one file as raw bytes during staging. Missing parents are created. Identical content succeeds unchanged; different existing content requires Force. Removal of an absent file succeeds. File content is limited to 16 MiB per operation and is stored as readable Base64 in staged configuration, not secret storage. Runtime results omit content. No scheduled enforcement or forced reboot.'
+            Environment = 'WinPE after OSDCloud has applied Windows; executes once under SYSTEM during SetupComplete.'
+            Output = 'OSDStage.StagedApp with total operation count and destination paths; no file content.'
+            Parameters = @{
+                Path = 'Literal local Windows destination for Content or Remove. Machine directory variables are expanded during SetupComplete, not in WinPE.'
+                Content = 'Exact text to write. Defaults to an empty string. No newline is added automatically.'
+                Encoding = 'UTF8 without BOM (default), UTF8BOM, Unicode (UTF-16 LE with BOM), or strict ASCII. Used only with Content.'
+                SourcePath = 'One existing source file accessible in WinPE. Bytes are captured immediately; the original path is not needed during SetupComplete. No directory copy or reparse points.'
+                DestinationPath = 'Literal local Windows destination when copying SourcePath.'
+                Remove = 'Remove the selected file if present. Cannot be combined with Content or SourcePath.'
+                Force = 'Permit replacing different existing file content or removing a read-only file. Does not bypass ACLs, replace a directory, or recursively remove anything.'
+            }
+            Examples = @(
+                @{ Code = 'Add-OSDStageFile -Path ''%ProgramData%\Contoso\settings.json'' -Content ''{"ring":"Pilot"}'' -Force'; Remarks = 'Write UTF-8 text and explicitly allow replacing different content.' },
+                @{ Code = 'Add-OSDStageFile -SourcePath ''E:\Input\config.ini'' -DestinationPath ''%ProgramData%\Contoso\config.ini'''; Remarks = 'Snapshot bytes from the actual source drive during staging.' },
+                @{ Code = 'Add-OSDStageFile -Path ''%ProgramData%\Contoso\old.ini'' -Remove -Force'; Remarks = 'Remove the exact file, including if it is read-only.' }
+            )
+            Link = 'docs/file-system.md'
+        }
         'Add-OSDStageEnvironmentVariable' = @{
             Synopsis = 'Stage machine environment variables and PATH additions for SetupComplete.'
             Description = 'Stages one bundled Script for machine-scope Set, Remove or AppendPath operations. Ordinary values use REG_SZ; ExpandString uses REG_EXPAND_SZ without resolving percent references. PATH additions preserve existing content and type and skip lexical duplicates. Explicit Set/Remove supersedes earlier intent for the same name. No preparation-PC environment changes, user scope, forced reboot or later remediation. Values are omitted from runtime logs/results but remain readable in staging config; this is not secret storage. Existing processes, including the parent runner, keep their environment snapshots.'

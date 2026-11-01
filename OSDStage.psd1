@@ -42,6 +42,8 @@
     'Add-OSDStageWindowsCapability',
     'Add-OSDStageDefaultAssociation',
     'Add-OSDStageEnvironmentVariable',
+    'Add-OSDStageDirectory',
+    'Add-OSDStageFile',
     'Add-OSDStageService',
     'Add-OSDStageStartPins',
     'Add-OSDStageTaskbarPins',
