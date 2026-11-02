@@ -1,5 +1,7 @@
 # Repository certificate packages
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 Certificates can use the same repository, versioning, SHA-256 verification and USB cache as fonts. Publish a ZIP with `PackageType Certificate` and explicitly choose `CertificateStore Root` or `CA` in its manifest. Both destinations are **LocalMachine only**. The deployment command needs only the package Id.
 
 On the preparation machine, put only public CA `.cer` or `.crt` files in the source directory (subdirectories are allowed). Scripts, private keys, PFX files, bundles and support files are rejected. Root requires self-issued CA certificates; CA accepts intermediate CA certificates. Validation does not establish trustworthiness, verify the self-signature, or evaluate expiry/revocation/the full chain; the publisher must approve the certificates.

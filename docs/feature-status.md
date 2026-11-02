@@ -1,25 +1,19 @@
 # Feature scope and validation register
 
-> Current repository: [roryvossepoel/OSDStage](https://github.com/roryvossepoel/OSDStage), renamed on 1 November 2026 after PRs #99/#100 and successful main CI. Gallery and Pages publication remain separate work.
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
 
-> Current rename acceptance: the OSDStage candidate passed the focused empty-cache deployment on 31 October 2026, including independent device checks. See [OSDStage rename acceptance](osdstage-rename-acceptance.md). The feature register below retains historical OSDApps evidence and planning context; that older evidence alone does not validate the rename.
+**Status baseline: 2 November 2026.** Gallery RC1 and GitHub Pages are published. Merged development changes remain separate from that release; see [release availability](release-status.md).
 
-Current status: 1 November 2026. OSDStage has a new module identity and schema 2
-contracts. The combined, repository-only and renamed empty-cache deployments
-have recorded acceptance within their stated limits. The repository is now
-OSDStage; no migration or old-command aliases are planned. The module remains
-an unpublished development candidate. Identify test modules by commit.
+The combined, repository-only and renamed empty-cache deployments have recorded acceptance within their stated limits. Identify development test modules by commit. No migration or old-command aliases are planned.
 
 ## Current work order
 
-1. Maintain the technical contracts and recorded acceptance evidence below.
-2. Finish terminology, documentation and public presentation for OSDStage.
-3. Finalize the web catalog viewer and publish documentation through GitHub Pages.
-4. Review and explicitly initiate the first Gallery release.
+1. Preserve technical contracts and record evidence for each changed behavior.
+2. Improve the user guides and Pages navigation.
+3. Complete Windows Update acceptance in its separate experimental PR.
+4. Review changes and explicitly initiate the next release when ready.
 
-The module's Windows Viewer is read-only. The web catalog viewer is a separate
-preview with custom repository URL input, tiles/list and pagination. Neither is
-an interactive deployment editor. See [the viewer guide](viewer.md).
+The Windows Viewer and web catalog viewer are read-only. Neither is an interactive deployment editor. See [the viewer guide](viewer.md).
 
 The tables retain earlier device evidence with its original commit and deployment
 IDs. Earlier test completion does not establish every architecture or variant.

@@ -1,5 +1,7 @@
 # Files and directories
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 **Unreleased: not included in Gallery version 1.0.0-rc1.**
 
 Use `Add-OSDStageDirectory` and `Add-OSDStageFile` in WinPE after OSDCloud

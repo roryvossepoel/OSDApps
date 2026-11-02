@@ -1,5 +1,9 @@
 # CMTrace Open (built-in)
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
+> **Post-RC1 behavior:** automatic online PreInstall acquisition is merged but not included in Gallery 1.0.0-rc1. With RC1, use the cache preparation step first. See [release availability](release-status.md).
+
 This optional built-in installs the CMTrace Open MSI sourced directly from [adamgell/cmtraceopen GitHub releases](https://github.com/adamgell/cmtraceopen/releases). No binary is committed to OSDStage.
 
 ## Optional full Windows preparation
@@ -33,4 +37,4 @@ The built-in stages intent and any validated cached MSI. Online PreInstall check
 - Physical x64 validation on PC1 succeeded: SetupComplete checked SHA-256 and Authenticode, silently installed CMTrace Open 1.6.3 with exit code 0, and the Windows uninstall inventory confirmed 1.6.3.
 - The update-check setting was passed as `DISABLEUPDATECHECKS=1` during the successful install.
 - ARM64 deployment and end-user functional behavior were not independently validated.
-- Automatic PreInstall acquisition is new; the historical physical tests above covered prepared-cache installation. Cold-cache and refreshed-cache deployment still need physical acceptance.
+- Operator-confirmed on 1 November 2026: online PreInstall reported `Downloaded` for both apps and both apps worked. A subsequent run reported `CacheReused`. ARM64 and replacement by a newer vendor release remain outside that evidence.

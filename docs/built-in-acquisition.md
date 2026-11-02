@@ -1,0 +1,500 @@
+# Built-in acquisition and validation
+
+[Documentation](README.md) · [Built-in apps](built-in-apps.md) · [Release availability](release-status.md)
+
+Use this reference when investigating cache reuse, download behavior or validation. For normal deployment, start with the [app chooser](built-in-apps.md).
+
+Jump to [freshness checks](#how-update-freshness-is-determined), [Office compatibility](#office-cache-compatibility-with-deployment-configuration), [signature scope](#authenticode-and-publisher-policy), [fallback](#fallback-behavior) or [requesting an app](#requesting-a-new-built-in-app).
+
+## Installer filenames
+
+Built-in downloads retain the filename supplied by the vendor: the HTTP
+`Content-Disposition` filename when present, otherwise the final redirected URL's
+filename. The same name is retained in the USB cache and local Windows staging.
+Unsafe names or a file extension that differs from the expected payload format
+are rejected before promotion. Downloads, signature/hash checks and complete
+cache-generation replacement follow the existing validation policies.
+
+Each cached variant records its exact vendor `PayloadFileName`, SHA-256 and byte
+size in `CacheInfo.json`. Windows staging records that exact relative filename
+and hash in `DeviceManifest.json`. PreInstall updates the manifest only after
+acquiring and validating the selected payload; the runner validates the recorded
+path and hash again. Unrelated files with the same extension are never selected.
+Office keeps its ODT-managed layout and recorded payload profile.
+
+**Unsupported cache metadata is a cache miss.** Online acquisition can replace it with a newly validated generation. There is no old-name lookup, cache migration,
+filename conversion or compatibility alias. A cold online deployment records a
+pending payload with a null filename until acquisition succeeds; it does not use
+a fabricated package path. Old cache metadata is not repaired or guessed.
+
+**Custom repository apps and scripts still use `Package.zip`.** That repository
+archive contract is separate from built-in vendor installers.
+
+## Machine-readable metadata
+
+The current built-in app catalog is also published as:
+
+[`metadata/builtins.json`](../metadata/builtins.json)
+
+This JSON is intended for external tooling and includes the app Id, display name, vendor, supported architectures/channels, Add command, acquisition model, cache path and phase. Installer built-ins have a Sync command and USB cache path; module-bundled scripts have neither.
+
+CI validates the file against the module's exported built-in Add commands so a new built-in cannot be added without updating the metadata.
+
+## Vendor-only source policy
+
+Built-in third-party software installers are always sourced directly from their software vendor. OSDStage-owned built-in scripts are bundled as text in the module and do not download installers.
+
+OSDStage does not contain, embed, mirror, redistribute, or publish built-in app installers or payloads. The module only contains acquisition and installation logic plus vendor-owned URLs or supported endpoints.
+
+```text
+Vendor
+→ download at cache/deployment time
+→ optional OSDCloud USB cache
+→ local staging
+→ installation
+```
+
+The OSDCloud USB cache is only a local deployment cache of vendor content. It is never a distribution source maintained by OSDStage.
+
+This rule is absolute for built-in **software products**: if an installer cannot be obtained directly and maintainably from the vendor, it is not eligible for built-in installer support. The Windows Inbox Cleanup script is a separate OSDStage-maintained configuration action, not a third-party redistributable.
+
+Repository apps are different. Repository content is controlled by the repository owner, and OSDStage does not prescribe where that organization obtains or hosts those packages.
+
+<a id="authenticode-and-publisher-policy-0340"></a>
+
+## Authenticode and publisher policy
+
+On full Windows, the publisher-validated integrations listed below require:
+
+1. a valid Windows Authenticode signature on the selected MSI/EXE;
+2. the signer certificate's `O=` organization to match the expected publisher.
+
+| Built-in | Signable file checked | Expected organization |
+| --- | --- | --- |
+| Microsoft 365 Apps | `setup.exe` | Microsoft Corporation |
+| Microsoft Teams | `teamsbootstrapper.exe` | Microsoft Corporation |
+| Google Chrome Enterprise | Vendor MSI | Google LLC |
+| Cisco Webex | Vendor MSI | Cisco Systems, Inc. |
+| Zoom Workplace | Vendor MSI | Zoom Communications, Inc. |
+| Mozilla Firefox Enterprise | Vendor MSI | Mozilla Corporation |
+| Visual Studio Code | System installer EXE | Microsoft Corporation |
+| Visual C++ v14 | Redistributable EXE | Microsoft Corporation |
+| .NET runtimes | Runtime EXE | Microsoft Corporation |
+
+Other validation models are described separately: [7Zip](7zip.md) checks the official release SHA-256; [CMTrace Open](cmtrace-open.md) checks the upstream asset SHA-256 and Authenticode without this organization allowlist; [Company Portal](microsoft-company-portal.md) uses file hashes and native Appx provisioning validation. Adobe's outer ZIP is not Authenticode-assessed.
+
+For MSI/EXE synchronization, candidate downloads are checked **before**
+replacing an existing cached file. A rejected candidate leaves the previous
+cache package in place and raises an error. An existing cache hit is also
+verified even when its remote ETag matches. The standalone SetupComplete
+PreInstall runtime validates the corresponding files when refreshing, using
+a staged cache, or falling back after a network error. This can cause
+deployment to fail closed when the trust chain cannot be established.
+
+This is a publisher organization allowlist, not certificate thumbprint
+pinning. It does not prove that every nested payload is signed or malware-free;
+the Teams MSIX and Microsoft 365 Apps content tree are **not covered** by
+the limited bootstrapper/ODT EXE checks. Adobe ZIP is **not** reported as
+having a verified Authenticode signature. Certificate trust/revocation
+may require network access independently of vendor URL availability.
+
+The read-only OSDStage Viewer enables signature inspection by default on
+full Windows, reports it as unavailable in WinPE, and permits the optional
+`-SkipSignatureVerification` for isolated viewing only. This flag does not
+relax built-in sync or SetupComplete security policy. The existing
+`Get-OSDStageCache` CLI remains opt-in with `-VerifySignatures`.
+
+## How update freshness is determined
+
+Built-in apps use evergreen vendor sources. Most integrations can reuse payloads after an HTTP metadata check; Office PreInstall compares the channel version descriptor before deciding whether a new complete generation is needed.
+
+The freshness mechanism is product-specific:
+
+| App | Update check | Download behavior |
+| --- | --- | --- |
+| Microsoft 365 Apps | PreInstall checks configuration compatibility, generation consistency and the channel version CAB (or an exact build pin) | A current compatible generation is reused. Otherwise ODT downloads into a separate new generation, validated before replacement. Explicit `Sync-OSDStageMicrosoft365Apps` still acquires a fresh generation. |
+| Microsoft Teams | HTTP metadata for the official MSIX: `ETag` preferred, otherwise `Last-Modified + Content-Length` | MSIX is downloaded only when the metadata changed or no valid cached MSIX exists. The Teams bootstrapper is refreshed on every online sync. |
+| Adobe Acrobat Unified | HTTP metadata for the official Adobe ZIP: `ETag` preferred, otherwise `Last-Modified + Content-Length` | The vendor ZIP is downloaded only when the remote metadata changed or no cached ZIP exists. |
+| Google Chrome Enterprise | HTTP metadata for the official Enterprise MSI: `ETag` preferred, otherwise `Last-Modified + Content-Length` | The vendor MSI is downloaded only when the remote metadata changed or no cached MSI exists. |
+| Mozilla Firefox Enterprise | HTTP metadata for the Mozilla latest MSI endpoint: `ETag` preferred, otherwise `Last-Modified + Content-Length` | The vendor MSI is downloaded only when the remote metadata changed or no cached MSI exists. Channel, architecture, and language are cached separately. |
+| Cisco Webex | Cisco MSI HTTP metadata, `ETag` preferred, otherwise `Last-Modified + Content-Length` | Reuse the MSI when unchanged; download when missing or changed. Separate x64/ARM64 cache folders. |
+| Zoom Workplace | Official MSI HTTP metadata | Reuse unchanged validated content; separate x64/ARM64 generations. |
+| 7Zip | Official release version and SHA-256 | Reuse matching verified content; download and validate a changed release. |
+| Visual Studio Code | Microsoft stable system-installer metadata and SHA-256 | Reuse matching content after hash and publisher validation. |
+| Visual C++ v14 | Microsoft evergreen endpoint HTTP metadata | Verify a Microsoft-signed v14 installer before reuse or replacement. |
+| .NET runtimes | Microsoft release metadata, channel support and SHA-512 | Select a supported stable patch within the requested channel and runtime type. |
+| Company Portal (post-RC1) | Official kit HTTP metadata and cached file hashes | Reuse or download a validated kit, then provision it in Windows. |
+| CMTrace Open (post-RC1) | Upstream stable release and asset SHA-256 | Reuse matching validated MSI or acquire a new generation. |
+
+### HTTP metadata comparison
+
+For Teams, Adobe Acrobat Unified, Google Chrome Enterprise, Mozilla Firefox Enterprise, Cisco Webex and Zoom Workplace, OSDStage first asks the vendor endpoint for remote file metadata.
+
+The comparison order is:
+
+1. Compare `ETag` when both remote and saved values are present.
+2. Otherwise compare `Last-Modified` and `Content-Length`.
+3. Download when no usable match exists or the cached payload is missing.
+
+`CacheInfo.json` stores the previous `RemoteETag`, `RemoteLastModified`,
+`RemoteContentLength`, `RemoteFinalUri` and `SyncedAt` values. This avoids opening
+an MSI or extracting a ZIP just to decide whether the remote metadata changed.
+A metadata match still requires the applicable local content and publisher
+checks; it is not an independent guarantee of vendor freshness or file identity.
+
+A replacement is prepared and validated in a separate directory before it becomes
+active. See [cache generation recovery](architecture.md#cache-generation-recovery)
+for swap and interruption handling. `AcquisitionOutcome` distinguishes download,
+reuse and fallback for the current deployment; see [acquisition reporting](runtime.md#acquisition-and-installation-are-separate-results).
+
+### Microsoft 365 Apps is different
+
+Microsoft 365 Apps does not use the generic HTTP metadata comparison for the Office payload.
+
+OSDStage runs the Office Deployment Tool in download mode with the staged configuration:
+
+```text
+setup.exe /download configuration.xml
+```
+
+Before online acquisition, PreInstall checks the staged generation and requested
+configuration. For the six supported channels it downloads only the small
+`v64.cab` or `v32.cab` descriptor from the channel's Microsoft CDN URL into a
+temporary directory outside the cache. It extracts `VersionDescriptor.xml` and
+compares the advertised architecture build (`I640Version` or `I320Version`) with
+the cached build, also checking the channel identity and any default build.
+A matching build permits reuse after the cached ODT publisher check. No ODT `/download` process
+is started and no active USB cache files are changed on this path.
+
+An exact requested build pin can reuse a matching generation without a current
+channel probe. A different advertised build requires acquisition. CAB bytes can
+change because of rollout metadata or legacy OS entries while the relevant build
+stays unchanged; those changes alone do not require a new payload. The generic
+`Available/@Build` can refer to a legacy OS and is not used for this decision. Custom
+`DownloadPath`, unsupported channels and dynamic configurations do not use this
+CDN shortcut. A failed metadata request is reported as `FallbackCacheUsed` only
+if the existing source is acceptable; it is never reported as confirmed reuse.
+The metadata request has a 30-second timeout and native CAB extraction has a
+10-second timeout. Ambiguous or unreadable metadata is treated as a failed check.
+The temporary descriptor is
+removed on success and failure, and is never copied over a cached CAB.
+
+When acquisition is needed, ODT acquires the requested channel, architecture, products and languages into a new sibling directory. OSDStage does not seed that directory with the active Office data tree. After ODT reports a successful download, OSDStage checks the candidate's version-folder and CAB consistency before switching the active directory. These checks are described below; they are not a full verification of every payload file. The previous generation is removed as a whole only after successful promotion; individual old Office files are not selectively pruned.
+
+This also requires free space for the candidate alongside the current generation. See [transaction space checks](architecture.md#cache-transaction-space-checks).
+
+OSDStage reads the concrete cached build from:
+
+```text
+Office\Data\<version>
+```
+
+and records that value in `CacheInfo.json`. Comparing the version before and after the ODT run allows the log to report whether the cached Office build actually changed.
+
+### Office cache compatibility with deployment configuration
+
+Office generation integrity and configuration compatibility are separate checks.
+A valid version directory and matching CAB files do not establish that cached
+content was downloaded for the requested products, languages or channel.
+
+Before staging fallback content, OSDStage compares the selected XML with the
+cache's recorded download configuration. PreInstall repeats this check before
+USB restaging, offline use and failed-refresh fallback. The selected deployment
+XML is never replaced by the USB cache XML during PreInstall.
+
+- Architecture, channel, products, languages and the other `Add` settings must
+  match. The comparison is deliberately conservative: changed exclusions or
+  element order also require acquisition. It does not infer product/language
+  subset coverage from the files in `Office\Data`.
+- A pinned version must match the actual cached build. Without a pinned version,
+  an older compatible generation remains eligible for failed-refresh fallback.
+- Licensing, display and update settings outside `Add` do not change payload
+  eligibility. The deployment still uses its selected settings.
+- `SourcePath` is excluded from comparison because OSDStage manages the download
+  and local installation locations.
+- Dynamic languages such as `MatchOS`/`MatchInstalled`, conditional products,
+  implicit architecture/channel and other unresolved configuration cannot prove
+  offline compatibility. They require successful online acquisition.
+
+Office cache metadata must contain a `PayloadProfile` derived from the acquisition
+XML. The selected deployment XML cannot substitute for missing provenance.
+Caches without the current metadata are not migrated; build a fresh cache.
+
+An incompatible cache is left intact. WinPE stages the requested configuration
+without copying unsuitable Office content and reports that online acquisition
+is required. Online refresh still uses a complete isolated generation. If it
+fails and no compatible staged fallback exists, PreInstall fails clearly and
+the affected Office entry is not installed; independent entries follow the normal failure-handling policy. Structural cache health remains a
+separate report; it does not promise compatibility with every future selection.
+
+Custom XML still receives the documented syntax check; the payload comparison
+additionally needs one `Add` element for the acquisition workflow.
+
+#### What is checked in the Office files?
+
+The configuration comparison is additional to physical generation checks. It
+does not replace them, and matching XML alone does not make a cache valid.
+
+| Check | What OSDStage verifies |
+| --- | --- |
+| Required paths | `setup.exe`, `configuration.xml` and `Office\Data` exist in the cache generation. |
+| Version layout | Exactly one numerically named Office version directory exists; its version must match an explicitly requested version when one is supplied. |
+| Payload presence | The active version directory contains files. The count is recorded, but is not compared with an expected inventory. |
+| CAB consistency | The architecture-specific shared CAB and active version-specific CAB both exist and have identical SHA-256 hashes. |
+| ODT executable | Separate signature checks validate Authenticode and the expected Microsoft publisher before OSDStage executes `setup.exe`. |
+| Download result | A candidate download must complete successfully before it can be validated and promoted. |
+| Configuration provenance | The recorded acquisition settings must be compatible with the requested deployment before existing content is accepted as fallback. |
+
+The two CAB hashes are compared with each other, not with an independently
+trusted Microsoft hash. Their equality establishes consistency between those
+two files; it does not prove that every Office data file is authentic or intact.
+OSDStage does not currently compare the payload against a complete expected file
+list, expected individual file sizes, a known total size, or hashes for every
+Office data file. A missing or damaged payload file can therefore escape these
+checks if the version directory remains nonempty. Reported cache sizes and
+free-space checks are not completeness checks.
+
+Configuration compatibility records what the content was acquired for. It does
+not independently inspect the Office files to prove product/language coverage
+or license entitlement. ODT performs acquisition and installation; passing the
+OSDStage checks is not a guarantee that a subsequent installation will succeed.
+
+#### One active Office cache: configuration changes
+
+The built-in maintains one active Office generation, not a collection of
+configuration-specific caches. A successful replacement is promoted as a whole;
+the previous generation is then removed as a whole. A failed acquisition or
+validation leaves the existing generation intact.
+
+| Requested change | Expected behavior |
+| --- | --- |
+| Dutch to German | The Dutch generation is incompatible. Acquire a new German generation; replace the active cache only after success. |
+| German back to Dutch | Acquire Dutch content again. The previous Dutch generation is not retained as a second cache. |
+| Add Visio, change channel or architecture | Existing content with different acquisition settings is incompatible and cannot serve as fallback. |
+| Multiple languages to a subset | Conservative matching still requires acquisition; OSDStage does not infer subset coverage. |
+| Only licensing, display or update settings outside `Add` change | Otherwise matching content can be reused after freshness checks; installation uses the selected deployment XML. |
+| Refresh fails with an incompatible cache | Preserve that cache, but do not install the requested configuration from it. Without a compatible staged fallback, PreInstall fails. |
+
+Online Office PreInstall reuses a compatible, consistent generation when its
+build matches the architecture-specific build advertised by the channel CDN, or an explicit build pin matches. Missing,
+incompatible or changed content takes the complete acquisition path. A compatible
+older build remains eligible for offline or failed-refresh fallback unless a
+requested version pin excludes it. An explicit `Sync-OSDStageMicrosoft365Apps` call
+on the preparation PC still requests a fresh complete acquisition.
+
+For multiple independently maintained Office configurations, use separate
+packages in your own repository and manage their upstream acquisition there.
+The built-in does not provide multiple retained configuration profiles.
+
+### Choosing built-in Office or repository Office
+
+The built-in checks freshness during full Windows before installation:
+
+1. Validate the existing generation and compare the requested configuration.
+2. Reuse it when the advertised channel build or explicit build pin matches.
+3. Otherwise run ODT `/download` into a new generation, validate it, promote it,
+   and stage that content locally for installation.
+
+If the metadata check or acquisition fails, an acceptable previously staged
+fallback may still be used; the result records the refresh warning. ODT remains
+the acquisition mechanism when a replacement is needed. Replacements require
+additional temporary disk space, but unchanged deployments avoid downloading
+all Office content again.
+
+If deployment speed is more important than checking Microsoft for a current Office build during SetupComplete, Microsoft 365 Apps can instead be packaged as a normal repository app.
+
+In that model:
+
+```text
+self-maintained repository
+→ organization decides which Office build is current
+→ repository sync/update happens in WinPE
+→ Package.zip is staged to the OS
+→ full Windows installs the staged package
+→ no built-in Office ODT freshness check
+```
+
+This is an intentional OSDStage design choice:
+
+| Approach | Freshness owner | Sync moment | Full-Windows overhead | Best fit |
+| --- | --- | --- | --- | --- |
+| Built-in Microsoft 365 Apps | Microsoft / ODT | Full Windows | Channel metadata check; ODT download only when needed | Evergreen Office with minimal package maintenance |
+| Repository-packaged Microsoft 365 Apps | Repository owner | WinPE | No built-in ODT refresh step | Maximum deployment-time predictability and organization-controlled versioning |
+
+Neither approach is inherently better. Built-ins optimize for vendor-native evergreen maintenance; repository apps optimize for organization-owned packaging, version control, and deterministic deployment behavior.
+
+This same principle applies more broadly in OSDStage: a supported built-in is a convenience path, not a requirement. Any app can still be delivered through the self-maintained repository when that better matches the deployment strategy.
+
+### Microsoft Teams bootstrapper
+
+The Teams MSIX uses the normal metadata comparison and is skipped when the cached MSIX is still current.
+
+The small `teamsbootstrapper.exe`, however, is intentionally downloaded again during an online synchronization so the provisioning bootstrapper itself remains current. This does not require re-downloading the much larger Teams MSIX when its metadata has not changed.
+
+### Sync timing
+
+Built-in freshness checks happen in **full Windows**: through a public Sync command on the preparation machine, or through PreInstall during SetupComplete.
+
+```text
+WinPE
+→ stage built-in intent and available fallback cache
+
+Full Windows
+→ check vendor freshness
+→ reuse current compatible payloads or prepare a complete replacement generation
+→ stage current payload locally
+→ Runner installs
+```
+
+Repository versions and hashes are controlled by the repository owner. Content can be synchronized on the preparation machine or during WinPE staging; Runner uses the staged package without refreshing it during SetupComplete.
+
+## Deployment flow
+
+The same commands are used with or without USB cache:
+
+```powershell
+Add-OSDStageMicrosoft365Apps
+Add-OSDStageMicrosoftTeams
+Add-OSDStageAdobeAcrobatUnified
+Add-OSDStageGoogleChromeEnterprise
+Add-OSDStageMozillaFirefoxEnterprise
+```
+
+In WinPE, the built-in Add cmdlets stage deployment intent and any already-available cached payload into Windows Temp. A USB cache is not required.
+
+In full Windows, PreInstall resolves the source automatically:
+- if an `OSDCloud` USB cache is present, it is used and updated;
+- if no `OSDCloud` USB cache is present, content is acquired directly to the local Windows runtime;
+- current content is staged locally before the runner starts;
+- the runner installs from local content.
+
+## No-USB mode
+
+No alternate parameter or command is required.
+
+When no `OSDCloud` volume is connected, PreInstall downloads the current built-in content directly into the local Windows runtime under `%SystemRoot%\Temp\OSDStage`. The runner then installs from that local source.
+
+When an `OSDCloud` volume is connected, it is detected automatically. Existing cache content is used when available and the cache is refreshed/updated during SetupComplete.
+
+A completely blank `OSDCloud` volume is supported. OSDStage creates the cache structure and populates it during the full-Windows pre-install phase.
+
+## Fallback behavior
+
+An ordinary refresh failure can use a complete acceptable staged fallback. If no usable source remains, PreInstall records the app-local failure and Runner skips that app while processing independent queue entries. The final deployment is still `Failed` and staging is retained. Invalid manifests, supported-publisher trust failures and other phase-level safety failures stop processing.
+
+A successful fallback installation is recorded separately from the failed refresh. See [acquisition outcomes](runtime.md#acquisition-and-installation-are-separate-results).
+
+The absence of an `OSDCloud` USB is not an error: when online, PreInstall acquires built-in content directly to the local Windows runtime.
+
+Office refresh has a 20-minute timeout by default.
+
+## USB cache behavior
+
+USB is not required for built-in deployment.
+
+If an `OSDCloud` USB volume is detected, cache functionality is enabled automatically. Keep that media connected until OOBE is displayed so SetupComplete can use and update the cache.
+
+If no `OSDCloud` volume is present, built-ins are acquired directly to the local Windows runtime.
+
+
+## Verbose staging diagnostics
+
+Use:
+
+```powershell
+Add-OSDStageMicrosoft365Apps -Verbose
+Add-OSDStageMicrosoftTeams -Verbose
+Add-OSDStageAdobeAcrobatUnified -Verbose
+Add-OSDStageGoogleChromeEnterprise -Verbose
+Add-OSDStageMozillaFirefoxEnterprise -Verbose
+```
+
+Verbose output shows:
+- offline Windows target detection;
+- OSDCloud cache-volume detection;
+- whether an existing built-in cache is complete;
+- local staging decisions;
+- SetupComplete integration;
+- the selected acquisition path.
+
+When OSDCloud cache media is detected, the Add cmdlet also emits a warning to keep the USB connected until OOBE is displayed.
+
+The same decisions are written to the CMTrace-compatible logs.
+
+
+## Validated deployment behavior
+
+OSDStage has been validated with both blank-cache and warm-cache deployments using the same Add commands and installation queue.
+
+Validated behavior includes:
+
+- blank `OSDCloud` media being populated automatically during full-Windows PreInstall;
+- existing built-in cache content being detected and staged as fallback;
+- unchanged Teams, Chrome, and Adobe payloads being reused after lightweight freshness checks;
+- Microsoft 365 Apps being synchronized by ODT and reporting whether the cached Office build changed;
+- successful installation from local staged content;
+- historical cold-cache versus warm-cache timing with similar Runner installation times in the recorded runs.
+
+See [Validation matrix](testing.md) and [Performance](performance.md) for the tested versions and limits. Earlier Office incremental-refresh timings do not predict the current complete-generation refresh cost.
+
+## Requesting a new built-in app
+
+Built-ins are maintained as product-specific code in OSDStage, so they are deliberately selective. A request should only be considered when the app is a good fit for a generic, repeatable deployment path.
+
+### Required characteristics
+
+A built-in candidate should:
+
+- be broadly used in enterprise or managed Windows environments;
+- have a direct, deterministic vendor download source;
+- be acquired from that vendor at runtime/cache time rather than being bundled, mirrored, or redistributed by OSDStage;
+- use a stable URL, documented API/endpoint, or similarly maintainable vendor-supported acquisition method;
+- support unattended installation with predictable exit codes;
+- work without customer-specific credentials, tenant-specific portals, or interactive download flows;
+- be maintainable without scraping HTML, browser automation, traffic sniffing, or reverse-engineering temporary download links.
+
+### Download-source rule
+
+OSDStage must be able to acquire the installer directly from the vendor in a predictable way.
+
+A vendor using a CDN is not automatically a problem. The requirement is that the vendor exposes a stable, supported download URL or endpoint. A built-in will not be added when the installer must come from a third-party mirror, community package source, OSDStage itself, or when acquisition depends on techniques such as:
+
+```text
+scraping a download page
+sniffing browser/network traffic
+following undocumented JavaScript-generated links
+capturing short-lived signed URLs
+reusing session cookies or access tokens
+bypassing CDN / anti-bot protections
+reverse-engineering a protected download workflow
+```
+
+If the vendor changes a stable URL behind the scenes while keeping the published endpoint stable, that is fine. The module should not need to discover or reconstruct hidden CDN URLs itself.
+
+### When to use the repository instead
+
+The repository model is the default for apps that are:
+
+- customer-specific;
+- line-of-business or internally developed;
+- uncommon or narrowly used;
+- hosted internally;
+- accessible only after authentication;
+- distributed through portals with non-deterministic download links;
+- unsuitable for a generic vendor-native maintenance flow.
+
+Those apps belong in `catalog.json` / `Package.zip`, where the organization controls acquisition and packaging.
+
+### What to include in a request
+
+A useful built-in request should include:
+
+- product name and vendor;
+- vendor documentation URL;
+- direct installer URL(s) or documented download endpoint;
+- supported architectures;
+- unattended installation command;
+- evidence that the app is broadly used;
+- expected update/freshness mechanism if known.
+
+A request meeting these criteria can still be declined if the vendor's acquisition or installation model is too fragile to maintain safely.

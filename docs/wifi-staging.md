@@ -1,5 +1,7 @@
 # Wi-Fi profile staging
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 Run `Add-OSDStageWiFiProfile -Path <export.xml>` in WinPE after Windows has been applied. The command stages one built-in `WiFiProfiles` Script entry. Repeated calls merge profiles; a repeated, case-sensitive profile name replaces its previous staged definition. `-WindowsPath` is optional and uses normal offline Windows discovery.
 
 The initial implementation accepts Windows WLAN XML exports for WPA2-Personal, WPA3-Personal and unencrypted open networks. Enterprise/EAP credentials, WEP and machine-protected shared keys are rejected before staging. Export personal profiles on the preparation PC using `netsh wlan export profile name="profile-name" folder="C:\OSDStage\TestWiFi" key=clear`. Do not commit or upload the export: it contains a clear-text shared key.
@@ -28,6 +30,8 @@ Staging contains the profile XML in `BuiltIn\WiFiProfiles\config.json`. Before w
 The runtime removes its credential-bearing config in its `finally` block after a single attempt, including on failure and with `CleanupMode Never`. Reports remain. This is normal file deletion, not secure disk erasure. If execution never reaches the Wi-Fi runtime (for example power loss or an earlier integrity failure), the restricted config remains until staging is removed. The source export on the preparation PC/USB is never deleted by OSDStage. Removing the config means this entry cannot be rerun or revalidated after execution; use fresh deployment staging for another attempt.
 
 ## WinPE example
+
+The volume lookup below only locates your separate source XML. OSDStage already detects its cache automatically; the lookup is unnecessary when using the SSID parameters above or a packaged profile from your repository. The XML is copied into staging, so this source file is not needed during SetupComplete.
 
 ```powershell
 $usb = @(Get-Volume | Where-Object { $_.FileSystemLabel -eq 'OSDCloud' -and $_.DriveLetter })

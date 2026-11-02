@@ -1,5 +1,7 @@
 # Machine environment variables
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 Run `Add-OSDStageEnvironmentVariable` in WinPE after Windows has been applied. It stages one bundled `EnvironmentVariables` Script with SHA-256 checked configuration and runtime. No repository package, cache, download or environment change on the preparation PC/WinPE is needed. SetupComplete executes it once as SYSTEM in the installed Windows.
 
 ```powershell

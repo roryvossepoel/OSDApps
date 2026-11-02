@@ -1,5 +1,7 @@
 # Registry staging
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 `Add-OSDStageRegistryKey` stages a key without adding or deleting values.
 `Add-OSDStageRegistryValue` stages a value and creates all missing parent keys when
 SetupComplete executes it. Neither cmdlet writes to the WinPE registry.

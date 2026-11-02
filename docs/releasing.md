@@ -1,5 +1,7 @@
 # Releasing OSDStage
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 OSDStage uses GitHub Actions for validation and PowerShell Gallery publishing.
 
 ## Public descriptions

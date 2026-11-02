@@ -1,5 +1,7 @@
 # OSDStage rename acceptance
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 Recorded on 31 October 2026 for candidate
 `5c0bd44f734296709439e3707337bb3291f29874` in PR #99.
 Deployment ID: `1f2adf99-55d4-4880-b359-419f78eb52a4`.

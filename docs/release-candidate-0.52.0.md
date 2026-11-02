@@ -1,5 +1,9 @@
 # Candidate review and release handoff
 
+> **Historical handoff record.** This captures an earlier development candidate, not the current release instructions. Use [release availability](release-status.md) and [releasing](releasing.md) for the current workflow.
+
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 > Historical device evidence below was recorded with OSDApps, before the rename. Command and path examples are now written for OSDStage; the recorded commit IDs and deployment IDs refer to the original tests. This is not acceptance evidence for the renamed candidate.
 
 ## Status and scope

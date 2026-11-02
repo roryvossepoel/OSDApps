@@ -1,5 +1,7 @@
 # Console output
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 The next module build uses the Deploy-OSDCloud console style: a local timestamp,
 `[INFO]`, `[WARN]` or `[ERROR]`, followed by a short message. Results appear on
 consecutive lines, with no extra blank line per item. This is unreleased; the

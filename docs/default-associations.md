@@ -1,10 +1,11 @@
 # Initial default file and protocol associations
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 `Add-OSDStageDefaultAssociation` stages initial defaults for new Windows users.
 Use it in WinPE after OSDCloud applies Windows, and put the entry after the
-installers that provide the selected handlers. This candidate supports Windows
-11 client with native 64-bit PowerShell during SetupComplete. It is experimental
-until the physical acceptance test below passes.
+installers that provide the selected handlers. This integration supports Windows
+11 client with native 64-bit PowerShell during SetupComplete. See the [physical acceptance](#physical-acceptance) section for tested behavior and limits.
 
 ## Explicit initial defaults only
 

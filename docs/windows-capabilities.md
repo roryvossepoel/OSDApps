@@ -1,5 +1,7 @@
 # Windows capabilities (Features on Demand)
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 `Add-OSDStageWindowsCapability` stages explicit capability changes in WinPE after
 OSDCloud has applied Windows. One `WindowsCapabilities` built-in Script executes
 the combined selections during SetupComplete as native 64-bit SYSTEM.

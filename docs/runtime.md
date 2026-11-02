@@ -47,7 +47,7 @@ When online it can acquire/refresh vendor content through the cache, or directly
 
 **An available file is not sufficient by itself.** Supported MSI/EXE files must pass Windows Authenticode and expected-publisher checks before they are used, including the fallback path. An ordinary source/acquisition failure without usable fallback is recorded against that built-in; PreInstall finishes as `CompletedWithErrors` and Runner skips that app while continuing independent queue entries. A publisher/signature failure, invalid manifest or other phase-level safety failure remains fatal and prevents Runner from starting.
 
-The signature scope is deliberately limited: Office `setup.exe`, Teams `teamsbootstrapper.exe`, and Chrome/Firefox/Webex MSI files. It does not cover the Office data tree, Teams MSIX or Adobe's outer ZIP. See the [publisher policy](built-in-apps.md#authenticode-and-publisher-policy-0340).
+Signature scope is product-specific. Examples include Office `setup.exe`, Teams `teamsbootstrapper.exe`, browser/conferencing MSIs and supported Microsoft runtime EXEs. These checks do not cover the Office data tree, Teams MSIX or Adobe's outer ZIP. See the [publisher policy](built-in-acquisition.md#authenticode-and-publisher-policy-0340).
 
 `NetworkInterface.GetIsNetworkAvailable()` reports interface availability; it is not proof that a vendor endpoint is reachable. The log distinguishes a directly skipped refresh from a failed refresh followed by fallback.
 
