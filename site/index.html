@@ -14,12 +14,12 @@
       <div class="preview-stages" aria-label="Deployment phases"><span>01 · WinPE</span><span>02 · SetupComplete</span><span>03 · OOBE</span></div>
       <div class="preview-body">
         <div class="preview-code"><div><span class="terminal-dots" aria-hidden="true">● ● ●</span><span>PowerShell · after OSDCloud</span></div><pre><code># Choose what this device needs
-Add-OSDStageGoogleChromeEnterprise
+Add-OSDStageMicrosoft365Apps
 Add-OSDStageAdobeAcrobatUnified
 
 # Check before the first boot
 Test-OSDStageDeployment -ThrowOnFailure</code></pre></div>
-        <div class="preview-packages"><p class="preview-label">Your choices</p><div><span class="preview-check" aria-hidden="true">✓</span><span>Google Chrome Enterprise<small>Built-in app</small></span><span class="preview-status">Staged</span></div><div><span class="preview-check" aria-hidden="true">✓</span><span>Adobe Acrobat<small>Built-in app</small></span><span class="preview-status">Staged</span></div></div>
+        <div class="preview-packages"><p class="preview-label">Your choices</p><div><span class="preview-check" aria-hidden="true">✓</span><span>Microsoft 365 Apps<small>Built-in app</small></span><span class="preview-status">Staged</span></div><div><span class="preview-check" aria-hidden="true">✓</span><span>Adobe Acrobat<small>Built-in app</small></span><span class="preview-status">Staged</span></div></div>
         <div class="preview-summary"><span aria-hidden="true">↳</span><span>Staged in WinPE. Applied during SetupComplete.</span></div>
       </div>
     </div>

@@ -89,7 +89,7 @@ Describe 'Built-in metadata' {
                 Select-Object -ExpandProperty Name |
                 Where-Object {
                     $_ -like 'Add-OSDStage*' -and
-                    $_ -notin @('Add-OSDStage','Add-OSDStagePackage','Add-OSDStageFont','Add-OSDStageDriver','Add-OSDStageRegistryKey','Add-OSDStageRegistryValue')
+                    $_ -notin @('Add-OSDStage','Add-OSDStagePackage','Add-OSDStageFont','Add-OSDStageDriver')
                 } |
                 Sort-Object
         )

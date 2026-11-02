@@ -1,1 +1,3 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><rect x="10" y="12" width="44" height="40" rx="6" stroke="#4065A9" stroke-width="4"/><path d="M18 34h28M24 25l5 5 10-10" stroke="#4065A9" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/><path d="M24 43h17" stroke="#4065A9" stroke-linecap="round" stroke-width="4"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="Remove inbox apps" fill="none" stroke="#347665" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7"/>
+</svg>
