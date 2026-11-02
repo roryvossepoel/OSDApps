@@ -75,11 +75,11 @@
     AliasesToExport   = @()
     PrivateData = @{
         PSData = @{
-            Prerelease = 'rc1'
+            Prerelease = 'rc2'
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','AppDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','AppCache','AppPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDStage'
             LicenseUri = 'https://github.com/roryvossepoel/OSDStage/blob/main/LICENSE'
-            ReleaseNotes = 'OSDStage 1.0.0-rc1 public release candidate: renamed module and cmdlets, schema v2 repository contracts, and fresh OSDStage cache and staging paths.'
+            ReleaseNotes = 'OSDStage 1.0.0-rc2: automatic Company Portal and CMTrace acquisition and caching, ordered file and directory operations, and compact timestamped console output. Windows Update staging is not included.'
             RequireLicenseAcceptance = $false
         }
     }
