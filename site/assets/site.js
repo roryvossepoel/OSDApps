@@ -33,7 +33,7 @@ if (!reducedMotion.matches && 'IntersectionObserver' in window) {
       }
     });
   }, {threshold: 0.08});
-  document.querySelectorAll('.flow-strip, .home-bottom, .instruction, .next-step, .site-footer').forEach(section => {
+  document.querySelectorAll('.home-section, .flow-strip, .home-bottom, .instruction, .next-step, .site-footer').forEach(section => {
     if (section.getBoundingClientRect().top >= window.innerHeight) observer.observe(section);
   });
 }
