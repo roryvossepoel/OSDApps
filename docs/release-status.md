@@ -4,6 +4,8 @@
 
 **Documentation baseline: 2 November 2026.** The published preview is [OSDStage 1.0.0-rc1](https://www.powershellgallery.com/packages/OSDStage/1.0.0-rc1), with its matching [GitHub release](https://github.com/roryvossepoel/OSDStage/releases/tag/v1.0.0-rc1). It is a release candidate, not GA.
 
+**RC2 preparation:** version `1.0.0-rc2` includes automatic Company Portal/CMTrace acquisition, file and directory operations, and compact console output. Publication is not yet verified; the published version above remains RC1 until the release and Gallery verification workflows complete. Windows Update is excluded.
+
 The guides on `main` also describe merged development changes. A merge does not update the Gallery package.
 
 | Capability | Gallery 1.0.0-rc1 | Merged development source |

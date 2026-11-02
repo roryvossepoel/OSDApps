@@ -4,10 +4,10 @@ Describe 'Release identity' {
         $script:resolver = Join-Path $script:root 'build/Get-ReleaseVersion.ps1'
     }
     It 'resolves the real candidate consistently' {
-        $result = & $script:resolver -ExpectedVersion '1.0.0-rc1'
+        $result = & $script:resolver -ExpectedVersion '1.0.0-rc2'
         $result.ModuleVersion | Should -Be '1.0.0'
-        $result.Version | Should -Be '1.0.0-rc1'
-        $result.Tag | Should -Be 'v1.0.0-rc1'
+        $result.Version | Should -Be '1.0.0-rc2'
+        $result.Tag | Should -Be 'v1.0.0-rc2'
         $result.IsPrerelease | Should -BeTrue
     }
     It 'resolves stable releases without a suffix' {
@@ -19,7 +19,7 @@ Describe 'Release identity' {
     }
     It 'rejects the wrong channel or candidate' {
         { & $script:resolver -ExpectedVersion '1.0.0' } | Should -Throw '*does not match*'
-        { & $script:resolver -ExpectedVersion '1.0.0-rc2' } | Should -Throw '*does not match*'
+        { & $script:resolver -ExpectedVersion '1.0.0-rc1' } | Should -Throw '*does not match*'
     }
     It 'rejects invalid prerelease manifests' -ForEach @(
         @{ Version='1.0.0.0'; Label='rc1' },
