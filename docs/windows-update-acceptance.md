@@ -58,7 +58,7 @@ Add-OSDStageDirectory -Path '%ProgramData%\OSDStageAcceptance' -Force
 Add-OSDStageFile -Path '%ProgramData%\OSDStageAcceptance\BeforeWindowsUpdate.txt' `
     -Content "Configuration applied before Windows Update; test build $testCommit" -Force
 
-# Add any other normal application/configuration staging calls here.
+# Add any other normal app/configuration staging calls here.
 
 Add-OSDStageWindowsUpdate -IncludeDrivers
 $deployment = Test-OSDStageDeployment -ThrowOnFailure

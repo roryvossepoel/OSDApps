@@ -115,7 +115,7 @@ Distinct offers sharing a hardware ID are no longer discarded or ranked from
 their titles. WUA receives the selected offers for installation, software first,
 then drivers in discovery order. This does not promise the exact selection of
 the Windows Update Settings UI, installation of every offer, or the newest
-version per device. Driver version/application behavior still needs physical
+version per device. Driver version and activation behavior still needs physical
 acceptance; a failed installation stops the pass and is recorded.
 
 Classification GUIDs are language-independent. Each root offer requires its own
@@ -142,7 +142,7 @@ see [Microsoft's firmware distribution guidance](https://learn.microsoft.com/en-
 Windows updates and driver updates are **not cached on the OSDCloud USB drive**.
 OSDStage obtains them through the configured Windows Update infrastructure
 (Windows Update, Microsoft Update or WSUS, as configured). Network access is
-required for this step, including when application payloads are already cached
+required for this step, including when app payloads are already cached
 on USB. Windows servicing can reuse its own local download cache; OSDStage does
 not force a fresh download of identical content. Offline-ready preflight cannot
 succeed with this step selected.
