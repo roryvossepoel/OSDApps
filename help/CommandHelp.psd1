@@ -251,19 +251,21 @@
             Link = 'docs/environment-variables.md'
         }
         'Add-OSDStageWindowsUpdate' = @{
-            Synopsis = 'Stage an experimental, conservative Windows Update pass as the last deployment step.'
-            Description = 'Uses the native Windows Update Agent with the configured update source. Allows automatic security, critical and definition updates with complete safe metadata; excludes upgrades, broad update classifications, previews and unknown bundles. Installs one pass without rebooting or scheduling later retries. The last staging call replaces earlier Windows Update options. Not yet physically validated for installation or Autopilot handoff.'
+            Synopsis = 'Stage an experimental Windows Update pass as the last deployment step.'
+            Description = 'Uses the native Windows Update Agent with the configured update source. Allows automatic security, critical, definition, Updates and Update Rollups classifications, including applicable Windows, .NET and Defender servicing. Excludes upgrades, feature packs, previews and unknown bundles. Installs one pass without rebooting or scheduling later retries. The last staging call replaces earlier Windows Update options. Earlier software installation has physical evidence; the expanded driver policy and Autopilot handoff still require acceptance.'
             Environment = 'Stage in WinPE after OSDCloud. Runs last under native 64-bit SYSTEM during SetupComplete on Windows 11 25H2+; requires network access to the configured update source.'
             Output = 'OSDStage.StagedApp. Runtime writes WindowsUpdate-Result.json and a progress log; deferred work and reboot requirements remain explicit.'
             Parameters = @{
-                IncludeDrivers = 'Opt in to non-browse-only hardware drivers in a restricted class/hardware allowlist, even when AutoSelectOnWebSites is false. Firmware, System, Extension, SoftwareComponent and OtherHardware classes are excluded. UI-capable drivers are attempted only with ForceQuiet; no interactive fallback. Competing offers for the same hardware ID are skipped. Does not mean Intune-approved drivers.'
+                IncludeDrivers = 'Opt in to all offered driver classes, including Firmware, System, Extension and OtherHardware. Optional/nonautomatic drivers remain eligible. Use DriverClass to narrow the selection. Installation always requests ForceQuiet, never an interactive fallback or a reboot. Does not mean Intune-approved drivers.'
+                DriverClass = 'Optional exact WUA class-name allowlist, for example Networking, Sound, Video. Requires IncludeDrivers. Omit to include all classes; supplying a list excludes all other classes. WUA OtherHardware is broader than INF System/Bluetooth classes. Firmware can be scheduled for a later restart when included.'
                 ScanOnly = 'Record candidates and selection reasons without accepting EULAs, downloading or installing updates.'
                 TimeoutMinutes = 'Cancellation threshold per scan, download batch and individual installation, from 5 to 180 minutes. Default 30. WUA cancellation is cooperative; OSDStage waits for safe completion and does not forcibly terminate servicing.'
             }
             Examples = @(
                 @{Code='Add-OSDStageWindowsUpdate -ScanOnly';Remarks='First test: inspect update metadata and selection inside SetupComplete.'}
-                @{Code='Add-OSDStageWindowsUpdate';Remarks='Stage one conservative installation pass; first confirm physical acceptance for this test build.'}
-                @{Code='Add-OSDStageWindowsUpdate -IncludeDrivers';Remarks='Explicitly include supported hardware-driver offers, including offers not marked for automatic selection.'}
+                @{Code='Add-OSDStageWindowsUpdate';Remarks='Stage one quality-update installation pass; first confirm physical acceptance for this test build.'}
+                @{Code='Add-OSDStageWindowsUpdate -IncludeDrivers';Remarks='Explicitly include all driver classes, including firmware and offers not marked for automatic selection.'}
+                @{Code='Add-OSDStageWindowsUpdate -IncludeDrivers -DriverClass Networking,Sound,Video';Remarks='Include only these exact WUA driver classes; all other driver classes are excluded.'}
             )
             Link = 'docs/windows-update.md'
         }

@@ -25,11 +25,13 @@ After inspecting the scan report, test installation on the disposable target:
 
 ```powershell
 Add-OSDStageWindowsUpdate
-# Or explicitly include the supported hardware drivers:
+# Or explicitly include all driver classes (including firmware):
 Add-OSDStageWindowsUpdate -IncludeDrivers
+# Or include only these WUA driver classes:
+Add-OSDStageWindowsUpdate -IncludeDrivers -DriverClass Networking,Sound,Video
 ```
 
-These are alternatives, not two update passes. Staging never updates the WinPE or
+These are alternatives, not multiple update passes. Staging never updates the WinPE or
 preparation computer. Full Windows 11 25H2+ and native 64-bit SYSTEM are required
 at execution time. The existing launcher controls the first Windows boot.
 
@@ -50,24 +52,54 @@ The separate JSON report includes the raw `BrowseOnly` and `AutoSelectOnWebSites
 it does not overwrite `WindowsUpdate-Result.json`. Running it during OOBE is
 selection evidence only, not a SetupComplete installation acceptance test.
 
+## Manual scan and installation test in OOBE
+
+Use an elevated native 64-bit Windows PowerShell console on the disposable test
+PC after the deployment runner has finished. This also works in full Windows;
+it is a manual runtime test, not proof of SetupComplete execution.
+
+```powershell
+# Read-only by default. Includes all driver classes, including Firmware.
+$scan = .\tools\Invoke-OSDStageWindowsUpdateOobeTest.ps1 -IncludeDrivers
+$scan | Format-List Status, Outcome, SelectionPolicy, FoundCount, SelectedCount, ResultPath
+$scan.Items | Format-Table Title, DriverClass, Selected, SelectionReason -Wrap
+
+# Explicit installation. Performs a fresh scan, so available offers can change.
+$result = .\tools\Invoke-OSDStageWindowsUpdateOobeTest.ps1 -IncludeDrivers -Install
+$result | Format-List Status, Outcome, InstalledCount, RebootRequired, RebootRequested, Error, ResultPath
+$result.Items | Format-Table Title, DriverClass, Status, InstallResultCode -Wrap
+```
+
+Both invocations accept `-DriverClass Networking,Sound,Video` to narrow driver
+selection. Use the same filter for scan and installation. Reports and adjacent
+logs use unique paths under `%ProgramData%\OSDStage\Tests`; deployment results
+are preserved. The phase is `ManualOobeTest`, distinct from SetupComplete. The
+script neither stages a deployment nor changes OOBE state. It does not request a
+restart. Firmware installation can take effect at a later restart.
+
 ## Selection policy
+
+`QualityAndDriversV5` uses the following rules:
 
 | Candidate | Behavior |
 | --- | --- |
-| Automatic Security Updates, Critical Updates, Definition Updates | Eligible when required metadata and every bundle member pass validation |
-| Upgrades, Feature Packs, Service Packs, general Updates and Update Rollups | Excluded; broad classifications can include enablement packages or non-security previews |
-| Browse-only/preview offers, interactive software updates, unknown interaction or reboot metadata | Excluded |
-| Missing classification on a root offer, conflicting or unrecognized classifications | Skipped with a reason; never inferred safe from a title |
-| Software bundle member with a readable category collection but no classification | May use its checked software parent's allowed quality classification; all other member checks still apply |
-| Drivers | Off by default |
-| Opted-in hardware drivers | Restricted to WUA Networking, Sound and Video classes with recognized PCI/USB/HID/Bluetooth/print hardware identities; HDAUDIO is also allowed for Sound |
-| Firmware, BIOS, System, Extension, SoftwareComponent, OtherHardware and unknown driver classes | Excluded |
+| Automatic Security Updates, Critical Updates, Definition Updates, Updates and Update Rollups | Eligible when required metadata and bundle checks pass; covers applicable Windows, .NET and Defender updates, and MSRT |
+| Upgrades, Feature Packs, Service Packs and unknown/conflicting classifications | Excluded |
+| Browse-only/nonautomatic software, previews and recognized feature/enablement titles | Excluded |
+| Drivers without `-IncludeDrivers` | Excluded |
+| Drivers with `-IncludeDrivers` | All WUA classes eligible, including Firmware, System, Extension and OtherHardware; no hardware-prefix allowlist |
+| Drivers with an explicit `-DriverClass` list | Only exact WUA class-name matches are eligible (case-insensitive); no wildcard or title inference |
+| Missing driver class/classification, unreadable bundles or unknown installation behavior | Skipped with a recorded reason |
 
-For root driver offers, `-IncludeDrivers` permits `AutoSelectOnWebSites=False`
-when `BrowseOnly=False` and all driver checks pass. Explicit opt-in supplies the
-selection decision; it does not make the offer automatically selected by Windows.
-Browse-only offers and missing selection flags remain excluded. Software still
-requires `AutoSelectOnWebSites=True`, even with drivers enabled.
+`-DriverClass` requires `-IncludeDrivers`. These are WUA classes, not INF setup
+classes: for example, WUA may report chipset, Bluetooth or HID drivers as
+`OtherHardware`. Inspect the scan before choosing a list. An explicit list is
+an inclusion filter, not a separate exclusion parameter.
+
+Driver opt-in permits optional and nonautomatic driver offers; neither
+`IsAssigned` nor `AutoSelectOnWebSites` is used to reject them. Raw flags remain
+in the report. Software retains its automatic/non-browse-only requirement.
+Known preview titles remain excluded for both types.
 
 With explicit driver opt-in, `CanRequestUserInput=True` does not by itself
 exclude a driver. OSDStage always sets `ForceQuiet=True` and
@@ -76,33 +108,26 @@ honor quiet installation, WUA can return `WU_E_UH_DOESNOTSUPPORTACTION`; the run
 records the HRESULT and stops. Software still rejects UI-capable installers.
 See [Microsoft's ForceQuiet contract](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdateinstaller2-put_forcequiet).
 
-Multiple otherwise eligible root driver offers with the same hardware ID are
-all skipped as `MultipleDriverOffersForHardware` (case-insensitive). OSDStage
-does not guess driver ranking from titles or install competing versions in scan
-order. Distinct hardware IDs are not proof of distinct physical devices; this
-is a conservative duplicate-offer guard, not a full PnP ranking implementation.
-The report records `CanRequestUserInput` and `RebootBehavior` for diagnosis.
+Distinct offers sharing a hardware ID are no longer discarded or ranked from
+their titles. WUA receives the selected offers for installation, software first,
+then drivers in discovery order. This does not promise the exact selection of
+the Windows Update Settings UI, installation of every offer, or the newest
+version per device. Driver version/application behavior still needs physical
+acceptance; a failed installation stops the pass and is recorded.
 
-Classification GUIDs are language-independent. `ConservativeQualityV4` requires
-each root offer to have its own allowed classification. A software member with no
-classification can use its checked software parent's effective classification,
-including through nested software bundles. This is OSDStage's selection policy,
-not a claim that WUA populates inherited categories. A null/unreadable category
-collection, an explicit unknown or excluded classification, a driver member or
-an unclassified root offer is not rescued by this rule. Explicit member
-classifications and preview/feature/interactive exclusions are still checked.
-Only the selected root offer is passed to the installer, never its binaries
-individually. All inspected siblings are recorded, including after a rejection.
+Classification GUIDs are language-independent. Each root offer requires its own
+allowed classification. An unclassified software bundle member can inherit its
+checked software parent's classification. Explicit excluded classifications,
+missing category collections and excluded member titles still reject the bundle.
+Only selected root offers are installed; internal binaries are not installed
+separately. `ClassificationIds`, `EffectiveClassificationIds` and
+`ClassificationSource` record this decision.
 
-Each bundle decision records the actual `ClassificationIds`,
-`EffectiveClassificationIds` and `ClassificationSource` (`Own`, `ParentBundle`
-or `None`). This distinguishes absent categories from an explicitly excluded
-classification when inspecting a result.
-
-Title exclusions are additional checks, not the primary release boundary. This intentionally conservative first
-version can skip legitimate updates, including KB5007651 or MSRT if their actual
-classification is outside the allowlist. Inspect the report before broadening a
-policy; do not enable all `Type='Software'` results or rely on English titles.
+The classification policy excludes feature-upgrade categories. Additional title
+checks reject recognized previews/enablement packages; these checks are not a
+language-independent guarantee for mislabeled vendor metadata. The source and
+existing update policy remain authoritative. Verify release/build after the pass
+and again after any later restart.
 
 OSDStage leaves update sources and policies unchanged: no WSUS bypass, service
 registration, target-release policy edits or Setup/OOBE registry changes. It
@@ -173,8 +198,8 @@ has regression coverage for this shape. A read-only OOBE check of revision
 All 31 offered drivers were rejected as `NotAutomatic`. The subsequent diagnostic
 on revision `6b59446` confirmed `BrowseOnly=False` and `AutoSelectOnWebSites=False`
 for all 31. V3 therefore separates explicit driver opt-in from automatic software
-selection, while retaining the WUA class and hardware checks. OtherHardware,
-System, Extension and Firmware remain excluded. Driver installation is pending.
+selection, while retaining the WUA class and hardware checks. In V3, OtherHardware,
+System, Extension and Firmware were excluded. Driver installation was pending.
 
 **PC1 software installation, revision `6b59446`:** 34 found, two selected and
 both installed in 41.7 seconds during SetupComplete. KB5007651 (10.0.29680.1000)
@@ -188,7 +213,8 @@ driver installation, or a claim that the device is fully patched.
 - Install selected updates; compare per-update results with the installed state.
 - Test a cumulative update requiring restart, a pre-existing restart prerequisite,
   no eligible updates, source/network failure and cooperative cancellation.
-- Opt in to drivers separately; confirm hardware behavior and firmware exclusion.
+- Opt in to drivers separately; confirm installed driver versions, class filtering,
+  firmware behavior and any pending restart before release.
 - Confirm earlier packages finish first and their failures suppress this step.
 - Confirm the original Windows release, normal OOBE and Autopilot handoff after
   the wrapper completes. No performance or cross-build guarantee is established yet.
@@ -212,3 +238,14 @@ opted-in drivers only through the existing quiet installer, adds HDAUDIO for
 Sound, records both behavior fields, and skips competing offers for an identical
 hardware ID. The two Intel 24.20.0.4/24.70.0.3 offers shared one hardware ID.
 Driver installation with V4 remains **unverified on hardware**.
+
+### V5 all-class driver and quality-update test (2 November 2026)
+
+PC1 offered 31 drivers, but `IsAssigned=1` returned none. V5 therefore does not
+use that criterion. Explicit driver opt-in now covers all classes, with an
+optional exact class allowlist. Firmware is included unless a supplied list
+omits its class. Updates and Update Rollups are added for regular quality
+servicing. The former blanket rejection of shared hardware IDs is removed.
+A separate elevated OOBE test tool defaults to scan-only and requires `-Install`
+for changes. V5 driver installation and monthly cumulative updates remain
+**unverified on hardware** until the next test results are reviewed.

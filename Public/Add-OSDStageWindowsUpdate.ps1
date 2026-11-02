@@ -2,12 +2,14 @@ function Add-OSDStageWindowsUpdate {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [switch]$IncludeDrivers,
+        [ValidateNotNullOrEmpty()][string[]]$DriverClass=@(),
         [switch]$ScanOnly,
         [ValidateRange(5,180)][int]$TimeoutMinutes=30,
         [string]$WindowsPath
     )
 
     $ErrorActionPreference='Stop'
+    if ($PSBoundParameters.ContainsKey('DriverClass') -and -not $IncludeDrivers) { throw 'DriverClass requires IncludeDrivers.' }
     Assert-OSDStageSourceEnabled -Source BuiltIn
     if (-not (Test-OSDStageWinPE)) { throw 'Stage Windows Update in WinPE after OSDCloud, not on the preparation PC.' }
 
@@ -57,6 +59,7 @@ function Add-OSDStageWindowsUpdate {
         SchemaVersion=2
         DeploymentId=[string]$manifest.DeploymentId
         ResultPath=(Join-Path $resultDirectory 'WindowsUpdate-Result.json')
+        DriverClass=@($DriverClass)
         IncludeDrivers=[bool]$IncludeDrivers
         ScanOnly=[bool]$ScanOnly
         TimeoutMinutes=$TimeoutMinutes
@@ -109,6 +112,6 @@ function Add-OSDStageWindowsUpdate {
     [pscustomobject]@{
         PSTypeName='OSDStage.StagedApp';Name='WindowsUpdate';PackageType='Script';Source='BuiltIn'
         WindowsPath=$target;StagedPath=$payloadRoot;Version='1.0.0';IncludeDrivers=[bool]$IncludeDrivers;ScanOnly=[bool]$ScanOnly
-        NetworkRequired=$true;ExecutionOrder='Last'
+        DriverClass=@($DriverClass);NetworkRequired=$true;ExecutionOrder='Last'
     }
 }

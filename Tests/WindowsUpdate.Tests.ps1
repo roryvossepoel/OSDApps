@@ -65,7 +65,7 @@ Describe 'Conservative Windows Update selection and execution' {
         (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeTrue
     }
     It 'rejects feature upgrades, enablement classifications, unknown and conflicting classifications' {
-        foreach ($category in @('3689bdc8-b205-4af4-8d4a-a63924c5e9d5','28bc880e-0592-4cbf-8f95-c79b17911d5f','b54e7d24-7add-428f-8b75-90a396fa584f','cd5ffd1e-e932-4e3a-bf74-18bf0b1bbd83','unknown')) {
+        foreach ($category in @('3689bdc8-b205-4af4-8d4a-a63924c5e9d5','b54e7d24-7add-428f-8b75-90a396fa584f','unknown')) {
             (Get-OSDStageWindowsUpdateSelection (New-TestUpdate -Title 'KB1234567' -Category $category)).Selected | Should -BeFalse
         }
         $script:update.Categories+=@([pscustomobject]@{Type='UpdateClassification';CategoryID='3689bdc8-b205-4af4-8d4a-a63924c5e9d5'})
@@ -111,7 +111,7 @@ Describe 'Conservative Windows Update selection and execution' {
         (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeFalse
     }
     It 'preserves explicit child classification exclusions and records all bundle members' {
-        foreach ($category in @('3689bdc8-b205-4af4-8d4a-a63924c5e9d5','28bc880e-0592-4cbf-8f95-c79b17911d5f','b54e7d24-7add-428f-8b75-90a396fa584f','cd5ffd1e-e932-4e3a-bf74-18bf0b1bbd83','unknown')) {
+        foreach ($category in @('3689bdc8-b205-4af4-8d4a-a63924c5e9d5','b54e7d24-7add-428f-8b75-90a396fa584f','unknown')) {
             $bad=New-TestUpdate -Category $category
             $unclassified=New-TestUpdate;$unclassified.Categories=@()
             $script:update.BundledUpdates=@($bad,$unclassified)
@@ -156,56 +156,65 @@ Describe 'Conservative Windows Update selection and execution' {
         foreach ($u in @($platform.BundledUpdates)+@($defender.BundledUpdates)) { $u.Categories=@() }
         $script:updates=@($platform,$defender,(New-TestUpdate -Title 'KB890830' -Category '28bc880e-0592-4cbf-8f95-c79b17911d5f'))
         $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
-        $r.SelectionPolicy | Should -Be ConservativeQualityV4
-        $r.SelectedCount | Should -Be 2
-        $r.InstalledCount | Should -Be 2
-        $r.Items[2].Selected | Should -BeFalse
+        $r.SelectionPolicy | Should -Be QualityAndDriversV5
+        $r.SelectedCount | Should -Be 3
+        $r.InstalledCount | Should -Be 3
+        $r.Items[2].Selected | Should -BeTrue
         # Install only root offers, never their internal binaries separately.
-        @($script:installOrder) | Should -Be @('KB5007651','KB2267602')
+        @($script:installOrder) | Should -Be @('KB5007651','KB2267602','KB890830')
         $saved=Get-Content $script:config.ResultPath -Raw | ConvertFrom-Json
         $saved.Items[1].BundleDecisions.Count | Should -Be 4
         $saved.Items[1].BundleDecisions[3].ClassificationSource | Should -Be ParentBundle
         $saved.Items[1].BundleDecisions[3].ClassificationIds.Count | Should -Be 0
     }
-    It 'requires driver opt-in and rejects firmware, extension and unknown hardware' {
+    It 'requires opt-in but then includes all classes including firmware and optional offers' {
+        foreach ($class in @('Firmware','System','Extension','SoftwareComponent','OtherHardware','Networking','Sound','Video','NewVendorClass')) {
+            $u=New-TestUpdate -Title 'Vendor Firmware' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+            $u.DriverClass=$class;$u.DriverHardwareID='UEFI\RES_1234'
+            $u.AutoSelectOnWebSites=$false;$u.BrowseOnly=$true
+            (Get-OSDStageWindowsUpdateSelection $u).Reason | Should -Be DriversDisabled
+            (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeTrue
+        }
+    }
+    It 'uses optional exact WUA class names as an allowlist without weakening software policy' {
         $u=New-TestUpdate -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
-        (Get-OSDStageWindowsUpdateSelection $u).Reason | Should -Be DriversDisabled
-        (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeTrue
-        foreach ($class in @('Firmware','System','Extension','SoftwareComponent','OtherHardware','Unknown','Net','Display','Media')) {
-            $u.DriverClass=$class
-            (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
-        }
-        $u.DriverClass='Networking';$u.DriverHardwareID='UEFI\RES_1234'
-        (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
-    }
-    It 'accepts non-browse-only WUA hardware classes with explicit opt-in' {
-        foreach ($class in @('Networking','Sound','Video')) {
-            $u=New-TestUpdate -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
-            $u.DriverClass=$class
-            (Get-OSDStageWindowsUpdateSelection $u).Reason | Should -Be DriversDisabled
-            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be OptedInHardwareDriver
-            $u.BrowseOnly=$true
-            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be NotAutomatic
-            (Get-OSDStageWindowsUpdateSelection $u).Reason | Should -Be DriversDisabled
-            $u.BrowseOnly=$false;$u.AutoSelectOnWebSites=$false
-            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be OptedInHardwareDriver
-            $u.AutoSelectOnWebSites=$null
-            (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
-        }
-    }
-    It 'preserves software and driver exclusions when automatic selection is false' {
+        (Get-OSDStageWindowsUpdateSelection $u $true -DriverClass @('networking','Sound')).Selected | Should -BeTrue
+        $u.DriverClass='Extension'
+        (Get-OSDStageWindowsUpdateSelection $u $true -DriverClass @('Networking','Sound')).Reason | Should -Be DriverClassNotIncluded
+        $u.DriverClass=''
+        (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be DriverClassMissing
         $u=New-TestUpdate;$u.AutoSelectOnWebSites=$false
         (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be NotAutomatic
-        $u=New-TestUpdate -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
-        $u.AutoSelectOnWebSites=$false
-        foreach ($class in @('Firmware','System','Extension','SoftwareComponent','OtherHardware','Unknown')) {
-            $u.DriverClass=$class
-            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be DriverClassNotAllowed
+    }
+    It 'allows normal NET Updates and rollups but excludes previews and feature packs' {
+        foreach ($category in @('cd5ffd1e-e932-4e3a-bf74-18bf0b1bbd83','28bc880e-0592-4cbf-8f95-c79b17911d5f')) {
+            $u=New-TestUpdate -Title '.NET cumulative update' -Category $category
+            (Get-OSDStageWindowsUpdateSelection $u).Selected | Should -BeTrue
+            foreach ($title in @('.NET cumulative update Preview','Feature update','Enablement package')) {
+                $u.Title=$title
+                (Get-OSDStageWindowsUpdateSelection $u).Selected | Should -BeFalse
+            }
         }
-        $u.DriverClass='Networking';$u.DriverHardwareID='UEFI\RES_1234'
-        (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be DriverHardwareNotAllowed
-        $u.DriverHardwareID='PCI\VEN_1234';$u.BrowseOnly=$null
-        (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
+    }
+    It 'rejects invalid class configuration and persists valid class filters into the runtime report' {
+        foreach ($classes in @(@('Networking'),@(''),@('*'),@('Net?'),@('Net[12]'),@(123))) {
+            $c=$script:config.PSObject.Copy()
+            $c | Add-Member NoteProperty DriverClass $classes
+            { Assert-OSDStageWindowsUpdateConfiguration $c } | Should -Throw
+        }
+        foreach ($classes in @(@(''),@('*'),@('Net?'),@('Net[12]'),@(123))) {
+            $c=$script:config.PSObject.Copy();$c.IncludeDrivers=$true
+            $c | Add-Member NoteProperty DriverClass $classes
+            { Assert-OSDStageWindowsUpdateConfiguration $c } | Should -Throw
+        }
+        $script:config.IncludeDrivers=$true
+        $script:config | Add-Member NoteProperty DriverClass @('Sound')
+        $u=New-TestUpdate -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $script:updates=@($u)
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.DriverClass | Should -Be @('Sound')
+        $r.Items[0].SelectionReason | Should -Be DriverClassNotIncluded
+        $r.SelectedCount | Should -Be 0
     }
     It 'allows UI-capable opted-in drivers only through the quiet runtime' {
         $driver=New-TestUpdate -Title 'Intel network' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
@@ -228,36 +237,19 @@ Describe 'Conservative Windows Update selection and execution' {
         $driver.InstallationBehavior=$null
         (Get-OSDStageWindowsUpdateSelection $driver $true).Reason | Should -Be InstallationBehaviorMissing
     }
-    It 'allows HDAUDIO only for the Sound class and retains driver exclusions' {
-        $driver=New-TestUpdate -Title 'Realtek MEDIA' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
-        $driver.DriverHardwareID='hdaudio\func_01&ven_10ec&dev_0236&subsys_10280d1a'
-        $driver.InstallationBehavior.CanRequestUserInput=$true
-        $driver.DriverClass='Sound'
-        (Get-OSDStageWindowsUpdateSelection $driver $true).Selected | Should -BeTrue
-        $driver.DriverClass='Networking'
-        (Get-OSDStageWindowsUpdateSelection $driver $true).Reason | Should -Be DriverHardwareNotAllowed
-        foreach ($class in @('Firmware','System','Extension','SoftwareComponent','OtherHardware')) {
-            $driver.DriverClass=$class
-            (Get-OSDStageWindowsUpdateSelection $driver $true).Reason | Should -Be DriverClassNotAllowed
-        }
-    }
-    It 'does not install competing offers for the same hardware ID in either order' {
+    It 'preserves distinct WUA offers sharing a hardware ID rather than inventing a version ranking' {
         $older=New-TestUpdate -Title 'Intel 24.20.0.4' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
         $newer=New-TestUpdate -Title 'Intel 24.70.0.3' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
         $older.DriverHardwareID='pci\ven_8086&dev_7af0&subsys_40908086'
         $newer.DriverHardwareID=$older.DriverHardwareID.ToUpperInvariant()
-        $distinct=New-TestUpdate -Title 'Other network' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
-        $script:config.IncludeDrivers=$true
-        foreach ($order in @(@($older,$newer,$distinct),@($distinct,$newer,$older))) {
-            $script:updates=$order;$script:installOrder.Clear()
-            $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
-            $r.SelectedCount | Should -Be 1
-            $r.InstalledCount | Should -Be 1
-            @($r.Items | Where-Object SelectionReason -eq MultipleDriverOffersForHardware).Count | Should -Be 2
-            @($script:installOrder) | Should -Be @('Other network')
-            $older.EulaAccepted | Should -BeFalse
-            $newer.EulaAccepted | Should -BeFalse
-        }
+        $script:config.IncludeDrivers=$true;$script:config.ScanOnly=$true
+        $script:updates=@($older,$newer)
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.SelectedCount | Should -Be 2
+        @($r.Items | Where-Object Selected).Count | Should -Be 2
+        $r.Items[0].UpdateId | Should -Not -Be $r.Items[1].UpdateId
+        $older.EulaAccepted | Should -BeFalse
+        Should -Invoke Invoke-OSDStageWindowsUpdateAsync -Times 1 -Exactly
     }
     It 'stops after a driver cannot install quietly without an interactive retry' {
         $driver=New-TestUpdate -Title 'UI capable driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
@@ -284,12 +276,12 @@ Describe 'Conservative Windows Update selection and execution' {
         $driver=New-TestUpdate -Title 'Network driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
         $driver.BrowseOnly=$true;$driver.AutoSelectOnWebSites=$false
         $missing=New-TestUpdate;$missing.BrowseOnly=$null
-        $script:updates=@($driver,$missing);$script:config.IncludeDrivers=$true
+        $script:updates=@($driver,$missing);$script:config.IncludeDrivers=$true;$script:config.ScanOnly=$true
         $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
-        $r.SelectedCount | Should -Be 0
+        $r.SelectedCount | Should -Be 1
         $r.Items[0].BrowseOnly | Should -BeTrue
         $r.Items[0].AutoSelectOnWebSites | Should -BeFalse
-        $r.Items[0].SelectionReason | Should -Be NotAutomatic
+        $r.Items[0].SelectionReason | Should -Be OptedInHardwareDriver
         ($null -eq $r.Items[1].BrowseOnly) | Should -BeTrue
         Should -Invoke Invoke-OSDStageWindowsUpdateAsync -Times 1 -Exactly
     }
@@ -304,12 +296,12 @@ Describe 'Conservative Windows Update selection and execution' {
         $r.Items[0].SelectionReason | Should -Be DriversDisabled
         $script:config.IncludeDrivers=$true;$script:installOrder.Clear()
         $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
-        $r.SelectedCount | Should -Be 2
+        $r.SelectedCount | Should -Be 3
         $r.Items[0].Status | Should -Be Installed
         $r.Items[0].DriverClass | Should -Be Networking
         $r.Items[0].DriverHardwareId | Should -Be 'PCI\VEN_1234'
-        $r.Items[1].Selected | Should -BeFalse
-        @($script:installOrder) | Should -Be @('Beveiligingsupdate','Network driver')
+        $r.Items[1].Selected | Should -BeTrue
+        @($script:installOrder) | Should -Be @('Beveiligingsupdate','Network driver','Dell Firmware')
         $r.RebootRequested | Should -BeFalse
     }
     It 'scan-only records decisions without accepting EULAs or installing' {
@@ -318,6 +310,14 @@ Describe 'Conservative Windows Update selection and execution' {
         $r.Outcome | Should -Be ScanOnly
         $r.Items[0].Selected | Should -BeTrue
         $script:update.EulaAccepted | Should -BeFalse
+        Should -Invoke Invoke-OSDStageWindowsUpdateAsync -Times 1 -Exactly
+    }
+    It 'labels a manual OOBE test separately and keeps its scan read-only' {
+        $script:config.ScanOnly=$true
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config -OobeTest
+        $r.Phase | Should -Be ManualOobeTest
+        $r.RebootRequested | Should -BeFalse
+        Should -Invoke Assert-OSDStageWindowsUpdateContext -Times 1 -Exactly -ParameterFilter { $OobeTest }
         Should -Invoke Invoke-OSDStageWindowsUpdateAsync -Times 1 -Exactly
     }
     It 'handles an empty scan without invoking download or install' {
@@ -424,11 +424,13 @@ Describe 'Conservative Windows Update selection and execution' {
             $stage=Join-Path $target 'Windows/Temp/OSDStage'
             Test-Path (Join-Path $stage 'DeviceManifest.json') | Should -BeFalse
             Add-OSDStageWindowsUpdate -WindowsPath $target | Out-Null
-            Add-OSDStageWindowsUpdate -WindowsPath $target -ScanOnly -IncludeDrivers | Out-Null
+            Add-OSDStageWindowsUpdate -WindowsPath $target -ScanOnly -IncludeDrivers -DriverClass Networking,Sound | Out-Null
             $m=Get-Content (Join-Path $stage 'DeviceManifest.json') -Raw | ConvertFrom-Json
             $m.Packages.Count | Should -Be 1
             $c=Join-Path $stage 'BuiltIn/WindowsUpdate/config.json'
             (Get-Content $c -Raw | ConvertFrom-Json).ScanOnly | Should -BeTrue
+            @((Get-Content $c -Raw | ConvertFrom-Json).DriverClass) | Should -Be @('Networking','Sound')
+            { Add-OSDStageWindowsUpdate -WindowsPath $target -DriverClass Sound } | Should -Throw '*requires*'
             $check=Test-OSDStageDeployment -WindowsPath $target -ThrowOnFailure
             $check.Valid | Should -BeTrue
             $check.NetworkRequired | Should -BeTrue
