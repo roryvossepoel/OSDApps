@@ -57,6 +57,7 @@ function Get-OSDStageWindowsUpdateSelection {
     try {
         if ($Depth -gt 16) { throw 'BundleDepthExceeded' }
         if ($Update.IsInstalled -ne $false -or $Update.IsHidden -ne $false) { throw 'NotApplicable' }
+        if ([int]$Update.Type -eq 2 -and -not $IncludeDrivers) { throw 'DriversDisabled' }
         if ($Depth -eq 0 -and ($Update.BrowseOnly -ne $false -or $Update.AutoSelectOnWebSites -ne $true)) { throw 'NotAutomatic' }
         # RebootBehavior=1 means a restart is required AFTER installation, not
         # that WUA should initiate it. Cumulative updates must remain eligible.
@@ -79,11 +80,12 @@ function Get-OSDStageWindowsUpdateSelection {
             if ($effectiveCategories.Count -eq 0 -or @($effectiveCategories | Where-Object { $_ -notin $safe }).Count -gt 0) { throw 'ClassificationNotAllowed' }
         }
         elseif ([int]$Update.Type -eq 2) {
-            if (-not $IncludeDrivers) { throw 'DriversDisabled' }
             # Exclude Firmware, System, Extension and SoftwareComponent packages,
             # including firmware distributed through extension drivers. Only a
-            # small hardware-driver class allowlist is eligible in this version.
-            if ([string]$Update.DriverClass -notin @('Net','Display','Media','HIDClass','Bluetooth','Printer','Image')) { throw 'DriverClassNotAllowed' }
+            # small WUA DriverClass allowlist is eligible in this version. These
+            # are WUA categories, not INF setup classes such as Net/Display/Media.
+            # OtherHardware is ambiguous and must not be mapped from the title.
+            if ([string]$Update.DriverClass -notin @('Networking','Sound','Video')) { throw 'DriverClassNotAllowed' }
             if ([string]$Update.DriverHardwareID -notmatch '^(PCI|USB|HID|BTH|BTHENUM|SWD\\PRINTENUM)\\') { throw 'DriverHardwareNotAllowed' }
             if ($categories.Count -eq 0 -or @($categories | Where-Object { $_ -ne 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0' }).Count -gt 0) { throw 'DriverClassificationNotAllowed' }
         }
@@ -232,6 +234,7 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
             $item=[pscustomobject]@{
                 UpdateId=[string]$update.Identity.UpdateID;Revision=$update.Identity.RevisionNumber
                 Title=[string]$update.Title;Type=[int]$update.Type
+                BrowseOnly=$update.BrowseOnly;AutoSelectOnWebSites=$update.AutoSelectOnWebSites
                 DriverClass=$(if ([int]$update.Type -eq 2) { [string]$update.DriverClass } else { $null })
                 DriverHardwareId=$(if ([int]$update.Type -eq 2) { [string]$update.DriverHardwareID } else { $null })
                 KBArticleIDs=@($update.KBArticleIDs);BundleDecisions=$decision.BundleDecisions

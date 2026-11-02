@@ -41,12 +41,12 @@ $selection = .\tools\Test-OSDStageWindowsUpdateSelection.ps1
 $selection | Format-List Phase, FoundCount, DefaultSelectedCount,
     WithDriversSelectedCount, DriverSelectedCount, ResultPath
 $selection.Items | Format-List Title, DefaultSelected, WithDriversSelected,
-    DefaultReason, WithDriversReason, DriverClass
+    DefaultReason, WithDriversReason, DriverClass, BrowseOnly, AutoSelectOnWebSites
 ```
 
 It performs one scan and compares default selection with driver opt-in. It does
 not download update payloads, accept EULAs, install, change policy or reboot.
-The separate JSON report includes driver hardware/class and bundle metadata;
+The separate JSON report includes the raw `BrowseOnly` and `AutoSelectOnWebSites` flags, driver hardware/class and bundle metadata;
 it does not overwrite `WindowsUpdate-Result.json`. Running it during OOBE is
 selection evidence only, not a SetupComplete installation acceptance test.
 
@@ -60,8 +60,8 @@ selection evidence only, not a SetupComplete installation acceptance test.
 | Missing classification on a root offer, conflicting or unrecognized classifications | Skipped with a reason; never inferred safe from a title |
 | Software bundle member with a readable category collection but no classification | May use its checked software parent's allowed quality classification; all other member checks still apply |
 | Drivers | Off by default |
-| Opted-in automatic hardware drivers | Restricted to Net, Display, Media, HIDClass, Bluetooth, Printer and Image classes with recognized PCI/USB/HID/Bluetooth/print hardware identities |
-| Firmware, BIOS, System, Extension, SoftwareComponent and unknown driver classes | Excluded |
+| Opted-in automatic hardware drivers | Restricted to WUA Networking, Sound and Video classes with recognized PCI/USB/HID/Bluetooth/print hardware identities |
+| Firmware, BIOS, System, Extension, SoftwareComponent, OtherHardware and unknown driver classes | Excluded |
 
 Classification GUIDs are language-independent. `ConservativeQualityV2` requires
 each root offer to have its own allowed classification. A software member with no
@@ -143,8 +143,15 @@ KB5007651 and KB2267602 were Definition Updates but were rejected at bundled
 software members. A separate read-only WUA inspection confirmed empty category
 collections on the Security platform binary and four Defender binaries.
 KB890830 was excluded as Update Rollups. The V2 classification-context correction
-has regression coverage for this shape; corrected real-world selection and
-installation still need acceptance. No full servicing or Autopilot pass is claimed.
+has regression coverage for this shape. A read-only OOBE check of revision
+`7ca3e27` then selected both software updates and continued excluding KB890830.
+All 31 offered drivers were rejected as `NotAutomatic`; this does not establish
+which of the two automatic-selection flags caused rejection. The check also
+exposed WUA classes Networking/Sound/Video instead of the INF class names in the
+initial allowlist. That allowlist is corrected, with both raw flags now recorded.
+OtherHardware remains excluded because it is ambiguous. `-IncludeDrivers` does
+not opt into manual/optional offers. Physical installation, driver selection and
+Autopilot handoff still need acceptance.
 
 - Run scan-only in the actual SetupComplete phase and inspect real classifications,
   bundle metadata and skip reasons, including offered release upgrades.

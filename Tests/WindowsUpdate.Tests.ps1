@@ -10,7 +10,7 @@ Describe 'Conservative Windows Update selection and execution' {
                 Categories=@([pscustomobject]@{Type='UpdateClassification';CategoryID=$Category;Name='Localized classification'})
                 IsInstalled=$false;IsHidden=$false;BrowseOnly=$false;AutoSelectOnWebSites=$true
                 InstallationBehavior=[pscustomobject]@{CanRequestUserInput=$false;RebootBehavior=2}
-                BundledUpdates=@();EulaAccepted=$false;IsDownloaded=$true;DriverClass='Net';DriverHardwareID='PCI\VEN_1234'
+                BundledUpdates=@();EulaAccepted=$false;IsDownloaded=$true;DriverClass='Networking';DriverHardwareID='PCI\VEN_1234'
             }
             $u | Add-Member ScriptMethod AcceptEula { $this.EulaAccepted=$true }
             $u
@@ -171,12 +171,40 @@ Describe 'Conservative Windows Update selection and execution' {
         $u=New-TestUpdate -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
         (Get-OSDStageWindowsUpdateSelection $u).Reason | Should -Be DriversDisabled
         (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeTrue
-        foreach ($class in @('Firmware','System','Extension','SoftwareComponent','Unknown')) {
+        foreach ($class in @('Firmware','System','Extension','SoftwareComponent','OtherHardware','Unknown','Net','Display','Media')) {
             $u.DriverClass=$class
             (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
         }
-        $u.DriverClass='Net';$u.DriverHardwareID='UEFI\RES_1234'
+        $u.DriverClass='Networking';$u.DriverHardwareID='UEFI\RES_1234'
         (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
+    }
+    It 'accepts observed WUA hardware classes only when the offer is automatic and opted in' {
+        foreach ($class in @('Networking','Sound','Video')) {
+            $u=New-TestUpdate -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+            $u.DriverClass=$class
+            (Get-OSDStageWindowsUpdateSelection $u).Reason | Should -Be DriversDisabled
+            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be AutomaticHardwareDriver
+            $u.BrowseOnly=$true
+            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be NotAutomatic
+            (Get-OSDStageWindowsUpdateSelection $u).Reason | Should -Be DriversDisabled
+            $u.BrowseOnly=$false;$u.AutoSelectOnWebSites=$false
+            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be NotAutomatic
+            $u.AutoSelectOnWebSites=$null
+            (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
+        }
+    }
+    It 'records raw automatic-selection flags without turning missing metadata into false' {
+        $driver=New-TestUpdate -Title 'Network driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $driver.BrowseOnly=$true;$driver.AutoSelectOnWebSites=$false
+        $missing=New-TestUpdate;$missing.BrowseOnly=$null
+        $script:updates=@($driver,$missing);$script:config.IncludeDrivers=$true
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.SelectedCount | Should -Be 0
+        $r.Items[0].BrowseOnly | Should -BeTrue
+        $r.Items[0].AutoSelectOnWebSites | Should -BeFalse
+        $r.Items[0].SelectionReason | Should -Be NotAutomatic
+        ($null -eq $r.Items[1].BrowseOnly) | Should -BeTrue
+        Should -Invoke Invoke-OSDStageWindowsUpdateAsync -Times 1 -Exactly
     }
     It 'keeps hardware drivers optional in the runtime and records their metadata' {
         $driver=New-TestUpdate -Title 'Network driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
@@ -190,7 +218,7 @@ Describe 'Conservative Windows Update selection and execution' {
         $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
         $r.SelectedCount | Should -Be 2
         $r.Items[0].Status | Should -Be Installed
-        $r.Items[0].DriverClass | Should -Be Net
+        $r.Items[0].DriverClass | Should -Be Networking
         $r.Items[0].DriverHardwareId | Should -Be 'PCI\VEN_1234'
         $r.Items[1].Selected | Should -BeFalse
         @($script:installOrder) | Should -Be @('Beveiligingsupdate','Network driver')

@@ -25,6 +25,7 @@ $items=@(foreach ($update in $scan.Result.Updates) {
     $withDrivers=Get-OSDStageWindowsUpdateSelection -Update $update -IncludeDrivers $true
     [pscustomobject]@{
         UpdateId=[string]$update.Identity.UpdateID;Title=[string]$update.Title;Type=[int]$update.Type
+        BrowseOnly=$update.BrowseOnly;AutoSelectOnWebSites=$update.AutoSelectOnWebSites
         DefaultSelected=$standard.Selected;WithDriversSelected=$withDrivers.Selected
         DefaultReason=$standard.Reason;WithDriversReason=$withDrivers.Reason
         DriverClass=$(if ([int]$update.Type -eq 2) { [string]$update.DriverClass } else { $null })
