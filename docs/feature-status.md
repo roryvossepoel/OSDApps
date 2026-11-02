@@ -2,7 +2,7 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
 
-**Status baseline: 2 November 2026.** Gallery RC1 and GitHub Pages are published. Merged development changes remain separate from that release; see [release availability](release-status.md).
+**Status baseline: 2 November 2026.** Gallery RC2 and GitHub Pages are published. Experimental Windows Update remains separate from that release; see [release availability](release-status.md).
 
 The combined, repository-only and renamed empty-cache deployments have recorded acceptance within their stated limits. Identify development test modules by commit. No migration or old-command aliases are planned.
 
@@ -111,7 +111,7 @@ Files and directories passed physical testing after the RC1 acceptance run. `Add
 create/copy/remove operations with separate Force and Recurse options. See the
 [contract and test example](file-system.md). All nine SetupComplete operations
 succeeded, and all five independent content/removal checks passed. The published
-RC1 module is unchanged; these merged commands await a new release.
+RC1 module is unchanged; these commands are included in RC2.
 
 ## Feature-scope closeout — 31 October 2026
 

@@ -6,7 +6,7 @@ Jump to [release differences](#does-main-match-the-gallery-module), [USB prepara
 
 ## Does main match the Gallery module?
 
-Not always. Gallery RC1 is published, while `main` also contains merged development changes. File operations, compact output and automatic first-boot acquisition for Company Portal/CMTrace Open were added after RC1. Check [release availability](release-status.md) and the loaded module path before testing examples.
+Check the version first. Gallery RC2 includes file operations, compact output and automatic first-boot acquisition for Company Portal/CMTrace Open. These are absent from RC1. Newer development changes may still be separate from Gallery. Check [release availability](release-status.md) and the loaded module path before testing examples.
 
 ## What can OSDStage stage?
 
@@ -43,7 +43,7 @@ for updated content during full-Windows PreInstall. Fully offline deployment
 requires matching verified content in advance. Loading the module and preparing
 bootable OSDCloud media are separate from caching payloads.
 
-**Gallery RC1:** Company Portal and CMTrace Open still require pre-caching. Their automatic first-boot acquisition is a merged development change; see [release availability](release-status.md).
+**Gallery RC1:** Company Portal and CMTrace Open still require pre-caching. Their automatic first-boot acquisition is included in RC2; see [release availability](release-status.md).
 
 ## Which commands belong on the preparation machine and which belong in WinPE?
 

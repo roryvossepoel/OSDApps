@@ -2,10 +2,10 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
 
-The next module build uses the Deploy-OSDCloud console style: a local timestamp,
+From RC2, OSDStage uses the Deploy-OSDCloud console style: a local timestamp,
 `[INFO]`, `[WARN]` or `[ERROR]`, followed by a short message. Results appear on
-consecutive lines, with no extra blank line per item. This is unreleased; the
-published `1.0.0-rc1` still uses its earlier display.
+consecutive lines, with no extra blank line per item. This is included in `1.0.0-rc2`;
+`1.0.0-rc1` uses its earlier display.
 
 ```text
 [2026-11-01T17:15:26] [INFO] Staged FileSystem: 9 operations queued on C:\

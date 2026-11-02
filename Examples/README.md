@@ -1,6 +1,6 @@
 # Examples
 
-> Install the published preview with `-AllowPrerelease`. Check [release availability](../docs/release-status.md) before using features added after RC1.
+> Install the published preview with `-AllowPrerelease`. Check [release availability](../docs/release-status.md) when selecting a module version.
 
 [Project](../README.md) · [Getting started](../docs/getting-started.md) · [Documentation](../docs/README.md)
 

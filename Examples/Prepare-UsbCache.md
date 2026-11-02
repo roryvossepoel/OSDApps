@@ -1,6 +1,6 @@
 # Prepare a USB cache
 
-> Install the published preview with `-AllowPrerelease`. Check [release availability](../docs/release-status.md) before using features added after RC1.
+> Install the published preview with `-AllowPrerelease`. Check [release availability](../docs/release-status.md) when selecting a module version.
 
 [Examples](README.md) · [Next: online WinPE](WinPE-Online.md) · [Next: offline WinPE](WinPE-Offline.md)
 

@@ -123,8 +123,8 @@ The freshness mechanism is product-specific:
 | Visual Studio Code | Microsoft stable system-installer metadata and SHA-256 | Reuse matching content after hash and publisher validation. |
 | Visual C++ v14 | Microsoft evergreen endpoint HTTP metadata | Verify a Microsoft-signed v14 installer before reuse or replacement. |
 | .NET runtimes | Microsoft release metadata, channel support and SHA-512 | Select a supported stable patch within the requested channel and runtime type. |
-| Company Portal (post-RC1) | Official kit HTTP metadata and cached file hashes | Reuse or download a validated kit, then provision it in Windows. |
-| CMTrace Open (post-RC1) | Upstream stable release and asset SHA-256 | Reuse matching validated MSI or acquire a new generation. |
+| Company Portal (RC2+) | Official kit HTTP metadata and cached file hashes | Reuse or download a validated kit, then provision it in Windows. |
+| CMTrace Open (RC2+) | Upstream stable release and asset SHA-256 | Reuse matching validated MSI or acquire a new generation. |
 
 ### HTTP metadata comparison
 

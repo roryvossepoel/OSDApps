@@ -16,7 +16,7 @@ Test-OSDStageDeployment -ThrowOnFailure
 
 Keep the target online for first-boot acquisition. An attached volume labeled `OSDCloud` is detected and used as an optional cache. You do not need a drive-letter detection script or a Sync call for a normal online deployment.
 
-**Gallery RC1 exception:** automatic first-boot acquisition for Company Portal and CMTrace Open is a post-RC1 change. With RC1, prepare those two caches first. See [release availability](release-status.md).
+**RC2:** Company Portal and CMTrace Open use the same automatic online acquisition flow. RC1 users must upgrade or prepare those two caches first; see [release availability](release-status.md).
 
 ## Choose an app
 

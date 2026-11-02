@@ -2,7 +2,7 @@
 
 Choose the task you want to complete. Start with the online WinPE workflow; cache preparation is optional unless the deployment must work offline. The Windows Viewer inspects your deployment without changing it.
 
-**Using Gallery RC1?** Check [release availability](release-status.md): the documentation on `main` also covers merged development changes.
+**Published preview: RC2.** Check [release availability](release-status.md) when upgrading from RC1 or testing newer development changes.
 
 ## Start here
 
@@ -24,14 +24,14 @@ Choose the task you want to complete. Start with the online WinPE workflow; cach
 
 | Topic | Contents |
 | --- | --- |
-| [Console output](console-output.md) (unreleased) | Compact summaries, full result objects and diagnostic details |
+| [Console output](console-output.md) (RC2) | Compact summaries, full result objects and diagnostic details |
 | [Built-in apps](built-in-apps.md) | Complete app chooser with separate configuration guides |
 | [Acquisition and validation](built-in-acquisition.md) | Vendor sources, cache freshness, fallback and signature scope |
 | [Initial default apps](default-associations.md) | File/protocol associations from parameters or XML, one-shot DISM import and physical acceptance |
 | [Repository packages](repository.md) | Catalog/alias structure, package authoring, cache health, transactional reconciliation and SHA-256 integrity |
 | [Viewers](viewer.md) | Windows deployment inspector versus web catalog browser; read-only boundaries |
 | [Registry](registry-staging.md), [variables](environment-variables.md), [services](services.md) | Explicit machine settings applied once during SetupComplete |
-| [Files and directories](file-system.md) (unreleased) | Create directories, write or copy files, and explicitly remove selected paths |
+| [Files and directories](file-system.md) (RC2) | Create directories, write or copy files, and explicitly remove selected paths |
 | [Certificates](certificate-staging.md), [drivers](driver-packages.md), [fonts](repository.md) | Typed repository payloads and machine-wide installation |
 | [Wi-Fi](wifi-staging.md) | WLAN XML or parameters, profile import and credential cleanup |
 | [Start/taskbar pins](desktop-settings.md) | Explicit pin lists and documented limitations |

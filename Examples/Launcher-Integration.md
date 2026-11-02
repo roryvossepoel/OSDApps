@@ -1,6 +1,6 @@
 # Integrate with a WinPE launcher
 
-> Install the published preview with `-AllowPrerelease`. Check [release availability](../docs/release-status.md) before using features added after RC1.
+> Install the published preview with `-AllowPrerelease`. Check [release availability](../docs/release-status.md) when selecting a module version.
 
 [Examples](README.md) · [Online staging](WinPE-Online.md) · [Results](../docs/getting-started.md#5-check-the-outcome)
 

@@ -8,7 +8,7 @@ Run the Add commands in WinPE after OSDCloud. OSDStage prepares the queue; Setup
 
 Run OSDStage after OSDCloud has applied the Windows image and before the first Windows boot. OSDStage does not replace Windows image deployment.
 
-OSDStage 1.0.0-rc1 is published. This guide also describes merged development changes; check [release availability](release-status.md) for the differences. Preview installation requires PowerShellGet 1.6 or later and `-AllowPrerelease`.
+OSDStage 1.0.0-rc2 is published. Check [release availability](release-status.md) when upgrading from RC1 or testing newer development changes. Preview installation requires PowerShellGet 1.6 or later and `-AllowPrerelease`.
 
 The examples target x64. Individual built-ins have different architecture options; consult [Built-in apps](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
 
@@ -33,7 +33,7 @@ For an online deployment, vendor/repository access must be available when acquis
 
 ## 1. Preparation machine — install or save the module
 
-**Environment: full Windows.** Saving the module is optional for online deployment: the WinPE example below loads it directly from Gallery. The published RC1 requires pre-caching for Company Portal and CMTrace Open; merged development builds also support automatic online acquisition for those apps. Preparation can write module files and USB cache content. It must not stage apps against the preparation machine's Windows installation.
+**Environment: full Windows.** Saving the module is optional for online deployment: the WinPE example below loads it directly from Gallery. RC2 supports automatic online acquisition for Company Portal and CMTrace Open; older RC1 installations require pre-caching for those two apps. Preparation can write module files and USB cache content. It must not stage apps against the preparation machine's Windows installation.
 
 ```powershell
 Install-Module OSDStage -Repository PSGallery -AllowPrerelease -Force -ErrorAction Stop
@@ -80,7 +80,7 @@ The defaults already use cache label `OSDCloud`, cleanup mode `OnSuccess` and au
 
 With an OSDCloud-labeled USB flash drive connected, matching cache content is staged as fallback and PreInstall can reuse or refresh it for built-ins that support first-boot acquisition. Leave the USB flash drive connected until OOBE appears. Without a USB flash drive, PreInstall downloads supported built-in content to local staging. Keep the PC online in either case. To test without cache, use only built-ins that support first-boot acquisition and disconnect the USB flash drive before staging on a fresh deployment; removing it after staging may leave cached fallback content on the target.
 
-**Company Portal and CMTrace Open:** in merged development builds, both follow the same automatic online PreInstall acquisition and cache-refresh flow. Gallery RC1 requires their cache to be prepared on full Windows first. For a fully offline deployment, every selected app needs verified content and `Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure`. See [release availability](release-status.md).
+**Company Portal and CMTrace Open:** from RC2, both follow the same automatic online PreInstall acquisition and cache-refresh flow. Gallery RC1 requires their cache to be prepared on full Windows first. For a fully offline deployment, every selected app needs verified content and `Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure`. See [release availability](release-status.md).
 
 If you need different settings, `Set-OSDStageConfiguration` applies to the **current PowerShell session**. Set overrides before adding apps.
 
