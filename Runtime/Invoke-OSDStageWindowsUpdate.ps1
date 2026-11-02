@@ -67,10 +67,16 @@ function Get-OSDStageWindowsUpdateSelection {
         }
         # RebootBehavior=1 means a restart is required AFTER installation, not
         # that WUA should initiate it. Cumulative updates must remain eligible.
-        if ($null -eq $Update.InstallationBehavior -or
-            $Update.InstallationBehavior.CanRequestUserInput -ne $false -or
-            $null -eq $Update.InstallationBehavior.RebootBehavior -or
-            [int]$Update.InstallationBehavior.RebootBehavior -notin @(0,1,2)) { throw 'InteractiveOrUnknownRebootBehavior' }
+        $behavior=$Update.InstallationBehavior
+        if ($null -eq $behavior) { throw 'InstallationBehaviorMissing' }
+        if ($behavior.CanRequestUserInput -isnot [bool]) { throw 'InteractionMetadataUnknown' }
+        if ($null -eq $behavior.RebootBehavior -or
+            [int]$behavior.RebootBehavior -notin @(0,1,2)) { throw 'RebootBehaviorUnknown' }
+        # Explicitly opted-in drivers may advertise UI capability. Installation
+        # still MUST use ForceQuiet, with no interactive fallback. WUA rejects
+        # updates that cannot honor it; the runtime records failure and stops.
+        if ($behavior.CanRequestUserInput -and
+            -not ([int]$Update.Type -eq 2 -and $IncludeDrivers)) { throw 'InteractiveSoftwareUpdate' }
         if ([string]$Update.Title -match '(?i)preview|voorvertoning|vorschau|aper\u00e7u|enablement|feature\s+update|functie.update|firmware|\bBIOS\b|\bUEFI\b') { throw 'ExcludedTitle' }
         if ($null -eq $Update.Categories) { throw 'ClassificationMetadataMissing' }
         $categories=@($Update.Categories | Where-Object Type -eq 'UpdateClassification' | ForEach-Object { [string]$_.CategoryID })
@@ -92,7 +98,8 @@ function Get-OSDStageWindowsUpdateSelection {
             # are WUA categories, not INF setup classes such as Net/Display/Media.
             # OtherHardware is ambiguous and must not be mapped from the title.
             if ([string]$Update.DriverClass -notin @('Networking','Sound','Video')) { throw 'DriverClassNotAllowed' }
-            if ([string]$Update.DriverHardwareID -notmatch '^(PCI|USB|HID|BTH|BTHENUM|SWD\\PRINTENUM)\\') { throw 'DriverHardwareNotAllowed' }
+            if ([string]$Update.DriverHardwareID -notmatch '^(PCI|USB|HID|BTH|BTHENUM|SWD\\PRINTENUM)\\' -and
+                -not ($Update.DriverClass -eq 'Sound' -and [string]$Update.DriverHardwareID -match '^HDAUDIO\\')) { throw 'DriverHardwareNotAllowed' }
             if ($categories.Count -eq 0 -or @($categories | Where-Object { $_ -ne 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0' }).Count -gt 0) { throw 'DriverClassificationNotAllowed' }
         }
         else { throw 'UpdateTypeNotAllowed' }
@@ -121,6 +128,33 @@ function Get-OSDStageWindowsUpdateSelection {
         EffectiveClassificationIds=@($effectiveCategories);ClassificationSource=$classificationSource
         BundleDecisions=@($bundleDecisions.ToArray())
     }
+}
+
+function Get-OSDStageWindowsUpdateSelections {
+    param([AllowEmptyCollection()][object[]]$Updates,[bool]$IncludeDrivers=$false)
+    $entries=@(foreach ($update in $Updates) {
+        [pscustomobject]@{Update=$update;Decision=(Get-OSDStageWindowsUpdateSelection $update $IncludeDrivers)}
+    })
+    # WUA can offer multiple versions for the same hardware ID. Do not rank
+    # them by title/version or install both in discovery order. Leave ambiguous
+    # groups to normal device servicing until a driver-ranking policy is tested.
+    $groups=@{}
+    foreach ($entry in $entries) {
+        if ($entry.Decision.Selected -and [int]$entry.Update.Type -eq 2) {
+            $key=([string]$entry.Update.DriverHardwareID).Trim()
+            if (-not $groups.ContainsKey($key)) { $groups[$key]=@() }
+            $groups[$key]+=@($entry)
+        }
+    }
+    foreach ($group in $groups.Values) {
+        if ($group.Count -gt 1) {
+            foreach ($entry in $group) {
+                $entry.Decision.Selected=$false
+                $entry.Decision.Reason='MultipleDriverOffersForHardware'
+            }
+        }
+    }
+    $entries
 }
 
 function New-OSDStageWindowsUpdateComObject {
@@ -211,7 +245,7 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
     $report=[ordered]@{
         SchemaVersion=2;DeploymentId=[string]$Configuration.DeploymentId
         Phase='LastWithinSetupComplete';Status='Running';Outcome='Running';ScanOnly=$Configuration.ScanOnly
-        IncludeDrivers=$Configuration.IncludeDrivers;Source='PolicyDefault';SelectionPolicy='ConservativeQualityV3'
+        IncludeDrivers=$Configuration.IncludeDrivers;Source='PolicyDefault';SelectionPolicy='ConservativeQualityV4'
         StartedAtUtc=[DateTime]::UtcNow.ToString('o');CompletedAtUtc=$null;DurationSeconds=0
         LogPath=$script:OSDStageWindowsUpdateLogPath
         ReleaseBefore=$null;ReleaseAfter=$null;ReleaseUnchanged=$null
@@ -235,12 +269,14 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
         $report.FoundCount=$candidates.Count
         $selected=[Collections.Generic.List[object]]::new()
         $items=[Collections.Generic.List[object]]::new()
-        foreach ($update in $candidates) {
-            $decision=Get-OSDStageWindowsUpdateSelection $update $Configuration.IncludeDrivers
+        foreach ($candidate in @(Get-OSDStageWindowsUpdateSelections -Updates $candidates -IncludeDrivers $Configuration.IncludeDrivers)) {
+            $update=$candidate.Update;$decision=$candidate.Decision
             $item=[pscustomobject]@{
                 UpdateId=[string]$update.Identity.UpdateID;Revision=$update.Identity.RevisionNumber
                 Title=[string]$update.Title;Type=[int]$update.Type
                 BrowseOnly=$update.BrowseOnly;AutoSelectOnWebSites=$update.AutoSelectOnWebSites
+                CanRequestUserInput=$update.InstallationBehavior.CanRequestUserInput
+                RebootBehavior=$update.InstallationBehavior.RebootBehavior
                 DriverClass=$(if ([int]$update.Type -eq 2) { [string]$update.DriverClass } else { $null })
                 DriverHardwareId=$(if ([int]$update.Type -eq 2) { [string]$update.DriverHardwareID } else { $null })
                 KBArticleIDs=@($update.KBArticleIDs);BundleDecisions=$decision.BundleDecisions

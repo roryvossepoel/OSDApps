@@ -156,7 +156,7 @@ Describe 'Conservative Windows Update selection and execution' {
         foreach ($u in @($platform.BundledUpdates)+@($defender.BundledUpdates)) { $u.Categories=@() }
         $script:updates=@($platform,$defender,(New-TestUpdate -Title 'KB890830' -Category '28bc880e-0592-4cbf-8f95-c79b17911d5f'))
         $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
-        $r.SelectionPolicy | Should -Be ConservativeQualityV3
+        $r.SelectionPolicy | Should -Be ConservativeQualityV4
         $r.SelectedCount | Should -Be 2
         $r.InstalledCount | Should -Be 2
         $r.Items[2].Selected | Should -BeFalse
@@ -206,6 +206,79 @@ Describe 'Conservative Windows Update selection and execution' {
         (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be DriverHardwareNotAllowed
         $u.DriverHardwareID='PCI\VEN_1234';$u.BrowseOnly=$null
         (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
+    }
+    It 'allows UI-capable opted-in drivers only through the quiet runtime' {
+        $driver=New-TestUpdate -Title 'Intel network' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $driver.InstallationBehavior.CanRequestUserInput=$true
+        $driver.AutoSelectOnWebSites=$false
+        (Get-OSDStageWindowsUpdateSelection $driver).Reason | Should -Be DriversDisabled
+        (Get-OSDStageWindowsUpdateSelection $driver $true).Selected | Should -BeTrue
+        $script:config.IncludeDrivers=$true;$script:updates=@($driver)
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.InstalledCount | Should -Be 1
+        $r.Items[0].CanRequestUserInput | Should -BeTrue
+        $r.Items[0].RebootBehavior | Should -Be 2
+        $script:installer.ForceQuiet | Should -BeTrue
+        $script:installer.AllowSourcePrompts | Should -BeFalse
+        $r.RebootRequested | Should -BeFalse
+        $driver.InstallationBehavior.CanRequestUserInput=$null
+        (Get-OSDStageWindowsUpdateSelection $driver $true).Reason | Should -Be InteractionMetadataUnknown
+        $driver.InstallationBehavior.CanRequestUserInput=$true;$driver.InstallationBehavior.RebootBehavior=99
+        (Get-OSDStageWindowsUpdateSelection $driver $true).Reason | Should -Be RebootBehaviorUnknown
+        $driver.InstallationBehavior=$null
+        (Get-OSDStageWindowsUpdateSelection $driver $true).Reason | Should -Be InstallationBehaviorMissing
+    }
+    It 'allows HDAUDIO only for the Sound class and retains driver exclusions' {
+        $driver=New-TestUpdate -Title 'Realtek MEDIA' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $driver.DriverHardwareID='hdaudio\func_01&ven_10ec&dev_0236&subsys_10280d1a'
+        $driver.InstallationBehavior.CanRequestUserInput=$true
+        $driver.DriverClass='Sound'
+        (Get-OSDStageWindowsUpdateSelection $driver $true).Selected | Should -BeTrue
+        $driver.DriverClass='Networking'
+        (Get-OSDStageWindowsUpdateSelection $driver $true).Reason | Should -Be DriverHardwareNotAllowed
+        foreach ($class in @('Firmware','System','Extension','SoftwareComponent','OtherHardware')) {
+            $driver.DriverClass=$class
+            (Get-OSDStageWindowsUpdateSelection $driver $true).Reason | Should -Be DriverClassNotAllowed
+        }
+    }
+    It 'does not install competing offers for the same hardware ID in either order' {
+        $older=New-TestUpdate -Title 'Intel 24.20.0.4' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $newer=New-TestUpdate -Title 'Intel 24.70.0.3' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $older.DriverHardwareID='pci\ven_8086&dev_7af0&subsys_40908086'
+        $newer.DriverHardwareID=$older.DriverHardwareID.ToUpperInvariant()
+        $distinct=New-TestUpdate -Title 'Other network' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $script:config.IncludeDrivers=$true
+        foreach ($order in @(@($older,$newer,$distinct),@($distinct,$newer,$older))) {
+            $script:updates=$order;$script:installOrder.Clear()
+            $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+            $r.SelectedCount | Should -Be 1
+            $r.InstalledCount | Should -Be 1
+            @($r.Items | Where-Object SelectionReason -eq MultipleDriverOffersForHardware).Count | Should -Be 2
+            @($script:installOrder) | Should -Be @('Other network')
+            $older.EulaAccepted | Should -BeFalse
+            $newer.EulaAccepted | Should -BeFalse
+        }
+    }
+    It 'stops after a driver cannot install quietly without an interactive retry' {
+        $driver=New-TestUpdate -Title 'UI capable driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $driver.InstallationBehavior.CanRequestUserInput=$true
+        $other=New-TestUpdate -Title 'Next driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $other.DriverHardwareID='USB\VID_1234'
+        $script:updates=@($driver,$other);$script:config.IncludeDrivers=$true
+        Mock Invoke-OSDStageWindowsUpdateAsync {
+            $r=New-TestWuaResult -Code 4
+            $r.HResult=-2145116156 # WU_E_UH_DOESNOTSUPPORTACTION (0x80242004)
+            $r | Add-Member ScriptMethod GetUpdateResult { param($index) [pscustomobject]@{ResultCode=4;HResult=$this.HResult;RebootRequired=$false} } -Force
+            [pscustomobject]@{Result=$r;TimedOut=$false;DurationSeconds=1}
+        } -ParameterFilter {$Phase -eq 'Install'}
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.Status | Should -Be Failed
+        $r.InstalledCount | Should -Be 0
+        $r.Items[0].InstallHResult | Should -Be -2145116156
+        $script:installer.ForceQuiet | Should -BeTrue
+        $script:installer.AllowSourcePrompts | Should -BeFalse
+        $r.RebootRequested | Should -BeFalse
+        Should -Invoke Invoke-OSDStageWindowsUpdateAsync -Times 1 -Exactly -ParameterFilter {$Phase -eq 'Install'}
     }
     It 'records raw automatic-selection flags without turning missing metadata into false' {
         $driver=New-TestUpdate -Title 'Network driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'

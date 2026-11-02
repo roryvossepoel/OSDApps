@@ -256,7 +256,7 @@
             Environment = 'Stage in WinPE after OSDCloud. Runs last under native 64-bit SYSTEM during SetupComplete on Windows 11 25H2+; requires network access to the configured update source.'
             Output = 'OSDStage.StagedApp. Runtime writes WindowsUpdate-Result.json and a progress log; deferred work and reboot requirements remain explicit.'
             Parameters = @{
-                IncludeDrivers = 'Opt in to non-browse-only hardware drivers in a restricted class/hardware allowlist, even when AutoSelectOnWebSites is false. Firmware, System, Extension, SoftwareComponent and OtherHardware classes are excluded. Does not mean Intune-approved drivers.'
+                IncludeDrivers = 'Opt in to non-browse-only hardware drivers in a restricted class/hardware allowlist, even when AutoSelectOnWebSites is false. Firmware, System, Extension, SoftwareComponent and OtherHardware classes are excluded. UI-capable drivers are attempted only with ForceQuiet; no interactive fallback. Competing offers for the same hardware ID are skipped. Does not mean Intune-approved drivers.'
                 ScanOnly = 'Record candidates and selection reasons without accepting EULAs, downloading or installing updates.'
                 TimeoutMinutes = 'Cancellation threshold per scan, download batch and individual installation, from 5 to 180 minutes. Default 30. WUA cancellation is cooperative; OSDStage waits for safe completion and does not forcibly terminate servicing.'
             }

@@ -56,11 +56,11 @@ selection evidence only, not a SetupComplete installation acceptance test.
 | --- | --- |
 | Automatic Security Updates, Critical Updates, Definition Updates | Eligible when required metadata and every bundle member pass validation |
 | Upgrades, Feature Packs, Service Packs, general Updates and Update Rollups | Excluded; broad classifications can include enablement packages or non-security previews |
-| Optional/preview/interactive updates, unknown reboot metadata | Excluded |
+| Browse-only/preview offers, interactive software updates, unknown interaction or reboot metadata | Excluded |
 | Missing classification on a root offer, conflicting or unrecognized classifications | Skipped with a reason; never inferred safe from a title |
 | Software bundle member with a readable category collection but no classification | May use its checked software parent's allowed quality classification; all other member checks still apply |
 | Drivers | Off by default |
-| Opted-in hardware drivers | Restricted to WUA Networking, Sound and Video classes with recognized PCI/USB/HID/Bluetooth/print hardware identities |
+| Opted-in hardware drivers | Restricted to WUA Networking, Sound and Video classes with recognized PCI/USB/HID/Bluetooth/print hardware identities; HDAUDIO is also allowed for Sound |
 | Firmware, BIOS, System, Extension, SoftwareComponent, OtherHardware and unknown driver classes | Excluded |
 
 For root driver offers, `-IncludeDrivers` permits `AutoSelectOnWebSites=False`
@@ -69,7 +69,21 @@ selection decision; it does not make the offer automatically selected by Windows
 Browse-only offers and missing selection flags remain excluded. Software still
 requires `AutoSelectOnWebSites=True`, even with drivers enabled.
 
-Classification GUIDs are language-independent. `ConservativeQualityV3` requires
+With explicit driver opt-in, `CanRequestUserInput=True` does not by itself
+exclude a driver. OSDStage always sets `ForceQuiet=True` and
+`AllowSourcePrompts=False`, with no interactive fallback. If an update cannot
+honor quiet installation, WUA can return `WU_E_UH_DOESNOTSUPPORTACTION`; the run
+records the HRESULT and stops. Software still rejects UI-capable installers.
+See [Microsoft's ForceQuiet contract](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdateinstaller2-put_forcequiet).
+
+Multiple otherwise eligible root driver offers with the same hardware ID are
+all skipped as `MultipleDriverOffersForHardware` (case-insensitive). OSDStage
+does not guess driver ranking from titles or install competing versions in scan
+order. Distinct hardware IDs are not proof of distinct physical devices; this
+is a conservative duplicate-offer guard, not a full PnP ranking implementation.
+The report records `CanRequestUserInput` and `RebootBehavior` for diagnosis.
+
+Classification GUIDs are language-independent. `ConservativeQualityV4` requires
 each root offer to have its own allowed classification. A software member with no
 classification can use its checked software parent's effective classification,
 including through nested software bundles. This is OSDStage's selection policy,
@@ -188,3 +202,13 @@ driver installation, or a claim that the device is fully patched.
 - [BeginInstall](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdateinstaller-begininstall)
 - [Restart behavior metadata](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/ne-wuapi-installationrebootbehavior)
 - [SetupComplete constraints](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/add-a-custom-script-to-windows-setup)
+
+### V4 driver follow-up (2 November 2026)
+
+The V3 physical run installed two software updates in 35.1 seconds and no
+drivers. All five Networking/Sound/Video candidates exposed a non-null behavior
+object, `CanRequestUserInput=True` and `RebootBehavior=2`. V4 permits these
+opted-in drivers only through the existing quiet installer, adds HDAUDIO for
+Sound, records both behavior fields, and skips competing offers for an identical
+hardware ID. The two Intel 24.20.0.4/24.70.0.3 offers shared one hardware ID.
+Driver installation with V4 remains **unverified on hardware**.

@@ -20,12 +20,16 @@ $scan=Invoke-OSDStageWindowsUpdateAsync -Agent $searcher -Phase Search -TimeoutM
 if ($scan.TimedOut -or [int]$scan.Result.ResultCode -ne 2) {
     throw 'Selection diagnostic scan did not complete successfully.'
 }
-$items=@(foreach ($update in $scan.Result.Updates) {
+$driverDecisions=@(Get-OSDStageWindowsUpdateSelections -Updates @($scan.Result.Updates) -IncludeDrivers $true)
+$items=@(foreach ($candidate in $driverDecisions) {
+    $update=$candidate.Update
     $standard=Get-OSDStageWindowsUpdateSelection -Update $update
-    $withDrivers=Get-OSDStageWindowsUpdateSelection -Update $update -IncludeDrivers $true
+    $withDrivers=$candidate.Decision
     [pscustomobject]@{
         UpdateId=[string]$update.Identity.UpdateID;Title=[string]$update.Title;Type=[int]$update.Type
         BrowseOnly=$update.BrowseOnly;AutoSelectOnWebSites=$update.AutoSelectOnWebSites
+        CanRequestUserInput=$update.InstallationBehavior.CanRequestUserInput
+        RebootBehavior=$update.InstallationBehavior.RebootBehavior
         DefaultSelected=$standard.Selected;WithDriversSelected=$withDrivers.Selected
         DefaultReason=$standard.Reason;WithDriversReason=$withDrivers.Reason
         DriverClass=$(if ([int]$update.Type -eq 2) { [string]$update.DriverClass } else { $null })
@@ -35,7 +39,7 @@ $items=@(foreach ($update in $scan.Result.Updates) {
     }
 })
 $report=[pscustomobject]@{
-    Phase='ReadOnlySelectionDiagnostic';SelectionPolicy='ConservativeQualityV3'
+    Phase='ReadOnlySelectionDiagnostic';SelectionPolicy='ConservativeQualityV4'
     CheckedAtUtc=[DateTime]::UtcNow.ToString('o');DurationSeconds=$scan.DurationSeconds
     FoundCount=$items.Count;DefaultSelectedCount=@($items | Where-Object DefaultSelected).Count
     WithDriversSelectedCount=@($items | Where-Object WithDriversSelected).Count
