@@ -2,31 +2,29 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Changelog](../CHANGELOG.md)
 
-**Documentation baseline: 2 November 2026.** The published preview is [OSDStage 1.0.0-rc1](https://www.powershellgallery.com/packages/OSDStage/1.0.0-rc1), with its matching [GitHub release](https://github.com/roryvossepoel/OSDStage/releases/tag/v1.0.0-rc1). It is a release candidate, not GA.
+**Documentation baseline: 2 November 2026.** The published preview is [OSDStage 1.0.0-rc2](https://www.powershellgallery.com/packages/OSDStage/1.0.0-rc2), with its matching [GitHub release](https://github.com/roryvossepoel/OSDStage/releases/tag/v1.0.0-rc2). It is a release candidate, not GA.
 
-**RC2 preparation:** version `1.0.0-rc2` includes automatic Company Portal/CMTrace acquisition, file and directory operations, and compact console output. Publication is not yet verified; the published version above remains RC1 until the release and Gallery verification workflows complete. Windows Update is excluded.
+RC2 includes the tested changes merged after RC1. A later merge does not automatically update the Gallery package.
 
-The guides on `main` also describe merged development changes. A merge does not update the Gallery package.
-
-| Capability | Gallery 1.0.0-rc1 | Merged development source |
+| Capability | Gallery 1.0.0-rc1 | Gallery 1.0.0-rc2 |
 | --- | --- | --- |
 | Built-in app installers, repository packages and device configuration | Available | Available |
 | Company Portal and CMTrace Open | Prepare their cache on full Windows, then stage in WinPE | Also acquire, refresh and cache automatically during online PreInstall |
 | File and directory commands | Not included | Available; see [file operations](file-system.md) |
 | Timestamped compact output | Not included | Available; see [console output](console-output.md) |
-| Windows Update staging | Not included | Separate experimental [PR #111](https://github.com/roryvossepoel/OSDStage/pull/111); not part of this baseline |
+| Windows Update staging | Not included | Not included; separate experimental [PR #111](https://github.com/roryvossepoel/OSDStage/pull/111) |
 
 ## Install the published preview
 
 On full Windows or online WinPE with PowerShellGet available:
 
 ```powershell
-Install-Module OSDStage -Repository PSGallery -RequiredVersion '1.0.0-rc1' `
+Install-Module OSDStage -Repository PSGallery -RequiredVersion '1.0.0-rc2' `
     -AllowPrerelease -Force -ErrorAction Stop
 Import-Module OSDStage -RequiredVersion '1.0.0' -Force
 ```
 
-PowerShell uses numeric module version `1.0.0`; `rc1` is separate prerelease metadata. Verify both the identity and loaded path, especially after using a development build:
+PowerShell uses numeric module version `1.0.0`; `rc2` is separate prerelease metadata. RC1 and RC2 share that numeric folder. Close existing PowerShell sessions before upgrading, then verify both the identity and loaded path in a fresh session:
 
 ```powershell
 Get-Module OSDStage | Select-Object Name, Version, Path,

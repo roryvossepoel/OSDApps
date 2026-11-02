@@ -2,7 +2,7 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
 
-> **Post-RC1 behavior:** automatic online PreInstall acquisition is merged but not included in Gallery 1.0.0-rc1. With RC1, use the cache preparation step first. See [release availability](release-status.md).
+> **Available from RC2:** automatic online PreInstall acquisition is included in Gallery 1.0.0-rc2. With RC1, use the cache preparation step first. See [release availability](release-status.md).
 
 This optional integration provisions the official Microsoft Company Portal Preinstall Kit for **future Windows user profiles** during SetupComplete. OSDStage includes no Microsoft app binaries or licenses. WinPE stages deployment intent and any validated cached kit. During SetupComplete, PreInstall checks the official kit and refreshes the connected OSDCloud cache automatically, or downloads to the local Windows disk when no USB is present.
 

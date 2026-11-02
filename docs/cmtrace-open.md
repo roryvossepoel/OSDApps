@@ -2,7 +2,7 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
 
-> **Post-RC1 behavior:** automatic online PreInstall acquisition is merged but not included in Gallery 1.0.0-rc1. With RC1, use the cache preparation step first. See [release availability](release-status.md).
+> **Available from RC2:** automatic online PreInstall acquisition is included in Gallery 1.0.0-rc2. With RC1, use the cache preparation step first. See [release availability](release-status.md).
 
 This optional built-in installs the CMTrace Open MSI sourced directly from [adamgell/cmtraceopen GitHub releases](https://github.com/adamgell/cmtraceopen/releases). No binary is committed to OSDStage.
 

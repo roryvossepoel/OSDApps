@@ -123,7 +123,7 @@ stored by the viewer.
 
 - Keep the home page short. Put task examples in the expandable guides and link to full reference for details.
 - Keep every command example explicit about preparation Windows, target WinPE or the installed target.
-- The quick start uses only the online Gallery route with `-AllowPrerelease`. RC1 is published. Link to the release-availability guide for merged changes that are not yet in the Gallery. Remove `-AllowPrerelease` when documenting a verified GA release.
+- The quick start uses only the online Gallery route with `-AllowPrerelease`. RC2 is published. Link to the release-availability guide for merged changes that are not yet in the Gallery. Remove `-AllowPrerelease` when documenting a verified GA release.
 - Keep links relative so the site works under the repository project path and on a custom domain.
 - No external fonts, analytics, framework build or backend is required.
 

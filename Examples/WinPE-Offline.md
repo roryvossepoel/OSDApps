@@ -1,6 +1,6 @@
 # Offline WinPE deployment
 
-> Install the published preview with `-AllowPrerelease`. Check [release availability](../docs/release-status.md) before using features added after RC1.
+> Install the published preview with `-AllowPrerelease`. Check [release availability](../docs/release-status.md) when selecting a module version.
 
 [Examples](README.md) · [USB preparation](Prepare-UsbCache.md) · [Online alternative](WinPE-Online.md)
 
