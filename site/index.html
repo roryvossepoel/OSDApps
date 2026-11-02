@@ -25,6 +25,21 @@ Test-OSDStageDeployment -ThrowOnFailure</code></pre></div>
     </div>
   </section>
 
+  <section class="home-section workflow-panel" aria-labelledby="workflow-title">
+    <div class="section-intro"><p class="eyebrow">How it works</p><h2 id="workflow-title">From Windows installation to OOBE.</h2><p>One flow. Your apps and configuration, applied before OOBE.</p></div>
+    <ol class="workflow-steps">
+      <li><span class="workflow-number" aria-hidden="true">01</span><p class="workflow-phase">OSDCloud · WinPE</p><h3>Install Windows</h3><p>Let OSDCloud apply Windows and complete its workflow.</p></li>
+      <li><span class="workflow-number" aria-hidden="true">02</span><p class="workflow-phase">OSDStage · WinPE</p><h3>Stage your choices</h3><p>Stage apps and configuration, then validate the deployment.</p></li>
+      <li><span class="workflow-number" aria-hidden="true">03</span><p class="workflow-phase">Restart → SetupComplete</p><h3>Apply automatically</h3><p>Restart into Windows. SetupComplete installs your apps and applies configuration before OOBE.</p></li>
+      <li><span class="workflow-number" aria-hidden="true">04</span><p class="workflow-phase">OOBE</p><h3>Continue setup</h3><p>Continue with Windows setup or your Autopilot enrollment.</p></li>
+    </ol>
+    <div class="workflow-notes">
+      <div><span class="workflow-note-icon" aria-hidden="true">↳</span><div><h3>Your choice of content</h3><p>Use built-in evergreen apps and configuration commands, or connect your own package repository.</p></div></div>
+      <div><span class="workflow-note-icon" aria-hidden="true">↻</span><div><h3>USB caching, automatically</h3><p>Connect a USB drive labeled <code>OSDCloud</code>. Supported content is cached automatically and reused when valid.</p></div></div>
+    </div>
+    <a class="text-link" href="get-started.html">Follow the quick start <span aria-hidden="true">→</span></a>
+  </section>
+
   <section class="home-section home-capabilities" aria-labelledby="choices-title">
     <div class="section-intro"><p class="eyebrow">One workflow · Your choices</p><h2 id="choices-title">Choose what makes a device ready.</h2><p>Start with a few apps. Add the settings and content your deployment needs.</p></div>
     <div class="capability-grid">
@@ -32,12 +47,6 @@ Test-OSDStageDeployment -ThrowOnFailure</code></pre></div>
       <article class="capability"><p class="capability-number">02 · Configuration</p><h3>More than software.<br>Your device settings, too.</h3><p>Add fonts, certificates, drivers and Windows settings to the same deployment.</p><div class="capability-sample"><span>Windows configuration</span><strong>Registry · Services · Wi-Fi</strong><span>Device content</span><strong>Fonts · Certificates · Drivers</strong></div><a href="guides.html">Find a practical guide <span aria-hidden="true">→</span></a></article>
       <article class="capability"><p class="capability-number">03 · Caching</p><h3>Download once.<br>Reuse when it matches.</h3><p>An OSDCloud-labeled USB drive lets supported content be cached and reused across devices.</p><div class="cache-example" aria-label="Content flows from source to USB cache to device"><span>Source</span><span aria-hidden="true">→</span><strong>USB cache</strong><span aria-hidden="true">→</span><span>Device</span></div><p class="capability-note">Prepare matching content first for a fully offline deployment.</p><a href="guides.html#cache">How caching works <span aria-hidden="true">→</span></a></article>
     </div>
-  </section>
-
-  <section class="home-section workflow-panel" aria-labelledby="workflow-title">
-    <div class="section-intro"><p class="eyebrow">From deployment to first sign-in</p><h2 id="workflow-title">Three steps. Your existing OSDCloud flow.</h2></div>
-    <ol class="workflow-steps"><li><span class="workflow-number">1</span><div><h3>Deploy Windows</h3><p>Let OSDCloud apply Windows and finish its workflow.</p></div></li><li><span class="workflow-number">2</span><div><h3>Stage your choices</h3><p>Run OSDStage commands in WinPE, then validate before rebooting.</p></div></li><li><span class="workflow-number">3</span><div><h3>Continue to OOBE</h3><p>SetupComplete applies your choices before Windows setup continues.</p></div></li></ol>
-    <a class="text-link" href="get-started.html">Follow the quick start <span aria-hidden="true">→</span></a>
   </section>
 
   <section class="home-section home-start" aria-labelledby="start-title">
