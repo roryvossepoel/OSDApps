@@ -8,6 +8,8 @@ The current policy still needs full SetupComplete, cumulative-update, cancellati
 and Autopilot handoff acceptance.
 Use the reviewed test build, not the Gallery module, for the following commands.
 
+For the next clean deployment, use the [pinned SetupComplete acceptance procedure](windows-update-acceptance.md).
+
 ## Stage in WinPE
 
 After OSDCloud applies Windows, add the step alongside your other OSDStage calls:
