@@ -5,6 +5,24 @@
 The static website lives in `site/`. It contains Home, Get started, Catalog,
 Guides and FAQ. Detailed module reference remains in this repository.
 
+## Proposed documentation direction
+
+Use GitHub Pages as the primary user-facing home: Get started, task guides,
+copyable examples, package authoring, results/troubleshooting and FAQ. Keep the
+home page short; put detail on dedicated pages with clear navigation. Users
+should be able to complete normal deployment tasks without opening GitHub files.
+
+The repository remains the source of truth for documentation, command help,
+technical contracts, development and test evidence. Before expanding the site,
+add a build step that renders the user guides from their canonical source files.
+Do not hand-maintain the same instructions in both Markdown and HTML. Keep a
+visible release/version context so unreleased commands are not presented as
+available in the Gallery release.
+
+This is the proposed next structure, not a completed content migration. The
+current static site still links to repository guides for detailed reference.
+The [source register](sources.md) is available from the website footer now.
+
 ## Review and publish
 
 1. Open the website pull request and wait for **GitHub Pages / Build and check website** and the normal module CI checks.
