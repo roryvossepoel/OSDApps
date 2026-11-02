@@ -154,6 +154,15 @@ function New-OSDStageWindowsUpdateComObject {
     New-Object -ComObject $ProgId -ErrorAction Stop
 }
 
+function Test-OSDStageWindowsUpdateRebootPrerequisite {
+    param([Parameter(Mandatory)]$Installer)
+    $required=$Installer.RebootRequiredBeforeInstallation
+    if ($required -isnot [bool]) {
+        throw 'WUA did not return a Boolean reboot prerequisite; installation was not attempted.'
+    }
+    $required
+}
+
 function New-OSDStageWindowsUpdateCallback {
     # WUA supports an Automation callback with DISPID 0. The managed callback
     # never enters a PowerShell runspace on a COM worker thread. The caller polls.
@@ -245,6 +254,7 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
         ReleaseBefore=$null;ReleaseAfter=$null;ReleaseUnchanged=$null
         SearchResultCode=$null;FoundCount=0;SelectedCount=0;InstalledCount=0
         RebootRequired=$false;RebootStateKnown=$false;RebootRequested=$false;TimedOut=$false;FurtherScanRequired=$true
+        ExecutionPolicy='ContinueUntilRebootPrerequisiteV1';InstallationBlockedByReboot=$false
         Items=@();Error=$null
     }
     try {
@@ -291,7 +301,8 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
             $installer=$session.CreateUpdateInstaller()
             $installer.AllowSourcePrompts=$false;$installer.ForceQuiet=$true
             if ($installer.IsBusy) { throw 'Windows Update installer is busy; no concurrent installation was started.' }
-            if ($installer.RebootRequiredBeforeInstallation) {
+            if (Test-OSDStageWindowsUpdateRebootPrerequisite -Installer $installer) {
+                $report.InstallationBlockedByReboot=$true
                 $report.RebootRequired=$true;$report.Status='Deferred';$report.Outcome='RebootRequiredBeforeInstallation'
                 foreach ($entry in $selected) { $entry.Item.Status='Deferred' }
             }
@@ -317,18 +328,25 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
                     throw 'Download incomplete; no installations were started.'
                 }
                 # Software before drivers. Install individually for accurate results,
-                # exclusive installers and a reboot boundary between updates.
+                # exclusive installers and a reboot prerequisite check between updates.
                 # Sort-Object is not stable on Windows PowerShell 5.1. Preserve
                 # discovery order within each type when partitioning the queue.
                 $installQueue=@($selected | Where-Object { [int]$_.Update.Type -eq 1 }) +
                     @($selected | Where-Object { [int]$_.Update.Type -eq 2 })
                 foreach ($entry in $installQueue) {
+                    if ($report.InstallationBlockedByReboot) { $entry.Item.Status='Deferred';continue }
                     if ($installer.IsBusy) { throw 'Windows Update installer became busy; no concurrent installation was started.' }
-                    if ($report.RebootRequired -or $installer.RebootRequiredBeforeInstallation) {
-                        $report.RebootRequired=$true;$entry.Item.Status='Deferred';continue
-                    }
                     $single=New-OSDStageWindowsUpdateComObject 'Microsoft.Update.UpdateColl'
                     [void]$single.Add($entry.Update);$installer.Updates=$single
+                    # A successful update may need a restart to finish without
+                    # blocking further installation. Keep the aggregate flag,
+                    # but defer only when WUA says a restart is a prerequisite.
+                    if (Test-OSDStageWindowsUpdateRebootPrerequisite -Installer $installer) {
+                        $report.InstallationBlockedByReboot=$true
+                        $report.RebootRequired=$true;$entry.Item.Status='Deferred'
+                        Write-OSDStageWindowsUpdateMessage 'WUA requires a restart before further installation; remaining updates are deferred. No restart requested.' WARN
+                        continue
+                    }
                     $entry.Item.Status='Installing';Save-OSDStageWindowsUpdateReport $report $Configuration.ResultPath
                     Write-OSDStageWindowsUpdateMessage ('Installing '+$entry.Item.Title)
                     $install=Invoke-OSDStageWindowsUpdateAsync -Agent $installer -Phase Install -TimeoutMinutes $Configuration.TimeoutMinutes
@@ -341,6 +359,9 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
                     $report.TimedOut=$install.TimedOut
                     Save-OSDStageWindowsUpdateReport $report $Configuration.ResultPath
                     if ($install.TimedOut -or [int]$ir.ResultCode -ne 2 -or [int]$install.Result.ResultCode -ne 2) { throw 'Installation did not complete successfully; remaining updates were not attempted.' }
+                    if ($entry.Item.RebootRequired) {
+                        Write-OSDStageWindowsUpdateMessage 'Installed update requires a later restart. Checking WUA prerequisites before the next update; no restart requested.'
+                    }
                 }
                 $report.Status=if (@($selected | Where-Object {$_.Item.Status -eq 'Deferred'}).Count -gt 0) {'Deferred'} else {'Succeeded'}
                 $report.Outcome=if ($report.RebootRequired) {'RebootRequired'} else {'SelectedUpdatesInstalled'}

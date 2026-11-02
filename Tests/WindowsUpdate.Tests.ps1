@@ -27,6 +27,7 @@ Describe 'Conservative Windows Update selection and execution' {
         $script:update=New-TestUpdate
         $script:updates=@($script:update)
         $script:searchCode=2;$script:timedOut=$false;$script:downloadCode=2;$script:installCode=2;$script:reboot=$false;$script:systemReboot=$false
+        $script:blockAfterInstall=$false
         $script:installOrder=[Collections.Generic.List[string]]::new()
         $script:installer=[pscustomobject]@{IsBusy=$false;RebootRequiredBeforeInstallation=$false;ForceQuiet=$false;AllowSourcePrompts=$true;Updates=$null}
         $script:downloader=[pscustomobject]@{Updates=$null}
@@ -49,6 +50,7 @@ Describe 'Conservative Windows Update selection and execution' {
                 Download { New-TestWuaResult -Code $script:downloadCode }
                 Install {
                     $script:installOrder.Add([string]$Agent.Updates[0].Title)
+                    if ($script:blockAfterInstall) { $script:installer.RebootRequiredBeforeInstallation=$true }
                     New-TestWuaResult -Code $script:installCode -Reboot $script:reboot
                 }
             }
@@ -341,6 +343,7 @@ Describe 'Conservative Windows Update selection and execution' {
         $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
         $r.Status | Should -Be Deferred
         $r.RebootRequired | Should -BeTrue
+        $r.InstallationBlockedByReboot | Should -BeTrue
         $r.Items[0].Status | Should -Be Deferred
         Should -Invoke Invoke-OSDStageWindowsUpdateAsync -Times 0 -ParameterFilter {$Phase -ne 'Search'}
     }
@@ -367,16 +370,50 @@ Describe 'Conservative Windows Update selection and execution' {
         $saved.DeploymentId | Should -Be $script:config.DeploymentId
         $saved.Items[0].InstallResultCode | Should -Be 2
     }
-    It 'stops at a reboot boundary and records the remaining updates as deferred' {
+    It 'defers remaining updates only when WUA reports a restart prerequisite after installation' {
         $script:updates=@($script:update,(New-TestUpdate -Title 'Next'))
-        $script:reboot=$true
+        $script:reboot=$true;$script:blockAfterInstall=$true
         $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
         $r.Status | Should -Be Deferred
         $r.InstalledCount | Should -Be 1
         $r.RebootRequired | Should -BeTrue
+        $r.InstallationBlockedByReboot | Should -BeTrue
         @($script:installOrder) | Should -Be @('Beveiligingsupdate')
         $r.Items[1].Status | Should -Be Deferred
         Should -Invoke Invoke-OSDStageWindowsUpdateAsync -Times 1 -Exactly -ParameterFilter {$Phase -eq 'Install'}
+    }
+    It 'continues after a successful update needs a later restart without clearing the pending flag' {
+        $driver=New-TestUpdate -Title 'System driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $driver.DriverClass='OtherHardware'
+        $next=New-TestUpdate -Title 'Extension driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $next.DriverClass='Extension'
+        $script:config.IncludeDrivers=$true;$script:updates=@($script:update,$driver,$next)
+        $script:reboot=$true;$script:systemReboot=$true
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.Status | Should -Be Succeeded
+        $r.ExecutionPolicy | Should -Be ContinueUntilRebootPrerequisiteV1
+        $r.InstalledCount | Should -Be 3
+        $r.RebootRequired | Should -BeTrue
+        $r.InstallationBlockedByReboot | Should -BeFalse
+        $r.RebootRequested | Should -BeFalse
+        @($script:installOrder) | Should -Be @('Beveiligingsupdate','System driver','Extension driver')
+        Should -Invoke Invoke-OSDStageWindowsUpdateAsync -Times 3 -Exactly -ParameterFilter {$Phase -eq 'Install'}
+    }
+    It 'installs when a reboot is already pending but WUA has no restart prerequisite' {
+        $script:systemReboot=$true
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.Status | Should -Be Succeeded
+        $r.InstalledCount | Should -Be 1
+        $r.RebootRequired | Should -BeTrue
+        $r.InstallationBlockedByReboot | Should -BeFalse
+        $r.RebootRequested | Should -BeFalse
+    }
+    It 'does not install when WUA cannot report a valid restart prerequisite' {
+        $script:installer.RebootRequiredBeforeInstallation=$null
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.Status | Should -Be Failed
+        $r.Error | Should -BeLike '*Boolean reboot prerequisite*'
+        Should -Invoke Invoke-OSDStageWindowsUpdateAsync -Times 0 -ParameterFilter {$Phase -eq 'Install'}
     }
     It 'retains HRESULTs and reboot requirements when an installation fails' {
         $script:installCode=4;$script:reboot=$true

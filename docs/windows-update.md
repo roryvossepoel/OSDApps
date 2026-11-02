@@ -152,8 +152,14 @@ partial search/download success does not silently become success. An install
 failure stops the remaining update work.
 
 Updates that require a restart after installation remain eligible; requiring a
-restart is not permission to initiate one. If WUA requires a restart, the report records it and any remaining updates are
-deferred. There is no reboot call, OOBE task, background retry or restart loop.
+restart is not permission to initiate one. `RebootRequired` records that Windows
+needs a later restart; this alone does not stop the queue. Before each installation,
+OSDStage checks WUA's `RebootRequiredBeforeInstallation`. Only a true prerequisite
+defers the remaining queue and sets `InstallationBlockedByReboot=True`. Missing
+or unreadable prerequisite metadata fails the run instead of attempting an install.
+`ExecutionPolicy=ContinueUntilRebootPrerequisiteV1` identifies this behavior.
+There is no reboot call, OOBE task, background retry or restart loop. Pending
+restart flags are never cleared or suppressed to continue servicing.
 The outer deployment wrapper remains responsible for reboot decisions at a valid
 lifecycle point. SetupComplete must not be restarted expecting it to resume.
 
@@ -222,6 +228,7 @@ driver installation, or a claim that the device is fully patched.
 ## Primary references
 
 - [WUA search criteria](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdatesearcher-search)
+- [Reboot required before installation](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdateinstaller-get_rebootrequiredbeforeinstallation) (reviewed after the PC1 pending-restart test on 2 November 2026)
 - [Classification GUIDs](https://learn.microsoft.com/en-us/powershell/module/updateservices/get-wsusclassification)
 - [BundledUpdates API](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdate-get_bundledupdates) and [Categories API](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdate-get_categories) (reviewed 2 November 2026 after PC1 bundle diagnostics)
 - [Asynchronous WUA lifetime](https://learn.microsoft.com/en-us/windows/win32/wua_sdk/guidelines-for-asynchronous-wua-operations)
@@ -247,5 +254,22 @@ optional exact class allowlist. Firmware is included unless a supplied list
 omits its class. Updates and Update Rollups are added for regular quality
 servicing. The former blanket rejection of shared hardware IDs is removed.
 A separate elevated OOBE test tool defaults to scan-only and requires `-Install`
-for changes. V5 driver installation and monthly cumulative updates remain
+for changes. Full V5 driver installation and monthly cumulative updates remain
 **unverified on hardware** until the next test results are reviewed.
+
+### Pending restart follow-up (2 November 2026)
+
+PC1's manual OOBE V5 test selected 34 offers (two software and 32 drivers). In
+107 seconds it reported successful installation of MSRT KB890830, Defender
+platform KB4052623, Dell Monitor 1.0.0.0 and Intel System 10.1.37.7. Each had
+InstallResultCode 2 and HRESULT 0. Thirty remaining offers were deferred;
+no restart was requested and the Windows release was unchanged. A read-only
+probe then showed `SystemInfo.RebootRequired=True` but
+`Installer.RebootRequiredBeforeInstallation=False`.
+
+The original stop-on-any-restart rule was too restrictive for this evidence.
+The corrected runtime retains the aggregate pending-restart flag while checking
+the actual WUA prerequisite before each next install. Tests cover continued
+installation with a later restart pending and deferral when WUA genuinely
+requires a restart first. Continuation on PC1 and full SetupComplete acceptance
+are still pending; this is not a claim that all 34 offers installed.
