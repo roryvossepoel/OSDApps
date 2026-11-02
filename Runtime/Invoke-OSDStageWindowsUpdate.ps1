@@ -58,7 +58,13 @@ function Get-OSDStageWindowsUpdateSelection {
         if ($Depth -gt 16) { throw 'BundleDepthExceeded' }
         if ($Update.IsInstalled -ne $false -or $Update.IsHidden -ne $false) { throw 'NotApplicable' }
         if ([int]$Update.Type -eq 2 -and -not $IncludeDrivers) { throw 'DriversDisabled' }
-        if ($Depth -eq 0 -and ($Update.BrowseOnly -ne $false -or $Update.AutoSelectOnWebSites -ne $true)) { throw 'NotAutomatic' }
+        if ($Depth -eq 0) {
+            # Driver opt-in is explicit selection: AutoSelectOnWebSites=False
+            # must not veto it. Browse-only offers and missing flags still fail
+            # closed; software keeps the automatic-selection requirement.
+            if ($Update.BrowseOnly -ne $false -or $Update.AutoSelectOnWebSites -isnot [bool]) { throw 'NotAutomatic' }
+            if ([int]$Update.Type -ne 2 -and $Update.AutoSelectOnWebSites -ne $true) { throw 'NotAutomatic' }
+        }
         # RebootBehavior=1 means a restart is required AFTER installation, not
         # that WUA should initiate it. Cumulative updates must remain eligible.
         if ($null -eq $Update.InstallationBehavior -or
@@ -107,7 +113,7 @@ function Get-OSDStageWindowsUpdateSelection {
             if (-not $decision.Selected -and -not $bundleRejection) { $bundleRejection='BundleRejected: ' + $decision.Reason }
         }
         if ($bundleRejection) { throw $bundleRejection }
-        $selected=$true;$reason=if ([int]$Update.Type -eq 2) {'AutomaticHardwareDriver'} else {'AllowedQualityClassification'}
+        $selected=$true;$reason=if ([int]$Update.Type -eq 2) {'OptedInHardwareDriver'} else {'AllowedQualityClassification'}
     }
     catch { $reason=$_.Exception.Message }
     [pscustomobject]@{
@@ -205,7 +211,7 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
     $report=[ordered]@{
         SchemaVersion=2;DeploymentId=[string]$Configuration.DeploymentId
         Phase='LastWithinSetupComplete';Status='Running';Outcome='Running';ScanOnly=$Configuration.ScanOnly
-        IncludeDrivers=$Configuration.IncludeDrivers;Source='PolicyDefault';SelectionPolicy='ConservativeQualityV2'
+        IncludeDrivers=$Configuration.IncludeDrivers;Source='PolicyDefault';SelectionPolicy='ConservativeQualityV3'
         StartedAtUtc=[DateTime]::UtcNow.ToString('o');CompletedAtUtc=$null;DurationSeconds=0
         LogPath=$script:OSDStageWindowsUpdateLogPath
         ReleaseBefore=$null;ReleaseAfter=$null;ReleaseUnchanged=$null

@@ -35,7 +35,7 @@ $items=@(foreach ($update in $scan.Result.Updates) {
     }
 })
 $report=[pscustomobject]@{
-    Phase='ReadOnlySelectionDiagnostic';SelectionPolicy='ConservativeQualityV2'
+    Phase='ReadOnlySelectionDiagnostic';SelectionPolicy='ConservativeQualityV3'
     CheckedAtUtc=[DateTime]::UtcNow.ToString('o');DurationSeconds=$scan.DurationSeconds
     FoundCount=$items.Count;DefaultSelectedCount=@($items | Where-Object DefaultSelected).Count
     WithDriversSelectedCount=@($items | Where-Object WithDriversSelected).Count

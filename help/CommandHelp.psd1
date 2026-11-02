@@ -256,14 +256,14 @@
             Environment = 'Stage in WinPE after OSDCloud. Runs last under native 64-bit SYSTEM during SetupComplete on Windows 11 25H2+; requires network access to the configured update source.'
             Output = 'OSDStage.StagedApp. Runtime writes WindowsUpdate-Result.json and a progress log; deferred work and reboot requirements remain explicit.'
             Parameters = @{
-                IncludeDrivers = 'Opt in to automatic hardware drivers in a restricted class/hardware allowlist. Firmware, System, Extension and SoftwareComponent classes are excluded. Does not mean Intune-approved drivers.'
+                IncludeDrivers = 'Opt in to non-browse-only hardware drivers in a restricted class/hardware allowlist, even when AutoSelectOnWebSites is false. Firmware, System, Extension, SoftwareComponent and OtherHardware classes are excluded. Does not mean Intune-approved drivers.'
                 ScanOnly = 'Record candidates and selection reasons without accepting EULAs, downloading or installing updates.'
                 TimeoutMinutes = 'Cancellation threshold per scan, download batch and individual installation, from 5 to 180 minutes. Default 30. WUA cancellation is cooperative; OSDStage waits for safe completion and does not forcibly terminate servicing.'
             }
             Examples = @(
                 @{Code='Add-OSDStageWindowsUpdate -ScanOnly';Remarks='First test: inspect update metadata and selection inside SetupComplete.'}
                 @{Code='Add-OSDStageWindowsUpdate';Remarks='Stage one conservative installation pass; first confirm physical acceptance for this test build.'}
-                @{Code='Add-OSDStageWindowsUpdate -IncludeDrivers';Remarks='Explicitly include supported automatic hardware-driver offers.'}
+                @{Code='Add-OSDStageWindowsUpdate -IncludeDrivers';Remarks='Explicitly include supported hardware-driver offers, including offers not marked for automatic selection.'}
             )
             Link = 'docs/windows-update.md'
         }

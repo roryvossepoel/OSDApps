@@ -156,7 +156,7 @@ Describe 'Conservative Windows Update selection and execution' {
         foreach ($u in @($platform.BundledUpdates)+@($defender.BundledUpdates)) { $u.Categories=@() }
         $script:updates=@($platform,$defender,(New-TestUpdate -Title 'KB890830' -Category '28bc880e-0592-4cbf-8f95-c79b17911d5f'))
         $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
-        $r.SelectionPolicy | Should -Be ConservativeQualityV2
+        $r.SelectionPolicy | Should -Be ConservativeQualityV3
         $r.SelectedCount | Should -Be 2
         $r.InstalledCount | Should -Be 2
         $r.Items[2].Selected | Should -BeFalse
@@ -178,20 +178,34 @@ Describe 'Conservative Windows Update selection and execution' {
         $u.DriverClass='Networking';$u.DriverHardwareID='UEFI\RES_1234'
         (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
     }
-    It 'accepts observed WUA hardware classes only when the offer is automatic and opted in' {
+    It 'accepts non-browse-only WUA hardware classes with explicit opt-in' {
         foreach ($class in @('Networking','Sound','Video')) {
             $u=New-TestUpdate -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
             $u.DriverClass=$class
             (Get-OSDStageWindowsUpdateSelection $u).Reason | Should -Be DriversDisabled
-            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be AutomaticHardwareDriver
+            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be OptedInHardwareDriver
             $u.BrowseOnly=$true
             (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be NotAutomatic
             (Get-OSDStageWindowsUpdateSelection $u).Reason | Should -Be DriversDisabled
             $u.BrowseOnly=$false;$u.AutoSelectOnWebSites=$false
-            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be NotAutomatic
+            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be OptedInHardwareDriver
             $u.AutoSelectOnWebSites=$null
             (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
         }
+    }
+    It 'preserves software and driver exclusions when automatic selection is false' {
+        $u=New-TestUpdate;$u.AutoSelectOnWebSites=$false
+        (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be NotAutomatic
+        $u=New-TestUpdate -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $u.AutoSelectOnWebSites=$false
+        foreach ($class in @('Firmware','System','Extension','SoftwareComponent','OtherHardware','Unknown')) {
+            $u.DriverClass=$class
+            (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be DriverClassNotAllowed
+        }
+        $u.DriverClass='Networking';$u.DriverHardwareID='UEFI\RES_1234'
+        (Get-OSDStageWindowsUpdateSelection $u $true).Reason | Should -Be DriverHardwareNotAllowed
+        $u.DriverHardwareID='PCI\VEN_1234';$u.BrowseOnly=$null
+        (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
     }
     It 'records raw automatic-selection flags without turning missing metadata into false' {
         $driver=New-TestUpdate -Title 'Network driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
@@ -208,6 +222,7 @@ Describe 'Conservative Windows Update selection and execution' {
     }
     It 'keeps hardware drivers optional in the runtime and records their metadata' {
         $driver=New-TestUpdate -Title 'Network driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $driver.AutoSelectOnWebSites=$false
         $firmware=New-TestUpdate -Title 'Dell Firmware' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
         $firmware.DriverClass='Firmware'
         $script:updates=@($driver,$firmware,$script:update)

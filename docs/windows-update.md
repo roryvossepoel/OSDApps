@@ -2,9 +2,9 @@
 
 [Documentation](README.md) · [Investigation and acceptance #109](https://github.com/roryvossepoel/OSDStage/issues/109)
 
-This development feature is **not in Gallery 1.0.0-rc1**. A native WUA scan has
-succeeded inside SetupComplete on PC1; this new asynchronous implementation,
-installation, cancellation and Autopilot handoff still require physical acceptance.
+This development feature is **not in Gallery 1.0.0-rc2**. Software update installation has
+succeeded inside SetupComplete on PC1. Driver installation, cumulative updates
+requiring restart, cancellation and Autopilot handoff still require physical acceptance.
 Use the reviewed test build, not the Gallery module, for the following commands.
 
 ## Stage in WinPE
@@ -25,7 +25,7 @@ After inspecting the scan report, test installation on the disposable target:
 
 ```powershell
 Add-OSDStageWindowsUpdate
-# Or explicitly include the supported automatic hardware drivers:
+# Or explicitly include the supported hardware drivers:
 Add-OSDStageWindowsUpdate -IncludeDrivers
 ```
 
@@ -60,10 +60,16 @@ selection evidence only, not a SetupComplete installation acceptance test.
 | Missing classification on a root offer, conflicting or unrecognized classifications | Skipped with a reason; never inferred safe from a title |
 | Software bundle member with a readable category collection but no classification | May use its checked software parent's allowed quality classification; all other member checks still apply |
 | Drivers | Off by default |
-| Opted-in automatic hardware drivers | Restricted to WUA Networking, Sound and Video classes with recognized PCI/USB/HID/Bluetooth/print hardware identities |
+| Opted-in hardware drivers | Restricted to WUA Networking, Sound and Video classes with recognized PCI/USB/HID/Bluetooth/print hardware identities |
 | Firmware, BIOS, System, Extension, SoftwareComponent, OtherHardware and unknown driver classes | Excluded |
 
-Classification GUIDs are language-independent. `ConservativeQualityV2` requires
+For root driver offers, `-IncludeDrivers` permits `AutoSelectOnWebSites=False`
+when `BrowseOnly=False` and all driver checks pass. Explicit opt-in supplies the
+selection decision; it does not make the offer automatically selected by Windows.
+Browse-only offers and missing selection flags remain excluded. Software still
+requires `AutoSelectOnWebSites=True`, even with drivers enabled.
+
+Classification GUIDs are language-independent. `ConservativeQualityV3` requires
 each root offer to have its own allowed classification. A software member with no
 classification can use its checked software parent's effective classification,
 including through nested software bundles. This is OSDStage's selection policy,
@@ -91,8 +97,13 @@ products. Automatic driver metadata does not establish Intune approval.
 Driver filtering cannot prove that a normal vendor driver contains no embedded
 firmware logic. For a strict no-firmware requirement, leave drivers disabled;
 see [Microsoft's firmware distribution guidance](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/updating-device-firmware-using-windows-update).
-Windows Update payloads use Windows servicing's own cache, not the OSDCloud USB
-cache. Offline-ready preflight cannot succeed with this step selected.
+Windows updates and driver updates are **not cached on the OSDCloud USB drive**.
+OSDStage obtains them through the configured Windows Update infrastructure
+(Windows Update, Microsoft Update or WSUS, as configured). Network access is
+required for this step, including when application payloads are already cached
+on USB. Windows servicing can reuse its own local download cache; OSDStage does
+not force a fresh download of identical content. Offline-ready preflight cannot
+succeed with this step selected.
 
 ## Execution and restart boundary
 
@@ -145,13 +156,18 @@ collections on the Security platform binary and four Defender binaries.
 KB890830 was excluded as Update Rollups. The V2 classification-context correction
 has regression coverage for this shape. A read-only OOBE check of revision
 `7ca3e27` then selected both software updates and continued excluding KB890830.
-All 31 offered drivers were rejected as `NotAutomatic`; this does not establish
-which of the two automatic-selection flags caused rejection. The check also
-exposed WUA classes Networking/Sound/Video instead of the INF class names in the
-initial allowlist. That allowlist is corrected, with both raw flags now recorded.
-OtherHardware remains excluded because it is ambiguous. `-IncludeDrivers` does
-not opt into manual/optional offers. Physical installation, driver selection and
-Autopilot handoff still need acceptance.
+All 31 offered drivers were rejected as `NotAutomatic`. The subsequent diagnostic
+on revision `6b59446` confirmed `BrowseOnly=False` and `AutoSelectOnWebSites=False`
+for all 31. V3 therefore separates explicit driver opt-in from automatic software
+selection, while retaining the WUA class and hardware checks. OtherHardware,
+System, Extension and Firmware remain excluded. Driver installation is pending.
+
+**PC1 software installation, revision `6b59446`:** 34 found, two selected and
+both installed in 41.7 seconds during SetupComplete. KB5007651 (10.0.29680.1000)
+and KB2267602 (1.463.94.0) each returned InstallResultCode 2. No reboot was required
+or requested; Windows 26H2 build 26300.9711 was unchanged. `FurtherScanRequired`
+remained true. This validates this software pass, not cumulative-update servicing,
+driver installation, or a claim that the device is fully patched.
 
 - Run scan-only in the actual SetupComplete phase and inspect real classifications,
   bundle metadata and skip reasons, including offered release upgrades.
