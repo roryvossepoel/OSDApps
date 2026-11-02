@@ -3,8 +3,9 @@
 [Documentation](README.md) · [Investigation and acceptance #109](https://github.com/roryvossepoel/OSDStage/issues/109)
 
 This development feature is **not in Gallery 1.0.0-rc2**. Software update installation has
-succeeded inside SetupComplete on PC1. Driver installation, cumulative updates
-requiring restart, cancellation and Autopilot handoff still require physical acceptance.
+succeeded inside SetupComplete on PC1. Manual driver installation and post-restart versions have also been verified on PC1.
+The current policy still needs full SetupComplete, cumulative-update, cancellation
+and Autopilot handoff acceptance.
 Use the reviewed test build, not the Gallery module, for the following commands.
 
 ## Stage in WinPE
@@ -254,8 +255,8 @@ optional exact class allowlist. Firmware is included unless a supplied list
 omits its class. Updates and Update Rollups are added for regular quality
 servicing. The former blanket rejection of shared hardware IDs is removed.
 A separate elevated OOBE test tool defaults to scan-only and requires `-Install`
-for changes. Full V5 driver installation and monthly cumulative updates remain
-**unverified on hardware** until the next test results are reviewed.
+for changes. The subsequent physical evidence is recorded below. Monthly cumulative-update
+servicing remains unverified on hardware.
 
 ### Pending restart follow-up (2 November 2026)
 
@@ -271,5 +272,40 @@ The original stop-on-any-restart rule was too restrictive for this evidence.
 The corrected runtime retains the aggregate pending-restart flag while checking
 the actual WUA prerequisite before each next install. Tests cover continued
 installation with a later restart pending and deferral when WUA genuinely
-requires a restart first. Continuation on PC1 and full SetupComplete acceptance
-are still pending; this is not a claim that all 34 offers installed.
+requires a restart first. The continuation result is recorded below; full
+SetupComplete acceptance of this policy remains pending.
+
+
+### Continuation and post-restart evidence (2 November 2026)
+
+With runtime revision `433f6d1`, PC1 installed all 29 offers selected by a fresh
+manual OOBE scan in 71.7 seconds. Every item returned InstallResultCode 2 and
+HRESULT 0. `Status=Succeeded`, `RebootRequired=True`,
+`InstallationBlockedByReboot=False`, `RebootRequested=False` and
+`ReleaseUnchanged=True`. The earlier pass had already downloaded content, so this
+is not a fresh-download performance benchmark. The result is 29/29 for this scan,
+not a claim that every offer from the original 34-item scan installed.
+
+After a user-initiated restart, firmware visibly updated. Active versions were
+confirmed: Dell BIOS 1.19.3, Intel Ethernet 12.19.2.66, Intel Wi-Fi 24.70.0.3,
+Realtek Audio 6.0.9974.1 and Intel UHD Graphics 32.0.101.7088.
+A post-restart scan offered eight more drivers, mostly software/audio components,
+with no pending reboot. A later fresh installation scan selected ten drivers
+and installed all ten in 35.8 seconds, each with result 2/HRESULT 0, no required
+or requested restart. WUA history independently contained those installations;
+the Settings UI showed up-to-date but an empty history. The UI difference has
+not been explained and is not used as an acceptance gate.
+
+These results support the one-pass boundary: a successful pass means the selected
+set completed, not that a future scan must be empty. Driver extensions can create
+software-component devices that receive their own updates. This is a plausible
+explanation for the later offers, not a verified dependency map for every item.
+OSDStage does not rescan or resume after reboot; subsequent servicing belongs to
+the normal Windows Update management process. No OOBE restart loop is added.
+
+References reviewed for this follow-up:
+
+- [Component INF files and independently serviced child devices](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/using-a-component-inf-file)
+- [Extension INF files](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/using-an-extension-inf-file)
+- [WUA history queries](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdatesearcher-queryhistory)
+- [WUA operation result codes](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/ne-wuapi-operationresultcode)

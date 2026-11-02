@@ -1,5 +1,7 @@
 # Repository packages
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 <a id="repository-apps"></a>
 
 ![OSDStage repository: catalog, package manifest, archive layout and static publishing](images/repository-contract.svg)
@@ -24,6 +26,8 @@ Repository/
                 ├── manifest.json
                 └── Package.zip
 ```
+
+The authoring helpers generate a `Packages` directory. An existing repository may use `packages` instead: the `Manifest` URLs in its catalog must match the published paths exactly, including letter case on case-sensitive hosting. The JSON property remains `Packages`.
 
 Supported repository architectures:
 

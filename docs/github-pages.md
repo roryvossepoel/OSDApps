@@ -5,6 +5,67 @@
 The static website lives in `site/`. It contains Home, Get started, Catalog,
 Guides and FAQ. Detailed module reference remains in this repository.
 
+## Proposed documentation direction
+
+Use GitHub Pages as the primary user-facing home: Get started, task guides,
+copyable examples, package authoring, results/troubleshooting and FAQ. Keep the
+home page short; put detail on dedicated pages with clear navigation. Users
+should be able to complete normal deployment tasks without opening GitHub files.
+
+The repository remains the source of truth for documentation, command help,
+technical contracts, development and test evidence. Before expanding the site,
+add a build step that renders the user guides from their canonical source files.
+Do not hand-maintain the same instructions in both Markdown and HTML. Keep a
+visible release/version context so unreleased commands are not presented as
+available in the Gallery release.
+
+This is the proposed next structure, not a completed content migration. The
+current static site still links to repository guides for detailed reference.
+The [source register](sources.md) is available from the website footer now.
+
+### Agreed information structure
+
+The five sections below are the agreed direction as of 2 November 2026.
+This is an implementation brief; it does not claim that the new pages already
+exist. Keep English as the website language.
+
+| Section | User task | Content to provide |
+| --- | --- | --- |
+| Get started | Complete a first deployment | Requirements, Gallery installation, where commands run, one minimal working example and result verification |
+| Guides & examples | Add the right components | Short task guides for software, repository packages, fonts, certificates, drivers, Wi-Fi, Windows settings and caching; each with a copyable example |
+| Cmdlets | Look up a command | Searchable command index with purpose, parameters, defaults, execution phase, examples and result fields; generated from canonical command help |
+| FAQ & troubleshooting | Understand or resolve a result | Common questions, logs/results locations, cache behavior, failed/skipped outcomes and practical recovery steps |
+| Catalog & sources | Explore content and its references | Existing catalog viewer with an optional user-supplied URL, plus a separate readable source register grouped by topic |
+
+### Presentation and navigation
+
+- Keep the existing short hero and three-step deployment explanation. Add five
+  compact entry cards with a clear title, one sentence and a direct destination.
+- Use the existing blue palette, a restrained accent and small consistent icons.
+  Add visual hierarchy through spacing, headings and code examples rather than
+  long introductory text or decoration on every block.
+- Give detail pages breadcrumbs, a useful contents list and relevant next steps.
+  Keep the main navigation and footer consistent, with a compact mobile menu.
+- Clearly label preparation Windows, WinPE after Windows is applied, and the
+  installed target. Show Gallery release availability separately from unreleased
+  features; a command appearing on the development branch is not a release.
+- Preserve keyboard navigation, visible focus, adequate contrast and copy-button
+  feedback. Any scroll reveal must respect reduced-motion preferences and leave
+  content readable when JavaScript is unavailable.
+- Keep advanced options discoverable on the relevant detail page. Routine guides
+  should use automatic Windows/USB discovery where the cmdlet supports it.
+
+### Delivery order
+
+1. Add the documentation render step and version/availability context, using the
+   existing Markdown and command help as the single source.
+2. Build the five entry points and their detail navigation; migrate normal user
+   tasks onto Pages while retaining existing repository links.
+3. Add cmdlet search and finish responsive, accessibility and copy-example checks.
+
+The source-register expansion can merge independently. It does not require a
+module release or a change to deployment behavior.
+
 ## Review and publish
 
 1. Open the website pull request and wait for **GitHub Pages / Build and check website** and the normal module CI checks.
@@ -62,7 +123,7 @@ stored by the viewer.
 
 - Keep the home page short. Put task examples in the expandable guides and link to full reference for details.
 - Keep every command example explicit about preparation Windows, target WinPE or the installed target.
-- The quick start uses only the online Gallery route with `-AllowPrerelease`. Keep the publication-pending notice until the RC upload and exact-content verification succeed. Remove `-AllowPrerelease` when documenting a verified GA release.
+- The quick start uses only the online Gallery route with `-AllowPrerelease`. RC2 is published. Link to the release-availability guide for merged changes that are not yet in the Gallery. Remove `-AllowPrerelease` when documenting a verified GA release.
 - Keep links relative so the site works under the repository project path and on a custom domain.
 - No external fonts, analytics, framework build or backend is required.
 

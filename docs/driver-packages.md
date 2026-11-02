@@ -1,5 +1,7 @@
 # Repository driver packages
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 `Add-OSDStageDriver -Id WorkstationDrivers` stages a repository `PackageType: Driver` using the standard catalog, version selection, `Package.zip`, USB cache and SHA-256 verification. It does not install drivers on the preparation PC or into WinPE. Drivers required to boot Windows must already be supplied by the Windows deployment; this feature runs after Windows has booted. SetupComplete processes the package once as SYSTEM in the applied Windows installation.
 
 ## Build and publish

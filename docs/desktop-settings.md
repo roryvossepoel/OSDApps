@@ -1,5 +1,7 @@
 # Initial Start and taskbar pins
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 Both commands are opt-in. The module has no default pin list. Configure in WinPE after OSDCloud has applied Windows and **before the first boot** into that image. See [the combined example](../Examples/Stage-OSDStageDesktopTest.ps1).
 
 ```powershell
@@ -14,12 +16,6 @@ Add-OSDStageTaskbarPins -Pins @(
 )
 Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure
 ```
-
-## Preparing the USB test module
-
-On a full Windows preparation PC, run `tools/Prepare-OSDStageDesktopTest.ps1 -Revision <40-character commit SHA>`. It discovers exactly one volume labeled OSDCloud, downloads that immutable revision and copies it into a new `TestModules/OSDStage-Desktop-<short SHA>` folder. It does not replace the normal module or reset the cache. Existing test folders are not overwritten. ZIP extraction uses .NET ZipFile.
-
-In WinPE, import `OSDStage.psd1` from that exact test folder and run its `Examples/Stage-OSDStageDesktopTest.ps1` after deployment completes.
 
 ## Configuration contract
 
@@ -47,7 +43,7 @@ The durable XML is `Windows\OEM\OSDStage\TaskbarLayoutModification.xml` on the t
 
 **This is persistent native Windows policy, not taskbar `applyOnce`.** Windows can reread the configuration; the fixed `PinGeneration="1"` allows users to remove pins without restoring them on policy refresh. OSDStage does not schedule a logon script, cleanup task, post-boot verification, correction, or reboot. Later Intune/GPO policies may supersede these settings. The initial pin rendering is operator-confirmed with the accepted extra-Outlook limitation below. Continued editability of both Start and taskbar remains to be confirmed in physical acceptance; registry/file success alone does not prove shell behavior.
 
-A hash ownership marker protects replacements. Existing foreign or modified policy/layout values and policies that force reapplying the layout at every logon are refused, and failed commits restore the XML and both typed policy values. Unrelated Start policy values are preserved. This test revision requires a **freshly applied image**; do not apply it over the previous OEM test. `Remove-OSDStageStaging -Name DesktopSettings` refuses when TaskbarPins is present because removing the queue alone would leave the already-prepared image configuration behind. Reapply the image to discard it. Runtime cleanup retains the durable layout.
+A hash ownership marker protects replacements. Existing foreign or modified policy/layout values and policies that force reapplying the layout at every logon are refused, and failed commits restore the XML and both typed policy values. Unrelated Start policy values are preserved. Use a **freshly applied image**; do not layer this over an earlier experimental layout configuration. `Remove-OSDStageStaging -Name DesktopSettings` refuses when TaskbarPins is present because removing the queue alone would leave the already-prepared image configuration behind. Reapply the image to discard it. Runtime cleanup retains the durable layout.
 
 ## Results and validation
 
@@ -60,6 +56,12 @@ Automated coverage uses disposable files/registry hives and mocks for unavailabl
 Physical tests on 2026-10-27 confirmed the Edge/Explorer/Settings Start pins and the requested Settings/Explorer taskbar pins. Outlook also appeared as an extra taskbar pin; Store and Edge were no longer reported as extra pins. **The maintainer accepted the extra Outlook pin as a limitation; exact exclusion of all extra taskbar pins is not guaranteed.** The available logs cannot establish whether Outlook was pinned by Windows, an app, or management. Pin editability remains to be confirmed. No post-sign-in cleanup or correction is performed.
 
 The example requests Settings/Explorer only on the taskbar, making unexpected pins visible. Normal first sign-in is sufficient for the initial visual test; no extra reboot is required.
+
+## Reproducing the development test
+
+On a full Windows preparation PC, run `tools/Prepare-OSDStageDesktopTest.ps1 -Revision <40-character commit SHA>`. It discovers exactly one volume labeled OSDCloud, downloads that immutable revision and copies it into a new `TestModules/OSDStage-Desktop-<short SHA>` folder. It does not replace the normal module or reset the cache. Existing test folders are not overwritten. ZIP extraction uses .NET ZipFile.
+
+In WinPE, import `OSDStage.psd1` from that exact test folder and run its `Examples/Stage-OSDStageDesktopTest.ps1` after deployment completes.
 
 ## Microsoft references
 

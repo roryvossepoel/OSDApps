@@ -1,12 +1,14 @@
 # OSDStage contract
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 OSDStage is a new module identity. There is no transition module, old-command alias layer or conversion of OSDApps catalogs, cache data or device staging. Existing tested deployment behavior is the baseline. The renamed candidate passed its focused empty-cache Windows deployment; see [the acceptance record](osdstage-rename-acceptance.md).
 
 ## Names and contracts
 
 | Surface | OSDStage contract |
 | --- | --- |
-| Module | `OSDStage.psd1`, `OSDStage.psm1`, new module GUID, initial version `0.1.0` |
+| Module | `OSDStage.psd1`, `OSDStage.psm1`, its own module GUID; see [release availability](release-status.md) for published versions |
 | Commands | `Add-OSDStageFont`, `Add-OSDStageCertificate`, `Add-OSDStageDriver`, `Add-OSDStageWiFiProfile`, and the corresponding OSDStage discovery, configuration and sync commands |
 | Repository catalog | `SchemaVersion: 2`, root `Packages`, each ID with an `Architectures` array |
 | Package manifest | `SchemaVersion: 2`, `Payload: { FileName, Sha256 }` |
@@ -29,6 +31,6 @@ An empty OSDStage cache is a normal starting state. Existing integrity, transact
 
 ## Release and acceptance
 
-The GitHub repository was renamed to [roryvossepoel/OSDStage](https://github.com/roryvossepoel/OSDStage) on 1 November 2026 after PRs #99 and #100 merged and main CI passed. Source, icon, help and module metadata URLs now use that canonical repository name. Release creation remains manual; these changes do not publish OSDStage to the Gallery.
+The GitHub repository was renamed to [roryvossepoel/OSDStage](https://github.com/roryvossepoel/OSDStage) on 1 November 2026 after PRs #99 and #100 merged and main CI passed. Source, icon, help and module metadata URLs now use that canonical repository name. Release creation remains manual; merging later changes does not update the Gallery package.
 
-Windows PowerShell 5.1 and PowerShell 7 validation, fresh-cache content acquisition, ordered SetupComplete execution, renamed paths and independent cleanup checks have passed for the candidate recorded in [rename acceptance](osdstage-rename-acceptance.md). CI on later changes is separate evidence. Historical feature records remain scoped to their recorded candidates. Viewer publication, public Pages documentation and Gallery release remain separate work.
+Windows PowerShell 5.1 and PowerShell 7 validation, fresh-cache content acquisition, ordered SetupComplete execution, renamed paths and independent cleanup checks have passed for the candidate recorded in [rename acceptance](osdstage-rename-acceptance.md). CI on later changes is separate evidence. Historical feature records remain scoped to their recorded candidates. GitHub Pages and Gallery RC2 are published. New development behavior requires its own acceptance and release; see [release availability](release-status.md).

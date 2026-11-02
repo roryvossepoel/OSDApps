@@ -1,12 +1,14 @@
 # OSDStage documentation
 
-OSDStage is CLI-first. Use PowerShell to configure, cache and stage software and device settings; use OSDStage Viewer to inspect what was prepared. Start with the workflow for the environment you are actually using.
+Choose the task you want to complete. Start with the online WinPE workflow; cache preparation is optional unless the deployment must work offline. The Windows Viewer inspects your deployment without changing it.
+
+**Published preview: RC2.** Check [release availability](release-status.md) when upgrading from RC1 or testing newer development changes.
 
 ## Start here
 
 | I want to... | Guide | Where it runs |
 | --- | --- | --- |
-| Understand the full deployment sequence | [Getting started](getting-started.md) | Windows preparation → WinPE → first Windows boot |
+| Start an online deployment | [Getting started](getting-started.md) | WinPE → SetupComplete → OOBE |
 | Put the module and reusable app content on USB | [Prepare a USB cache](../Examples/Prepare-UsbCache.md) | Full Windows preparation machine |
 | Stage apps after OSDCloud has applied Windows | [Online WinPE deployment](../Examples/WinPE-Online.md) | WinPE, before the first Windows boot |
 | Integrate staging with OSDT or another launcher | [Launcher integration](../Examples/Launcher-Integration.md) | WinPE; exit-code gate before the launcher reboots |
@@ -22,18 +24,19 @@ OSDStage is CLI-first. Use PowerShell to configure, cache and stage software and
 
 | Topic | Contents |
 | --- | --- |
-| [Console output](console-output.md) (unreleased) | Compact summaries, full result objects and diagnostic details |
-| [Built-in apps](built-in-apps.md) | Per-app configuration, architectures, vendor sources and signature/publisher policy |
+| [Console output](console-output.md) (RC2) | Compact summaries, full result objects and diagnostic details |
+| [Built-in apps](built-in-apps.md) | Complete app chooser with separate configuration guides |
+| [Acquisition and validation](built-in-acquisition.md) | Vendor sources, cache freshness, fallback and signature scope |
 | [Initial default apps](default-associations.md) | File/protocol associations from parameters or XML, one-shot DISM import and physical acceptance |
 | [Repository packages](repository.md) | Catalog/alias structure, package authoring, cache health, transactional reconciliation and SHA-256 integrity |
 | [Viewers](viewer.md) | Windows deployment inspector versus web catalog browser; read-only boundaries |
 | [Registry](registry-staging.md), [variables](environment-variables.md), [services](services.md) | Explicit machine settings applied once during SetupComplete |
-| [Files and directories](file-system.md) (unreleased) | Create directories, write or copy files, and explicitly remove selected paths |
+| [Files and directories](file-system.md) (RC2) | Create directories, write or copy files, and explicitly remove selected paths |
 | [Certificates](certificate-staging.md), [drivers](driver-packages.md), [fonts](repository.md) | Typed repository payloads and machine-wide installation |
 | [Wi-Fi](wifi-staging.md) | WLAN XML or parameters, profile import and credential cleanup |
 | [Start/taskbar pins](desktop-settings.md) | Explicit pin lists and documented limitations |
-| [Windows Update](windows-update.md) (experimental, unreleased) | Final quality-update pass, selection policy, reboot boundaries and test procedure |
-| [Windows capabilities](windows-capabilities.md) | Add/remove Features on Demand on Windows 11 25H2 and later |
+| [Windows Update](windows-update.md) (experimental, unreleased) | Final quality-update pass, optional drivers, reboot boundaries and test procedure |
+| [Windows features](windows-features.md), [capabilities](windows-capabilities.md), [inbox cleanup](windows-inbox-cleanup.md) | Enable/disable features, add/remove FoDs and remove explicitly selected inbox apps |
 | [Runtime and cleanup](runtime.md) | SetupComplete, PreInstall, Runner, machine-readable results, configuration, logs and failure handling |
 | [FAQ and troubleshooting](faq.md) | Environment mistakes, cache and network failures, trust checks, logs and upgrades |
 
@@ -43,10 +46,12 @@ OSDStage is CLI-first. Use PowerShell to configure, cache and stage software and
 | --- | --- |
 | [Architecture](architecture.md) | Acquisition, cache, local staging and the ordered device manifest |
 | [Feature scope and validation](feature-status.md) | Implemented features, practical evidence, outstanding decisions and deferred work |
+| [Sources and design references](sources.md) | Consulted documentation, upstream code, purposes and validation boundaries |
 | [GitHub Pages](github-pages.md) | Static website, web catalog, local checks and publication |
 | [Public metadata](public-metadata.md) | `metadata/builtins.json`, icons and external Viewer consumers |
 | [Contributing](../CONTRIBUTING.md) | Contribution and built-in app request policy |
 | [Maintenance](maintenance.md) | Source metadata, USB, release and saved-result checks; diagnostic bundle collection and their limits |
+| [Release availability](release-status.md) | Published preview versus merged development changes |
 | [Releasing](releasing.md) | CI, module build, release tags and verified PowerShell Gallery publication |
 
 ## Evidence and history

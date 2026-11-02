@@ -80,7 +80,7 @@ Normal CI never publishes to the Gallery. Version bumps and immutable release pu
 
 Built-in apps are product-specific integrations maintained inside OSDStage. They are intentionally reserved for broadly used software with a stable, vendor-supported acquisition and unattended installation path. Built-in payloads must always be acquired directly from the software vendor; installers may never be bundled with, mirrored by, or redistributed through OSDStage.
 
-Before requesting a built-in, review the [Built-in app request policy](docs/built-in-apps.md#requesting-a-new-built-in-app).
+Before requesting a built-in, review the [Built-in app request policy](docs/built-in-acquisition.md#requesting-a-new-built-in-app).
 
 The installer source must be the vendor itself. Third-party mirrors, community package feeds, repackaged binaries, and module-hosted installer payloads are not accepted for built-ins.
 

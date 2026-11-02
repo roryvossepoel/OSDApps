@@ -1,18 +1,25 @@
 # Changelog
 
-## Unreleased — after 1.0.0-rc1
+## Unreleased
 
-- Add experimental `Add-OSDStageWindowsUpdate`: a final native-WUA step with conservative classification and bundle selection, optional hardware drivers, scan-only mode, cooperative cancellation, per-update results and no automatic reboot. Installation and Autopilot acceptance remain pending in #109.
+- Add experimental `Add-OSDStageWindowsUpdate`: one final native Windows Update scan/install pass after apps and configuration. Includes eligible Windows, .NET, Defender and MSRT quality updates; excludes feature upgrades and recognized previews.
+- Optional `-IncludeDrivers` permits all WUA driver classes, including firmware; `-DriverClass` narrows the selection. Continue installing with a later restart pending until WUA requires a restart before another installation. Record per-update outcomes without requesting a reboot or caching update payloads on OSDCloud USB.
+- Manual OOBE acceptance on PC1 confirmed 29/29 driver installations, active BIOS/network/audio/video versions after restart, and a later 10/10 component-driver pass. Full current-policy SetupComplete and cumulative-update acceptance remain pending.
 
-- Correct experimental Windows Update selection for unclassified software bundle members by using the checked parent quality classification; retain explicit exclusions, record actual/effective classification IDs and inspect all bundle siblings. This addresses the PC1 scan that found 34 updates but selected none; physical installation acceptance remains pending.
+## 1.0.0-rc2
 
-- Correct experimental Windows Update driver filtering to use WUA Networking/Sound/Video classes. Keep manual/optional and ambiguous OtherHardware offers excluded; record BrowseOnly/AutoSelectOnWebSites in diagnostic and deployment reports.
+- Second public release candidate. Not a GA release. Includes the tested changes merged after RC1; no repository schema, cache-path or command-name migration is required from RC1.
 
 - Acquire and refresh Company Portal and CMTrace Open automatically during PreInstall, with optional OSDCloud USB caching and validated offline fallback. WinPE can stage both without prepared cache; fully offline preflight still requires verified content.
 
 - Use Deploy-OSDCloud-style timestamped `[INFO]`/`[WARN]`/`[ERROR]` lines and terminal-aware colors, with no extra blank lines between results, across cmdlet result types without replacing PowerShell objects or changing JSON properties. Preserve explicit detail/table views, diagnostics and failure details; distinguish staging, cache reuse, validation, authoring and cleanup. Configuration updates use a suppressible information message when `-PassThru` is omitted.
 
 - Add `Add-OSDStageDirectory` and `Add-OSDStageFile` for ordered, one-shot SetupComplete file operations. Support literal paths, directory creation/removal, text or source-file content, explicit `-Force` replacement and separate `-Recurse` removal. Include integrity-checked offline staging, per-operation results, help and a disposable test example. Physical acceptance passed on 1 November 2026: nine operations succeeded and all five independent content/removal checks passed. The published RC1 does not contain these commands.
+
+- Physical x64 acceptance: Company Portal and CMTrace Open both completed fresh online acquisition and installation, then reused validated cached content on the next deployment; both apps were confirmed working. File-system acceptance completed nine operations with five independent content/removal checks. Compact output was verified with preserved result properties and explicit detailed views.
+- Refresh the GitHub Pages homepage, task guides, source register and release-availability documentation. Website content is deployed separately from the module.
+- Windows Update staging and optional Windows Update drivers remain in experimental PR #111 and are not included. ARM64 physical validation is still outstanding.
+- Upgrade from RC1 with an explicit prerelease install: `Install-Module OSDStage -Repository PSGallery -RequiredVersion '1.0.0-rc2' -AllowPrerelease -Force`. RC1 and RC2 use the same numeric PowerShell module folder (`1.0.0`); close existing PowerShell sessions and verify the loaded prerelease label before testing.
 
 ## 1.0.0-rc1
 

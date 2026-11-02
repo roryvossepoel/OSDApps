@@ -1,5 +1,7 @@
 # All-app cold deployment validation
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 **Historical procedure for OSDStage 0.45.0.** This is not a current-release regression test or a required step after every update. Its [recorded successful cold run](testing.md#nine-app-cold-deployment--19-october-2026) is separate from the procedure. For current deployment instructions, use the [online WinPE example](../Examples/WinPE-Online.md); for inspections, use [Choose the right check](maintenance.md#choose-the-right-check).
 
 This operator test uses the published OSDStage **0.45.0** module from PowerShell

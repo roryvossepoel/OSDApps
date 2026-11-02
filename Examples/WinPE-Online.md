@@ -1,6 +1,6 @@
 # Online WinPE deployment
 
-> Release candidate: these online Gallery instructions apply after publication of the OSDStage preview is verified. Use `-AllowPrerelease`.
+> Install the published preview with `-AllowPrerelease`. Check [release availability](../docs/release-status.md) when selecting a module version.
 
 [Examples](README.md) · [USB preparation](Prepare-UsbCache.md) · [Offline alternative](WinPE-Offline.md)
 

@@ -1,5 +1,7 @@
 # Validation matrix
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 > Historical device evidence below was recorded with OSDApps, before the rename. Command and path examples are now written for OSDStage; the recorded commit IDs and deployment IDs refer to the original tests. This is not acceptance evidence for the renamed candidate.
 
 This page records version-specific maintenance checks and real OSDStage deployment scenarios after OSDCloud applies Windows. **Staging success alone is not an installation success**: the Windows `SetupComplete.cmd` phases must finish and the individual app results must be checked.

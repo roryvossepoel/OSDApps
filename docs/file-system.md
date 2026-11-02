@@ -1,6 +1,8 @@
 # Files and directories
 
-**Unreleased: not included in Gallery version 1.0.0-rc1.**
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
+**Available from Gallery version 1.0.0-rc2.** Not included in RC1.
 
 Use `Add-OSDStageDirectory` and `Add-OSDStageFile` in WinPE after OSDCloud
 has applied Windows. They stage intent; SetupComplete performs the changes
@@ -96,6 +98,6 @@ copy (`00-FF-0A-0D-80`), recursive directory removal and individual file removal
 The test added an individual file create/remove pair to the seven-operation
 example. Read-only and link rejection remain automated-test evidence.
 Deployment ID: `82664f3f-ade5-426d-a523-21dd632c7a1c`.
-These commands are merged but are not in the published `1.0.0-rc1` module.
+These commands are included in `1.0.0-rc2`; the earlier `1.0.0-rc1` module is unchanged.
 
 [Back to documentation](README.md)

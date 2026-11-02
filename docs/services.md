@@ -1,5 +1,7 @@
 # Windows services
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 `Add-OSDStageService` stages service configuration in WinPE after OSDCloud has applied Windows. A bundled `Services` Script executes once as SYSTEM during SetupComplete. It uses the same transaction, SHA-256 integrity, offline-readiness, runner and cleanup contract as environment variables. No repository package or cache is required.
 
 ```powershell

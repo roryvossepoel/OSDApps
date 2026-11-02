@@ -2,6 +2,12 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Viewer](viewer.md) · [Runtime](runtime.md)
 
+Jump to [release differences](#does-main-match-the-gallery-module), [USB preparation](#do-i-need-to-prepare-every-usb-stick-first), [network failures](#what-happens-if-there-is-no-network), [signature checks](#why-did-a-signature-or-publisher-check-fail) or [logs](#where-are-the-logs).
+
+## Does main match the Gallery module?
+
+Check the version first. Gallery RC2 includes file operations, compact output and automatic first-boot acquisition for Company Portal/CMTrace Open. These are absent from RC1. Newer development changes may still be separate from Gallery. Check [release availability](release-status.md) and the loaded module path before testing examples.
+
 ## What can OSDStage stage?
 
 Software and explicit device configuration before OOBE: vendor apps, repository
@@ -36,6 +42,8 @@ vendor built-ins, including Company Portal and CMTrace Open, acquire and check
 for updated content during full-Windows PreInstall. Fully offline deployment
 requires matching verified content in advance. Loading the module and preparing
 bootable OSDCloud media are separate from caching payloads.
+
+**Gallery RC1:** Company Portal and CMTrace Open still require pre-caching. Their automatic first-boot acquisition is included in RC2; see [release availability](release-status.md).
 
 ## Which commands belong on the preparation machine and which belong in WinPE?
 
@@ -74,7 +82,7 @@ See Microsoft's [Win32 app processing flow](https://learn.microsoft.com/troubles
 
 OSDStage does not use the Office Deployment Tool as a WinPE acquisition mechanism. Built-in acquisition/refresh runs in full Windows, where the deployment runtime used by the module is available. WinPE stages Office deployment intent and can copy an existing Office cache.
 
-See [Architecture](architecture.md) and [Microsoft 365 Apps options](built-in-apps.md#microsoft-365-apps).
+See [Architecture](architecture.md) and [Microsoft 365 Apps options](microsoft-365-apps.md#microsoft-365-apps).
 
 ## Teams sync works in WinPE. Why is it also deferred?
 
@@ -227,7 +235,7 @@ They describe different evidence:
 | SHA-256 verified | The checked file matches its referenced hash. Repository ZIPs use the catalog hash; some built-ins also check recorded release hashes. |
 | Signature valid | A supported cached MSI/EXE passed Windows Authenticode and the expected built-in publisher check. |
 
-A built-in `Valid=True` cache entry is not a claim that its whole package chain was signature-verified. Office data, Teams MSIX and Adobe's outer ZIP are outside the specific MSI/EXE signature scope. The exact local checks differ by app; `Healthy=True` does not establish vendor freshness or compatibility with every Office configuration. See [what a cache check proves](maintenance.md#what-a-cache-check-proves). Read the [Viewer status guide](viewer.md#integrity-and-signature-are-different-checks) and [publisher policy](built-in-apps.md#authenticode-and-publisher-policy-0340).
+A built-in `Valid=True` cache entry is not a claim that its whole package chain was signature-verified. Office data, Teams MSIX and Adobe's outer ZIP are outside the specific MSI/EXE signature scope. The exact local checks differ by app; `Healthy=True` does not establish vendor freshness or compatibility with every Office configuration. See [what a cache check proves](maintenance.md#what-a-cache-check-proves). Read the [Viewer status guide](viewer.md#integrity-and-signature-are-different-checks) and [publisher policy](built-in-acquisition.md#authenticode-and-publisher-policy-0340).
 
 ## Why did a signature or publisher check fail?
 
@@ -298,7 +306,7 @@ Catalogs use schema 2 with root `Packages` and per-ID `Architectures`. Public bu
 
 ## Can I request another built-in app?
 
-Yes. Review the [built-in request policy](built-in-apps.md#requesting-a-new-built-in-app) and [contribution guide](../CONTRIBUTING.md). Built-ins are reserved for broadly useful integrations with stable vendor-native acquisition and unattended installation paths.
+Yes. Review the [built-in request policy](built-in-acquisition.md#requesting-a-new-built-in-app) and [contribution guide](../CONTRIBUTING.md). Built-ins are reserved for broadly useful integrations with stable vendor-native acquisition and unattended installation paths.
 
 Customer-specific, authenticated or otherwise non-generic content belongs in an organization-managed repository instead.
 

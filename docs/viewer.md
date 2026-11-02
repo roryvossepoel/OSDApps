@@ -130,7 +130,7 @@ Get-OSDStageCache -ResolveVersions -VerifySignatures |
     Select-Object Id, Version, Valid, SignatureStatus, SignatureScope, SignatureSigner
 ```
 
-Office inspection covers **setup.exe only**; Teams covers **teamsbootstrapper.exe only**. It does not verify the Office data tree or Teams MSIX. Adobe's outer ZIP remains outside the supported Authenticode scope. See the [publisher policy](built-in-apps.md#authenticode-and-publisher-policy-0340).
+Office inspection covers **setup.exe only**; Teams covers **teamsbootstrapper.exe only**. It does not verify the Office data tree or Teams MSIX. Adobe's outer ZIP remains outside the supported Authenticode scope. See the [publisher policy](built-in-acquisition.md#authenticode-and-publisher-policy-0340).
 
 `-Offline` disables repository lookup, but Windows trust/revocation evaluation may still use the network. To suppress both catalog lookup and signature inspection by the Viewer:
 
