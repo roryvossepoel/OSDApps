@@ -29,14 +29,10 @@ Test-OSDStageDeployment -ThrowOnFailure</code></pre></div>
     <div class="section-intro"><p class="eyebrow">How it works</p><h2 id="workflow-title">From Windows installation to OOBE.</h2><p>One flow. Your apps and configuration, applied before OOBE.</p></div>
     <ol class="workflow-steps">
       <li><span class="workflow-number" aria-hidden="true">01</span><p class="workflow-phase">OSDCloud · WinPE</p><h3>Install Windows</h3><p>Let OSDCloud apply Windows and complete its workflow.</p></li>
-      <li><span class="workflow-number" aria-hidden="true">02</span><p class="workflow-phase">OSDStage · WinPE</p><h3>Stage your choices</h3><p>Stage apps and configuration, then validate the deployment.</p></li>
+      <li><span class="workflow-number" aria-hidden="true">02</span><p class="workflow-phase">OSDStage · WinPE</p><h3>Stage your choices</h3><p>Stage apps and configuration, then validate. Connect an OSDCloud-labeled USB drive to automatically cache supported content for reuse.</p></li>
       <li><span class="workflow-number" aria-hidden="true">03</span><p class="workflow-phase">Restart → SetupComplete</p><h3>Apply automatically</h3><p>Restart into Windows. SetupComplete installs your apps and applies configuration before OOBE.</p></li>
       <li><span class="workflow-number" aria-hidden="true">04</span><p class="workflow-phase">OOBE</p><h3>Continue setup</h3><p>Continue with Windows setup or your Autopilot enrollment.</p></li>
     </ol>
-    <div class="workflow-notes">
-      <div><span class="workflow-note-icon" aria-hidden="true">↳</span><div><h3>Your choice of content</h3><p>Use built-in evergreen apps and configuration commands, or connect your own package repository.</p></div></div>
-      <div><span class="workflow-note-icon" aria-hidden="true">↻</span><div><h3>USB caching, automatically</h3><p>Connect a USB drive labeled <code>OSDCloud</code>. Supported content is cached automatically and reused when valid.</p></div></div>
-    </div>
     <a class="text-link" href="get-started.html">Follow the quick start <span aria-hidden="true">→</span></a>
   </section>
 
