@@ -1,6 +1,6 @@
 # OSDStage
 
-> **Published preview: 1.0.0-rc1.** Install with `-AllowPrerelease`. Documentation on `main` also covers merged changes that are not yet in the Gallery; check [release availability](docs/release-status.md). Repository and package manifests use schema 2.
+> **Release candidate: 1.0.0-rc2.** Install published previews with `-AllowPrerelease`; check [release availability](docs/release-status.md) for verified Gallery publication. Repository and package manifests use schema 2.
 
 ![OSDStage — Your deployment. Ready before OOBE. Software and device configuration with optional USB caching.](docs/images/osdstage-banner.svg)
 
@@ -55,7 +55,7 @@ OSDStage discovers the offline Windows installation, prepares SetupComplete and 
 - **With an OSDCloud-labeled USB flash drive:** matching cached content is staged as fallback. SetupComplete checks for updates and can refresh the cache. Leave the USB flash drive connected until OOBE appears.
 - **Without a USB flash drive:** SetupComplete downloads built-in content directly to local staging. Keep the PC online until OOBE appears.
 
-**Post-RC1:** Company Portal and CMTrace Open also support online acquisition during SetupComplete. The published RC1 still requires their caches to be prepared first; see [release availability](docs/release-status.md). A detected OSDCloud USB cache is checked and refreshed automatically; without USB, content is acquired on the Windows disk. Prepare verified content in advance only when you need a fully offline deployment.
+**From RC2:** Company Portal and CMTrace Open also support online acquisition during SetupComplete. See [release availability](docs/release-status.md) when upgrading from RC1. A detected OSDCloud USB cache is checked and refreshed automatically; without USB, content is acquired on the Windows disk. Prepare verified content in advance only when you need a fully offline deployment.
 
 Keep networking available for either online route. No module copy on the USB flash drive is needed when loading from the Gallery. For a fully disconnected deployment, [prepare matching content and save the module first](Examples/WinPE-Offline.md).
 
@@ -97,7 +97,7 @@ Repository package types are `App`, `Script`, `Font`, `Certificate` and `Driver`
 | --- | --- |
 | Fonts, machine CA certificates and driver packages | [Repository packages](docs/repository.md), [certificates](docs/certificate-staging.md), [drivers](docs/driver-packages.md) |
 | Registry, machine variables and services | [Registry](docs/registry-staging.md), [variables](docs/environment-variables.md), [services](docs/services.md) |
-| Files and directories (unreleased) | [Create, copy and remove](docs/file-system.md) |
+| Files and directories | [Create, copy and remove](docs/file-system.md) |
 | Wi-Fi profiles | [XML and parameter input](docs/wifi-staging.md) |
 | Optional features, FoDs and inbox app removal | [Feature scope](docs/feature-status.md), [capabilities](docs/windows-capabilities.md), [inbox cleanup](docs/windows-inbox-cleanup.md#windows-inbox-cleanup) |
 | Initial app associations and Start/taskbar pins | [Associations](docs/default-associations.md), [pins](docs/desktop-settings.md) |
