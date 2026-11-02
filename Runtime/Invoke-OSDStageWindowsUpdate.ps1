@@ -41,14 +41,18 @@ function Assert-OSDStageWindowsUpdateContext {
 }
 
 function Get-OSDStageWindowsUpdateSelection {
-    param([Parameter(Mandatory)]$Update,[bool]$IncludeDrivers=$false,[int]$Depth=0)
-    # Category IDs are language independent. Unknown/missing metadata fails closed.
+    param([Parameter(Mandatory)]$Update,[bool]$IncludeDrivers=$false,[int]$Depth=0,
+        [string[]]$ParentSoftwareClassifications=@())
+    # Category IDs are language independent. Root updates require their own
+    # classification. Unclassified software members can use a checked software
+    # parent's classification; explicit disallowed metadata is never overridden.
     # Do not allow the broad Updates/UpdateRollups/FeaturePacks classifications:
     # enablement packages and non-security previews can be published there.
     $safe=@('0fa1201d-4330-4fa8-8ae9-b877473b6441', # Security Updates
         'e6cf1350-c01b-414d-a61f-263d14d133b4', # Critical Updates
         'e0789628-ce08-4437-be74-2495b842f43b') # Definition Updates
     $reason='MissingOrUnsupportedMetadata';$selected=$false
+    $categories=@();$effectiveCategories=@();$classificationSource='None'
     $bundleDecisions=[Collections.Generic.List[object]]::new()
     try {
         if ($Depth -gt 16) { throw 'BundleDepthExceeded' }
@@ -61,9 +65,18 @@ function Get-OSDStageWindowsUpdateSelection {
             $null -eq $Update.InstallationBehavior.RebootBehavior -or
             [int]$Update.InstallationBehavior.RebootBehavior -notin @(0,1,2)) { throw 'InteractiveOrUnknownRebootBehavior' }
         if ([string]$Update.Title -match '(?i)preview|voorvertoning|vorschau|aper\u00e7u|enablement|feature\s+update|functie.update|firmware|\bBIOS\b|\bUEFI\b') { throw 'ExcludedTitle' }
+        if ($null -eq $Update.Categories) { throw 'ClassificationMetadataMissing' }
         $categories=@($Update.Categories | Where-Object Type -eq 'UpdateClassification' | ForEach-Object { [string]$_.CategoryID })
+        $effectiveCategories=$categories
+        if ($categories.Count -gt 0) { $classificationSource='Own' }
         if ([int]$Update.Type -eq 1) {
-            if ($categories.Count -eq 0 -or @($categories | Where-Object { $_ -notin $safe }).Count -gt 0) { throw 'ClassificationNotAllowed' }
+            if ($categories.Count -eq 0 -and $Depth -gt 0 -and
+                $ParentSoftwareClassifications.Count -gt 0 -and
+                @($ParentSoftwareClassifications | Where-Object { $_ -notin $safe }).Count -eq 0) {
+                $effectiveCategories=@($ParentSoftwareClassifications)
+                $classificationSource='ParentBundle'
+            }
+            if ($effectiveCategories.Count -eq 0 -or @($effectiveCategories | Where-Object { $_ -notin $safe }).Count -gt 0) { throw 'ClassificationNotAllowed' }
         }
         elseif ([int]$Update.Type -eq 2) {
             if (-not $IncludeDrivers) { throw 'DriversDisabled' }
@@ -76,15 +89,30 @@ function Get-OSDStageWindowsUpdateSelection {
         }
         else { throw 'UpdateTypeNotAllowed' }
         if ($null -eq $Update.BundledUpdates) { throw 'BundleMetadataMissing' }
+        $childClassifications=@()
+        if ([int]$Update.Type -eq 1) { $childClassifications=@($effectiveCategories) }
+        $bundleRejection=$null
         foreach ($child in $Update.BundledUpdates) {
-            $decision=Get-OSDStageWindowsUpdateSelection -Update $child -IncludeDrivers $IncludeDrivers -Depth ($Depth+1)
-            $bundleDecisions.Add([pscustomobject]@{UpdateId=[string]$child.Identity.UpdateID;Title=[string]$child.Title;Selected=$decision.Selected;Reason=$decision.Reason;Children=$decision.BundleDecisions})
-            if (-not $decision.Selected) { throw ('BundleRejected: ' + $decision.Reason) }
+            $decision=Get-OSDStageWindowsUpdateSelection -Update $child -IncludeDrivers $IncludeDrivers -Depth ($Depth+1) -ParentSoftwareClassifications $childClassifications
+            $bundleDecisions.Add([pscustomobject]@{
+                UpdateId=[string]$child.Identity.UpdateID;Title=[string]$child.Title;Type=[int]$child.Type
+                DriverClass=$(if ([int]$child.Type -eq 2) { [string]$child.DriverClass } else { $null })
+                DriverHardwareId=$(if ([int]$child.Type -eq 2) { [string]$child.DriverHardwareID } else { $null })
+                Selected=$decision.Selected;Reason=$decision.Reason
+                ClassificationIds=$decision.ClassificationIds;EffectiveClassificationIds=$decision.EffectiveClassificationIds
+                ClassificationSource=$decision.ClassificationSource;Children=$decision.BundleDecisions
+            })
+            if (-not $decision.Selected -and -not $bundleRejection) { $bundleRejection='BundleRejected: ' + $decision.Reason }
         }
+        if ($bundleRejection) { throw $bundleRejection }
         $selected=$true;$reason=if ([int]$Update.Type -eq 2) {'AutomaticHardwareDriver'} else {'AllowedQualityClassification'}
     }
     catch { $reason=$_.Exception.Message }
-    [pscustomobject]@{Selected=$selected;Reason=$reason;BundleDecisions=@($bundleDecisions.ToArray())}
+    [pscustomobject]@{
+        Selected=$selected;Reason=$reason;ClassificationIds=@($categories)
+        EffectiveClassificationIds=@($effectiveCategories);ClassificationSource=$classificationSource
+        BundleDecisions=@($bundleDecisions.ToArray())
+    }
 }
 
 function New-OSDStageWindowsUpdateComObject {
@@ -175,7 +203,7 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
     $report=[ordered]@{
         SchemaVersion=2;DeploymentId=[string]$Configuration.DeploymentId
         Phase='LastWithinSetupComplete';Status='Running';Outcome='Running';ScanOnly=$Configuration.ScanOnly
-        IncludeDrivers=$Configuration.IncludeDrivers;Source='PolicyDefault';SelectionPolicy='ConservativeQualityV1'
+        IncludeDrivers=$Configuration.IncludeDrivers;Source='PolicyDefault';SelectionPolicy='ConservativeQualityV2'
         StartedAtUtc=[DateTime]::UtcNow.ToString('o');CompletedAtUtc=$null;DurationSeconds=0
         LogPath=$script:OSDStageWindowsUpdateLogPath
         ReleaseBefore=$null;ReleaseAfter=$null;ReleaseUnchanged=$null
@@ -204,6 +232,8 @@ function Invoke-OSDStageWindowsUpdateConfiguration {
             $item=[pscustomobject]@{
                 UpdateId=[string]$update.Identity.UpdateID;Revision=$update.Identity.RevisionNumber
                 Title=[string]$update.Title;Type=[int]$update.Type
+                DriverClass=$(if ([int]$update.Type -eq 2) { [string]$update.DriverClass } else { $null })
+                DriverHardwareId=$(if ([int]$update.Type -eq 2) { [string]$update.DriverHardwareID } else { $null })
                 KBArticleIDs=@($update.KBArticleIDs);BundleDecisions=$decision.BundleDecisions
                 Categories=@($update.Categories | ForEach-Object { [pscustomobject]@{Id=[string]$_.CategoryID;Type=[string]$_.Type;Name=[string]$_.Name} })
                 Selected=$decision.Selected;SelectionReason=$decision.Reason

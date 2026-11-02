@@ -33,6 +33,23 @@ These are alternatives, not two update passes. Staging never updates the WinPE o
 preparation computer. Full Windows 11 25H2+ and native 64-bit SYSTEM are required
 at execution time. The existing launcher controls the first Windows boot.
 
+To check the corrected selection on an already installed test PC before another
+deployment, run the test build's read-only diagnostic:
+
+```powershell
+$selection = .\tools\Test-OSDStageWindowsUpdateSelection.ps1
+$selection | Format-List Phase, FoundCount, DefaultSelectedCount,
+    WithDriversSelectedCount, DriverSelectedCount, ResultPath
+$selection.Items | Format-List Title, DefaultSelected, WithDriversSelected,
+    DefaultReason, WithDriversReason, DriverClass
+```
+
+It performs one scan and compares default selection with driver opt-in. It does
+not download update payloads, accept EULAs, install, change policy or reboot.
+The separate JSON report includes driver hardware/class and bundle metadata;
+it does not overwrite `WindowsUpdate-Result.json`. Running it during OOBE is
+selection evidence only, not a SetupComplete installation acceptance test.
+
 ## Selection policy
 
 | Candidate | Behavior |
@@ -40,13 +57,29 @@ at execution time. The existing launcher controls the first Windows boot.
 | Automatic Security Updates, Critical Updates, Definition Updates | Eligible when required metadata and every bundle member pass validation |
 | Upgrades, Feature Packs, Service Packs, general Updates and Update Rollups | Excluded; broad classifications can include enablement packages or non-security previews |
 | Optional/preview/interactive updates, unknown reboot metadata | Excluded |
-| Missing, conflicting or unrecognized metadata, including bundled children | Skipped with a reason; never inferred safe from a title |
+| Missing classification on a root offer, conflicting or unrecognized classifications | Skipped with a reason; never inferred safe from a title |
+| Software bundle member with a readable category collection but no classification | May use its checked software parent's allowed quality classification; all other member checks still apply |
 | Drivers | Off by default |
 | Opted-in automatic hardware drivers | Restricted to Net, Display, Media, HIDClass, Bluetooth, Printer and Image classes with recognized PCI/USB/HID/Bluetooth/print hardware identities |
 | Firmware, BIOS, System, Extension, SoftwareComponent and unknown driver classes | Excluded |
 
-Classification GUIDs are language-independent. Title exclusions are additional
-checks, not the primary release boundary. This intentionally conservative first
+Classification GUIDs are language-independent. `ConservativeQualityV2` requires
+each root offer to have its own allowed classification. A software member with no
+classification can use its checked software parent's effective classification,
+including through nested software bundles. This is OSDStage's selection policy,
+not a claim that WUA populates inherited categories. A null/unreadable category
+collection, an explicit unknown or excluded classification, a driver member or
+an unclassified root offer is not rescued by this rule. Explicit member
+classifications and preview/feature/interactive exclusions are still checked.
+Only the selected root offer is passed to the installer, never its binaries
+individually. All inspected siblings are recorded, including after a rejection.
+
+Each bundle decision records the actual `ClassificationIds`,
+`EffectiveClassificationIds` and `ClassificationSource` (`Own`, `ParentBundle`
+or `None`). This distinguishes absent categories from an explicitly excluded
+classification when inspecting a result.
+
+Title exclusions are additional checks, not the primary release boundary. This intentionally conservative first
 version can skip legitimate updates, including KB5007651 or MSRT if their actual
 classification is outside the allowlist. Inspect the report before broadening a
 policy; do not enable all `Type='Software'` results or rely on English titles.
@@ -102,6 +135,17 @@ failure. Verify the release again after any later wrapper-controlled reboot.
 
 ## Acceptance before release
 
+**PC1, 2 November 2026, revision `16d61af`:** the new asynchronous runtime
+completed in SetupComplete in 19.1 seconds. It found 34 updates, selected and
+installed zero, reported no reboot and retained Windows 26H2 build 26300.9711.
+The result was `NoEligibleUpdates`, not successful update installation.
+KB5007651 and KB2267602 were Definition Updates but were rejected at bundled
+software members. A separate read-only WUA inspection confirmed empty category
+collections on the Security platform binary and four Defender binaries.
+KB890830 was excluded as Update Rollups. The V2 classification-context correction
+has regression coverage for this shape; corrected real-world selection and
+installation still need acceptance. No full servicing or Autopilot pass is claimed.
+
 - Run scan-only in the actual SetupComplete phase and inspect real classifications,
   bundle metadata and skip reasons, including offered release upgrades.
 - Install selected updates; compare per-update results with the installed state.
@@ -116,6 +160,7 @@ failure. Verify the release again after any later wrapper-controlled reboot.
 
 - [WUA search criteria](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdatesearcher-search)
 - [Classification GUIDs](https://learn.microsoft.com/en-us/powershell/module/updateservices/get-wsusclassification)
+- [BundledUpdates API](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdate-get_bundledupdates) and [Categories API](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdate-get_categories) (reviewed 2 November 2026 after PC1 bundle diagnostics)
 - [Asynchronous WUA lifetime](https://learn.microsoft.com/en-us/windows/win32/wua_sdk/guidelines-for-asynchronous-wua-operations)
 - [BeginInstall](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdateinstaller-begininstall)
 - [Restart behavior metadata](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/ne-wuapi-installationrebootbehavior)

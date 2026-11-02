@@ -86,13 +86,86 @@ Describe 'Conservative Windows Update selection and execution' {
         $u=New-TestUpdate;$u.PSObject.Properties.Remove('BrowseOnly')
         (Get-OSDStageWindowsUpdateSelection $u).Selected | Should -BeFalse
     }
-    It 'inspects every bundled update and rejects unknown child metadata' {
+    It 'inherits a checked classification only for unclassified software bundle members' {
         $script:update.BundledUpdates=@((New-TestUpdate))
         (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeTrue
         $script:update.BundledUpdates[0].Categories=@()
-        (Get-OSDStageWindowsUpdateSelection $script:update).Reason | Should -BeLike 'BundleRejected*'
-        $script:update.BundledUpdates=@((New-TestUpdate -Category '3689bdc8-b205-4af4-8d4a-a63924c5e9d5'))
+        foreach ($category in @('0fa1201d-4330-4fa8-8ae9-b877473b6441','e6cf1350-c01b-414d-a61f-263d14d133b4','e0789628-ce08-4437-be74-2495b842f43b')) {
+            $script:update.Categories[0].CategoryID=$category
+            $decision=Get-OSDStageWindowsUpdateSelection $script:update
+            $decision.Selected | Should -BeTrue
+            $decision.ClassificationSource | Should -Be Own
+            $decision.BundleDecisions[0].ClassificationSource | Should -Be ParentBundle
+            $decision.BundleDecisions[0].ClassificationIds.Count | Should -Be 0
+            @($decision.BundleDecisions[0].EffectiveClassificationIds) | Should -Be @($category)
+        }
+    }
+    It 'rejects missing category metadata and never supplies a classification to a root offer' {
+        $u=New-TestUpdate;$u.Categories=@()
+        (Get-OSDStageWindowsUpdateSelection $u).Selected | Should -BeFalse
+        (Get-OSDStageWindowsUpdateSelection $u -ParentSoftwareClassifications 'e0789628-ce08-4437-be74-2495b842f43b').Selected | Should -BeFalse
+        $script:update.BundledUpdates=@($u)
+        $u.Categories=$null
+        (Get-OSDStageWindowsUpdateSelection $script:update).Reason | Should -Be 'BundleRejected: ClassificationMetadataMissing'
+        $u.PSObject.Properties.Remove('Categories')
         (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeFalse
+    }
+    It 'preserves explicit child classification exclusions and records all bundle members' {
+        foreach ($category in @('3689bdc8-b205-4af4-8d4a-a63924c5e9d5','28bc880e-0592-4cbf-8f95-c79b17911d5f','b54e7d24-7add-428f-8b75-90a396fa584f','cd5ffd1e-e932-4e3a-bf74-18bf0b1bbd83','unknown')) {
+            $bad=New-TestUpdate -Category $category
+            $unclassified=New-TestUpdate;$unclassified.Categories=@()
+            $script:update.BundledUpdates=@($bad,$unclassified)
+            $decision=Get-OSDStageWindowsUpdateSelection $script:update
+            $decision.Selected | Should -BeFalse
+            $decision.BundleDecisions.Count | Should -Be 2
+            $decision.BundleDecisions[0].ClassificationSource | Should -Be Own
+            $decision.BundleDecisions[1].Selected | Should -BeTrue
+            $bad.Categories+=@([pscustomobject]@{Type='UpdateClassification';CategoryID='e0789628-ce08-4437-be74-2495b842f43b'})
+            (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeFalse
+        }
+    }
+    It 'checks nested bundles and keeps preview, feature, interactive and driver exclusions' {
+        $child=New-TestUpdate;$child.Categories=@()
+        $leaf=New-TestUpdate;$leaf.Categories=@()
+        $child.BundledUpdates=@($leaf);$script:update.BundledUpdates=@($child)
+        (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeTrue
+        $leaf.Categories=@([pscustomobject]@{Type='UpdateClassification';CategoryID='3689bdc8-b205-4af4-8d4a-a63924c5e9d5'})
+        (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeFalse
+        $leaf.Categories=@()
+        foreach ($title in @('Feature Update','Enablement package','Preview','Firmware')) {
+            $leaf.Title=$title
+            (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeFalse
+        }
+        $leaf.Title='Binary 0';$leaf.InstallationBehavior.CanRequestUserInput=$true
+        (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeFalse
+        $leaf.InstallationBehavior.CanRequestUserInput=$false;$leaf.Type=2
+        (Get-OSDStageWindowsUpdateSelection $script:update).Selected | Should -BeFalse
+        (Get-OSDStageWindowsUpdateSelection $script:update -IncludeDrivers $true).Selected | Should -BeFalse
+        $driver=New-TestUpdate -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $leaf.Type=1;$driver.BundledUpdates=@($leaf)
+        (Get-OSDStageWindowsUpdateSelection $driver -IncludeDrivers $true).Selected | Should -BeFalse
+    }
+    It 'selects complete definition bundles with categoryless binary members and saves their evidence' {
+        # Regression shape from PC1 on 2 November: one Security platform binary
+        # and four Defender binaries. Titles are diagnostics, not an allowlist.
+        $definition='e0789628-ce08-4437-be74-2495b842f43b'
+        $platform=New-TestUpdate -Title 'KB5007651' -Category $definition
+        $defender=New-TestUpdate -Title 'KB2267602' -Category $definition
+        $platform.BundledUpdates=@((New-TestUpdate -Title 'Binary 0'))
+        $defender.BundledUpdates=@('HIDDEN: MpSigStub','HIDDEN: Engine','HIDDEN: Bases','Full Deltas' | ForEach-Object { New-TestUpdate -Title $_ })
+        foreach ($u in @($platform.BundledUpdates)+@($defender.BundledUpdates)) { $u.Categories=@() }
+        $script:updates=@($platform,$defender,(New-TestUpdate -Title 'KB890830' -Category '28bc880e-0592-4cbf-8f95-c79b17911d5f'))
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.SelectionPolicy | Should -Be ConservativeQualityV2
+        $r.SelectedCount | Should -Be 2
+        $r.InstalledCount | Should -Be 2
+        $r.Items[2].Selected | Should -BeFalse
+        # Install only root offers, never their internal binaries separately.
+        @($script:installOrder) | Should -Be @('KB5007651','KB2267602')
+        $saved=Get-Content $script:config.ResultPath -Raw | ConvertFrom-Json
+        $saved.Items[1].BundleDecisions.Count | Should -Be 4
+        $saved.Items[1].BundleDecisions[3].ClassificationSource | Should -Be ParentBundle
+        $saved.Items[1].BundleDecisions[3].ClassificationIds.Count | Should -Be 0
     }
     It 'requires driver opt-in and rejects firmware, extension and unknown hardware' {
         $u=New-TestUpdate -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
@@ -104,6 +177,24 @@ Describe 'Conservative Windows Update selection and execution' {
         }
         $u.DriverClass='Net';$u.DriverHardwareID='UEFI\RES_1234'
         (Get-OSDStageWindowsUpdateSelection $u $true).Selected | Should -BeFalse
+    }
+    It 'keeps hardware drivers optional in the runtime and records their metadata' {
+        $driver=New-TestUpdate -Title 'Network driver' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $firmware=New-TestUpdate -Title 'Dell Firmware' -Type 2 -Category 'ebfc1fc5-71a4-4f7b-9aca-3b9a503104a0'
+        $firmware.DriverClass='Firmware'
+        $script:updates=@($driver,$firmware,$script:update)
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.SelectedCount | Should -Be 1
+        $r.Items[0].SelectionReason | Should -Be DriversDisabled
+        $script:config.IncludeDrivers=$true;$script:installOrder.Clear()
+        $r=Invoke-OSDStageWindowsUpdateConfiguration $script:config
+        $r.SelectedCount | Should -Be 2
+        $r.Items[0].Status | Should -Be Installed
+        $r.Items[0].DriverClass | Should -Be Net
+        $r.Items[0].DriverHardwareId | Should -Be 'PCI\VEN_1234'
+        $r.Items[1].Selected | Should -BeFalse
+        @($script:installOrder) | Should -Be @('Beveiligingsupdate','Network driver')
+        $r.RebootRequested | Should -BeFalse
     }
     It 'scan-only records decisions without accepting EULAs or installing' {
         $script:config.ScanOnly=$true

@@ -4,6 +4,8 @@
 
 - Add experimental `Add-OSDStageWindowsUpdate`: a final native-WUA step with conservative classification and bundle selection, optional hardware drivers, scan-only mode, cooperative cancellation, per-update results and no automatic reboot. Installation and Autopilot acceptance remain pending in #109.
 
+- Correct experimental Windows Update selection for unclassified software bundle members by using the checked parent quality classification; retain explicit exclusions, record actual/effective classification IDs and inspect all bundle siblings. This addresses the PC1 scan that found 34 updates but selected none; physical installation acceptance remains pending.
+
 - Acquire and refresh Company Portal and CMTrace Open automatically during PreInstall, with optional OSDCloud USB caching and validated offline fallback. WinPE can stage both without prepared cache; fully offline preflight still requires verified content.
 
 - Use Deploy-OSDCloud-style timestamped `[INFO]`/`[WARN]`/`[ERROR]` lines and terminal-aware colors, with no extra blank lines between results, across cmdlet result types without replacing PowerShell objects or changing JSON properties. Preserve explicit detail/table views, diagnostics and failure details; distinguish staging, cache reuse, validation, authoring and cleanup. Configuration updates use a suppressible information message when `-PassThru` is omitted.
