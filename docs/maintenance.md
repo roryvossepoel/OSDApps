@@ -1,5 +1,7 @@
 # Maintenance checks and diagnostics
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 Use [`tools/Test-OSDStageMaintenance.ps1`](../tools/Test-OSDStageMaintenance.ps1) on the Windows preparation PC when reviewing a USB flash drive, a release or a saved deployment result. Use Diagnostics mode on the deployed PC (including OOBE PowerShell) to collect its results and logs. This optional repository tool is separate from the Gallery module: it adds no exported commands and is not part of SetupComplete.
 
 Download the script from the repository, or run it from a checkout. Windows PowerShell 5.1 and PowerShell 7 are supported. The examples below assume the repository root is the current directory.
@@ -115,7 +117,7 @@ Get-OSDStageCache -VerifySignatures |
     Select-Object Id, Version, Valid, SignatureStatus, SignatureScope
 ```
 
-Office configuration matching happens separately during staging and PreInstall: the requested acquisition settings are compared with the recorded payload profile. Online acquisition then makes the vendor-freshness decision. A cache can pass local health checks yet need new content for another language/product selection or a newer advertised build. See [Office compatibility and file-check limits](built-in-apps.md#office-cache-compatibility-with-deployment-configuration) and [built-in update detection](built-in-apps.md#how-update-freshness-is-determined).
+Office configuration matching happens separately during staging and PreInstall: the requested acquisition settings are compared with the recorded payload profile. Online acquisition then makes the vendor-freshness decision. A cache can pass local health checks yet need new content for another language/product selection or a newer advertised build. See [Office compatibility and file-check limits](built-in-acquisition.md#office-cache-compatibility-with-deployment-configuration) and [built-in update detection](built-in-acquisition.md#how-update-freshness-is-determined).
 
 ## Fresh-cache contract and diagnostics
 

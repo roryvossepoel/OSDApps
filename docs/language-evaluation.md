@@ -1,5 +1,7 @@
 # Language-pack evaluation and scope decision
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 ## Decision — 31 October 2026
 
 Language-pack installation and multilingual OOBE image preparation are **outside

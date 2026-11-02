@@ -1,5 +1,7 @@
 # Zoom Workplace validation
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 Zoom Workplace is introduced in OSDStage `0.45.0`. For a source-based validation,
 use the exact reviewed commit and its adjacent module; the script does not
 replace an installed module. A source candidate may retain the preceding

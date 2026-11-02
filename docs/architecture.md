@@ -49,7 +49,7 @@ Built-ins are vendor-native integrations maintained by OSDStage. The module does
 
 WinPE stages deployment intent and copies matching existing cache content as fallback when available. Full-Windows Sync commands or standalone PreInstall perform acquisition/refresh. Microsoft 365 Apps uses the Office Deployment Tool; Teams, Adobe, Chrome, Firefox and Webex use their integrated vendor acquisition paths.
 
-Supported installer files are checked for Windows Authenticode trust and the expected publisher organization. This covers Office `setup.exe`, Teams `teamsbootstrapper.exe` and Chrome/Firefox/Webex MSI files, not every nested payload. See the [publisher policy](built-in-apps.md#authenticode-and-publisher-policy-0340).
+Supported installer files are checked for Windows Authenticode trust and the expected publisher organization. This covers Office `setup.exe`, Teams `teamsbootstrapper.exe` and Chrome/Firefox/Webex MSI files, not every nested payload. See the [publisher policy](built-in-acquisition.md#authenticode-and-publisher-policy-0340).
 
 ## Why Office refreshes in full Windows
 

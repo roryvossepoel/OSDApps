@@ -2,13 +2,13 @@
 
 [Documentation](README.md) · [Examples](../Examples/README.md) · [Troubleshooting](faq.md)
 
-This guide separates the three environments used by OSDStage. The commands you run on a **full Windows preparation machine** are not the same commands you run against an **offline Windows target in WinPE**.
+Run the Add commands in WinPE after OSDCloud. OSDStage prepares the queue; SetupComplete installs it before OOBE. A separate preparation PC is optional for online deployments.
 
 ## Before you start
 
 Run OSDStage after OSDCloud has applied the Windows image and before the first Windows boot. OSDStage does not replace Windows image deployment.
 
-OSDStage 1.0.0-rc1 is being prepared for the PowerShell Gallery. The commands below apply after publication is verified. Preview installation requires PowerShellGet 1.6 or later and `-AllowPrerelease`.
+OSDStage 1.0.0-rc1 is published. This guide also describes merged development changes; check [release availability](release-status.md) for the differences. Preview installation requires PowerShellGet 1.6 or later and `-AllowPrerelease`.
 
 The examples target x64. Individual built-ins have different architecture options; consult [Built-in apps](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
 
@@ -22,9 +22,18 @@ Decide which source types you need:
 
 For an online deployment, vendor/repository access must be available when acquisition occurs. A fully offline deployment requires complete content for the selected app variants **before** reboot; supported MSI/EXE files must still pass Windows signature and expected-publisher validation.
 
+## Choose your route
+
+| Deployment | Start here |
+| --- | --- |
+| Online, module already included by the launcher | [Stage in WinPE](#2-target-machine--stage-in-winpe) |
+| Online, module not loaded yet | Install from Gallery in the WinPE example below |
+| Fully offline | [Prepare the module and matching cache](../Examples/WinPE-Offline.md) |
+| Read results on the deployed PC | [Check the outcome](#5-check-the-outcome) |
+
 ## 1. Preparation machine — install or save the module
 
-**Environment: full Windows.** Saving the module is optional for online deployment: the WinPE example below loads it directly from Gallery. Preparing the app cache is still required for Company Portal and CMTrace Open, as described below. Preparation can write module files and USB cache content. It must not stage apps against the preparation machine's Windows installation.
+**Environment: full Windows.** Saving the module is optional for online deployment: the WinPE example below loads it directly from Gallery. The published RC1 requires pre-caching for Company Portal and CMTrace Open; merged development builds also support automatic online acquisition for those apps. Preparation can write module files and USB cache content. It must not stage apps against the preparation machine's Windows installation.
 
 ```powershell
 Install-Module OSDStage -Repository PSGallery -AllowPrerelease -Force -ErrorAction Stop
@@ -71,7 +80,7 @@ The defaults already use cache label `OSDCloud`, cleanup mode `OnSuccess` and au
 
 With an OSDCloud-labeled USB flash drive connected, matching cache content is staged as fallback and PreInstall can reuse or refresh it for built-ins that support first-boot acquisition. Leave the USB flash drive connected until OOBE appears. Without a USB flash drive, PreInstall downloads supported built-in content to local staging. Keep the PC online in either case. To test without cache, use only built-ins that support first-boot acquisition and disconnect the USB flash drive before staging on a fresh deployment; removing it after staging may leave cached fallback content on the target.
 
-**Pre-cached exceptions:** Microsoft Company Portal and CMTrace Open must first be synchronized on a full-Windows preparation machine and staged in WinPE from the populated OSDCloud cache. Neither is downloaded during SetupComplete. For Company Portal, `Sync-OSDStageMicrosoftCompanyPortal -Architecture x64` downloads the official Microsoft kit automatically; `-KitPath` is only an optional local-kit fallback. Use `Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure` before reboot for these entries.
+**Company Portal and CMTrace Open:** in merged development builds, both follow the same automatic online PreInstall acquisition and cache-refresh flow. Gallery RC1 requires their cache to be prepared on full Windows first. For a fully offline deployment, every selected app needs verified content and `Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure`. See [release availability](release-status.md).
 
 If you need different settings, `Set-OSDStageConfiguration` applies to the **current PowerShell session**. Set overrides before adding apps.
 
@@ -89,7 +98,7 @@ At least one source must remain enabled. Explicit Add commands fail clearly when
 
 Runtime settings, including source selection, are copied into the device manifest during staging; changing the session afterward does not rewrite an existing manifest by itself. If multiple Windows installations are found, specify `-WindowsPath` on the Add and preflight commands.
 
-New app IDs are appended to `DeviceManifest.json` in the order they are added. Re-adding an existing ID replaces its entry and moves it to the end; it does not create another entry. Sorting the Viewer table does not change that order.
+New app IDs are appended to `DeviceManifest.json` in staging order. Runtime prerequisites are placed before apps. Re-adding an existing app ID replaces its entry; it does not create a duplicate. Configuration commands can combine several operations into one entry; see each guide for its ordering rules. Sorting the Viewer table does not change that order.
 
 For repository apps, configure your actual catalog URL and use app IDs that it contains. `-SkipCacheRefresh` belongs to the generic repository `Add-OSDStage`; it does not control built-in freshness checks.
 

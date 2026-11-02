@@ -1,5 +1,7 @@
 # OSDStage Viewer documentation
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 The user guide is now **[docs/viewer.md](viewer.md)**. This address is retained so existing links to the former development-preview page still have a destination.
 
 <a id="four-read-only-tabs"></a>
@@ -28,7 +30,7 @@ The user guide is now **[docs/viewer.md](viewer.md)**. This address is retained 
 | Network and signature-inspection options | [Default signature inspection](viewer.md#default-signature-inspection-and-network-behavior) |
 | Logs and troubleshooting | [Logs](viewer.md#logs) and [Troubleshooting](viewer.md#troubleshooting) |
 | WinPE staging workflows | [Examples](../Examples/README.md) |
-| SetupComplete signature enforcement | [Runtime and cleanup](runtime.md) and [Publisher policy](built-in-apps.md#authenticode-and-publisher-policy-0340) |
+| SetupComplete signature enforcement | [Runtime and cleanup](runtime.md) and [Publisher policy](built-in-acquisition.md#authenticode-and-publisher-policy-0340) |
 | Physical test results and limitations | [Validation matrix](testing.md) |
 
 [Back to documentation](README.md)

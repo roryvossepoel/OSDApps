@@ -1,5 +1,7 @@
 # Fresh-cache native-filename acceptance
 
+[Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
+
 This is the acceptance procedure for PR72, not a published-release instruction.
 Do not merge or publish on source checks alone. Do not use the older nine-app
 Gallery test, which imports its historical pinned release. Keep the exact same

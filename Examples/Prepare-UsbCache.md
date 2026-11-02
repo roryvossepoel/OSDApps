@@ -1,6 +1,6 @@
 # Prepare a USB cache
 
-> Development candidate: Gallery installation examples apply after the first OSDStage publication. For the current candidate, use a reviewed CI module artifact; see [Getting started](../docs/getting-started.md#before-you-start).
+> Install the published preview with `-AllowPrerelease`. Check [release availability](../docs/release-status.md) before using features added after RC1.
 
 [Examples](README.md) · [Next: online WinPE](WinPE-Online.md) · [Next: offline WinPE](WinPE-Offline.md)
 

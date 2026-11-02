@@ -1,6 +1,6 @@
 # OSDStage
 
-> Release candidate: preparing **1.0.0-rc1**. Gallery commands below apply after its publication is verified. Install previews with `-AllowPrerelease`. Repository and package manifests use schema 2. See [the OSDStage contract](docs/osdstage-contract.md).
+> **Published preview: 1.0.0-rc1.** Install with `-AllowPrerelease`. Documentation on `main` also covers merged changes that are not yet in the Gallery; check [release availability](docs/release-status.md). Repository and package manifests use schema 2.
 
 ![OSDStage — Your deployment. Ready before OOBE. Software and device configuration with optional USB caching.](docs/images/osdstage-banner.svg)
 
@@ -22,7 +22,7 @@ Stage software and device configuration in WinPE **after OSDCloud has applied Wi
 
 ## Install from PowerShell Gallery
 
-**After verified RC publication**, run in PowerShell on your Windows preparation machine, or in online WinPE with PowerShellGet available.
+Run in PowerShell on your Windows preparation machine, or in online WinPE with PowerShellGet available.
 
 ```powershell
 Install-Module OSDStage -Repository PSGallery -AllowPrerelease -Force -ErrorAction Stop
@@ -35,7 +35,7 @@ For WinPE without Gallery access, [save the module to your USB flash drive](Exam
 
 ## Quick start
 
-**After Gallery publication, run this complete example in online WinPE, after OSDCloud has applied Windows and before the first reboot.** It stages three apps for the target PC:
+**Run this complete example in online WinPE, after OSDCloud has applied Windows and before the first reboot.** It stages three apps for the target PC:
 
 ```powershell
 Install-Module OSDStage -Repository PSGallery -AllowPrerelease -Force -ErrorAction Stop
@@ -55,7 +55,7 @@ OSDStage discovers the offline Windows installation, prepares SetupComplete and 
 - **With an OSDCloud-labeled USB flash drive:** matching cached content is staged as fallback. SetupComplete checks for updates and can refresh the cache. Leave the USB flash drive connected until OOBE appears.
 - **Without a USB flash drive:** SetupComplete downloads built-in content directly to local staging. Keep the PC online until OOBE appears.
 
-Company Portal and CMTrace Open also support online acquisition during SetupComplete. A detected OSDCloud USB cache is checked and refreshed automatically; without USB, content is acquired on the Windows disk. Prepare verified content in advance only when you need a fully offline deployment.
+**Post-RC1:** Company Portal and CMTrace Open also support online acquisition during SetupComplete. The published RC1 still requires their caches to be prepared first; see [release availability](docs/release-status.md). A detected OSDCloud USB cache is checked and refreshed automatically; without USB, content is acquired on the Windows disk. Prepare verified content in advance only when you need a fully offline deployment.
 
 Keep networking available for either online route. No module copy on the USB flash drive is needed when loading from the Gallery. For a fully disconnected deployment, [prepare matching content and save the module first](Examples/WinPE-Offline.md).
 
@@ -69,7 +69,7 @@ The Viewer is read-only. Here, `-Offline` skips online repository discovery; it 
 
 ## Built-in apps
 
-The optional Windows Inbox Cleanup script is staged with `Add-OSDStageWindowsInboxCleanup -Preset Tested13` or `-Remove @('Microsoft.BingWeather')`. It is never run implicitly. [Options and validation](docs/built-in-apps.md#windows-inbox-cleanup).
+The optional Windows Inbox Cleanup script is staged with `Add-OSDStageWindowsInboxCleanup -Preset Tested13` or `-Remove @('Microsoft.BingWeather')`. It is never run implicitly. [Options and validation](docs/windows-inbox-cleanup.md#windows-inbox-cleanup).
 
 | App | Stage in WinPE |
 | --- | --- |
@@ -99,7 +99,7 @@ Repository package types are `App`, `Script`, `Font`, `Certificate` and `Driver`
 | Registry, machine variables and services | [Registry](docs/registry-staging.md), [variables](docs/environment-variables.md), [services](docs/services.md) |
 | Files and directories (unreleased) | [Create, copy and remove](docs/file-system.md) |
 | Wi-Fi profiles | [XML and parameter input](docs/wifi-staging.md) |
-| Optional features, FoDs and inbox app removal | [Feature scope](docs/feature-status.md), [capabilities](docs/windows-capabilities.md), [inbox cleanup](docs/built-in-apps.md#windows-inbox-cleanup) |
+| Optional features, FoDs and inbox app removal | [Feature scope](docs/feature-status.md), [capabilities](docs/windows-capabilities.md), [inbox cleanup](docs/windows-inbox-cleanup.md#windows-inbox-cleanup) |
 | Initial app associations and Start/taskbar pins | [Associations](docs/default-associations.md), [pins](docs/desktop-settings.md) |
 
 Configure your own catalog URL, then stage a package using its actual repository ID:
@@ -155,7 +155,7 @@ See [results and troubleshooting](docs/getting-started.md#5-check-the-outcome) f
 
 - [Getting started](docs/getting-started.md): preparation, staging and results.
 - [Online](Examples/WinPE-Online.md) and [offline](Examples/WinPE-Offline.md) workflows: complete examples for the target PC.
-- [Security and publisher checks](docs/built-in-apps.md#authenticode-and-publisher-policy-0340): exactly what is checked and the requirements for offline trust.
+- [Security and publisher checks](docs/built-in-acquisition.md#authenticode-and-publisher-policy-0340): exactly what is checked and the requirements for offline trust.
 - [Runtime and cleanup](docs/runtime.md): execution order, failures and retained diagnostics.
 - [Maintenance checks](docs/maintenance.md): read-only USB, release and saved-result inspection on the preparation PC.
 - [Contributing](CONTRIBUTING.md): improvements and built-in requests.
