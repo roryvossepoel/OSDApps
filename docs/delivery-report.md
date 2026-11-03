@@ -27,7 +27,7 @@ The report uses an explicit field allowlist. Registry and environment values, fi
 
 ## Component details
 
-Each app or configuration component has its own card with its execution result. Expand **Recorded component details** inside that card to see individual operations. Windows Update has its own card with expandable update details:
+All applications are grouped in one **Apps** card. Each configuration component has its own card with its execution result. Expand **Recorded component details** inside that card to see individual operations. Windows Update has its own card with expandable update details:
 
 | Component | Recorded details |
 | --- | --- |

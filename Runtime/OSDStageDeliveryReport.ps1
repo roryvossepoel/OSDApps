@@ -290,7 +290,12 @@ function ConvertTo-OSDStageReportHtml {
         $updateContent = (Format-ReportTable @($Report.WindowsUpdate) @('Status','Outcome','FoundCount','SelectedCount','InstalledCount','SkippedCount','RebootRequired','RebootRequested','InstallationBlockedByReboot','FurtherScanRequired')) +
             (Format-ReportTable @($Report.WindowsUpdate.Items) @('Title','DriverClass','Selected','SelectionReason','Status','InstallResultCode','InstallHResult'))
     }
-    $packageCards = (@(foreach ($package in $Report.Packages) {
+    $appPackages = @($Report.Packages | Where-Object { $_.PackageType -eq 'App' -and $_.Id -ne 'WindowsUpdate' -and $null -eq $_.Details })
+    $appCard = if ($appPackages.Count -gt 0) {
+        '<section class="panel apps-card"><h2>Apps</h2>' +
+            (Format-ReportTable $appPackages @('Id','Status','Version','ExitCode','DurationSeconds','AcquisitionOutcome','RebootRequired','FailureType','ErrorPresent')) + '</section>'
+    } else { '' }
+    $packageCards = $appCard + ((@(foreach ($package in @($Report.Packages | Where-Object { $_ -notin $appPackages })) {
         $name = if ([string]::IsNullOrWhiteSpace([string]$package.DisplayName)) { $package.Id } else { $package.DisplayName }
         '<section class="panel package-card"><h2>' + (Format-ReportValue $name) + '</h2>' +
             (Format-ReportTable @($package) @('Status','Version','ExitCode','DurationSeconds','AcquisitionOutcome','RebootRequired','FailureType','ErrorPresent'))
@@ -304,7 +309,7 @@ function ConvertTo-OSDStageReportHtml {
             '<details class="component-details" open><summary>Update details</summary>' + $updateContent + '</details>'
         }
         '</section>'
-    })) -join ''
+    })) -join '')
     $headline = if ($Report.ExecutionStatus -eq 'Succeeded') { 'Deployment complete.' } else { 'Deployment report.' }
     $state = Format-ReportValue $Report.Status
     $brandMark = '<svg class="brand-mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#17394b"/><path d="m10 15 10-5 10 5-10 5Zm0 6 10 5 10-5m-20 6 10 5 10-5" fill="none" stroke="#9cdbcd" stroke-width="2.5" stroke-linejoin="round"/></svg>'
