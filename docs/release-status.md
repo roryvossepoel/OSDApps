@@ -7,8 +7,8 @@ RC4 adds automatic JSON/HTML delivery reports and continues to the final Windows
 Update pass after individual package failures. It includes the existing apps,
 configuration, file operations, automatic content acquisition/caching and compact output.
 
-Publication is complete only when the [release and Gallery workflows](https://github.com/roryvossepoel/OSDStage/actions)
-succeed. A merge alone does not publish a package. Exact version links:
+The GitHub prerelease is published and the [Gallery publication and package verification](https://github.com/roryvossepoel/OSDStage/actions/runs/41699262042)
+succeeded. A merge alone does not publish a package. Exact version links:
 [PowerShell Gallery](https://www.powershellgallery.com/packages/OSDStage/1.0.0-rc4) ·
 [GitHub prerelease](https://github.com/roryvossepoel/OSDStage/releases/tag/v1.0.0-rc4).
 
@@ -24,7 +24,7 @@ succeed. A merge alone does not publish a package. Exact version links:
 
 ## Install the release candidate
 
-After verified publication, on full Windows or online WinPE with PowerShellGet:
+On full Windows or online WinPE with PowerShellGet:
 
 ```powershell
 Install-Module OSDStage -Repository PSGallery -RequiredVersion '1.0.0-rc4' `
@@ -41,9 +41,34 @@ Get-Module OSDStage | Select-Object Name, Version, Path,
     @{Name='Prerelease';Expression={$_.PrivateData.PSData.Prerelease}}
 ```
 
-The [Windows Update guide](windows-update.md) records the successful x64
-SetupComplete and regular OOBE test, the separate post-restart Settings round,
-and remaining field coverage. It does not claim Autopilot or monthly cumulative
-Windows/.NET acceptance. See [release procedure](releasing.md) for maintainers.
+## Published RC4 acceptance
 
-The [delivery report guide](delivery-report.md#broad-component-acceptance-3-november-2026) records the broad 19-package test, all 18 report checks and the confirmed manual checks. Reports describe execution and evidence; they do not certify Autopilot enrollment or that no future updates remain.
+The [3 November Gallery acceptance record](rc4-gallery-acceptance.md) covers the
+published package on two physical x64 devices running Windows 11 26H2 build
+26300.9711. Both used the same three-entry profile: 7-Zip, XPS Viewer and Windows
+Update last, with driver updates enabled.
+
+| Result | Dell Pro Micro QCM1250 | Surface Laptop Go 2 |
+| --- | --- | --- |
+| OSDStage packages | 3/3 succeeded; no failures or skips | 3/3 succeeded; no failures or skips |
+| Delivery-report checks | 8/8 passed | 8/8 passed |
+| Selected Windows Updates | 36/36 installed | 4/4 installed |
+| Restart required by this OSDStage run | Yes | No |
+| Restart requested by OSDStage | No | No |
+
+The maintainer separately confirmed normal OOBE completion and first sign-in on
+both devices, with Autopilot/Intune proceeding normally where applicable. This is
+operator-confirmed handoff evidence; the supplied OSDStage reports do not audit
+enrollment or identify which device was registered in Autopilot.
+
+The [delivery report guide](delivery-report.md#broad-component-acceptance-3-november-2026)
+retains the earlier broad 19-package test, all 18 report checks and confirmed
+manual checks. That source test and the two published-package runs cover
+different scopes; the broad test does not need repeating solely for closeout.
+
+Monthly cumulative Windows/.NET updates were not offered in the two RC4 runs.
+Their physical servicing test remains open, along with the explicit variant
+limits in the [validation register](feature-status.md). Neither an empty future
+update scan nor every architecture/hardware combination is implied. RC4 remains
+a prerelease; a stable 1.0.0 version requires a separate reviewed release decision
+and the [release procedure](releasing.md).

@@ -59,6 +59,10 @@ See the [JSON/HTML delivery report](delivery-report.md) for deployment results, 
 
 ## Evidence and history
 
+[Published RC4 acceptance](rc4-gallery-acceptance.md) records the Gallery-to-WinPE
+and SetupComplete tests on Dell and Surface, the maintainer's subsequent OOBE and
+sign-in confirmation, and the remaining cumulative-update coverage.
+
 [Validation matrix](testing.md) records what was actually tested, on which version, and what remains outside the test scope. [Performance](performance.md) keeps the measured phase timings and their limitations. [Changelog](../CHANGELOG.md) preserves version-specific behavior changes and earlier development history.
 
 Historical test results are not claims about every currently supported architecture or every device. A successful installer exit code does not independently prove product activation, sign-in or all interactive features.

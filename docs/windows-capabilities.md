@@ -133,6 +133,21 @@ other Windows builds/editions, policy-restricted download environments and
 repository/offline source handling are not established by this test. No additional
 reinstallation or post-login repair is needed to repeat this accepted scenario.
 
+## Published RC4 XPS acceptance on 3 November 2026
+
+The [Gallery RC4 acceptance record](rc4-gallery-acceptance.md) includes Dell Pro
+Micro QCM1250 and Surface Laptop Go 2, both x64 on Windows 11 26H2 build
+26300.9711. XPS Viewer changed from `NotPresent` to `Installed` on both devices
+during SetupComplete, with exit code 0, no timeout and no restart required or
+requested by the capability operation. Runner-measured capability times were
+331.3 seconds on Dell and 564.1 seconds on Surface.
+
+The earlier Surface `0x800f0831` failure did not recur. These successful runs
+establish the tested XPS installation path; they do not establish the cause of
+the earlier failure or justify a speculative retry. OpenSSH removal, other
+capabilities, Windows builds and architectures retain their separately recorded
+evidence and limits.
+
 ## Microsoft references
 
 - [Capabilities and source/dependency handling](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/features-on-demand-v2--capabilities?view=windows-11)

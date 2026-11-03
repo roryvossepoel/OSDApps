@@ -2,11 +2,16 @@
 
 [Windows Update guide](windows-update.md) · [PR #111](https://github.com/roryvossepoel/OSDStage/pull/111)
 
-Prepared for the next clean PC1 deployment after the 2 November 2026 manual OOBE
-acceptance. This is a development build, not the Gallery RC2 module. The module
-source is pinned to `c714ceba585eeb26ddad8ad5c8324f1b4595fc8a`; its Windows Update
-runtime is identical to the successfully tested `433f6d1` runtime. The newer
-revision incorporates current main and records the evidence.
+This historical source procedure was prepared after the 2 November 2026 manual
+OOBE acceptance and passed on PC1 on 3 November. It is retained for reproduction,
+not as the current-release installation path. The module source is pinned to
+`c714ceba585eeb26ddad8ad5c8324f1b4595fc8a`; its Windows Update runtime is identical
+to the successfully tested `433f6d1` runtime.
+
+For current use, see the [published release candidate](release-status.md) and the
+later [RC4 Gallery acceptance on Dell and Surface](rc4-gallery-acceptance.md).
+Running the pinned source block below validates that source revision, not a
+package downloaded from the Gallery.
 
 The test performs one scan and installs the eligible selected set. Additional
 updates offered after installation or restart are acceptable and do not cause an
@@ -21,10 +26,11 @@ run Windows Update in WinPE or restart the OSDCloud installation. Start with a
 fresh Windows deployment; do not rerun SetupComplete on the existing OOBE test.
 
 The small acceptance queue contains 7-Zip, a marker file and Windows Update.
-You can add your normal apps and configuration at the indicated position. An
-earlier individual package failure or skip does not suppress Windows Update;
-it still leaves the overall deployment unsuccessful. Inspect Latest.json and
-the runtime log if no update report is produced. The cmdlets detect the offline Windows volume;
+You can add your normal apps and configuration at the indicated position. This
+historical successful run does not establish RC4's later continuation behavior
+after an individual package failure; see the [release comparison](release-status.md).
+Inspect Latest.json and the runtime log if no update report is produced.
+The cmdlets detect the offline Windows volume;
 only add `-WindowsPath` if more than one Windows installation is present.
 
 ```powershell
@@ -140,6 +146,7 @@ failure and does not cause another pass.
 This pinned source procedure passed on PC1 on 3 November 2026; see the
 [recorded SetupComplete evidence](windows-update.md#fresh-setupcomplete-and-desktop-acceptance-3-november-2026). Monthly Windows/.NET cumulative servicing,
 cooperative timeout/cancellation and other hardware remain separate coverage
-items; this PC's current ESD does not prove those cases. Autopilot enrollment
-also remains untested on this non-Autopilot device. This procedure pins the
-original test source; use the current [release candidate](release-status.md) for release-installation acceptance.
+items; that PC's ESD did not prove those cases. Autopilot enrollment was not
+tested on that non-Autopilot device. The later [published RC4 record](rc4-gallery-acceptance.md)
+adds the two-device execution results and the maintainer's OOBE/sign-in and
+applicable Autopilot/Intune confirmation without changing this historical evidence.

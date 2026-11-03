@@ -2,21 +2,48 @@
 
 [Documentation](README.md) · [Getting started](getting-started.md) · [Release availability](release-status.md)
 
-**Status baseline: 2 November 2026.** Gallery RC2 and GitHub Pages are published. Experimental Windows Update remains separate from that release; see [release availability](release-status.md).
+**Status baseline: 3 November 2026.** OSDStage `1.0.0-rc4` is published on PowerShell Gallery and GitHub as a release candidate. Windows Update and automatic JSON/HTML delivery reports are included; see [release availability](release-status.md). A stable `1.0.0` release remains a separate decision.
 
-The combined, repository-only and renamed empty-cache deployments have recorded acceptance within their stated limits. Identify development test modules by commit. No migration or old-command aliases are planned.
+The combined, repository-only, renamed empty-cache and published RC4 deployments have recorded acceptance within their stated limits. Identify development test modules by commit and published packages by release version and tag. No migration or old-command aliases are planned.
 
 ## Current work order
 
-1. Preserve technical contracts and record evidence for each changed behavior.
-2. Improve the user guides and Pages navigation.
-3. Complete Windows Update acceptance in its separate experimental PR.
-4. Review changes and explicitly initiate the next release when ready.
+1. Preserve the accepted deployment evidence and technical contracts; investigate
+   changed behavior or a specific remaining coverage gap.
+2. Collect targeted monthly cumulative Windows/.NET update evidence when those
+   updates are offered on a test device.
+3. Review the documented scope and limits, then explicitly decide whether to
+   prepare a stable `1.0.0` release using the [release procedure](releasing.md).
 
 The Windows Viewer and web catalog viewer are read-only. Neither is an interactive deployment editor. See [the viewer guide](viewer.md).
 
+The OSDStage name and public GitHub Pages site at [osdstage.com](https://osdstage.com/)
+are delivered, including the mobile navigation in
+[PR #124](https://github.com/roryvossepoel/OSDStage/pull/124). Interactive Viewer
+expansion remains deferred.
+
 The tables retain earlier device evidence with its original commit and deployment
 IDs. Earlier test completion does not establish every architecture or variant.
+
+## RC4 acceptance — 3 November 2026
+
+The [published Gallery RC4 acceptance](rc4-gallery-acceptance.md) records WinPE
+staging and normal SetupComplete execution on a Dell Pro Micro QCM1250 and a
+Surface Laptop Go 2, both running Windows 11 build 26300.9711 x64. Each completed
+the same three-entry profile: 7-Zip, XPS Viewer and a final Windows Update pass.
+All three entries and all eight report checks passed on each device. Neither
+run requested an automatic restart.
+
+The earlier [broad component acceptance](delivery-report.md#broad-component-acceptance-3-november-2026)
+remains valid: 19 packages, 18 report checks and 11 matched component evidence
+groups on the Dell. The focused Gallery runs establish the published package
+path; they do not replace or require repetition of that broader acceptance.
+
+The maintainer confirmed normal OOBE and first sign-in on both devices, with
+Autopilot/Intune proceeding normally where applicable. Those observations are
+operator evidence, separate from the execution reports. Monthly cumulative Windows/.NET updates
+were not exercised by the offers in these runs. ARM64 and the individual variant
+limits below remain outside the recorded physical coverage.
 
 ## Deployment contract
 
@@ -55,9 +82,11 @@ to complete this table.
 | --- | --- | --- |
 | Repository apps and scripts | Built. [Repository guide](repository.md), [physical validation history](testing.md) and [native-filename acceptance](native-filename-acceptance.md) cover package staging and runner execution. | A package success does not prove all later app behavior. Package authors own their install scripts. |
 | Cache, source acquisition and offline readiness | Built. Version selection, integrity, reusable USB content, preflight and per-deployment reporting. Recorded online/offline and cold/warm scenarios in [testing](testing.md). | Legacy metadata recovery was merged in [PR #94](https://github.com/roryvossepoel/OSDStage/pull/94), tracked by [issue #92](https://github.com/roryvossepoel/OSDStage/issues/92). Both Windows CI hosts passed on `71ae31f49cfb6f16e93f8ec61454a57120cca5f2`. **Operator-confirmed, 30 October:** the production Sync helper refreshed an isolated Chrome cache with the three legacy metadata fields removed; hash/size validation and Google signature validation passed, and original cache hashes remained unchanged. This is a full-Windows helper test, not a physical public-wrapper, WinPE or PreInstall run. The fix is included in this baseline; the physical acceptance limits remain unchanged. Offline readiness still requires verified content. |
-| Built-in-only / repository-only selection | Built in [PR #80](https://github.com/roryvossepoel/OSDStage/pull/80). Session options control deployment/discovery; both disabled is refused. Sync remains available for preparation. | Automated behavior coverage; no separate physical mode-isolation result recorded here. |
-| Ordered runtime, fault isolation, logs and cleanup | Built. [Runtime guide](runtime.md) and [testing history](testing.md) describe one-shot execution, retained failure evidence and cleanup. | CleanupMode Never test runs do not prove OnSuccess cleanup. |
-| Inspection and diagnostics | Built. Read-only Viewer, cache health, deployment-result inspection and [maintenance diagnostics](maintenance.md). | Interactive selection/configuration expansion remains deferred. |
+| Built-in-only / repository-only selection | Built in [PR #80](https://github.com/roryvossepoel/OSDStage/pull/80). Session options control deployment/discovery; both disabled is refused. The [RC4 Gallery runs](rc4-gallery-acceptance.md) used built-ins with repository integration disabled; the repository-only path is recorded in the 31 October acceptance below. Sync remains available for preparation. | Physical results cover those selected source combinations. The both-disabled refusal remains automated coverage. |
+| Ordered runtime, fault isolation, logs and cleanup | Built. [Runtime guide](runtime.md) and [testing history](testing.md) describe one-shot execution and retained failure evidence. The 31 October acceptance below records operator-confirmed OnSuccess staging removal; both RC4 Gallery runs record OnSuccess cleanup scheduling. | Scheduling alone does not prove removal. Continuation to Windows Update after failed or skipped packages has automated coverage; the two successful Gallery runs do not exercise those failure paths. |
+| Windows Update: `Add-OSDStageWindowsUpdate` | Included in RC3 and RC4. One optional pass runs last in SetupComplete, with opt-in drivers/firmware and no automatic restart. The [RC4 Gallery runs](rc4-gallery-acceptance.md) installed 36/36 offers on Dell and 4/4 on Surface; [contract and earlier evidence](windows-update.md). | Monthly cumulative Windows/.NET field coverage remains open. A successful pass does not mean no updates remain after a restart or later scan. |
+| Delivery reports | Included in RC4. Standalone JSON/HTML reports correlate package and component results; [broad report acceptance](delivery-report.md#broad-component-acceptance-3-november-2026) and [published Gallery acceptance](rc4-gallery-acceptance.md) record matching evidence and report checks. | Reports describe execution and follow-up requirements; they do not certify hardware health, complete patching or Autopilot enrollment. |
+| Inspection and diagnostics | Built. Read-only Viewer, cache health, deployment-result inspection and [maintenance diagnostics](maintenance.md). | Interactive selection/configuration expansion remains deferred; [draft PR #39](https://github.com/roryvossepoel/OSDStage/pull/39) is separate from the delivered read-only Viewer. |
 
 ### Vendor built-ins
 
@@ -89,7 +118,7 @@ guide define the supported parameters; this table records the practical state.
 | Machine variables: `Add-OSDStageEnvironmentVariable` | Set/remove literal or expandable machine values; append PATH without new lexical duplicates. Existing processes are not refreshed. [Contract](environment-variables.md). | **Operator-confirmed workflow:** maintainer reconfirmed completion of earlier practical tests on 31 October. The new combined run records four actual changes: literal and expandable values, one PATH append and removal of the seeded variable. Earlier confirmation remains valid; see the acceptance update below. |
 | Services: `Add-OSDStageService` | Exact existing service name; startup mode and running/stopped state; bounded wait in the same run. No credentials, dependency edits or recurring enforcement. [Contract](services.md). | **Operator-confirmed workflow:** same combined run as variables, reconfirmed by the maintainer on 31 October. The new combined run records WSearch changing from Running/AutomaticDelayedStart to Stopped/Manual; Spooler was already Running/Automatic. Native automated disposable-service coverage remains separate evidence. |
 | Inbox app removal: `Add-OSDStageWindowsInboxCleanup` | Explicit selection or Tested13 preset, optional diagnosis. [Built-in guide](built-in-apps.md). | **Recorded pass:** 13 selected packages removed and reported absent after Autopilot; separate three-package run also recorded in [testing](testing.md). No blanket claim for every inbox package/build. |
-| Windows capabilities: `Add-OSDStageWindowsCapability` | Explicit Add/Remove by full capability identity; Windows 11 client 25H2+ at runtime; online servicing sources under existing policy. No custom source/repository integration, reboot or follow-up correction. [Contract](windows-capabilities.md). | **Log-backed, 30 October:** actual XPS `NotPresent` to `Installed` and OpenSSH Client `Installed` to `NotPresent`; both exit 0, no restart required/requested. One successful SetupComplete Script, zero failures, 328.2 seconds; independent OOBE query confirms final states. DISM target is build **26300.9711 x64**, not a separate build-26200/25H2 test. [Evidence and limits](windows-capabilities.md#physical-acceptance-on-30-october-2026). ARM64 and other capabilities remain unvalidated in practice. |
+| Windows capabilities: `Add-OSDStageWindowsCapability` | Explicit Add/Remove by full capability identity; Windows 11 client 25H2+ at runtime; online servicing sources under existing policy. No custom source/repository integration, reboot or follow-up correction. [Contract](windows-capabilities.md). | **Log-backed, 30 October:** actual XPS `NotPresent` to `Installed` and OpenSSH Client `Installed` to `NotPresent`; both exit 0, no restart required/requested. One successful SetupComplete Script, zero failures, 328.2 seconds; independent OOBE query confirms final states. DISM target is build **26300.9711 x64**, not a separate build-26200/25H2 test. [Evidence and limits](windows-capabilities.md#physical-acceptance-on-30-october-2026). **Recorded pass, 3 November:** published Gallery RC4 installed XPS Viewer from `NotPresent` to `Installed` on both Dell and Surface with exit 0 and no restart requested; see [RC4 acceptance](rc4-gallery-acceptance.md). These passes do not diagnose or establish a fix for the earlier Surface `0x800f0831` failure. ARM64 and other capabilities remain unvalidated in practice. |
 | Initial file/protocol associations: `Add-OSDStageDefaultAssociation` | Explicit identifier/ProgId/app-name parameters or XML input. Install apps first, then select associations; installing an app does not implicitly select it. One-shot DISM baseline export/merge/import during SetupComplete; user-editable initial defaults, no enforcement. [Contract](default-associations.md), [PR #91](https://github.com/roryvossepoel/OSDStage/pull/91). | **Operator-confirmed on PC1, 30 October:** corrected test revision `2b9dfd303c186302414d52b94f306215883904d4` opens `.pdf` in Adobe Acrobat and HTTP/HTTPS in Chrome. Changing PDF and both protocol defaults through Windows Settings also worked. No new runtime logs were supplied for this run. Separate HTML opening, XML-input deployment and ARM64 are not physically confirmed. |
 | Start pins: `Add-OSDStageStartPins` | Supplied ordered pin list or JSON; applyOnce; supported Windows build/ADMX required. [Contract](desktop-settings.md). | **Operator-confirmed:** Edge/Explorer/Settings pins correct. Continued user editability not separately confirmed. |
 | Taskbar pins: `Add-OSDStageTaskbarPins` | Native persistent layout policy with Replace and PinGeneration; supplied ordered list. [Contract](desktop-settings.md). | **Operator-confirmed with accepted limit:** Settings/Explorer appeared, with extra Outlook. Maintainer accepted this result; Outlook's source is unproven. Do not promise exact exclusion of all additional pins. Continued user editability remains unconfirmed. |
@@ -141,7 +170,11 @@ inputs are not committed to the repository.
 The BOM-prefixed manifest defect discovered during the HTTP synchronization test
 is addressed by [PR #98](https://github.com/roryvossepoel/OSDStage/pull/98). The
 maintainer's successful four-package Sync and deployment validate that fix in
-the tested path; CI remains a separate requirement before merging.
+the tested path. The fix is included in the current baseline; physical evidence
+and CI remain separate checks. These combined tests used the original
+Stage/runtime path. The later Prepare-phase change for valid cached-only
+packages has automated coverage and is not presented as part of those physical
+runs.
 
 Repository Wi-Fi in this test is a generic Script package, not a new native
 package type or a repository-Id parameter on Add-OSDStageWiFiProfile. The selected
@@ -170,25 +203,28 @@ coverage limits, not reasons to repeat these completed installations.
 | First-sign-in animation and support information | Not requested for this module. |
 | Shortcut creation | Not selected. Pin configuration does not create missing shortcuts/apps. |
 | Separate OneDrive per-machine integration | No new work selected. Revisit only after an explicit need and current installation behavior are established. |
-| Viewer expansion, GitHub Pages and naming | Deferred until feature scope and acceptance are settled; follow the agreed order above. |
+| Interactive Viewer expansion | Deferred. The current Windows and web viewers remain read-only; the earlier [draft PR #39](https://github.com/roryvossepoel/OSDStage/pull/39) is not part of the accepted RC4 deployment path. Naming and public Pages delivery are complete, as recorded above. |
 
 ## Next closeout work
 
-1. Preserve both accepted execution runs and the earlier operator confirmations.
-   No additional installation is required for the two completed scenarios.
-2. Complete review and CI of the manifest-reader fix, combined acceptance tooling
-   and this scope register. The combined test used the original Stage/runtime
-   path; the later Prepare-phase change for valid cached-only packages has
-   automated coverage and is not misrepresented as part of that physical run.
+1. Preserve the published RC4 Gallery acceptance, broad 19-package report
+   acceptance and earlier operator confirmations. No additional installation is
+   required solely to repeat those completed scenarios.
+2. Collect a targeted physical result for monthly cumulative Windows/.NET
+   updates when offered, recording the actual installation and restart outcome.
+   An offer set containing only other software and drivers does not establish
+   that coverage.
 3. Keep parameter-generated Wi-Fi and Start/taskbar editability marked as
-   unconfirmed in practice. If separately selected, collect only the relevant
-   observation; do not introduce a follow-up task or force a reboot.
+   unconfirmed in practice, alongside the architecture and variant limits in
+   this register. If separately selected, collect only the relevant observation;
+   do not introduce a follow-up task or force a reboot.
 4. The accepted legacy-cache helper test remains limited to the tested isolated
-   full-Windows refresh. The new runs used valid cache generations and do not
-   broaden legacy-cache recovery evidence to new failure scenarios.
-5. After technical review/CI closeout, decide naming, then finish Viewer and public
-   Pages documentation. Language packs, branding, regional settings and time zone
-   remain outside scope.
+   full-Windows refresh. The accepted deployments used valid cache generations
+   and do not broaden legacy-cache recovery evidence to new failure scenarios.
+5. Make an explicit stable `1.0.0` release decision against this scope and its
+   recorded limits, then follow the [release procedure](releasing.md). This
+   documentation closeout does not publish or change RC4. Language packs,
+   branding, regional settings and time zone remain outside scope.
 
 For each accepted scenario record: feature, source commit, Windows build/edition
 and architecture, input excluding secrets, expected change, observed change,

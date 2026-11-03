@@ -65,7 +65,14 @@ the payload bytes. The read-only maintenance tool's Release mode currently
 checks stable releases only; use the publish workflow's verification for RCs.
 
 After a verified RC publication, test installation from Gallery in WinPE and
-complete the normal deployment once. For GA, remove the `Prerelease` field,
+complete the normal deployment once. The [RC4 Gallery acceptance record](rc4-gallery-acceptance.md)
+documents that path on two x64 devices and separates the maintainer's successful
+OOBE/sign-in confirmation from the machine-readable execution evidence. Monthly
+cumulative Windows/.NET servicing was not offered in those runs and remains an
+explicit field-coverage item; record the decision on outstanding coverage before
+preparing GA.
+
+For GA, remove the `Prerelease` field,
 prepare a `1.0.0` changelog section and release notes, then review and run the
 same release procedure with `expected_version=1.0.0`. Do not move the RC tag or
 republish it. Removing the suffix creates a separate stable Gallery version.
@@ -101,6 +108,7 @@ No `main` push triggers release creation, including a manifest version change. C
 - Confirm release notes describe behavior changes and compatibility restrictions
 - Confirm Pester and GitHub CI pass
 - Verify GitHub Release notes and PowerShell Gallery publication
+- Record published-package WinPE/SetupComplete acceptance, subsequent operator checks and remaining field-coverage limits
 - Keep examples and public metadata aligned with the exported parameters
 - Verify the public `metadata/builtins.json` (`SchemaVersion: 2`) has entries for new apps with correct exported commands, cache paths and public icons
 - When a viewer reads the JSON from `main`, verify both JSON and icon assets after merge; do not break the schema without updating consumers

@@ -103,4 +103,20 @@ The accepted source was `1f927fa7d868179ba64ba66553e8b618eae8b460` (merged throu
 
 [CI on the accepted source](https://github.com/roryvossepoel/OSDStage/actions/runs/41658686621) passed on Windows PowerShell 5.1 and PowerShell 7, including continuation to Windows Update after a failed or skipped package. Failed-run and reporting-failure paths remain automated coverage rather than a claim about this successful physical run.
 
-An earlier Surface Laptop Go 2 run failed while servicing XPS Viewer with `0x800f0831`; a later manual OOBE installation succeeded. That observation does not establish that XPS Viewer is unavailable on 26H2, nor does this Dell success resolve the earlier servicing-store failure. RC4 does not add a speculative retry or exclude XPS Viewer by release. Monthly cumulative Windows/.NET updates and Autopilot enrollment remain separate field coverage.
+An earlier Surface Laptop Go 2 run failed while servicing XPS Viewer with `0x800f0831`; a later manual OOBE installation succeeded. That observation does not establish that XPS Viewer is unavailable on 26H2, nor does this Dell success resolve the earlier servicing failure. RC4 does not add a speculative retry or exclude XPS Viewer by release. Monthly cumulative Windows/.NET updates were not offered. The later published-package acceptance is recorded below.
+
+## Published Gallery RC4 acceptance: 3 November 2026
+
+The [RC4 Gallery acceptance record](rc4-gallery-acceptance.md) adds two physical
+three-entry deployments on Dell Pro Micro QCM1250 and Surface Laptop Go 2. Both
+completed 7-Zip, XPS Viewer and Windows Update successfully; all eight report
+checks passed on each device, and the JSON/HTML identities and results matched
+the underlying execution evidence. XPS changed from `NotPresent` to `Installed`
+on both; the earlier Surface failure did not recur in this run.
+
+Both reports correctly display `Attention` with `ExecutionStatus=Succeeded`.
+The Dell requires a restart and follow-up scan; the Surface recommends a
+follow-up scan without a recorded restart requirement. The maintainer separately
+confirmed normal OOBE and first sign-in on both devices, with Autopilot/Intune
+proceeding normally where applicable. This confirmation does not extend the
+report's scope into an enrollment audit or a guarantee of complete patch coverage.
