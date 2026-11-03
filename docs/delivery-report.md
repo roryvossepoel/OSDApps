@@ -1,6 +1,6 @@
 # Delivery report
 
-> Development feature: available in the delivery-report branch, not in the published RC3 package.
+> Included in release candidate 1.0.0-rc4. See [release availability](release-status.md) for installation and publication links.
 
 OSDStage writes `DeliveryReport.json` and `DeliveryReport.html` beside the configured runtime result file when execution finishes. The default folder is `%ProgramData%\OSDStage\Results`. `Latest.json` and the existing per-component reports remain unchanged.
 
@@ -88,4 +88,19 @@ The first physical report test on a Surface Laptop Go 2 used commit `6367e048a1e
 
 The uploaded JSON, HTML and component results matched: all seven report checks passed, package/update fields agreed with their source reports, and HTML report/deployment identities matched JSON. No warnings or errors were recorded in the supplied runtime/update logs. `Attention` was caused solely by `FurtherScanRequired=True`, with no demonstrated remaining offers. The summary now names the actual follow-up reason instead of suggesting that evidence or a restart is necessarily missing.
 
-The user confirmed that the initial HTML rendered well and requested closer alignment with the website. The revised presentation uses the website's inline mark, green gradient, typography, status card and full-width header/footer; it remains standalone and offline. The user approved the revised presentation. Component-detail acceptance on a physical deployment remains pending. Failed-run and reporting-failure cases remain covered by automated tests rather than this physical success run.
+The user confirmed that the initial HTML rendered well and requested closer alignment with the website. The revised presentation uses the website's inline mark, green gradient, typography, status card and full-width header/footer; it remains standalone and offline. The user approved the revised presentation. The later broad deployment below covers component-detail acceptance. Failed-run and reporting-failure cases remain covered by automated tests rather than this physical success run.
+
+## Broad component acceptance: 3 November 2026
+
+The accepted source was `1f927fa7d868179ba64ba66553e8b618eae8b460` (merged through [PR #121](https://github.com/roryvossepoel/OSDStage/pull/121)). A Dell Pro Micro QCM1250 running Windows 11 26H2 build 26300.9711 completed the [19-package test](delivery-report-full-test.md) during SetupComplete:
+
+- All 19 packages succeeded, with no failed or skipped packages. Runner duration was 1082.5 seconds, displayed as **18 min 03 sec**.
+- All 18 report checks passed. JSON/HTML identities and package/update fields matched the original runtime reports; all 11 supported component evidence groups were `Matched`.
+- All four built-in apps reused validated cache content. The Apps card correctly separated those apps from the repository app.
+- Fonts, certificates, repository INF drivers, registry, environment, services, features, capabilities, desktop settings, associations and file operations supplied matching component evidence. XPS Viewer installed and OpenSSH Client was removed successfully on this device.
+- Windows Update ran last: 36/36 offers installed (3 software updates and 33 drivers/firmware), each with result code 2 and HRESULT 0. It required a later restart, requested none, was not blocked by a reboot prerequisite and left the Windows release unchanged. `Attention` correctly reflected restart/follow-up requirements.
+- The user confirmed manual checks after restart and sign-in. No warnings or errors appeared in the supplied runtime/update logs. Raw device reports and configuration payloads are not committed to the repository.
+
+[CI on the accepted source](https://github.com/roryvossepoel/OSDStage/actions/runs/41658686621) passed on Windows PowerShell 5.1 and PowerShell 7, including continuation to Windows Update after a failed or skipped package. Failed-run and reporting-failure paths remain automated coverage rather than a claim about this successful physical run.
+
+An earlier Surface Laptop Go 2 run failed while servicing XPS Viewer with `0x800f0831`; a later manual OOBE installation succeeded. That observation does not establish that XPS Viewer is unavailable on 26H2, nor does this Dell success resolve the earlier servicing-store failure. RC4 does not add a speculative retry or exclude XPS Viewer by release. Monthly cumulative Windows/.NET updates and Autopilot enrollment remain separate field coverage.

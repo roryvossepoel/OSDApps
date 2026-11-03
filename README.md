@@ -1,6 +1,6 @@
 # OSDStage
 
-> **Release candidate: 1.0.0-rc3.** Install with `-AllowPrerelease`. Documentation on `main` also covers merged changes that are not yet in the Gallery; check [release availability](docs/release-status.md). Repository and package manifests use schema 2.
+> **Release candidate: 1.0.0-rc4.** Install with `-AllowPrerelease`. Documentation on `main` also covers merged changes that are not yet in the Gallery; check [release availability](docs/release-status.md). Repository and package manifests use schema 2.
 
 ![OSDStage — Your deployment. Ready before OOBE. Software and device configuration with optional USB caching.](docs/images/osdstage-banner.svg)
 
@@ -16,6 +16,7 @@ Stage software and device configuration in WinPE **after OSDCloud has applied Wi
 - **Reuse your downloads.** An optional USB cache serves multiple devices; validated replacements keep it current.
 - **Bring your own packages.** Apps, scripts, fonts, certificates and drivers share one ordered queue and package integrity checks.
 - **Opt in to Windows inbox cleanup.** A bundled script can remove explicitly selected provisioned apps before OOBE, without an app repository.
+- **Review the result.** Automatic [JSON and offline HTML delivery reports](docs/delivery-report.md) show app, configuration and update outcomes with matching component evidence.
 - **Leave a clean deployment.** Successful runs remove temporary staging while keeping logs and results. No module installation is required in the deployed Windows system.
 
 [Get started](#quick-start) · [Built-in apps](docs/built-in-apps.md) · [USB preparation](Examples/Prepare-UsbCache.md) · [Repository packages](docs/repository.md) · [Documentation](docs/README.md)

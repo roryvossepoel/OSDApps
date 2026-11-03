@@ -1,8 +1,14 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-rc4
 
-- Add automatic JSON and offline HTML delivery reports after runner completion or terminal PreInstall failure. Include module/device information, package and cache outcomes, correlated Windows Update details, restart requirements and evidence checks. Preserve runtime outcomes when reporting fails; omit raw diagnostic errors and configuration content. Physical report acceptance is pending.
+- Fourth public release candidate, not GA. Adds automatic `DeliveryReport.json` and standalone offline `DeliveryReport.html` after runner completion or terminal PreInstall failure. Includes module/device information, package and cache outcomes, correlated Windows Update details, restart requirements and evidence checks. Reporting failures preserve the runtime outcome.
+- Align the HTML with the website: one Apps card with separate Built-in apps and Repository apps sections, separate configuration cards and expandable component operations, including fonts, certificates, registry, services and files. Render durations as minutes and seconds; retain numeric `DurationSeconds` in JSON schema 1.1.
+- Match component evidence to the deployment and package before displaying it. Omit configuration values, credentials, installer commands and raw diagnostic errors; retain local runtime logs for troubleshooting. Reports still contain identifying device/component information and should be reviewed before sharing.
+- Attempt the final Windows Update pass even when an earlier individual package failed or was skipped. Preserve the earlier failure and unsuccessful aggregate deployment status. Windows Update's own prerequisites and fatal deployment validation still apply; no automatic reboot, retry or post-OOBE continuation is added.
+- Broad physical x64 SetupComplete acceptance on 3 November 2026 with source `1f927fa7d868179ba64ba66553e8b618eae8b460`: 19/19 packages succeeded, 36/36 updates installed, 18/18 report checks passed, all 11 supported component evidence groups matched, and four built-in apps reused validated cache content. Runner duration was 18 min 03 sec. The user also confirmed manual checks after restart and sign-in. See [delivery report acceptance](docs/delivery-report.md#broad-component-acceptance-3-november-2026).
+- Windows PowerShell 5.1 and PowerShell 7 CI passed on that accepted source, including continuation after failed/skipped packages. Those failure paths remain automated coverage; the broad physical run had no failed packages. Monthly Windows/.NET cumulative servicing and Autopilot enrollment remain separate field coverage. One update pass does not guarantee zero later offers.
+- Install with `Install-Module OSDStage -Repository PSGallery -RequiredVersion '1.0.0-rc4' -AllowPrerelease -Force`. RC versions share the numeric module folder `1.0.0`; use a fresh PowerShell session and verify the loaded prerelease label. No repository schema or cache migration is required.
 
 ## 1.0.0-rc3
 
