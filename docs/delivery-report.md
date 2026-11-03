@@ -55,3 +55,11 @@ Use a test deployment containing an app, configuration and Windows Update. After
 5. Keep the report together with the existing logs for review. A controlled failing package should produce a failed report; a report-generation failure must preserve the original runtime exit code.
 
 Automated tests cover missing/duplicate results, stale update evidence, PreInstall failures, HTML escaping and output failures. Physical SetupComplete acceptance of the report remains separate from the RC3 Windows Update acceptance.
+
+## Recorded acceptance: 3 November 2026
+
+The first physical report test on a Surface Laptop Go 2 used commit `6367e048a1e1e3181d783295060daf14c879a536`. All three packages (7-Zip, FileSystem and Windows Update) succeeded. 7-Zip reused validated cache content; both file operations succeeded. Windows Update installed four of four offers (three software updates and one audio component driver), requested no restart and left the Windows release unchanged. Runner duration was 227.3 seconds; the Windows Update pass took 217.4 seconds.
+
+The uploaded JSON, HTML and component results matched: all seven report checks passed, package/update fields agreed with their source reports, and HTML report/deployment identities matched JSON. No warnings or errors were recorded in the supplied runtime/update logs. `Attention` was caused solely by `FurtherScanRequired=True`, with no demonstrated remaining offers. The summary now names the actual follow-up reason instead of suggesting that evidence or a restart is necessarily missing.
+
+The user confirmed that the initial HTML rendered well and requested closer alignment with the website. The revised presentation uses the website's inline mark, green gradient, typography, status card and full-width header/footer; it remains standalone and offline. The updated presentation still needs user visual review. Failed-run and reporting-failure cases remain covered by automated tests rather than this physical success run.

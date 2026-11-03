@@ -124,14 +124,9 @@ function New-OSDStageDeliveryReport {
         $checks.Add([pscustomobject]@{ Name='DeviceMetadata'; Passed=$false; Detail='Some device metadata could not be collected.' })
         if ($state -eq 'Succeeded') { $state = 'Attention' }
     }
-    $message = switch ($state) {
-        'Failed' { 'Deployment failed. Review package results and the local runtime log.' }
-        'Succeeded' { 'Recorded deployment execution succeeded.' }
-        default { 'Review restart requirements, incomplete evidence and follow-up updates below.' }
-    }
-    [pscustomobject][ordered]@{
+    $report = [pscustomobject][ordered]@{
         SchemaVersion='1.0'; ReportId=[guid]::NewGuid().Guid; GeneratedAtUtc=[datetime]::UtcNow.ToString('o')
-        DeploymentId=$Result.DeploymentId; Phase=$Phase; Status=$state; ExecutionStatus=$Result.Status; Summary=$message
+        DeploymentId=$Result.DeploymentId; Phase=$Phase; Status=$state; ExecutionStatus=$Result.Status; Summary=$null
         StartedAtUtc=$Result.StartedAtUtc; CompletedAtUtc=$Result.CompletedAtUtc; DurationSeconds=$Result.DurationSeconds
         Module=[pscustomobject]@{ Name='OSDStage'; Version=$Manifest.Runtime.ModuleVersion; GalleryUrl='https://www.powershellgallery.com/packages/OSDStage'; GitHubUrl='https://github.com/roryvossepoel/OSDStage'; DocumentationUrl='https://roryvossepoel.github.io/OSDStage/' }
         Device=$device
@@ -141,6 +136,27 @@ function New-OSDStageDeliveryReport {
         Scope='Execution evidence only. This report does not certify that Windows is fully patched or that Autopilot enrollment succeeded. Updates may become available after restart. Windows Update content is not cached by OSDStage.'
         Privacy='Configuration values, raw errors, command lines and source URLs are omitted. Device and package names remain; review before sharing. Consult local logs for diagnostics.'
     }
+    $report.Summary = Get-OSDStageReportSummary -Report $report
+    return $report
+}
+
+function Get-OSDStageReportSummary {
+    param([Parameter(Mandatory)]$Report)
+    if ($Report.Status -eq 'Failed') { return 'Deployment failed. Review package results and the local runtime log.' }
+    if ($Report.Status -eq 'Succeeded') { return 'Recorded deployment execution succeeded.' }
+    if ($Report.ExecutionStatus -ne 'Succeeded' -or @($Report.Checks | Where-Object Passed -eq $false).Count -gt 0 -or
+        $Report.Counts.Skipped -gt 0 -or $Report.Counts.UnknownOrNotRun -gt 0) {
+        return 'Review the package results and evidence checks below.'
+    }
+    if ($Report.RebootRequired -eq $true) {
+        if ($Report.WindowsUpdate.FurtherScanRequired -eq $true) {
+            return 'Execution succeeded; restart required. A follow-up update scan is recommended.'
+        }
+        return 'Execution succeeded; restart required.'
+    }
+    if ($Report.WindowsUpdate.ScanOnly -eq $true) { return 'Execution succeeded; Windows Update was scan-only.' }
+    if ($Report.WindowsUpdate.FurtherScanRequired -eq $true) { return 'Execution succeeded; follow-up update scan recommended.' }
+    return 'Execution succeeded; review the recorded follow-up requirements below.'
 }
 
 function ConvertTo-OSDStageReportHtml {
@@ -169,25 +185,40 @@ function ConvertTo-OSDStageReportHtml {
         $updateContent = (Format-ReportTable @($Report.WindowsUpdate) @('Status','Outcome','FoundCount','SelectedCount','InstalledCount','SkippedCount','RebootRequired','RebootRequested','InstallationBlockedByReboot','FurtherScanRequired')) +
             (Format-ReportTable @($Report.WindowsUpdate.Items) @('Title','DriverClass','Selected','SelectionReason','Status','InstallResultCode','InstallHResult'))
     }
+    $headline = if ($Report.ExecutionStatus -eq 'Succeeded') { 'Deployment complete.' } else { 'Deployment report.' }
     $state = Format-ReportValue $Report.Status
+    $brandMark = '<svg class="brand-mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#17394b"/><path d="m10 15 10-5 10 5-10 5Zm0 6 10 5 10-5m-20 6 10 5 10-5" fill="none" stroke="#9cdbcd" stroke-width="2.5" stroke-linejoin="round"/></svg>'
     @"
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <title>OSDStage delivery report</title>
 <style>
-:root{color-scheme:light;--ink:#183a35;--green:#20765e;--line:#d4e3dd}*{box-sizing:border-box}body{margin:0;background:#f0f6f3;color:var(--ink);font:16px/1.55 system-ui,Segoe UI,sans-serif}main{max-width:1180px;margin:auto;padding:40px 24px}header{border-top:5px solid var(--green);padding:28px;background:#fff;border-radius:12px}h1{font-size:32px;line-height:1.2;margin:8px 0}h2{font-size:20px}p{max-width:90ch}.eyebrow{font-weight:700;color:var(--green);letter-spacing:.08em}.badge{display:inline-block;background:#dcefe4;padding:6px 14px;border-radius:20px;font-weight:700}.Attention{background:#fff0ce;color:#6c4700}.Failed{background:#fbe1df;color:#8b2823}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:22px 0}.metric,section,details{background:white;border:1px solid var(--line);border-radius:12px;padding:20px}.metric strong{display:block;font-size:28px}section,details{margin:16px 0}summary{cursor:pointer;font-weight:700}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}th{background:#edf5f1}.scroll{overflow:auto;margin-top:12px}a{color:#17684f}footer{font-size:14px;padding:16px 0}code{overflow-wrap:anywhere}.muted{color:#526960}@media print{body{background:#fff}main{max-width:none;padding:0}details{break-inside:auto}details>*{display:block!important}.scroll{overflow:visible}table{font-size:9px}header{break-inside:avoid}a{color:inherit}}
-</style></head><body><main>
-<header><div class="eyebrow">OSDSTAGE &middot; DELIVERY REPORT</div><h1>Deployment execution</h1><span class="badge $state">$state</span><p>$(Format-ReportValue $Report.Summary)</p>
-<p class="muted">Execution: $(Format-ReportValue $Report.ExecutionStatus) &middot; Phase: $(Format-ReportValue $Report.Phase) &middot; Restart required: $(Format-ReportValue $Report.RebootRequired)</p>
-$(if ($Report.ErrorPresent -or $Report.FailureType) { '<p>Failure type: ' + (Format-ReportValue $Report.FailureType) + '. See the local runtime log for diagnostics.</p>' })
-<p>Deployment <code>$(Format-ReportValue $Report.DeploymentId)</code><br>Started: $(Format-ReportValue $Report.StartedAtUtc)<br>Completed: $(Format-ReportValue $Report.CompletedAtUtc) &middot; Duration: $(Format-ReportValue $Report.DurationSeconds) seconds</p></header>
+/* Shared visual tokens and mark from the OSDStage website; everything stays inline/offline. */
+:root{color-scheme:light;--ink:#182f3d;--soft:#60737f;--accent:#126854;--edge:#dce5e8;--paper:#fff;--wash:#f4f7f8}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#eaf5ef 0%,#f1f8f7 34%,#f7fafb 68%,#fff 100%);color:var(--ink);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+a{color:var(--accent);text-underline-offset:4px}a:focus-visible,summary:focus-visible,.scroll:focus-visible{outline:3px solid #12816b;outline-offset:4px}
+.site-header{background:#ffffffed;border-top:3px solid #187b66;border-bottom:1px solid var(--edge)}.nav-wrap{max-width:1240px;margin:auto;min-height:88px;padding:12px 28px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:inline-flex;align-items:center;gap:11px;color:var(--ink);font-size:1.35rem;font-weight:750;letter-spacing:-.04em;text-decoration:none;white-space:nowrap}.brand-mark{width:35px;height:35px;flex-shrink:0}.header-label{font-size:.8rem;color:var(--soft)}
+main{max-width:1240px;margin:auto;padding:0 28px 48px}.report-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:center;padding:58px 0 40px}.eyebrow{display:inline-flex;align-items:center;gap:9px;margin:0 0 22px;padding:5px 12px;background:#ffffffc9;border:1px solid #e0ede6;border-radius:999px;font-size:.65rem;font-weight:750;letter-spacing:.12em;text-transform:uppercase;color:#22765b;box-shadow:0 2px 8px #1e695108}.eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:#21a783;box-shadow:0 0 0 4px #ddf4eb}
+h1,h2{margin:0;line-height:1.15;letter-spacing:-.035em}h1{font-size:clamp(2.4rem,4vw,3.5rem);font-weight:800;line-height:1.06;letter-spacing:-.055em;color:#132f2c}h1 span{display:block;color:#147d5e;background:linear-gradient(110deg,#16704e,#139d88);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}h2{font-size:1.35rem;font-weight:700}p{max-width:90ch;color:var(--soft)}.lead{font-size:1.02rem;line-height:1.8;margin:22px 0 0}.execution-card{min-width:0;border:1px solid #dae7e1;border-radius:19px;background:#ffffffeb;box-shadow:0 24px 55px #1b54451a;overflow:hidden}.card-heading{padding:17px 22px;border-bottom:1px solid #e6eee9;display:flex;justify-content:space-between;align-items:center;gap:14px;font-size:.85rem;font-weight:700}.card-heading .brand{font-size:.9rem}.card-heading .brand-mark{width:25px;height:25px}.run-facts{margin:0;padding:12px 22px 20px}.run-facts>div{display:flex;justify-content:space-between;gap:18px;padding:10px 0;border-bottom:1px solid #edf2ef;font-size:.84rem}.run-facts>div:last-child{border:0}.run-facts dt{color:var(--soft)}.run-facts dd{margin:0;font-weight:650;text-align:right;overflow-wrap:anywhere}.badge{display:inline-flex;align-items:center;background:#eaf6ef;color:#176448;border:1px solid #cde8db;padding:5px 12px;border-radius:999px;font-size:.75rem;font-weight:750;white-space:nowrap}.Attention{background:#fff3d9;color:#76520e;border-color:#f0dca8}.Failed{background:#fbe6e4;color:#8b2823;border-color:#ecc3bf}
+.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin:0 0 26px}.metric{background:#ffffffd9;border:1px solid #dfe9e3;border-radius:17px;padding:20px 22px;box-shadow:0 8px 28px #1b483106;font-size:.78rem;color:var(--soft)}.metric strong{display:block;font-size:2rem;line-height:1.25;letter-spacing:-.04em;color:#173c30;margin-top:6px}
+section.panel,details{min-width:0;background:#ffffffeb;border:1px solid #dfe9e3;border-radius:17px;padding:25px 26px;margin:18px 0;box-shadow:0 8px 28px #1b483106}summary{cursor:pointer;font-size:1.15rem;font-weight:700;letter-spacing:-.025em}summary::marker{color:#187358}.scroll{overflow:auto;margin-top:18px}table{border-collapse:collapse;width:100%;font-size:.8rem}th,td{text-align:left;padding:12px;border-bottom:1px solid #e2eae5;vertical-align:top;overflow-wrap:anywhere}th{background:#eff6f2;color:#345d50;font-size:.7rem;font-weight:750}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#f7faf8}code{font-family:ui-monospace,Consolas,monospace;font-size:.82em;overflow-wrap:anywhere}.muted{font-size:.8rem;color:var(--soft)}.deployment-meta{padding:18px 0 4px;font-size:.78rem;color:var(--soft)}.deployment-meta p{margin:5px 0}.site-footer{border-top:1px solid #d9e7df;background:linear-gradient(110deg,#edf6f0,#edf4f8)}.footer-wrap{max-width:1240px;padding:30px 28px;margin:auto;display:flex;justify-content:space-between;gap:30px;align-items:center}.footer-wrap p{font-size:.78rem;margin:6px 0 0}.footer-links{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:.8rem}.footer-links a{text-decoration:none}.footer-links a:hover{text-decoration:underline}
+@media(max-width:850px){.report-hero{grid-template-columns:1fr;gap:26px;padding:36px 0 28px}.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.footer-wrap{align-items:flex-start;flex-direction:column}table{min-width:640px}}
+@media(max-width:480px){main{padding:0 16px 28px}.nav-wrap{padding:12px 16px;min-height:76px;gap:12px}.header-label{font-size:.7rem}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.metric{padding:16px}section.panel,details{padding:20px 16px}.run-facts>div{flex-wrap:wrap;gap:4px 16px}.footer-wrap{padding:26px 16px}}
+@media print{body{background:#fff}.site-header,.site-footer{background:#fff}.nav-wrap{min-height:60px}main{max-width:none;padding:0}.report-hero{padding:20px 0;gap:20px;grid-template-columns:1fr 1fr}h1{font-size:28px}h1 span{-webkit-text-fill-color:#147d5e;background:none}.execution-card,.metric,section.panel,details{box-shadow:none}.metrics{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.metric{padding:12px}.metric strong{font-size:22px}details>*{display:block!important}.scroll{overflow:visible}table{min-width:0;font-size:9px}th{font-size:9px}th,td{padding:6px}header,.report-hero,.metrics{break-inside:avoid}a{color:inherit}.footer-wrap{padding:18px 0}.site-footer .brand-mark{width:24px;height:24px}}
+</style></head><body>
+<header class="site-header"><div class="nav-wrap"><a class="brand" href="https://roryvossepoel.github.io/OSDStage/">$brandMark<span>OSDStage</span></a><span class="header-label">Delivery report &middot; $(Format-ReportValue $Report.Module.Version)</span></div></header>
+<main><div class="report-hero"><div><div class="eyebrow">Your deployment, recorded</div><h1>$headline<span>Your results.</span></h1><p class="lead">$(Format-ReportValue $Report.Summary)</p>
+$(if ($Report.ErrorPresent -or $Report.FailureType) { '<p class="muted">Failure type: ' + (Format-ReportValue $Report.FailureType) + '. See the local runtime log for diagnostics.</p>' })
+</div><div class="execution-card"><div class="card-heading"><span class="brand">$brandMark<span>Execution overview</span></span><span class="badge $state">$state</span></div>
+<dl class="run-facts"><div><dt>Execution</dt><dd>$(Format-ReportValue $Report.ExecutionStatus)</dd></div><div><dt>Phase</dt><dd>$(Format-ReportValue $Report.Phase)</dd></div><div><dt>Restart required</dt><dd>$(Format-ReportValue $Report.RebootRequired)</dd></div><div><dt>Duration</dt><dd>$(Format-ReportValue $Report.DurationSeconds) seconds</dd></div></dl></div></div>
 <div class="metrics"><div class="metric">Expected<strong>$(Format-ReportValue $Report.Counts.Expected)</strong></div><div class="metric">Succeeded<strong>$(Format-ReportValue $Report.Counts.Succeeded)</strong></div><div class="metric">Failed<strong>$(Format-ReportValue $Report.Counts.Failed)</strong></div><div class="metric">Skipped<strong>$(Format-ReportValue $Report.Counts.Skipped)</strong></div><div class="metric">Unknown / not run<strong>$(Format-ReportValue $Report.Counts.UnknownOrNotRun)</strong></div></div>
-<section><h2>Device</h2>$deviceTable</section><section><h2>Apps and configuration</h2>$packageTable<p class="muted">Missing values are shown as Unknown. Raw error messages are retained in local runtime logs.</p></section>
+<section class="panel"><h2>Device</h2>$deviceTable</section><section class="panel"><h2>Apps and configuration</h2>$packageTable<p class="muted">Missing values are shown as Unknown. Raw error messages are retained in local runtime logs.</p></section>
 <details open><summary>Windows Update</summary>$updateContent</details><details open><summary>Evidence checks</summary>$checkTable</details>
-<section><h2>Scope and follow-up</h2><p>$(Format-ReportValue $Report.Scope)</p><p>$(Format-ReportValue $Report.Privacy)</p></section>
-<footer>OSDStage $(Format-ReportValue $Report.Module.Version) &middot; <a href="https://www.powershellgallery.com/packages/OSDStage">PowerShell Gallery</a> &middot; <a href="https://github.com/roryvossepoel/OSDStage">GitHub</a> &middot; <a href="https://roryvossepoel.github.io/OSDStage/">Documentation</a><br>Report $(Format-ReportValue $Report.ReportId) &middot; Generated $(Format-ReportValue $Report.GeneratedAtUtc)</footer>
-</main></body></html>
+<section class="panel"><h2>Scope and follow-up</h2><p>$(Format-ReportValue $Report.Scope)</p><p>$(Format-ReportValue $Report.Privacy)</p></section>
+<div class="deployment-meta"><p>Deployment <code>$(Format-ReportValue $Report.DeploymentId)</code></p><p>Started: $(Format-ReportValue $Report.StartedAtUtc) &middot; Completed: $(Format-ReportValue $Report.CompletedAtUtc)</p><p>Report <code>$(Format-ReportValue $Report.ReportId)</code> &middot; Generated: $(Format-ReportValue $Report.GeneratedAtUtc)</p></div>
+</main><footer class="site-footer"><div class="footer-wrap"><div><span class="brand">$brandMark<span>OSDStage</span></span><p>Your choices. Ready before OOBE. &middot; $(Format-ReportValue $Report.Module.Version)</p></div><nav class="footer-links" aria-label="Project links"><a href="https://www.powershellgallery.com/packages/OSDStage">PowerShell Gallery &#8599;</a><a href="https://github.com/roryvossepoel/OSDStage">GitHub &#8599;</a><a href="https://roryvossepoel.github.io/OSDStage/">Documentation &#8599;</a></nav></div></footer>
+</body></html>
 "@
 }
 

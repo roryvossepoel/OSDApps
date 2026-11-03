@@ -107,6 +107,27 @@ Describe 'Standalone delivery report' {
             (New-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory).WindowsUpdate | Should -BeNullOrEmpty
         }
     }
+    It 'explains only recorded follow-up reasons: <Case>' -TestCases @(
+        @{Case='FollowUpOnly'; Restart=$false; Missing=$false; Expected='Execution succeeded; follow-up update scan recommended.'}
+        @{Case='RestartAndFollowUp'; Restart=$true; Missing=$false; Expected='Execution succeeded; restart required. A follow-up update scan is recommended.'}
+        @{Case='MissingEvidence'; Restart=$false; Missing=$true; Expected='Review the package results and evidence checks below.'}
+    ) {
+        param($Restart, $Missing, $Expected)
+        $report = [pscustomobject]@{
+            Status='Attention';ExecutionStatus='Succeeded';RebootRequired=$Restart
+            Checks=@([pscustomobject]@{Passed=(-not $Missing)})
+            Counts=[pscustomobject]@{Skipped=0;UnknownOrNotRun=0}
+            WindowsUpdate=[pscustomobject]@{FurtherScanRequired=$true;ScanOnly=$false}
+        }
+        Get-OSDStageReportSummary $report | Should -Be $Expected
+    }
+    It 'does not present failed execution as a completed deployment in the headline' {
+        $result.Status = 'Failed'
+        $report = New-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory
+        $html = ConvertTo-OSDStageReportHtml $report
+        $html | Should -Match '<h1>Deployment report[.]'
+        $html | Should -Not -Match 'Deployment complete[.]'
+    }
     It 'does not leave a previous green report when rendering fails' {
         Write-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory
         Mock ConvertTo-OSDStageReportHtml { throw 'render failure' }
