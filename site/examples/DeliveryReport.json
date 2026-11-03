@@ -180,7 +180,7 @@
       "PackageType": "Script",
       "Version": "1.0.0",
       "Status": "Succeeded",
-      "ExitCode": 0,
+      "ExitCode": 3010,
       "DurationSeconds": 145,
       "AcquisitionOutcome": "NotApplicable",
       "RebootRequired": true,
@@ -255,7 +255,8 @@
         "SelectionReason": "OptedInHardwareDriver",
         "Status": "Installed",
         "InstallResultCode": 2,
-        "InstallHResult": 0
+        "InstallHResult": 0,
+        "RebootRequired": true
       }
     ]
   }
