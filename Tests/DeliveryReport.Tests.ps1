@@ -30,6 +30,23 @@ Describe 'Standalone delivery report' {
         $html | Should -Not -Match '<script|<link|<img'
         $result.Status | Should -Be 'Succeeded'
     }
+    It 'groups apps by recorded source in one card without guessing unknown sources' {
+        $report = New-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory
+        $report.Packages = @(
+            [pscustomobject]@{Id='BuiltInExample';PackageType='App';Source='BuiltIn';Status='Succeeded'},
+            [pscustomobject]@{Id='RepositoryExample';PackageType='App';Source='Repository';Status='Succeeded'},
+            [pscustomobject]@{Id='MissingSource';PackageType='App';Status='Succeeded'},
+            [pscustomobject]@{Id='UnrecognizedSource';PackageType='App';Source='Other';Status='Succeeded'}
+        )
+        $html = ConvertTo-OSDStageReportHtml $report
+        ([regex]::Matches($html, 'class="panel apps-card"')).Count | Should -Be 1
+        $html | Should -Match '(?s)<h3>Built-in apps</h3>.*?BuiltInExample.*?<h3>Repository apps</h3>.*?RepositoryExample.*?<h3>Apps with unknown source</h3>.*?MissingSource.*?UnrecognizedSource'
+        $report.Packages[1].Source | Should -Be 'Repository'
+        $report.Packages = @($report.Packages[0])
+        $html = ConvertTo-OSDStageReportHtml $report
+        $html | Should -Match '<h3>Built-in apps</h3>'
+        $html | Should -Not -Match '<h3>Repository apps</h3>|<h3>Apps with unknown source</h3>'
+    }
     It 'does not call a successful run with a pending restart fully complete' {
         $result.RebootRequired = $true
         $report = New-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory

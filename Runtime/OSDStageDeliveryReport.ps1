@@ -292,8 +292,21 @@ function ConvertTo-OSDStageReportHtml {
     }
     $appPackages = @($Report.Packages | Where-Object { $_.PackageType -eq 'App' -and $_.Id -ne 'WindowsUpdate' -and $null -eq $_.Details })
     $appCard = if ($appPackages.Count -gt 0) {
-        '<section class="panel apps-card"><h2>Apps</h2>' +
-            (Format-ReportTable $appPackages @('Id','Status','Version','ExitCode','DurationSeconds','AcquisitionOutcome','RebootRequired','FailureType','ErrorPresent')) + '</section>'
+        $appGroups = foreach ($group in @(
+            @{Source='BuiltIn';Title='Built-in apps'},
+            @{Source='Repository';Title='Repository apps'},
+            @{Source='Unknown';Title='Apps with unknown source'}
+        )) {
+            $rows = @($appPackages | Where-Object {
+                if ($group.Source -eq 'Unknown') { $_.Source -notin @('BuiltIn','Repository') }
+                else { $_.Source -eq $group.Source }
+            })
+            if ($rows.Count -gt 0) {
+                '<h3>' + $group.Title + '</h3>' +
+                    (Format-ReportTable $rows @('Id','Status','Version','ExitCode','DurationSeconds','AcquisitionOutcome','RebootRequired','FailureType','ErrorPresent'))
+            }
+        }
+        '<section class="panel apps-card"><h2>Apps</h2>' + ($appGroups -join '') + '</section>'
     } else { '' }
     $packageCards = $appCard + ((@(foreach ($package in @($Report.Packages | Where-Object { $_ -notin $appPackages })) {
         $name = if ([string]::IsNullOrWhiteSpace([string]$package.DisplayName)) { $package.Id } else { $package.DisplayName }
