@@ -1,4 +1,56 @@
 "use strict";
+
+// Keep the links visible without JavaScript; enhance the shared header only
+// after the toggle and panel are both available.
+const siteHeader = document.querySelector('.site-header');
+const navToggle = siteHeader?.querySelector('.nav-toggle');
+const navPanel = siteHeader?.querySelector('.nav-panel');
+if (navToggle && navPanel) {
+  const mobileNavigation = window.matchMedia('(max-width: 850px)');
+  const setNavigationOpen = open => {
+    const expanded = mobileNavigation.matches && open;
+    navToggle.setAttribute('aria-expanded', String(expanded));
+    navToggle.setAttribute('aria-label', expanded ? 'Close menu' : 'Open menu');
+    navPanel.hidden = mobileNavigation.matches && !expanded;
+  };
+  const closeNavigation = (restoreFocus = false) => {
+    setNavigationOpen(false);
+    if (restoreFocus) navToggle.focus({preventScroll: true});
+  };
+  const syncNavigation = () => {
+    const focused = document.activeElement;
+    navToggle.hidden = !mobileNavigation.matches;
+    setNavigationOpen(false);
+    if (mobileNavigation.matches && navPanel.contains(focused)) {
+      navToggle.focus({preventScroll: true});
+    } else if (!mobileNavigation.matches && focused === navToggle) {
+      navPanel.querySelector('a')?.focus({preventScroll: true});
+    }
+  };
+
+  navToggle.addEventListener('click', () => {
+    setNavigationOpen(navToggle.getAttribute('aria-expanded') !== 'true');
+  });
+  navPanel.addEventListener('click', event => {
+    if (mobileNavigation.matches && event.target.closest('a')) {
+      closeNavigation(navPanel.contains(document.activeElement));
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && navToggle.getAttribute('aria-expanded') === 'true') {
+      event.preventDefault();
+      closeNavigation(true);
+    }
+  });
+  document.addEventListener('click', event => {
+    if (navToggle.getAttribute('aria-expanded') === 'true' && !siteHeader.contains(event.target)) {
+      closeNavigation(navPanel.contains(document.activeElement));
+    }
+  });
+  mobileNavigation.addEventListener('change', syncNavigation);
+  syncNavigation();
+}
+
 document.querySelectorAll('.copy-code').forEach(button => {
   button.addEventListener('click', async () => {
     const code = button.closest('.code-block').querySelector('code');
