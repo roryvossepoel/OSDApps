@@ -283,14 +283,6 @@ function ConvertTo-OSDStageReportHtml {
         if (-not $body) { return '<p>No recorded items.</p>' }
         '<div class="scroll" tabindex="0"><table><thead><tr>' + $header + '</tr></thead><tbody>' + $body + '</tbody></table></div>'
     }
-    $packageTable = Format-ReportTable @($Report.Packages) @('Id','Status','Version','ExitCode','DurationSeconds','AcquisitionOutcome','RebootRequired','FailureType','ErrorPresent')
-    $componentContent = (@(foreach ($package in $Report.Packages) {
-        if ($null -eq $package.Details) { continue }
-        $details = $package.Details
-        '<details class="component-details"><summary>' + (Format-ReportValue $package.Id) + ' &middot; component details</summary><p class="muted">' +
-            (Format-ReportValue $details.Note) + '</p>' +
-            (Format-ReportTable @($details.Items) @($details.Fields)) + '</details>'
-    })) -join ''
     $checkTable = Format-ReportTable @($Report.Checks) @('Name','Passed','Detail')
     $deviceTable = Format-ReportTable @($Report.Device) @('ComputerName','Manufacturer','Model','WindowsVersion','Build','Revision')
     $updateContent = '<p>No correlated Windows Update details are available for this execution. See the checks below.</p>'
@@ -298,6 +290,21 @@ function ConvertTo-OSDStageReportHtml {
         $updateContent = (Format-ReportTable @($Report.WindowsUpdate) @('Status','Outcome','FoundCount','SelectedCount','InstalledCount','SkippedCount','RebootRequired','RebootRequested','InstallationBlockedByReboot','FurtherScanRequired')) +
             (Format-ReportTable @($Report.WindowsUpdate.Items) @('Title','DriverClass','Selected','SelectionReason','Status','InstallResultCode','InstallHResult'))
     }
+    $packageCards = (@(foreach ($package in $Report.Packages) {
+        $name = if ([string]::IsNullOrWhiteSpace([string]$package.DisplayName)) { $package.Id } else { $package.DisplayName }
+        '<section class="panel package-card"><h2>' + (Format-ReportValue $name) + '</h2>' +
+            (Format-ReportTable @($package) @('Status','Version','ExitCode','DurationSeconds','AcquisitionOutcome','RebootRequired','FailureType','ErrorPresent'))
+        if ($null -ne $package.Details) {
+            $details = $package.Details
+            '<details class="component-details"><summary>Recorded component details</summary><p class="muted">' +
+                (Format-ReportValue $details.Note) + '</p>' +
+                (Format-ReportTable @($details.Items) @($details.Fields)) + '</details>'
+        }
+        if ($package.Id -eq 'WindowsUpdate') {
+            '<details class="component-details" open><summary>Update details</summary>' + $updateContent + '</details>'
+        }
+        '</section>'
+    })) -join ''
     $headline = if ($Report.ExecutionStatus -eq 'Succeeded') { 'Deployment complete.' } else { 'Deployment report.' }
     $state = Format-ReportValue $Report.Status
     $brandMark = '<svg class="brand-mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#17394b"/><path d="m10 15 10-5 10 5-10 5Zm0 6 10 5 10-5m-20 6 10 5 10-5" fill="none" stroke="#9cdbcd" stroke-width="2.5" stroke-linejoin="round"/></svg>'
@@ -327,8 +334,10 @@ $(if ($Report.ErrorPresent -or $Report.FailureType) { '<p class="muted">Failure 
 </div><div class="execution-card"><div class="card-heading"><span class="brand">$brandMark<span>Execution overview</span></span><span class="badge $state">$state</span></div>
 <dl class="run-facts"><div><dt>Execution</dt><dd>$(Format-ReportValue $Report.ExecutionStatus)</dd></div><div><dt>Phase</dt><dd>$(Format-ReportValue $Report.Phase)</dd></div><div><dt>Restart required</dt><dd>$(Format-ReportValue $Report.RebootRequired)</dd></div><div><dt>Duration</dt><dd>$(Format-ReportValue $Report.DurationSeconds) seconds</dd></div></dl></div></div>
 <div class="metrics"><div class="metric">Expected<strong>$(Format-ReportValue $Report.Counts.Expected)</strong></div><div class="metric">Succeeded<strong>$(Format-ReportValue $Report.Counts.Succeeded)</strong></div><div class="metric">Failed<strong>$(Format-ReportValue $Report.Counts.Failed)</strong></div><div class="metric">Skipped<strong>$(Format-ReportValue $Report.Counts.Skipped)</strong></div><div class="metric">Unknown / not run<strong>$(Format-ReportValue $Report.Counts.UnknownOrNotRun)</strong></div></div>
-<section class="panel"><h2>Device</h2>$deviceTable</section><section class="panel"><h2>Apps and configuration</h2>$packageTable<p class="muted">Missing values are shown as Unknown. Raw error messages are retained in local runtime logs.</p>$componentContent</section>
-<details open><summary>Windows Update</summary>$updateContent</details><details open><summary>Evidence checks</summary>$checkTable</details>
+<section class="panel"><h2>Device</h2>$deviceTable</section>
+$packageCards
+<p class="muted">Missing values are shown as Unknown. Raw error messages are retained in local runtime logs.</p>
+<details open><summary>Evidence checks</summary>$checkTable</details>
 <section class="panel"><h2>Scope and follow-up</h2><p>$(Format-ReportValue $Report.Scope)</p><p>$(Format-ReportValue $Report.Privacy)</p></section>
 <div class="deployment-meta"><p>Deployment <code>$(Format-ReportValue $Report.DeploymentId)</code></p><p>Started: $(Format-ReportValue $Report.StartedAtUtc) &middot; Completed: $(Format-ReportValue $Report.CompletedAtUtc)</p><p>Report <code>$(Format-ReportValue $Report.ReportId)</code> &middot; Generated: $(Format-ReportValue $Report.GeneratedAtUtc)</p></div>
 </main><footer class="site-footer"><div class="footer-wrap"><div><span class="brand">$brandMark<span>OSDStage</span></span><p>Your choices. Ready before OOBE. &middot; $(Format-ReportValue $Report.Module.Version)</p></div><nav class="footer-links" aria-label="Project links"><a href="https://www.powershellgallery.com/packages/OSDStage">PowerShell Gallery &#8599;</a><a href="https://github.com/roryvossepoel/OSDStage">GitHub &#8599;</a><a href="https://roryvossepoel.github.io/OSDStage/">Documentation &#8599;</a></nav></div></footer>

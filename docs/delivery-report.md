@@ -27,7 +27,7 @@ The report uses an explicit field allowlist. Registry and environment values, fi
 
 ## Component details
 
-Expand a package under **Apps and configuration** to see its recorded operations:
+Each app or configuration component has its own card with its execution result. Expand **Recorded component details** inside that card to see individual operations. Windows Update has its own card with expandable update details:
 
 | Component | Recorded details |
 | --- | --- |
@@ -74,7 +74,7 @@ Use a test deployment containing an app, configuration and Windows Update. After
 1. Confirm both report files exist and share a report ID; compare their deployment ID with `Latest.json`.
 2. Verify app/configuration results and Windows Update totals match the existing JSON files.
 3. Confirm a successful run with `RebootRequired=True` displays **Attention**, while execution remains **Succeeded**.
-4. Open the HTML without network connectivity and inspect the summary, package table and expandable update details.
+4. Open the HTML without network connectivity and inspect the summary, individual package cards and expandable update details.
 5. Include your test font/certificate packages and a service or file operation. Expand each component and compare the individual results with its original `*-Result.json`. Check the observed service state, font registration and certificate store on the PC. A package already present should retain that outcome.
 6. Confirm `Packages[].Details.Evidence` is `Matched` for supported executed components; investigate any `ComponentEvidence:*` check that is false.
 7. Keep the report together with the existing logs for review. A controlled failing package should produce a failed report; a report-generation failure must preserve the original runtime exit code.
