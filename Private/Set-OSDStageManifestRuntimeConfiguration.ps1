@@ -6,7 +6,13 @@ function Set-OSDStageManifestRuntimeConfiguration {
 
     $configuration = Get-OSDStageConfiguration
 
+    $moduleData = Import-PowerShellDataFile (Join-Path (Split-Path $PSScriptRoot -Parent) 'OSDStage.psd1')
+    $moduleVersion = [string]$moduleData.ModuleVersion
+    if ($moduleData.PrivateData.PSData.Prerelease) {
+        $moduleVersion += '-' + [string]$moduleData.PrivateData.PSData.Prerelease
+    }
     $runtime = [pscustomobject]@{
+        ModuleVersion    = $moduleVersion
         EnableBuiltIns   = Test-OSDStageSourceEnabled -Source BuiltIn -Configuration $configuration
         EnableRepository = Test-OSDStageSourceEnabled -Source Repository -Configuration $configuration
         CleanupMode      = $configuration.CleanupMode

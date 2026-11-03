@@ -270,15 +270,43 @@ exit 3010
         $LASTEXITCODE | Should -Be 1
         Test-Path $order | Should -BeFalse
 
-        # A previous failed package suppresses the update pass.
+        # An individual failure must not suppress updates or become an overall success.
         $m.Packages[1]=New-OneShotRepositoryPackage -Stage $stage -Id 'BrokenBeforeUpdates' -InstallScript 'exit 42'
         $m | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $stage 'DeviceManifest.json') -Encoding UTF8
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:runnerPath -StagedPath $stage
         $LASTEXITCODE | Should -Be 1
-        Test-Path $order | Should -BeFalse
+        @(Get-Content $order) | Should -Be @('WindowsUpdate')
         $result=Get-Content $fixture.ResultPath -Raw | ConvertFrom-Json
-        $result.Packages[-1].Status | Should -Be Skipped
-        $result.Packages[-1].FailureType | Should -Be PriorPackageFailure
+        $result.Status | Should -Be Failed
+        @($result.Packages.Status) | Should -Be @('Failed','Succeeded')
+        $result.Packages[-1].Id | Should -Be WindowsUpdate
+        $result.Packages[-1].ExitCode | Should -Be 3010
+        $result.RebootRequired | Should -BeTrue
+        $result.FailedPackageCount | Should -Be 1
+        (Get-Content $fixture.LogPath -Raw) | Should -Match '\[WindowsUpdateAfterPackageFailure\]'
+
+        # A skipped app whose acquisition failed must not suppress updates either.
+        Remove-Item $order
+        $m.Packages[1] = [pscustomobject]@{
+            Id='AdobeAcrobatUnified';DisplayName='Adobe Acrobat Unified';Source='BuiltIn'
+            Type='AdobeAcrobatUnifiedZip';Architecture='x64';Package='BuiltIn\AdobeAcrobatUnified\x64\Package.zip'
+        }
+        $m | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $stage 'DeviceManifest.json') -Encoding UTF8
+        @{
+            SchemaVersion='2.0';DeploymentId=$fixture.DeploymentId;Phase='PreInstall';Status='CompletedWithErrors'
+            Packages=@(@{Id='AdobeAcrobatUnified';Status='Failed';FailureType='RemoteAcquisition';Error='Controlled acquisition failure.'})
+        } | ConvertTo-Json -Depth 10 | Set-Content (Join-Path (Split-Path $fixture.ResultPath -Parent) 'PreInstall.json') -Encoding UTF8
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:runnerPath -StagedPath $stage
+        $LASTEXITCODE | Should -Be 1
+        @(Get-Content $order) | Should -Be @('WindowsUpdate')
+        $result=Get-Content $fixture.ResultPath -Raw | ConvertFrom-Json
+        $result.Status | Should -Be Failed
+        @($result.Packages.Status) | Should -Be @('Skipped','Succeeded')
+        $result.Packages[0].FailureType | Should -Be RemoteAcquisition
+        $result.Packages[-1].Id | Should -Be WindowsUpdate
+        $result.Packages[-1].ExitCode | Should -Be 3010
+        $result.RebootRequired | Should -BeTrue
+        $result.SkippedPackageCount | Should -Be 1
     }
 
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add automatic JSON and offline HTML delivery reports after runner completion or terminal PreInstall failure. Include module/device information, package and cache outcomes, correlated Windows Update details, restart requirements and evidence checks. Preserve runtime outcomes when reporting fails; omit raw diagnostic errors and configuration content. Physical report acceptance is pending.
+
 ## 1.0.0-rc3
 
 - Third public release candidate, not GA. Includes Windows Update staging and the documentation/catalog improvements merged since RC2. The JSON/HTML delivery report is planned separately and is not included.

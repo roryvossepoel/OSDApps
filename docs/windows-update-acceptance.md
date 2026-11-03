@@ -21,9 +21,10 @@ run Windows Update in WinPE or restart the OSDCloud installation. Start with a
 fresh Windows deployment; do not rerun SetupComplete on the existing OOBE test.
 
 The small acceptance queue contains 7-Zip, a marker file and Windows Update.
-You can add your normal apps and configuration at the indicated position. Any
-failed/skipped earlier package suppresses Windows Update, so inspect Latest.json
-if no update report is produced. The cmdlets detect the offline Windows volume;
+You can add your normal apps and configuration at the indicated position. An
+earlier individual package failure or skip does not suppress Windows Update;
+it still leaves the overall deployment unsuccessful. Inspect Latest.json and
+the runtime log if no update report is produced. The cmdlets detect the offline Windows volume;
 only add `-WindowsPath` if more than one Windows installation is present.
 
 ```powershell

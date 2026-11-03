@@ -141,6 +141,16 @@ function Write-PreInstallResult {
         if (Test-Path -LiteralPath $temporaryPath -PathType Leaf) {
             Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
         }
+        if ($Status -eq 'Failed') {
+            try {
+                . (Join-Path $PSScriptRoot 'OSDStageDeliveryReport.ps1')
+                Write-OSDStageDeliveryReport -Result ([pscustomobject]$record) -Manifest $manifest -Directory $directory -Phase 'PreInstall'
+            }
+            catch {
+                try { Write-PreInstallLog -Event 'DeliveryReportFailed' -Level Warning -Message 'Delivery report could not be generated; deployment status is unchanged.' }
+                catch { try { Write-Warning 'OSDStage delivery report could not be generated. Deployment status is unchanged.' } catch { } }
+            }
+        }
     }
 }
 

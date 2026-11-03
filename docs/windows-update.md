@@ -20,8 +20,11 @@ Test-OSDStageDeployment -ThrowOnFailure
 ```
 
 The runner always moves Windows Update after every other selected package,
-regardless of cmdlet order. If an earlier package fails or is skipped, the update
-step is skipped. Partial `-Name` runner selections cannot bypass the full queue.
+regardless of cmdlet order. If an earlier individual package fails or is skipped,
+Windows Update is still attempted. The earlier failure remains visible and the
+deployment result remains unsuccessful. Windows Update's own prerequisite and
+restart checks still apply; fatal deployment validation errors still stop the
+runner before installation. Partial `-Name` runner selections cannot bypass the full queue.
 A later call replaces the Windows Update options rather than adding a second pass.
 
 After inspecting the scan report, test installation on the disposable target:
@@ -224,7 +227,7 @@ driver installation, or a claim that the device is fully patched.
   no eligible updates, source/network failure and cooperative cancellation.
 - Opt in to drivers separately; confirm installed driver versions, class filtering,
   firmware behavior and any pending restart before release.
-- Confirm earlier packages finish first and their failures suppress this step.
+- Confirm earlier packages finish first. An individual package failure or skip must not suppress Windows Update, and must remain visible in the unsuccessful deployment result.
 - Confirm the original Windows release, normal OOBE and Autopilot handoff after
   the wrapper completes. No performance or cross-build guarantee is established yet.
 

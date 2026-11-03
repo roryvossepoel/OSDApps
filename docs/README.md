@@ -4,6 +4,8 @@ Choose the task you want to complete. Start with the online WinPE workflow; cach
 
 **Release candidate: RC3.** Check [release availability](release-status.md) when upgrading from RC1 or testing newer development changes.
 
+See the [JSON/HTML delivery report](delivery-report.md) for the development reporting feature and its acceptance checks.
+
 ## Start here
 
 | I want to... | Guide | Where it runs |
