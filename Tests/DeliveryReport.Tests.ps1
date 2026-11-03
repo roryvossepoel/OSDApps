@@ -47,6 +47,37 @@ Describe 'Standalone delivery report' {
         $html | Should -Match '<h3>Built-in apps</h3>'
         $html | Should -Not -Match '<h3>Repository apps</h3>|<h3>Apps with unknown source</h3>'
     }
+    It 'formats HTML durations as minutes and seconds without changing JSON precision' {
+        $result.DurationSeconds = 2460.5
+        $result.Packages[0] | Add-Member DurationSeconds 213.5
+        $manifest.Packages[0] | Add-Member PackageType App
+        Write-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory
+        $report = Get-Content (Join-Path $directory 'DeliveryReport.json') -Raw | ConvertFrom-Json
+        $html = Get-Content (Join-Path $directory 'DeliveryReport.html') -Raw
+        $html | Should -Match '<dt>Duration</dt><dd>41 min 01 sec</dd>'
+        $html | Should -Match '<td>3 min 34 sec</td>'
+        $html | Should -Match '<th scope="col">Duration</th>'
+        $html | Should -Not -Match 'Duration Seconds|2460\.5 seconds'
+        $report.DurationSeconds | Should -Be 2460.5
+        $report.Packages[0].DurationSeconds | Should -Be 213.5
+        $result.DurationSeconds | Should -Be 2460.5
+    }
+    It 'handles duration boundaries and missing values: <Seconds> becomes <Expected>' -ForEach @(
+        @{Seconds=0; Expected='0 min 00 sec'},
+        @{Seconds=2.6; Expected='0 min 03 sec'},
+        @{Seconds=59.5; Expected='1 min 00 sec'},
+        @{Seconds=3601; Expected='60 min 01 sec'},
+        @{Seconds=$null; Expected='Unknown'},
+        @{Seconds=-1; Expected='Unknown'},
+        @{Seconds='invalid'; Expected='Unknown'}
+    ) {
+        $report = New-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory
+        $report.DurationSeconds = $Seconds
+        $report.Packages = @([pscustomobject]@{Id='FileSystem';PackageType='Script';DurationSeconds=$Seconds;Status='Succeeded'})
+        $html = ConvertTo-OSDStageReportHtml $report
+        $html | Should -Match "<dt>Duration</dt><dd>$Expected</dd>"
+        $html | Should -Match "<td>$Expected</td>"
+    }
     It 'does not call a successful run with a pending restart fully complete' {
         $result.RebootRequired = $true
         $report = New-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory

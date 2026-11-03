@@ -17,6 +17,7 @@ $report.Checks | Format-Table Name, Passed, Detail -Wrap
 ## What it records
 
 - Deployment identity, execution phase, UTC timestamps and runner duration.
+- HTML durations use minutes and seconds, rounded to the nearest whole second (for example, 2460.5 seconds becomes `41 min 01 sec`). JSON retains the numeric `DurationSeconds` values for analysis.
 - Staging module version, device name, manufacturer, model and Windows version/build when available.
 - App and configuration results, versions, exit codes, durations and recorded acquisition/cache outcomes.
 - Correlated Windows Update totals, individual selections and outcomes, restart requirements and follow-up scan indication.

@@ -275,13 +275,27 @@ function ConvertTo-OSDStageReportHtml {
     }
     function Format-ReportTable {
         param([object[]]$Rows, [string[]]$Fields)
-        $header = ($Fields | ForEach-Object { '<th scope="col">' + (Format-ReportValue ($_ -creplace '([a-z])([A-Z])', '$1 $2')) + '</th>' }) -join ''
+        $header = ($Fields | ForEach-Object {
+            $label = if ($_ -eq 'DurationSeconds') { 'Duration' } else { $_ -creplace '([a-z])([A-Z])', '$1 $2' }
+            '<th scope="col">' + (Format-ReportValue $label) + '</th>'
+        }) -join ''
         $body = ($Rows | ForEach-Object {
             $row = $_
-            '<tr>' + (($Fields | ForEach-Object { '<td>' + (Format-ReportValue $row.$_) + '</td>' }) -join '') + '</tr>'
+            '<tr>' + (($Fields | ForEach-Object {
+                $value = if ($_ -eq 'DurationSeconds') { Format-ReportDuration $row.$_ } else { Format-ReportValue $row.$_ }
+                '<td>' + $value + '</td>'
+            }) -join '') + '</tr>'
         }) -join ''
         if (-not $body) { return '<p>No recorded items.</p>' }
         '<div class="scroll" tabindex="0"><table><thead><tr>' + $header + '</tr></thead><tbody>' + $body + '</tbody></table></div>'
+    }
+    function Format-ReportDuration {
+        param($Seconds)
+        if ($null -eq $Seconds -or [string]::IsNullOrWhiteSpace([string]$Seconds)) { return 'Unknown' }
+        try { $number = [double]$Seconds } catch { return 'Unknown' }
+        if ([double]::IsNaN($number) -or [double]::IsInfinity($number) -or $number -lt 0) { return 'Unknown' }
+        $rounded = [math]::Round($number, 0, [MidpointRounding]::AwayFromZero)
+        '{0:0} min {1:00} sec' -f [math]::Floor($rounded / 60), ($rounded % 60)
     }
     $checkTable = Format-ReportTable @($Report.Checks) @('Name','Passed','Detail')
     $deviceTable = Format-ReportTable @($Report.Device) @('ComputerName','Manufacturer','Model','WindowsVersion','Build','Revision')
@@ -350,7 +364,7 @@ details.component-details{background:transparent;border:0;border-radius:0;box-sh
 <main><div class="report-hero"><div><div class="eyebrow">Your deployment, recorded</div><h1>$headline<span>Your results.</span></h1><p class="lead">$(Format-ReportValue $Report.Summary)</p>
 $(if ($Report.ErrorPresent -or $Report.FailureType) { '<p class="muted">Failure type: ' + (Format-ReportValue $Report.FailureType) + '. See the local runtime log for diagnostics.</p>' })
 </div><div class="execution-card"><div class="card-heading"><span class="brand">$brandMark<span>Execution overview</span></span><span class="badge $state">$state</span></div>
-<dl class="run-facts"><div><dt>Execution</dt><dd>$(Format-ReportValue $Report.ExecutionStatus)</dd></div><div><dt>Phase</dt><dd>$(Format-ReportValue $Report.Phase)</dd></div><div><dt>Restart required</dt><dd>$(Format-ReportValue $Report.RebootRequired)</dd></div><div><dt>Duration</dt><dd>$(Format-ReportValue $Report.DurationSeconds) seconds</dd></div></dl></div></div>
+<dl class="run-facts"><div><dt>Execution</dt><dd>$(Format-ReportValue $Report.ExecutionStatus)</dd></div><div><dt>Phase</dt><dd>$(Format-ReportValue $Report.Phase)</dd></div><div><dt>Restart required</dt><dd>$(Format-ReportValue $Report.RebootRequired)</dd></div><div><dt>Duration</dt><dd>$(Format-ReportDuration $Report.DurationSeconds)</dd></div></dl></div></div>
 <div class="metrics"><div class="metric">Expected<strong>$(Format-ReportValue $Report.Counts.Expected)</strong></div><div class="metric">Succeeded<strong>$(Format-ReportValue $Report.Counts.Succeeded)</strong></div><div class="metric">Failed<strong>$(Format-ReportValue $Report.Counts.Failed)</strong></div><div class="metric">Skipped<strong>$(Format-ReportValue $Report.Counts.Skipped)</strong></div><div class="metric">Unknown / not run<strong>$(Format-ReportValue $Report.Counts.UnknownOrNotRun)</strong></div></div>
 <section class="panel"><h2>Device</h2>$deviceTable</section>
 $packageCards

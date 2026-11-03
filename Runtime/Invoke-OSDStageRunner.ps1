@@ -1418,9 +1418,7 @@ try {
     foreach ($app in $apps) {
         $id = [string]$app.Id
         if ([string]$app.Type -eq 'WindowsUpdateScript' -and @($appResults | Where-Object Status -ne 'Succeeded').Count -gt 0) {
-            $appResults.Add((New-RunnerAppResult -App $app -Status 'Skipped' -FailureType 'PriorPackageFailure' -ErrorMessage 'Windows Update was not started because an earlier package failed or was skipped.'))
-            Save-RunnerResult -Status Running
-            continue
+            Write-RunnerLog -LogPath $logPath -Event 'WindowsUpdateAfterPackageFailure' -Level Warning -Message 'Attempting Windows Update after an earlier package failed or was skipped. Earlier failures remain in the deployment result.' -Data @{ Id=$id }
         }
         if ([string]$app.Source -eq 'BuiltIn' -and $preInstallFailures.ContainsKey($id)) {
             $preInstallFailure = $preInstallFailures[$id]
