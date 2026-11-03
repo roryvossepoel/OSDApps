@@ -56,7 +56,7 @@ OSDStage discovers the offline Windows installation, prepares SetupComplete and 
 - **With an OSDCloud-labeled USB flash drive:** matching cached content is staged as fallback. SetupComplete checks for updates and can refresh the cache. Leave the USB flash drive connected until OOBE appears.
 - **Without a USB flash drive:** SetupComplete downloads built-in content directly to local staging. Keep the PC online until OOBE appears.
 
-**From RC2:** Company Portal and CMTrace Open also support online acquisition during SetupComplete. See [release availability](docs/release-status.md) when upgrading from RC1. A detected OSDCloud USB cache is checked and refreshed automatically; without USB, content is acquired on the Windows disk. Prepare verified content in advance only when you need a fully offline deployment.
+Company Portal and CMTrace Open also support online acquisition during SetupComplete. A detected OSDCloud USB cache is checked and refreshed automatically; without USB, content is acquired on the Windows disk. Prepare verified content in advance only when you need a fully offline deployment.
 
 Keep networking available for either online route. No module copy on the USB flash drive is needed when loading from the Gallery. For a fully disconnected deployment, [prepare matching content and save the module first](Examples/WinPE-Offline.md).
 
@@ -67,6 +67,18 @@ Show-OSDStageUI -Offline
 ```
 
 The Viewer is read-only. Here, `-Offline` skips online repository discovery; it does not change the deployment's network behavior. Close the Viewer before rebooting.
+
+## Your deployment, recorded
+
+After SetupComplete, OSDStage automatically writes **DeliveryReport.html** and **DeliveryReport.json** beside the runtime result, by default in `%ProgramData%\OSDStage\Results`.
+
+- Review built-in apps and repository apps in separate groups.
+- Expand configuration cards for matching component evidence, including fonts, certificates, registry, services and files.
+- See update outcomes, restart requirements and follow-up checks without assuming one pass leaves Windows fully patched.
+
+Open the HTML offline on the deployed PC or copy it to a preparation PC with a browser. `Attention` can be correct even when execution succeeded. Keep the original runtime logs for troubleshooting and review identifying information before sharing a report.
+
+[Discover the report](https://roryvossepoel.github.io/OSDStage/report.html) · [Explore a fictional example](https://roryvossepoel.github.io/OSDStage/examples/DeliveryReport.html) · [Full report reference](docs/delivery-report.md)
 
 ## Built-in apps
 

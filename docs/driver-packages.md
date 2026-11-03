@@ -64,3 +64,7 @@ An already-present package can be processed successfully again by Windows; OSDSt
 Public payload cleanup follows the existing global CleanupMode. `Never` retains staging for tests. No retry is added by this feature.
 
 References: [PnPUtil syntax](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax) and [return values](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-return-values).
+
+## Review the recorded result
+
+The automatic [delivery report](delivery-report.md#component-details) gives this component its own card with matching recorded operations when supported evidence is available. Open the offline HTML after SetupComplete, or inspect `Packages[].Details` in JSON. Consult the original component result and runtime log for diagnostics; a successful recorded operation is not proof of later interactive behavior.

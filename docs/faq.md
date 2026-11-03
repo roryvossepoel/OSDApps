@@ -6,7 +6,7 @@ Jump to [release differences](#does-main-match-the-gallery-module), [USB prepara
 
 ## Does main match the Gallery module?
 
-Check the version first. Gallery RC2 includes file operations, compact output and automatic first-boot acquisition for Company Portal/CMTrace Open. These are absent from RC1. Newer development changes may still be separate from Gallery. Check [release availability](release-status.md) and the loaded module path before testing examples.
+Check [release availability](release-status.md) and the loaded module path first. RC4 includes JSON/HTML delivery reports and the final Windows Update attempt after individual package failures. Earlier candidates do not contain every current feature, and newer development changes may still be separate from Gallery.
 
 ## What can OSDStage stage?
 
@@ -275,6 +275,22 @@ Add-OSDStageMicrosoftTeams -Verbose
 ```
 
 These commands **perform staging**; they are not read-only diagnostics. Their output identifies the Windows target, cache detection and intended acquisition path. For inspection without changes, use the Viewer or read the existing Client/Runtime logs.
+
+## Where is my delivery report?
+
+After SetupComplete, open `%ProgramData%\OSDStage\Results\DeliveryReport.html` in a browser. `DeliveryReport.json` sits beside it. The files are automatic and require no extra staging command or module import. With a custom result path, they sit beside the configured runtime result. A terminal PreInstall failure also produces a report, with queued work marked not run.
+
+HTML works offline and can be copied to a preparation PC. If OOBE has no usable browser, inspect JSON in an elevated console or view the copied HTML elsewhere. Review device names, component identifiers and target paths before sharing. See the [report guide](delivery-report.md) and [fictional website example](https://roryvossepoel.github.io/OSDStage/examples/DeliveryReport.html).
+
+## Why does the report show Attention when execution succeeded?
+
+`ExecutionStatus` and report `Status` answer different questions. Execution may succeed while a restart, a follow-up update scan, missing component evidence, skipped results or unavailable metadata requires attention. Read the summary and individual checks. A `Failed` result stays a failure even when other packages succeed.
+
+The report is a snapshot, so a later restart does not rewrite its recorded restart requirement. It does not certify Autopilot enrollment, hardware health or zero remaining updates.
+
+## Does a failed configuration stop Windows Update?
+
+An ordinary individual package failure or skip does not suppress the final Windows Update pass. The earlier failure remains visible and the aggregate deployment remains unsuccessful. Fatal deployment validation still stops the runner, and Windows Update retains its own prerequisite and reboot checks. No automatic retry is scheduled.
 
 ## Why did my runtime source disappear?
 

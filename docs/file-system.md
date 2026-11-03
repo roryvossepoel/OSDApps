@@ -101,3 +101,7 @@ Deployment ID: `82664f3f-ade5-426d-a523-21dd632c7a1c`.
 These commands are included in `1.0.0-rc2`; the earlier `1.0.0-rc1` module is unchanged.
 
 [Back to documentation](README.md)
+
+## Review the recorded result
+
+The automatic [delivery report](delivery-report.md#component-details) gives this component its own card with matching recorded operations when supported evidence is available. Open the offline HTML after SetupComplete, or inspect `Packages[].Details` in JSON. Consult the original component result and runtime log for diagnostics; a successful recorded operation is not proof of later interactive behavior.

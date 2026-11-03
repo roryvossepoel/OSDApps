@@ -44,3 +44,7 @@ Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure
 Read `WiFiProfiles-Result.json` alongside the normal deployment reports. Physical SetupComplete validation is still required before release.
 
 API references: [WlanSetProfile](https://learn.microsoft.com/en-us/windows/win32/api/wlanapi/nf-wlanapi-wlansetprofile), [WlanEnumInterfaces](https://learn.microsoft.com/en-us/windows/win32/api/wlanapi/nf-wlanapi-wlanenuminterfaces).
+
+## Review the recorded result
+
+The automatic [delivery report](delivery-report.md#component-details) can show matching native Wi-Fi profile import evidence while omitting credentials. A generic repository script that imports Wi-Fi remains a script-package result. Successful import does not prove connectivity; check the actual connection on the deployed device.

@@ -68,3 +68,7 @@ In WinPE, import `OSDStage.psd1` from that exact test folder and run its `Exampl
 - [Configure Start layout and applyOnce](https://learn.microsoft.com/windows/configuration/start/layout)
 - [Start CSP and Group Policy mapping](https://learn.microsoft.com/windows/client-management/mdm/policy-csp-start#configurestartpins)
 - [Taskbar app IDs and replacement layout](https://learn.microsoft.com/windows/configuration/taskbar/pinned-apps)
+
+## Review the recorded result
+
+The automatic [delivery report](delivery-report.md#component-details) gives this component its own card with matching recorded operations when supported evidence is available. Open the offline HTML after SetupComplete, or inspect `Packages[].Details` in JSON. Consult the original component result and runtime log for diagnostics; a successful recorded operation is not proof of later interactive behavior.

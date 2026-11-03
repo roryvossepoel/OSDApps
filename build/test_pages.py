@@ -25,10 +25,11 @@ class PagesTests(unittest.TestCase):
         build()
         cls.docs={p:Document(p.read_text()) for p in OUT.rglob('*.html')}
     def test_navigation_and_local_links_under_project_subpath(self):
-        self.assertEqual(len(self.docs),5)
+        self.assertEqual(len(self.docs),7)
         for p,d in self.docs.items():
             with self.subTest(page=p.name):
-                self.assertEqual(d.lang,'en');self.assertEqual(d.h1,1);self.assertEqual(d.main,1);self.assertEqual(d.current,1)
+                self.assertEqual(d.lang,'en');self.assertEqual(d.h1,1);self.assertEqual(d.main,1)
+                self.assertEqual(d.current,0 if p.parent.name=='examples' else 1)
                 self.assertEqual(len(d.ids),len(set(d.ids)))
                 for link in d.links:
                     u=urlsplit(link)
@@ -39,6 +40,23 @@ class PagesTests(unittest.TestCase):
                     self.assertTrue(target.is_relative_to(OUT),link)
                     self.assertTrue(target.is_file(),f'{p.name}: {link}')
                     if u.fragment and target in self.docs:self.assertIn(unquote(u.fragment),self.docs[target].ids)
+    def test_report_example_is_fictional_offline_and_linked(self):
+        example=OUT/'examples/DeliveryReport.html'
+        html=example.read_text()
+        data=json.loads((OUT/'examples/DeliveryReport.json').read_text())
+        self.assertIs(data['SampleData'],True)
+        self.assertEqual(data['Device']['ComputerName'],'EXAMPLE-PC')
+        self.assertIn('Fictional example',html)
+        self.assertNotIn('<script',html)
+        self.assertNotIn('<link',html)
+        self.assertIn(data['ReportId'],html)
+        self.assertIn('Built-in apps',html)
+        self.assertIn('Repository apps',html)
+        self.assertEqual(data['Counts']['Expected'],len(data['Packages']))
+        self.assertEqual(data['WindowsUpdate']['InstalledCount'],len(data['WindowsUpdate']['Items']))
+        for name in ['index.html','get-started.html','guides.html','faq.html','catalog/index.html']:
+            self.assertIn('report.html', (OUT/name).read_text())
+
     def test_metadata_and_icons_are_bundled_from_current_revision(self):
         original=json.loads((ROOT/'metadata/builtins.json').read_text(encoding='utf-8-sig'))
         bundled=json.loads((OUT/'metadata/builtins.json').read_text())

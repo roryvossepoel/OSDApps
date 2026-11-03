@@ -28,3 +28,7 @@ No reboot, scheduled task, delayed retry or post-reboot check is introduced. `%P
 Tests cover intent merging, WhatIf, offline readiness alongside environment variables, rollback, tamper detection, idempotency, partial failures, timeout/no retry, and native PreInstall/runner integration. Native tests create two uniquely named disposable services, exercise delayed/normal automatic startup, start/stop, dependency rejection and disabled handling, then delete their own fixtures. They do not change existing Windows services. Physical WinPE/deployment acceptance remains a separate test.
 
 Reference: [sc.exe config](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/sc-config).
+
+## Review the recorded result
+
+The automatic [delivery report](delivery-report.md#component-details) gives this component its own card with matching recorded operations when supported evidence is available. Open the offline HTML after SetupComplete, or inspect `Packages[].Details` in JSON. Consult the original component result and runtime log for diagnostics; a successful recorded operation is not proof of later interactive behavior.

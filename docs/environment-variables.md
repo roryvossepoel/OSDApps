@@ -28,3 +28,7 @@ After changes, a single bounded WM_SETTINGCHANGE/Environment notification is att
 Validation covers real registry operations on an isolated test key (including PATH), validation-before-mutation, continuation, idempotency, transaction rollback and tamper detection. Native PreInstall/runner integration uses unique temporary machine variables and cleans them up; it never changes the test host's machine PATH. A physical WinPE/deployment test remains the acceptance step.
 
 References: [Windows environment variables](https://learn.microsoft.com/en-us/windows/win32/procthread/environment-variables), [WM_SETTINGCHANGE](https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-settingchange).
+
+## Review the recorded result
+
+The automatic [delivery report](delivery-report.md#component-details) gives this component its own card with matching recorded operations when supported evidence is available. Open the offline HTML after SetupComplete, or inspect `Packages[].Details` in JSON. Consult the original component result and runtime log for diagnostics; a successful recorded operation is not proof of later interactive behavior.

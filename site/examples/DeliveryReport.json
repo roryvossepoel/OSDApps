@@ -1,0 +1,263 @@
+{
+  "SampleData": true,
+  "SchemaVersion": "1.1",
+  "ReportId": "11111111-1111-4111-8111-111111111111",
+  "DeploymentId": "22222222-2222-4222-8222-222222222222",
+  "GeneratedAtUtc": "2026-11-03T10:06:00Z",
+  "StartedAtUtc": "2026-11-03T10:00:00Z",
+  "CompletedAtUtc": "2026-11-03T10:06:00Z",
+  "DurationSeconds": 360,
+  "Phase": "SetupComplete",
+  "Status": "Attention",
+  "ExecutionStatus": "Succeeded",
+  "Summary": "Illustrative example with fictional data. All selected packages succeeded; a restart and follow-up update scan are recorded.",
+  "Module": {
+    "Name": "OSDStage",
+    "Version": "1.0.0-rc4",
+    "GalleryUrl": "https://www.powershellgallery.com/packages/OSDStage",
+    "GitHubUrl": "https://github.com/roryvossepoel/OSDStage",
+    "DocumentationUrl": "https://roryvossepoel.github.io/OSDStage/"
+  },
+  "Device": {
+    "ComputerName": "EXAMPLE-PC",
+    "Manufacturer": "Example manufacturer",
+    "Model": "Example device",
+    "WindowsVersion": "26H2",
+    "Build": "26300",
+    "Revision": 9711,
+    "CollectionStatus": "Available"
+  },
+  "Counts": {
+    "Expected": 7,
+    "Succeeded": 7,
+    "Failed": 0,
+    "Skipped": 0,
+    "UnknownOrNotRun": 0
+  },
+  "RebootRequired": true,
+  "Packages": [
+    {
+      "Id": "Microsoft365Apps",
+      "DisplayName": "Microsoft 365 Apps",
+      "Source": "BuiltIn",
+      "PackageType": "App",
+      "Version": "Example",
+      "Status": "Succeeded",
+      "ExitCode": 0,
+      "DurationSeconds": 165,
+      "AcquisitionOutcome": "CacheReused",
+      "RebootRequired": false,
+      "FailureType": null,
+      "ErrorPresent": false
+    },
+    {
+      "Id": "7Zip",
+      "DisplayName": "7-Zip",
+      "Source": "BuiltIn",
+      "PackageType": "App",
+      "Version": "Example",
+      "Status": "Succeeded",
+      "ExitCode": 0,
+      "DurationSeconds": 3,
+      "AcquisitionOutcome": "CacheReused",
+      "RebootRequired": false,
+      "FailureType": null,
+      "ErrorPresent": false
+    },
+    {
+      "Id": "ExampleBusinessApp",
+      "DisplayName": "Example business app",
+      "Source": "Repository",
+      "PackageType": "App",
+      "Version": "Example",
+      "Status": "Succeeded",
+      "ExitCode": 0,
+      "DurationSeconds": 42,
+      "AcquisitionOutcome": "NotApplicable",
+      "RebootRequired": false,
+      "FailureType": null,
+      "ErrorPresent": false
+    },
+    {
+      "Id": "ExampleFonts",
+      "DisplayName": "Fonts",
+      "Source": "Repository",
+      "PackageType": "Font",
+      "Version": "1.0.0",
+      "Status": "Succeeded",
+      "ExitCode": 0,
+      "DurationSeconds": 2,
+      "AcquisitionOutcome": "NotApplicable",
+      "RebootRequired": false,
+      "FailureType": null,
+      "ErrorPresent": false,
+      "Details": {
+        "Evidence": "Matched",
+        "Note": "Illustrative font registration result.",
+        "Fields": [
+          "FileName",
+          "Status"
+        ],
+        "Items": [
+          {
+            "FileName": "ExampleSans-Regular.ttf",
+            "Status": "Installed"
+          }
+        ]
+      }
+    },
+    {
+      "Id": "ExampleCertificate",
+      "DisplayName": "Certificates",
+      "Source": "Repository",
+      "PackageType": "Certificate",
+      "Version": "1.0.0",
+      "Status": "Succeeded",
+      "ExitCode": 0,
+      "DurationSeconds": 1,
+      "AcquisitionOutcome": "NotApplicable",
+      "RebootRequired": false,
+      "FailureType": null,
+      "ErrorPresent": false,
+      "Details": {
+        "Evidence": "Matched",
+        "Note": "Illustrative certificate import result; no real certificate is included.",
+        "Fields": [
+          "Subject",
+          "StoreLocation",
+          "StoreName",
+          "Status"
+        ],
+        "Items": [
+          {
+            "Subject": "CN=Example Test CA",
+            "StoreLocation": "LocalMachine",
+            "StoreName": "Root",
+            "Status": "Imported"
+          }
+        ]
+      }
+    },
+    {
+      "Id": "FileSystem",
+      "DisplayName": "Files and directories",
+      "Source": "BuiltIn",
+      "PackageType": "Script",
+      "Version": "1.0.0",
+      "Status": "Succeeded",
+      "ExitCode": 0,
+      "DurationSeconds": 2,
+      "AcquisitionOutcome": "NotApplicable",
+      "RebootRequired": false,
+      "FailureType": null,
+      "ErrorPresent": false,
+      "Details": {
+        "Evidence": "Matched",
+        "Note": "Illustrative file operations.",
+        "Fields": [
+          "Operation",
+          "Path",
+          "Status"
+        ],
+        "Items": [
+          {
+            "Operation": "CreateDirectory",
+            "Path": "C:\\ProgramData\\Example",
+            "Status": "Created"
+          },
+          {
+            "Operation": "WriteFile",
+            "Path": "C:\\ProgramData\\Example\\Deployment.txt",
+            "Status": "Written"
+          }
+        ]
+      }
+    },
+    {
+      "Id": "WindowsUpdate",
+      "DisplayName": "Windows Update",
+      "Source": "BuiltIn",
+      "PackageType": "Script",
+      "Version": "1.0.0",
+      "Status": "Succeeded",
+      "ExitCode": 3010,
+      "DurationSeconds": 145,
+      "AcquisitionOutcome": "NotApplicable",
+      "RebootRequired": true,
+      "FailureType": null,
+      "ErrorPresent": false
+    }
+  ],
+  "Checks": [
+    {
+      "Name": "DeploymentIdentity",
+      "Passed": true,
+      "Detail": "Illustrative matching deployment identity."
+    },
+    {
+      "Name": "PackageResultsComplete",
+      "Passed": true,
+      "Detail": "One example result for every selected package."
+    },
+    {
+      "Name": "ComponentEvidence",
+      "Passed": true,
+      "Detail": "Illustrative component evidence; not a real validation run."
+    }
+  ],
+  "ErrorPresent": false,
+  "FailureType": null,
+  "Scope": "FICTIONAL EXAMPLE \u2014 this page demonstrates the report layout, not results from a real device. Execution evidence does not certify that Windows is fully patched or Autopilot enrollment succeeded. Updates may become available after restart.",
+  "Privacy": "No real device reports, credentials or customer configuration are used in this example. Actual reports contain identifying names and paths; review them before sharing.",
+  "WindowsUpdate": {
+    "Status": "Succeeded",
+    "Outcome": "RebootRequired",
+    "Phase": "LastWithinSetupComplete",
+    "ScanOnly": false,
+    "IncludeDrivers": true,
+    "FoundCount": 3,
+    "SelectedCount": 3,
+    "InstalledCount": 3,
+    "SkippedCount": 0,
+    "RebootRequired": true,
+    "RebootRequested": false,
+    "InstallationBlockedByReboot": false,
+    "FurtherScanRequired": true,
+    "DurationSeconds": 145,
+    "ReleaseUnchanged": true,
+    "DriverClass": [],
+    "Items": [
+      {
+        "Title": "Example security update",
+        "Type": 1,
+        "DriverClass": null,
+        "Selected": true,
+        "SelectionReason": "AllowedQualityClassification",
+        "Status": "Installed",
+        "InstallResultCode": 2,
+        "InstallHResult": 0
+      },
+      {
+        "Title": "Example Defender update",
+        "Type": 1,
+        "DriverClass": null,
+        "Selected": true,
+        "SelectionReason": "AllowedQualityClassification",
+        "Status": "Installed",
+        "InstallResultCode": 2,
+        "InstallHResult": 0
+      },
+      {
+        "Title": "Example network driver",
+        "Type": 2,
+        "DriverClass": "Networking",
+        "Selected": true,
+        "SelectionReason": "OptedInHardwareDriver",
+        "Status": "Installed",
+        "InstallResultCode": 2,
+        "InstallHResult": 0,
+        "RebootRequired": true
+      }
+    ]
+  }
+}

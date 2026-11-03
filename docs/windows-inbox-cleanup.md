@@ -27,3 +27,7 @@ The earlier standalone repository package is named `WindowsInboxAppCleanup`; the
 After the first boot, check `%ProgramData%\OSDStage\Results\Latest.json`, `%ProgramData%\OSDStage\Results\InboxCleanup-Result.json`, and `%ProgramData%\OSDStage\Logs\InboxCleanup.log`. Additional early diagnostics are written to `%SystemRoot%\Temp\OSDStage-InboxCleanup-Diagnostics.log`. A successful OSDStage result is not a replacement for post-Autopilot verification.
 
 [Cache and validation details](built-in-acquisition.md) · [Troubleshooting](faq.md)
+
+## Review the recorded result
+
+The automatic [delivery report](delivery-report.md) includes the cleanup package status in its own configuration card. Keep the original cleanup result and runtime log for detailed removals; the delivery report does not invent per-item details when supported matching evidence is absent.

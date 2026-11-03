@@ -23,3 +23,7 @@ body,.catalog-page{background:radial-gradient(ellipse 850px 540px at 85% 0%,#eaf
 @media(prefers-reduced-motion:no-preference){.scroll-revealed{animation:section-enter .5s ease-out both}.button{transition:background-color .15s,box-shadow .15s}.button.primary:hover{background:#0d584a;box-shadow:0 4px 12px #146b5a22}}
 @media(prefers-reduced-motion:reduce){.scroll-revealed{animation:none}}
 @media(max-width:600px){.hero{padding-top:32px}.gallery-badge{font-size:.66rem;margin-bottom:22px;gap:6px}.flow-strip{padding:22px}.site-footer{margin:45px 0 0;padding:25px 20px;gap:18px}.footer-links{justify-content:flex-start;gap:12px 20px;padding-top:0}}
+
+/* Six shared navigation destinations, including delivery reports. */
+@media(min-width:851px){.nav-wrap{gap:30px}.site-nav{gap:21px}}
+@media(max-width:600px){.site-nav{flex-wrap:wrap;justify-content:flex-start;column-gap:18px;row-gap:7px}}

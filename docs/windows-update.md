@@ -348,3 +348,7 @@ this additional Settings round, not just the SetupComplete pass.
 BIOS 1.19.3 was already current from the preceding day's test and survived the
 Windows reinstall. This run is not new evidence of a firmware flash. Monthly
 cumulative Windows/.NET updates were not offered and remain untested in the field.
+
+## Review updates in the delivery report
+
+The automatic [delivery report](delivery-report.md) includes a Windows Update card with correlated totals and individual outcomes from this deployment. `Attention` distinguishes restart/follow-up requirements from installation failure. The report records the SetupComplete pass; it does not trigger another scan or refresh itself after restart. Retain the original `WindowsUpdate-Result.json` and log for diagnostics.

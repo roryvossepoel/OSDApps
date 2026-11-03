@@ -454,3 +454,7 @@ Set-OSDStageConfiguration -CatalogUri 'https://example.blob.core.windows.net/osd
 Certificate packages contain only public CA `.cer`/`.crt` files under `Package/`. Publish with `-PackageType Certificate -CertificateStore Root` (or `CA`); both stores are under LocalMachine. Stage with `Add-OSDStageCertificate -Id`. See [certificate packages](certificate-staging.md) for the complete workflow.
 
 Driver packages use the same `Package.zip`, manifest, version and cache pipeline. Use `-PackageType Driver` and stage with `Add-OSDStageDriver -Id`. See [driver packages](driver-packages.md) for complete payload requirements and native import reporting.
+
+## Review repository results
+
+The automatic [delivery report](delivery-report.md) separates repository apps from built-in apps. Typed font, certificate and driver packages have their own component cards with matching recorded details. Generic repository scripts retain their package outcome; they do not automatically gain native component-level evidence. Review the original runtime logs for script diagnostics.
