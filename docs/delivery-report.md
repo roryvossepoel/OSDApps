@@ -28,7 +28,7 @@ The report uses an explicit field allowlist. Registry and environment values, fi
 
 ## Component details
 
-All applications are grouped in one **Apps** card, with separate **Built-in apps** and **Repository apps** sections based on the recorded `Source`. Empty sections are omitted; missing or unrecognized sources appear under **Apps with unknown source**. JSON retains the original `Source` value. Each configuration component has its own card with its execution result. Expand **Recorded component details** inside that card to see individual operations. Windows Update has its own card with expandable update details:
+All apps are grouped in one **Apps** card, with separate **Built-in apps** and **Repository apps** sections based on the recorded `Source`. Empty sections are omitted; missing or unrecognized sources appear under **Apps with unknown source**. JSON retains the original `Source` value. Each configuration component has its own card with its execution result. Expand **Recorded component details** inside that card to see individual operations. Windows Update has its own card with expandable update details:
 
 | Component | Recorded details |
 | --- | --- |
@@ -40,7 +40,7 @@ All applications are grouped in one **Apps** card, with separate **Built-in apps
 | Environment variables | Variable name, action, change outcome and appended entry count; no values. |
 | Windows features/capabilities | Component, action, before/after state, outcome and restart indication. |
 | Start/taskbar pins | Preparation outcome and pin count; not proof of the rendered user layout. |
-| Default associations | Extension/protocol, ProgId and application with the recorded import outcome; current user defaults are not verified. |
+| Default associations | Extension/protocol, ProgId and app with the recorded import outcome; current user defaults are not verified. |
 | Wi-Fi profiles | Profile name and import outcome; connectivity is not verified. |
 | Repository drivers | INF, Driver Store result and device-install outcome; import alone does not confirm active binding. |
 
