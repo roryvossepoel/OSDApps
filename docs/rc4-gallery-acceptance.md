@@ -168,7 +168,7 @@ its separately documented selections.
 Remaining coverage includes an actual cumulative Windows/.NET update offer and
 its servicing outcome, additional hardware and ARM64. These successful runs also
 do not exercise timeout/cancellation or an earlier package failure. No claim of
-fully patched Windows, completed firmware application or universal hardware
+fully patched Windows, confirmed firmware activation or universal hardware
 acceptance follows from a single update pass. See the
 [Windows Update guide](windows-update.md) for the one-pass contract and the
 [release procedure](releasing.md) for the separate stable-release decision.
