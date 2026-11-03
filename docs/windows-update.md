@@ -2,7 +2,8 @@
 
 [Documentation](README.md) · [Investigation and acceptance #109](https://github.com/roryvossepoel/OSDStage/issues/109)
 
-Windows Update staging is included in release candidate **1.0.0-rc3**, not RC2.
+Windows Update staging is included from **1.0.0-rc3**. RC4 also attempts the final
+update pass after an earlier individual package fails or is skipped.
 See [release availability](release-status.md) for the exact package and publication links.
 Fresh x64 SetupComplete acceptance passed on PC1 on 3 November 2026, followed by
 normal OOBE completion to a regular-account desktop. Monthly cumulative updates,

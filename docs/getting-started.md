@@ -8,7 +8,7 @@ Run the Add commands in WinPE after OSDCloud. OSDStage prepares the queue; Setup
 
 Run OSDStage after OSDCloud has applied the Windows image and before the first Windows boot. OSDStage does not replace Windows image deployment.
 
-OSDStage 1.0.0-rc3 is the current release candidate. Check [release availability](release-status.md) when upgrading from RC1 or testing newer development changes. Preview installation requires PowerShellGet 1.6 or later and `-AllowPrerelease`.
+OSDStage 1.0.0-rc4 is the current release candidate. Check [release availability](release-status.md) when upgrading from RC1 or testing newer development changes. Preview installation requires PowerShellGet 1.6 or later and `-AllowPrerelease`.
 
 The examples target x64. Individual built-ins have different architecture options; consult [Built-in apps](built-in-apps.md) before changing them. The documented WinPE flow uses Windows PowerShell 5.1. The optional Viewer also needs Windows Forms, .NET and an STA PowerShell session.
 

@@ -142,4 +142,4 @@ This pinned source procedure passed on PC1 on 3 November 2026; see the
 cooperative timeout/cancellation and other hardware remain separate coverage
 items; this PC's current ESD does not prove those cases. Autopilot enrollment
 also remains untested on this non-Autopilot device. This procedure pins the
-original test source; use the RC3 Gallery package for release-installation acceptance.
+original test source; use the current [release candidate](release-status.md) for release-installation acceptance.

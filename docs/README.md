@@ -2,9 +2,9 @@
 
 Choose the task you want to complete. Start with the online WinPE workflow; cache preparation is optional unless the deployment must work offline. The Windows Viewer inspects your deployment without changing it.
 
-**Release candidate: RC3.** Check [release availability](release-status.md) when upgrading from RC1 or testing newer development changes.
+**Release candidate: RC4.** Check [release availability](release-status.md) when upgrading from RC1 or testing newer development changes.
 
-See the [JSON/HTML delivery report](delivery-report.md) for the development reporting feature and its acceptance checks.
+See the [JSON/HTML delivery report](delivery-report.md) for deployment results, component evidence and acceptance checks.
 
 ## Start here
 
@@ -39,6 +39,7 @@ See the [JSON/HTML delivery report](delivery-report.md) for the development repo
 | [Start/taskbar pins](desktop-settings.md) | Explicit pin lists and documented limitations |
 | [Windows Update](windows-update.md) (release candidate) | Final quality-update pass, optional drivers, reboot boundaries and test procedure |
 | [Windows features](windows-features.md), [capabilities](windows-capabilities.md), [inbox cleanup](windows-inbox-cleanup.md) | Enable/disable features, add/remove FoDs and remove explicitly selected inbox apps |
+| [Delivery report](delivery-report.md) | Offline HTML and JSON results, built-in/repository app groups and component evidence |
 | [Runtime and cleanup](runtime.md) | SetupComplete, PreInstall, Runner, machine-readable results, configuration, logs and failure handling |
 | [FAQ and troubleshooting](faq.md) | Environment mistakes, cache and network failures, trust checks, logs and upgrades |
 

@@ -1,7 +1,7 @@
 # Broad delivery-report acceptance test
 
 Use a disposable x64 test PC, a volume labeled `OSDCloud`, network access and the
-pinned delivery-report development module. RC3 alone does not contain the report.
+pinned module source containing the delivery report (RC4 or later).
 This is a broad test of component types, not every available app or parameter.
 
 Prepare a new test module with `tools/Prepare-OSDStageCombinedTest.ps1 -Revision <commit>`
