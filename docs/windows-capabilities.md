@@ -141,3 +141,7 @@ reinstallation or post-login repair is needed to repeat this accepted scenario.
 
 Optional Features are a separate Windows interface: use the existing
 `Add-OSDStageWindowsFeature` for Enable/Disable feature names such as TelnetClient.
+
+## Review the recorded result
+
+The automatic [delivery report](delivery-report.md#component-details) gives this component its own card with matching recorded operations when supported evidence is available. Open the offline HTML after SetupComplete, or inspect `Packages[].Details` in JSON. Consult the original component result and runtime log for diagnostics; a successful recorded operation is not proof of later interactive behavior.

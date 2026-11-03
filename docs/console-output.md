@@ -77,3 +77,7 @@ same concise line instead, without a duplicate information message. Other
 commands need no `-PassThru` switch to capture their results.
 
 [Back to documentation](README.md)
+
+## Review the completed deployment
+
+Console summaries complement the automatic [delivery report](delivery-report.md). After SetupComplete, open `DeliveryReport.html` for the offline overview or inspect `DeliveryReport.json` for structured evidence. Both sit beside the runtime result, normally under `%ProgramData%\OSDStage\Results`. HTML formats durations as minutes and seconds; JSON retains numeric values. Recorded restart and follow-up requirements can yield `Attention` even when execution succeeded.

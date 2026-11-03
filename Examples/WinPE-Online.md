@@ -77,4 +77,6 @@ SetupComplete runs the queue during the first Windows boot. Do not rerun staging
 
 ## 4. Confirm the installation result in Windows
 
-After SetupComplete, use the [Getting started log check](../docs/getting-started.md#5-check-the-outcome). Review individual installer results, acquisition outcomes and `InstallComplete`, not just the WinPE staging output.
+After SetupComplete, open `%ProgramData%\OSDStage\Results\DeliveryReport.html` on the deployed PC, or copy it to a preparation PC with a browser. The matching JSON report is in the same folder. Review app, configuration and update outcomes and any restart/evidence attention items. See the [delivery report guide](../docs/delivery-report.md).
+
+For the original runtime results, use the [Getting started log check](../docs/getting-started.md#5-check-the-outcome). Review individual installer results, acquisition outcomes and `InstallComplete`, not just the WinPE staging output.

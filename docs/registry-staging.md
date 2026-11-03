@@ -105,3 +105,7 @@ does not require repeating the same deployment after documentation-only changes.
 
 See the [candidate review and release handoff](release-candidate-0.52.0.md) for
 breaking-contract requirements, known reporting limits and publication boundaries.
+
+## Review the recorded result
+
+The automatic [delivery report](delivery-report.md#component-details) gives this component its own card with matching recorded operations when supported evidence is available. Open the offline HTML after SetupComplete, or inspect `Packages[].Details` in JSON. Consult the original component result and runtime log for diagnostics; a successful recorded operation is not proof of later interactive behavior.

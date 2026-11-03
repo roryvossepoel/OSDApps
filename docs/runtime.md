@@ -126,7 +126,7 @@ The top-level status is `Running`, `Succeeded` or `Failed`. The final record inc
 - `PackageUpdated=null` means unknown, failed acquisition or not applicable. Missing/non-Boolean fields do not become false. An installer failure after a successful acquisition does not erase the acquisition facts.
 - `CacheUsed` retains the PreInstall meaning: a USB cache root was selected for that preparation operation. It is not proof of reuse: a new download may populate that cache, and already staged local content may be reused without a USB cache. The matching per-app Boolean is copied, or null if unavailable. The top-level `PreInstall.CacheUsed` has the same USB-root meaning.
 
-Company Portal, CMTrace Open, bundled Inbox Cleanup and repository/script entries do not participate in this PreInstall acquisition phase; their final `AcquisitionOutcome` is `NotApplicable` and these two flags remain null. Missing or ambiguous acquisition evidence for an eligible built-in reports `Unknown`, with null flags. File identity such as version and architecture may still be read from `CacheInfo.json`. No historical result or cache file is rewritten by this reporting correction.
+Bundled Inbox Cleanup and repository/script entries do not participate in this built-in PreInstall acquisition phase; their final `AcquisitionOutcome` is `NotApplicable` and these two flags remain null. Company Portal and CMTrace Open use the online acquisition/cache flow alongside the other supported built-ins. Missing or ambiguous acquisition evidence for an eligible built-in reports `Unknown`, with null flags. File identity such as version and architecture may still be read from `CacheInfo.json`. No historical result or cache file is rewritten by this reporting correction.
 
 ### Acquisition and installation are separate results
 
@@ -291,4 +291,8 @@ The [validation matrix](testing.md) and [performance history](performance.md) di
 
 ## Delivery report
 
-The development [delivery report](delivery-report.md) adds standalone JSON and HTML summaries beside `Latest.json`. It preserves execution status and distinguishes pending restarts from failures. See that guide for availability, privacy, evidence checks and limitations.
+Runner completion writes `DeliveryReport.json` and `DeliveryReport.html` beside `Latest.json`; terminal PreInstall failure also produces a report. These files remain outside staging with the default result path, so normal successful staging cleanup preserves them. No additional Add command or module installation in the target Windows system is required.
+
+The [delivery report](delivery-report.md) includes module/device information, one Apps card split into built-in and repository sources, separate configuration cards, matched component operations and correlated Windows Update outcomes. HTML displays minutes and seconds; JSON retains numeric durations. Its `Status` describes evidence and follow-up needs separately from `ExecutionStatus`: a successful run can correctly show `Attention` for a restart or later scan. Reporting errors do not replace the original runtime exit code.
+
+An individual package failure or skip does not suppress the final Windows Update attempt. The earlier failure remains recorded, and fatal validation and Windows Update prerequisites still apply. The report is a snapshot of this run, not a post-reboot health check or automatic retry. See the guide for evidence validation, privacy and limits.

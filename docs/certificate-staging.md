@@ -54,3 +54,7 @@ Repeated thumbprint/store pairs are staged once. One `Certificates` built-in Scr
 SetupComplete validates the entire configuration before modifying trust stores, then imports each requested certificate once. An existing thumbprint in the selected store returns `AlreadyPresent`; other certificates remain untouched. An import failure is reported and remaining operations continue. There are no forced reboots, scheduled retries or post-reboot checks. Importing into Root grants machine-wide trust.
 
 `Certificates-Result.json` records deployment ID, subject, thumbprint, destination store, outcome and errors. Exit code is 0 on success or 1 on failure; RestartNeeded is false. Public certificate staging follows the global cleanup mode (including retaining it with Never). Original `.cer` files are unchanged. No private-key support is included in this version.
+
+## Review the recorded result
+
+The automatic [delivery report](delivery-report.md#component-details) gives this component its own card with matching recorded operations when supported evidence is available. Open the offline HTML after SetupComplete, or inspect `Packages[].Details` in JSON. Consult the original component result and runtime log for diagnostics; a successful recorded operation is not proof of later interactive behavior.

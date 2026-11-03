@@ -19,3 +19,7 @@ SetupComplete queries the current state before changing anything. Already enable
 Results are written to `%ProgramData%\OSDStage\Results\WindowsFeatures-Result.json` by default. No DISM source/media management is included in this first implementation.
 
 [Cache and validation details](built-in-acquisition.md) · [Troubleshooting](faq.md)
+
+## Review the recorded result
+
+The automatic [delivery report](delivery-report.md#component-details) gives this component its own card with matching recorded operations when supported evidence is available. Open the offline HTML after SetupComplete, or inspect `Packages[].Details` in JSON. Consult the original component result and runtime log for diagnostics; a successful recorded operation is not proof of later interactive behavior.

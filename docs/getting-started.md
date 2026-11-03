@@ -33,7 +33,7 @@ For an online deployment, vendor/repository access must be available when acquis
 
 ## 1. Preparation machine — install or save the module
 
-**Environment: full Windows.** Saving the module is optional for online deployment: the WinPE example below loads it directly from Gallery. RC2 supports automatic online acquisition for Company Portal and CMTrace Open; older RC1 installations require pre-caching for those two apps. Preparation can write module files and USB cache content. It must not stage apps against the preparation machine's Windows installation.
+**Environment: full Windows.** Saving the module is optional for online deployment: the WinPE example below loads it directly from Gallery. Company Portal and CMTrace Open support automatic online acquisition. Preparation can write module files and USB cache content. It must not stage apps against the preparation machine's Windows installation.
 
 ```powershell
 Install-Module OSDStage -Repository PSGallery -AllowPrerelease -Force -ErrorAction Stop
@@ -80,7 +80,7 @@ The defaults already use cache label `OSDCloud`, cleanup mode `OnSuccess` and au
 
 With an OSDCloud-labeled USB flash drive connected, matching cache content is staged as fallback and PreInstall can reuse or refresh it for built-ins that support first-boot acquisition. Leave the USB flash drive connected until OOBE appears. Without a USB flash drive, PreInstall downloads supported built-in content to local staging. Keep the PC online in either case. To test without cache, use only built-ins that support first-boot acquisition and disconnect the USB flash drive before staging on a fresh deployment; removing it after staging may leave cached fallback content on the target.
 
-**Company Portal and CMTrace Open:** from RC2, both follow the same automatic online PreInstall acquisition and cache-refresh flow. Gallery RC1 requires their cache to be prepared on full Windows first. For a fully offline deployment, every selected app needs verified content and `Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure`. See [release availability](release-status.md).
+**Company Portal and CMTrace Open:** both follow the automatic online PreInstall acquisition and cache-refresh flow. For a fully offline deployment, every selected app needs verified content and `Test-OSDStageDeployment -RequireOfflineReady -ThrowOnFailure`. See [release availability](release-status.md).
 
 If you need different settings, `Set-OSDStageConfiguration` applies to the **current PowerShell session**. Set overrides before adding apps.
 
@@ -153,7 +153,18 @@ A successful staging command is not a successful installation. SetupComplete is 
 
 ## 5. Check the outcome
 
-**Environment: deployed Windows after SetupComplete.** Read the saved result directly; installing the module or opening the Viewer is not required.
+**Environment: deployed Windows after SetupComplete.** Start with the automatic [delivery report](delivery-report.md); installing the module or opening the Viewer is not required.
+
+```powershell
+$results = Join-Path $env:ProgramData 'OSDStage\Results'
+Start-Process (Join-Path $results 'DeliveryReport.html')
+```
+
+The offline HTML groups built-in and repository apps separately, with individual cards for configurations and expandable component details. The same folder contains `DeliveryReport.json` for structured inspection. If no browser is available in OOBE, read the JSON from an elevated console or copy the HTML to your preparation PC. A custom runtime result path also relocates these sibling reports.
+
+Check both execution and follow-up status. `Attention` can mean a required restart or later update scan even when execution succeeded. The report records this run and does not refresh automatically after restart. Review identifying fields before sharing it.
+
+For the original runtime result and acquisition details:
 
 ```powershell
 $Result = Get-Content -LiteralPath "$env:ProgramData\OSDStage\Results\Latest.json" -Raw | ConvertFrom-Json
