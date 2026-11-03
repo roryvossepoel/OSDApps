@@ -148,4 +148,118 @@ Describe 'Standalone delivery report' {
         { Write-RunnerResult -Status Succeeded -WarningAction SilentlyContinue } | Should -Not -Throw
         (Get-Content $resultPath -Raw | ConvertFrom-Json).Status | Should -Be 'Succeeded'
     }
+    It 'imports recorded component rows with allowlisted fields: <Kind>' -TestCases @(
+        @{Kind='Font'; Id='TestFonts'; Source='Repository'; Type='RepositoryPackage'; PackageType='Font'; File='Font-TestFonts-Result.json'; Count='FontCount'; Identity='Id'; Row=@{FileName='Example.ttf';RegistrationName='Example';Status='Installed';Outcome='Installed'}; Field='FileName'; Value='Example.ttf'}
+        @{Kind='Certificate'; Id='TestCA'; Source='Repository'; Type='RepositoryPackage'; PackageType='Certificate'; File='Certificate-TestCA-Result.json'; Count='OperationCount'; Identity='PackageId'; Row=@{Subject='CN=Example CA';Thumbprint='ABCD';Store='LocalMachine\Root';Status='Succeeded';Outcome='Imported'}; Field='Store'; Value='LocalMachine\Root'}
+        @{Kind='Driver'; Id='TestDrivers'; Source='Repository'; Type='RepositoryPackage'; PackageType='Driver'; File='Driver-TestDrivers-Result.json'; Count='InfCount'; Identity='PackageId'; Row=@{Inf='example.inf';Status='Succeeded';DriverStoreStatus='AddedOrAlreadyPresent';DeviceInstallStatus='NoMatchingDeviceOrBetterDriver';DeviceBindingConfirmed=$null}; Field='DeviceInstallStatus'; Value='NoMatchingDeviceOrBetterDriver'}
+        @{Kind='Certificates'; Id='Certificates'; Source='BuiltIn'; Type='CertificateScript'; PackageType='Script'; File='Certificates-Result.json'; Count='OperationCount'; Row=@{Subject='CN=Example CA';Thumbprint='ABCD';Store='LocalMachine\CA';Status='Succeeded';Outcome='AlreadyPresent'}; Field='Outcome'; Value='AlreadyPresent'}
+        @{Kind='Services'; Id='Services'; Source='BuiltIn'; Type='ServiceScript'; PackageType='Script'; File='Services-Result.json'; Count='OperationCount'; Row=@{Name='Example';Status='Succeeded';Outcome='Applied';Before=@{StartupType='Manual';State='Stopped'};After=@{StartupType='Automatic';State='Running'}}; Field='StartupTypeAfter'; Value='Automatic'}
+        @{Kind='FileSystem'; Id='FileSystem'; Source='BuiltIn'; Type='FileSystemScript'; PackageType='Script'; File='FileSystem-Result.json'; Count='OperationCount'; Row=@{Kind='File';Action='Copy';Path='C:\Example.txt';Status='Succeeded';Outcome='Copied'}; Field='Path'; Value='C:\Example.txt'}
+        @{Kind='Registry'; Id='RegistrySettings'; Source='Repository'; Type='RepositoryPackage'; PackageType='Script'; File='Registry-Result.json'; Count='OperationCount'; Row=@{Path='HKLM:\Software\Example';Name='Setting';Action='SetValue';Status='Succeeded';Outcome='Set'}; Field='Action'; Value='SetValue'}
+        @{Kind='EnvironmentVariables'; Id='EnvironmentVariables'; Source='BuiltIn'; Type='EnvironmentVariableScript'; PackageType='Script'; File='EnvironmentVariables-Result.json'; Count='OperationCount'; Row=@{Name='Example';Action='Set';Status='Succeeded';Outcome='Set'}; Field='Name'; Value='Example'}
+        @{Kind='DesktopSettings'; Id='DesktopSettings'; Source='BuiltIn'; Type='DesktopSettingsScript'; PackageType='Script'; File='DesktopSettings-Result.json'; Count='OperationCount'; Row=@{Kind='StartPins';Status='Succeeded';Detail=@{Outcome='ConfiguredForFirstSignIn';PinCount=2;ApplyOnce=$true;Secret='do-not-export'}}; Field='Outcome'; Value='ConfiguredForFirstSignIn'}
+        @{Kind='WindowsFeatures'; Id='WindowsFeatures'; Source='BuiltIn'; Type='WindowsFeatureScript'; PackageType='Script'; File='WindowsFeatures-Result.json'; Count='OperationCount'; Row=@{Name='TelnetClient';Action='Enable';Status='Succeeded';Outcome='Enabled';StateBefore='Disabled';StateAfter='Enabled'}; Field='StateAfter'; Value='Enabled'}
+        @{Kind='WindowsCapabilities'; Id='WindowsCapabilities'; Source='BuiltIn'; Type='WindowsCapabilityScript'; PackageType='Script'; File='WindowsCapabilities-Result.json'; Count='OperationCount'; Row=@{Name='Example';Action='Add';Status='Succeeded';Outcome='PendingRestart';RestartNeeded=$true}; Field='Outcome'; Value='PendingRestart'}
+        @{Kind='DefaultAssociations'; Id='DefaultAssociations'; Source='BuiltIn'; Type='DefaultAssociationScript'; PackageType='Script'; File='DefaultAssociations-Result.json'; Count='RequestedCount'; Row=@{Identifier='.pdf';ProgId='Example.Pdf';AppName='Example'}; Field='Outcome'; Value='ImportedForFirstSignIn'}
+        @{Kind='WiFiProfiles'; Id='WiFiProfiles'; Source='BuiltIn'; Type='WiFiProfileScript'; PackageType='Script'; File='WiFiProfiles-Result.json'; Count='OperationCount'; Row=@{Name='Example';Status='Succeeded';Outcome='Imported';Xml='<keyMaterial>do-not-export</keyMaterial>'}; Field='Outcome'; Value='Imported'}
+    ) {
+        param($Kind,$Id,$Source,$Type,$PackageType,$File,$Count,$Identity,$Row,$Field,$Value)
+        $manifest.Packages=@([pscustomobject]@{Id=$Id;Source=$Source;Type=$Type;PackageType=$PackageType;RegistryStageSchema=1})
+        $result.Packages=@([pscustomobject]@{Id=$Id;Status='Succeeded';ExitCode=0})
+        $record=@{SchemaVersion=2;DeploymentId=$result.DeploymentId;Status='Succeeded';$Count=1;Error='do-not-export';CommandLine='do-not-export'}
+        if ($Identity) { $record[$Identity]=$Id }
+        $Row['Data']='do-not-export';$Row['Content']='do-not-export';$Row['Value']='do-not-export'
+        if ($Kind -eq 'DefaultAssociations') { $record.Associations=@($Row);$record.Outcome='ImportedForFirstSignIn';$record.UserDefaultsVerified=$false }
+        else { $record.Items=@($Row) }
+        $path=Join-Path $directory $File
+        $record | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $path
+        (Get-Item $path).LastWriteTimeUtc=[datetime]'2026-11-03T07:05:00Z'
+        Write-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory
+        $report=Get-Content (Join-Path $directory 'DeliveryReport.json') -Raw | ConvertFrom-Json
+        $report.Packages[0].Details.Evidence | Should -Be 'Matched'
+        $report.Packages[0].Details.Items.Count | Should -Be 1
+        $report.Packages[0].Details.Items[0].$Field | Should -Be $Value
+        $report.Status | Should -Be 'Succeeded'
+        $report | ConvertTo-Json -Depth 16 | Should -Not -Match 'do-not-export'
+        $html=Get-Content (Join-Path $directory 'DeliveryReport.html') -Raw
+        $html | Should -Match 'component details'
+        $html | Should -Match ([regex]::Escape([Net.WebUtility]::HtmlEncode([string]$Value)))
+        $html | Should -Not -Match 'do-not-export'
+    }
+    It 'excludes unusable component evidence without changing package outcomes: <Case>' -TestCases @(
+        @{Case='Missing'};@{Case='WrongDeployment'};@{Case='OldSameDeployment'};@{Case='Future'}
+        @{Case='WrongPackage'};@{Case='WrongStatus'};@{Case='WrongCount'};@{Case='FailedChild'}
+        @{Case='Malformed'};@{Case='UnknownSchema'};@{Case='UnknownChildStatus'}
+    ) {
+        param($Case)
+        $manifest.Packages=@([pscustomobject]@{Id='Fonts';Source='Repository';Type='RepositoryPackage';PackageType='Font'})
+        $result.Packages=@([pscustomobject]@{Id='Fonts';Status='Succeeded';ExitCode=0})
+        $record=@{SchemaVersion=2;DeploymentId=$result.DeploymentId;Id='Fonts';Status='Succeeded';FontCount=1;Items=@(@{FileName='do-not-import.ttf';Status='Installed'})}
+        switch ($Case) {
+            WrongDeployment {$record.DeploymentId=[guid]::NewGuid().Guid}
+            WrongPackage {$record.Id='OtherFonts'}
+            WrongStatus {$record.Status='Failed'}
+            WrongCount {$record.FontCount=2}
+            FailedChild {$record.Items[0].Status='Failed'}
+            UnknownChildStatus {$record.Items[0].Status='Perhaps'}
+            UnknownSchema {$record.SchemaVersion=99}
+        }
+        $path=Join-Path $directory 'Font-Fonts-Result.json'
+        if ($Case -ne 'Missing') {
+            $record | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $path
+            if ($Case -eq 'Malformed') { '{broken' | Set-Content $path }
+            (Get-Item $path).LastWriteTimeUtc = switch ($Case) {
+                OldSameDeployment { [datetime]'2026-11-03T06:00:00Z' }
+                Future { [datetime]'2026-11-03T08:00:00Z' }
+                default { [datetime]'2026-11-03T07:05:00Z' }
+            }
+        }
+        $report=New-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory
+        $report.Status | Should -Be 'Attention'
+        $report.Packages[0].Status | Should -Be 'Succeeded'
+        $report.Packages[0].Details.Evidence | Should -Be 'Unavailable'
+        $report.Packages[0].Details.Items.Count | Should -Be 0
+        $report | ConvertTo-Json -Depth 16 | Should -Not -Match 'do-not-import'
+    }
+    It 'does not import component details for skipped packages or PreInstall failures' {
+        $manifest.Packages=@([pscustomobject]@{Id='Fonts';Source='Repository';PackageType='Font'})
+        $result.Packages=@([pscustomobject]@{Id='Fonts';Status='Skipped'})
+        $report=New-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory
+        $report.Packages[0].Details.Evidence | Should -Be 'NotRun'
+        $result.Status='Failed'
+        $report=New-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory -Phase PreInstall
+        $report.Packages[0].Details | Should -BeNullOrEmpty
+    }
+    It 'does not follow component paths for arbitrary packages or unsafe package identifiers' {
+        Mock Get-Content { throw 'Must not read arbitrary component paths' }
+        foreach ($definition in @(
+            [pscustomobject]@{Id='../escape';Source='Repository';PackageType='Font'},
+            [pscustomobject]@{Id='Services';Source='Repository';PackageType='Script';Type='ServiceScript'},
+            [pscustomobject]@{Id='RegistrySettings';Source='Repository';PackageType='Script'}
+        )) {
+            Get-OSDStageReportComponent -Definition $definition -Package $result.Packages[0] -Result $result -Directory $directory | Should -BeNullOrEmpty
+        }
+        Should -Invoke Get-Content -Times 0
+    }
+    It 'preserves mixed font outcomes and escapes component names without exporting raw errors' {
+        $definition=[pscustomobject]@{Id='Fonts';Source='Repository';PackageType='Font'}
+        $manifest.Packages=@($definition);$result.Status='Failed'
+        $result.Packages=@([pscustomobject]@{Id='Fonts';Status='Failed'})
+        $record=@{SchemaVersion=2;DeploymentId=$result.DeploymentId;Id='Fonts';Status='Failed';FontCount=3;Items=@(
+            @{FileName='<script>font</script>.ttf';Status='Installed';Outcome='Installed'},
+            @{FileName='existing.ttf';Status='AlreadyPresent';Outcome='AlreadyPresent'},
+            @{FileName='bad.ttf';Status='Failed';Outcome='FileConflict';Error='secret-error'}
+        )}
+        $path=Join-Path $directory 'Font-Fonts-Result.json'
+        $record | ConvertTo-Json -Depth 8 | Set-Content $path
+        (Get-Item $path).LastWriteTimeUtc=[datetime]'2026-11-03T07:05:00Z'
+        $report=New-OSDStageDeliveryReport -Result $result -Manifest $manifest -Directory $directory
+        $report.Status | Should -Be 'Failed'
+        $report.Packages[0].Details.Items[1].Outcome | Should -Be 'AlreadyPresent'
+        $report.Packages[0].Details.Items[2].Outcome | Should -Be 'FileConflict'
+        $html=ConvertTo-OSDStageReportHtml $report
+        $html | Should -Match '&lt;script&gt;font&lt;/script&gt;'
+        $html | Should -Not -Match '<script>|secret-error'
+    }
+
 }

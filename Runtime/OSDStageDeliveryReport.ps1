@@ -38,6 +38,99 @@ function Get-OSDStageReportDevice {
     [pscustomobject]$device
 }
 
+function Get-OSDStageReportComponent {
+    param($Package, $Definition, $Result, [string]$Directory)
+    # Fixed runtime report names only. Never follow a ResultPath supplied by a package.
+    $builtIns = @{
+        Certificates='CertificateScript'; Services='ServiceScript'; FileSystem='FileSystemScript'
+        EnvironmentVariables='EnvironmentVariableScript'; DesktopSettings='DesktopSettingsScript'
+        WindowsFeatures='WindowsFeatureScript'; WindowsCapabilities='WindowsCapabilityScript'
+        DefaultAssociations='DefaultAssociationScript'; WiFiProfiles='WiFiProfileScript'
+    }
+    $kind = $null; $fileName = $null; $identityField = $null
+    if ($Definition.Source -eq 'BuiltIn' -and $builtIns.ContainsKey([string]$Definition.Id) -and
+        $Definition.Type -eq $builtIns[[string]$Definition.Id]) {
+        $kind = [string]$Definition.Id; $fileName = $kind + '-Result.json'
+    }
+    elseif ($Definition.Source -eq 'Repository' -and $Definition.PackageType -in @('Font','Certificate','Driver')) {
+        $kind = [string]$Definition.PackageType
+        if ([string]$Definition.Id -notmatch '^[A-Za-z0-9][A-Za-z0-9_.-]*$') { return $null }
+        $fileName = '{0}-{1}-Result.json' -f $kind, $Definition.Id
+        $identityField = if ($kind -eq 'Font') { 'Id' } else { 'PackageId' }
+    }
+    elseif ($Definition.Id -eq 'RegistrySettings' -and $Definition.Source -eq 'Repository' -and $Definition.RegistryStageSchema -eq 1) {
+        $kind = 'Registry'; $fileName = 'Registry-Result.json'
+    }
+    if (-not $kind) { return $null }
+    $fields = switch ($kind) {
+        'Font' { @('FileName','RegistrationName','Status','Outcome') }
+        { $_ -in @('Certificate','Certificates') } { @('Subject','Thumbprint','Store','Status','Outcome') }
+        'Driver' { @('Inf','Status','DriverStoreStatus','DeviceInstallStatus','DeviceBindingConfirmed','RestartNeeded') }
+        'Services' { @('Name','Status','Outcome','StartupTypeRequested','StateRequested','StartupTypeBefore','StartupTypeAfter','StateBefore','StateAfter') }
+        'FileSystem' { @('Kind','Action','Path','Status','Outcome') }
+        'Registry' { @('Path','Name','Action','Type','ResolvedView','Status','Outcome') }
+        'EnvironmentVariables' { @('Name','Action','Status','Outcome','Changed','AddedPathEntryCount') }
+        'DesktopSettings' { @('Kind','Status','Outcome','PinCount','ApplyOnce','Mode') }
+        { $_ -in @('WindowsFeatures','WindowsCapabilities') } { @('Name','Action','Status','Outcome','StateBefore','StateAfter','RestartNeeded') }
+        'DefaultAssociations' { @('Identifier','ProgId','AppName','Status','Outcome','UserDefaultsVerified') }
+        'WiFiProfiles' { @('Name','Status','Outcome') }
+    }
+    $details = [pscustomobject]@{ Kind=$kind; Evidence='Unavailable'; Note='No matching component details are available for this execution.'; Fields=@($fields); Items=@() }
+    if ($Package.Status -notin @('Succeeded','Failed')) {
+        $details.Evidence = 'NotRun'; $details.Note = 'No component details imported for a package that did not run.'
+        return $details
+    }
+    try {
+        $file = Get-Item -LiteralPath (Join-Path $Directory $fileName) -ErrorAction Stop
+        if ($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 10MB) { throw 'Invalid detail file.' }
+        $start = ([datetime]$Result.StartedAtUtc).ToUniversalTime()
+        $end = ([datetime]$Result.CompletedAtUtc).ToUniversalTime()
+        # Legacy component reports have no attempt timestamp. Require a write within this runner execution.
+        if ($end -lt $start -or $file.LastWriteTimeUtc -lt $start -or $file.LastWriteTimeUtc -gt $end) { throw 'Stale detail file.' }
+        $source = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+        if ($source.SchemaVersion -ne 2 -or [string]$source.DeploymentId -ne [string]$Result.DeploymentId -or
+            $source.Status -ne $Package.Status) { throw 'Component identity or outcome mismatch.' }
+        if ($identityField -and $source.$identityField -ne $Definition.Id) { throw 'Package identity mismatch.' }
+        if ($kind -eq 'DefaultAssociations') {
+            $rows = @($source.Associations)
+            if ($source.Associations -isnot [array] -or $source.RequestedCount -ne $rows.Count) { throw 'Invalid association details.' }
+        }
+        else {
+            $rows = @($source.Items)
+            $countField = if ($kind -eq 'Font') { 'FontCount' } elseif ($kind -eq 'Driver') { 'InfCount' } else { 'OperationCount' }
+            if ($source.Items -isnot [array] -or $source.$countField -ne $rows.Count) { throw 'Invalid component counts.' }
+            $allowedStates = if ($kind -eq 'Font') { @('Installed','AlreadyPresent','Failed','Ignored') } else { @('Succeeded','Failed') }
+            if (@($rows | Where-Object { $_.Status -notin $allowedStates }).Count -gt 0 -or
+                ($source.Status -eq 'Succeeded' -and (@($rows | Where-Object Status -eq 'Failed').Count -gt 0 -or $rows.Count -eq 0))) { throw 'Invalid component outcomes.' }
+        }
+        $details.Items = @(foreach ($row in $rows) {
+            $values = [ordered]@{}
+            foreach ($field in $fields) {
+                $value = $row.$field
+                if ($kind -eq 'Services' -and $field -match '^(StartupType|State)(Before|After)$') { $value = $row.($Matches[2]).($Matches[1]) }
+                if ($kind -eq 'DesktopSettings' -and $field -in @('Outcome','PinCount','ApplyOnce','Mode')) { $value = $row.Detail.$field }
+                if ($kind -eq 'DefaultAssociations' -and $field -in @('Status','Outcome','UserDefaultsVerified')) { $value = $source.$field }
+                # Copy scalars only; arbitrary nested properties must never leak into JSON/HTML.
+                if ($value -is [string]) { $value = ConvertTo-OSDStageReportText $value }
+                elseif ($null -ne $value -and $value -isnot [bool] -and $value -isnot [ValueType]) { $value = $null }
+                $values[$field] = $value
+            }
+            [pscustomobject]$values
+        })
+        $details.Evidence = 'Matched'
+        $details.Note = switch ($kind) {
+            'DefaultAssociations' { 'Recorded import for first sign-in; current user defaults are not verified.' }
+            'DesktopSettings' { 'Recorded preparation for first sign-in; the rendered user layout is not verified.' }
+            'Driver' { 'Driver Store and device-install outcomes are separate; successful import does not confirm an active device binding.' }
+            'WiFiProfiles' { 'Profile import results; a working Wi-Fi connection is not verified.' }
+            'EnvironmentVariables' { 'Machine environment changes; existing process environments are not verified.' }
+            default { 'Recorded operations from this deployment execution.' }
+        }
+    }
+    catch { $details.Evidence='Unavailable'; $details.Items=@() }
+    return $details
+}
+
 function New-OSDStageDeliveryReport {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification='Builds an in-memory report object; no external state changes.')]
     [CmdletBinding()]
@@ -72,6 +165,19 @@ function New-OSDStageDeliveryReport {
         $actual.Count -eq $expected.Count -and $Result.ExpectedPackageCount -eq $expected.Count -and
         @($expected | Where-Object { $id=$_.Id; @($actual | Where-Object Id -eq $id).Count -ne 1 }).Count -eq 0
     $checks.Add([pscustomobject]@{ Name='PackageResultsComplete'; Passed=$complete; Detail='Exactly one result is present for every staged package.' })
+    if ($Phase -eq 'SetupComplete' -and $identityValid) {
+        foreach ($package in $packages) {
+            $definitions = @($expected | Where-Object Id -eq $package.Id)
+            if ($definitions.Count -ne 1 -or @($actual | Where-Object Id -eq $package.Id).Count -ne 1) { continue }
+            $component = Get-OSDStageReportComponent -Package $package -Definition $definitions[0] -Result $Result -Directory $Directory
+            if ($null -ne $component) {
+                $package | Add-Member -NotePropertyName Details -NotePropertyValue $component
+                if ($component.Evidence -ne 'NotRun') {
+                    $checks.Add([pscustomobject]@{ Name=('ComponentEvidence:' + $package.Id); Passed=($component.Evidence -eq 'Matched'); Detail=$component.Note })
+                }
+            }
+        }
+    }
     $knownStates = @($packages | Where-Object { $_.Status -notin @('Succeeded','Failed','Skipped') }).Count -eq 0
     $checks.Add([pscustomobject]@{ Name='PackageStatesKnown'; Passed=$knownStates; Detail='Every execution result has a recognized terminal state.' })
     $wu = $null
@@ -125,7 +231,7 @@ function New-OSDStageDeliveryReport {
         if ($state -eq 'Succeeded') { $state = 'Attention' }
     }
     $report = [pscustomobject][ordered]@{
-        SchemaVersion='1.0'; ReportId=[guid]::NewGuid().Guid; GeneratedAtUtc=[datetime]::UtcNow.ToString('o')
+        SchemaVersion='1.1'; ReportId=[guid]::NewGuid().Guid; GeneratedAtUtc=[datetime]::UtcNow.ToString('o')
         DeploymentId=$Result.DeploymentId; Phase=$Phase; Status=$state; ExecutionStatus=$Result.Status; Summary=$null
         StartedAtUtc=$Result.StartedAtUtc; CompletedAtUtc=$Result.CompletedAtUtc; DurationSeconds=$Result.DurationSeconds
         Module=[pscustomobject]@{ Name='OSDStage'; Version=$Manifest.Runtime.ModuleVersion; GalleryUrl='https://www.powershellgallery.com/packages/OSDStage'; GitHubUrl='https://github.com/roryvossepoel/OSDStage'; DocumentationUrl='https://roryvossepoel.github.io/OSDStage/' }
@@ -134,7 +240,7 @@ function New-OSDStageDeliveryReport {
         RebootRequired=$reboot; WindowsUpdate=$wu; Packages=@($packages); Checks=@($checks.ToArray())
         FailureType=(ConvertTo-OSDStageReportText $Result.FailureType); ErrorPresent=(-not [string]::IsNullOrWhiteSpace([string]$Result.Error))
         Scope='Execution evidence only. This report does not certify that Windows is fully patched or that Autopilot enrollment succeeded. Updates may become available after restart. Windows Update content is not cached by OSDStage.'
-        Privacy='Configuration values, raw errors, command lines and source URLs are omitted. Device and package names remain; review before sharing. Consult local logs for diagnostics.'
+        Privacy='Registry/environment values, file content, Wi-Fi credentials, raw errors, command lines and source URLs are omitted. Device, component and certificate names and target paths remain; review before sharing. Consult local logs for diagnostics.'
     }
     $report.Summary = Get-OSDStageReportSummary -Report $report
     return $report
@@ -178,6 +284,13 @@ function ConvertTo-OSDStageReportHtml {
         '<div class="scroll" tabindex="0"><table><thead><tr>' + $header + '</tr></thead><tbody>' + $body + '</tbody></table></div>'
     }
     $packageTable = Format-ReportTable @($Report.Packages) @('Id','Status','Version','ExitCode','DurationSeconds','AcquisitionOutcome','RebootRequired','FailureType','ErrorPresent')
+    $componentContent = (@(foreach ($package in $Report.Packages) {
+        if ($null -eq $package.Details) { continue }
+        $details = $package.Details
+        '<details><summary>' + (Format-ReportValue $package.Id) + ' &middot; component details</summary><p class="muted">' +
+            (Format-ReportValue $details.Note) + '</p>' +
+            (Format-ReportTable @($details.Items) @($details.Fields)) + '</details>'
+    })) -join ''
     $checkTable = Format-ReportTable @($Report.Checks) @('Name','Passed','Detail')
     $deviceTable = Format-ReportTable @($Report.Device) @('ComputerName','Manufacturer','Model','WindowsVersion','Build','Revision')
     $updateContent = '<p>No correlated Windows Update details are available for this execution. See the checks below.</p>'
@@ -213,7 +326,7 @@ $(if ($Report.ErrorPresent -or $Report.FailureType) { '<p class="muted">Failure 
 </div><div class="execution-card"><div class="card-heading"><span class="brand">$brandMark<span>Execution overview</span></span><span class="badge $state">$state</span></div>
 <dl class="run-facts"><div><dt>Execution</dt><dd>$(Format-ReportValue $Report.ExecutionStatus)</dd></div><div><dt>Phase</dt><dd>$(Format-ReportValue $Report.Phase)</dd></div><div><dt>Restart required</dt><dd>$(Format-ReportValue $Report.RebootRequired)</dd></div><div><dt>Duration</dt><dd>$(Format-ReportValue $Report.DurationSeconds) seconds</dd></div></dl></div></div>
 <div class="metrics"><div class="metric">Expected<strong>$(Format-ReportValue $Report.Counts.Expected)</strong></div><div class="metric">Succeeded<strong>$(Format-ReportValue $Report.Counts.Succeeded)</strong></div><div class="metric">Failed<strong>$(Format-ReportValue $Report.Counts.Failed)</strong></div><div class="metric">Skipped<strong>$(Format-ReportValue $Report.Counts.Skipped)</strong></div><div class="metric">Unknown / not run<strong>$(Format-ReportValue $Report.Counts.UnknownOrNotRun)</strong></div></div>
-<section class="panel"><h2>Device</h2>$deviceTable</section><section class="panel"><h2>Apps and configuration</h2>$packageTable<p class="muted">Missing values are shown as Unknown. Raw error messages are retained in local runtime logs.</p></section>
+<section class="panel"><h2>Device</h2>$deviceTable</section><section class="panel"><h2>Apps and configuration</h2>$packageTable<p class="muted">Missing values are shown as Unknown. Raw error messages are retained in local runtime logs.</p>$componentContent</section>
 <details open><summary>Windows Update</summary>$updateContent</details><details open><summary>Evidence checks</summary>$checkTable</details>
 <section class="panel"><h2>Scope and follow-up</h2><p>$(Format-ReportValue $Report.Scope)</p><p>$(Format-ReportValue $Report.Privacy)</p></section>
 <div class="deployment-meta"><p>Deployment <code>$(Format-ReportValue $Report.DeploymentId)</code></p><p>Started: $(Format-ReportValue $Report.StartedAtUtc) &middot; Completed: $(Format-ReportValue $Report.CompletedAtUtc)</p><p>Report <code>$(Format-ReportValue $Report.ReportId)</code> &middot; Generated: $(Format-ReportValue $Report.GeneratedAtUtc)</p></div>
