@@ -15,6 +15,7 @@ Describe 'P1 SetupComplete coexistence and refresh' {
 
             Add-OSDStageSetupComplete -WindowsPath $winRoot -Confirm:$false | Out-Null
 
+            Test-Path (Join-Path $winRoot 'Windows\Temp\OSDStage\OSDStageDeliveryReport.ps1') | Should -BeTrue
             $original = [IO.File]::ReadAllText($setupPath)
             $withThirdParty = $original.Replace(
                 ':: OSDStage Begin',

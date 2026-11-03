@@ -348,6 +348,16 @@ function Write-RunnerResult {
         if (Test-Path -LiteralPath $temporaryPath -PathType Leaf) {
             Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
         }
+        if ($Status -ne 'Running') {
+            try {
+                . (Join-Path $PSScriptRoot 'OSDStageDeliveryReport.ps1')
+                Write-OSDStageDeliveryReport -Result ([pscustomobject]$record) -Manifest $manifest -Directory $directory -Phase 'SetupComplete'
+            }
+            catch {
+                try { Write-RunnerLog -LogPath $logPath -Event 'DeliveryReportFailed' -Level Warning -Message 'Delivery report could not be generated; deployment status is unchanged.' }
+                catch { try { Write-Warning 'OSDStage delivery report could not be generated. Deployment status is unchanged.' } catch { } }
+            }
+        }
     }
 }
 

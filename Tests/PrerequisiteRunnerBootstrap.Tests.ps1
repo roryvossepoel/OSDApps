@@ -96,6 +96,11 @@ Describe 'Standalone prerequisite runner bootstrap' {
         Test-Path -LiteralPath $resultPath -PathType Leaf | Should -BeTrue
         $result = Get-Content -LiteralPath $resultPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $result.Status | Should -Be 'Failed'
+        $reportDirectory = Split-Path $resultPath -Parent
+        $delivery = Get-Content (Join-Path $reportDirectory 'DeliveryReport.json') -Raw | ConvertFrom-Json
+        $delivery.Status | Should -Be 'Failed'
+        $delivery.DeploymentId | Should -Be $result.DeploymentId
+        Test-Path (Join-Path $reportDirectory 'DeliveryReport.html') | Should -BeTrue
         $result.ExpectedPackageCount | Should -Be 1
         $result.SuccessfulPackageCount | Should -Be 0
         $result.FailedPackageCount | Should -Be 1

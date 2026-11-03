@@ -35,6 +35,8 @@ Describe 'OSDStage configuration' {
             $deploymentId = [guid]::Empty
             [guid]::TryParse([string]$manifest.DeploymentId, [ref]$deploymentId) | Should -BeTrue
             $manifest.Runtime.ResultPath | Should -Be '%ProgramData%\OSDStage\Results\Latest.json'
+            $metadata = Import-PowerShellDataFile (Join-Path $moduleRoot 'OSDStage.psd1')
+            $manifest.Runtime.ModuleVersion | Should -Be ($metadata.ModuleVersion + '-' + $metadata.PrivateData.PSData.Prerelease)
 
             $second = Set-OSDStageManifestRuntimeConfiguration -Manifest $manifest
             $second.DeploymentId | Should -Be $deploymentId.Guid

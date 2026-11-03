@@ -288,3 +288,7 @@ The generic MSI runner uses a 10-minute default installation timeout, logs waiti
 PreInstall failure types include `NetworkUnavailable`, `Timeout`, `CacheOrSourceMissing`, `RemoteAcquisition`, `TrustValidationFailed`, `ManifestInvalid` and `PreInstallError`. Runner types include `HashMismatch`, `ManifestInvalid`, `PreInstallFailed`, `SourceMissing`, `Timeout`, `InstallerFailed`, `AppError`, `AppFailures` and `RuntimeError`. The original message remains alongside the category; use it to diagnose the actual cause. These outcomes never schedule an automatic retry.
 
 The [validation matrix](testing.md) and [performance history](performance.md) distinguish measured phases from image deployment, WinPE staging, boot and OOBE time.
+
+## Delivery report
+
+The development [delivery report](delivery-report.md) adds standalone JSON and HTML summaries beside `Latest.json`. It preserves execution status and distinguishes pending restarts from failures. See that guide for availability, privacy, evidence checks and limitations.

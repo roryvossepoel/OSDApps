@@ -288,5 +288,10 @@ Describe 'Operational readiness and deployment results' {
         $result.CleanupMode | Should -Be 'Never'
         $result.PreInstall.Status | Should -Be 'Succeeded'
         $result.PreInstall.DeploymentId | Should -Be $deploymentId
+        $reportDirectory = Split-Path $resultPath -Parent
+        $delivery = Get-Content (Join-Path $reportDirectory 'DeliveryReport.json') -Raw | ConvertFrom-Json
+        $delivery.ExecutionStatus | Should -Be 'Succeeded'
+        $delivery.DeploymentId | Should -Be $deploymentId
+        Test-Path (Join-Path $reportDirectory 'DeliveryReport.html') | Should -BeTrue
     }
 }
