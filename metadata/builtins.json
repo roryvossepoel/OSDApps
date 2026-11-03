@@ -285,7 +285,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/capabilities.svg"
     },
     {
       "Id": "MicrosoftCompanyPortal",
@@ -339,7 +339,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/wifi.svg"
     },
     {
       "Id": "Certificates",
@@ -357,7 +357,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/certificates.svg"
     },
     {
       "Id": "EnvironmentVariables",
@@ -375,7 +375,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/variables.svg"
     },
     {
       "Id": "FileSystem",
@@ -396,7 +396,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/filesystem.svg"
     },
     {
       "Id": "Services",
@@ -414,7 +414,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/services.svg"
     },
     {
       "Id": "DesktopSettings",
@@ -432,7 +432,7 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg",
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/desktop.svg",
       "AdditionalAddCommands": [
         "Add-OSDStageTaskbarPins"
       ]
@@ -453,7 +453,28 @@
       "DefaultArchitecture": "any",
       "CachePath": null,
       "RepositoryAlternative": false,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/associations.svg"
+    },
+    {
+      "Id": "RegistrySettings",
+      "DisplayName": "Registry settings",
+      "Source": "BuiltIn",
+      "PackageType": "Script",
+      "Vendor": "OSDStage",
+      "Acquisition": "BundledScript",
+      "SyncPhase": "None",
+      "AddCommand": "Add-OSDStageRegistryKey",
+      "SyncCommand": null,
+      "Architectures": [
+        "any"
+      ],
+      "DefaultArchitecture": "any",
+      "CachePath": null,
+      "RepositoryAlternative": false,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/registry.svg",
+      "AdditionalAddCommands": [
+        "Add-OSDStageRegistryValue"
+      ]
     },
     {
       "Id": "WindowsUpdate",

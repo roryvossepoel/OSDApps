@@ -1,6 +1,6 @@
 # OSDStage
 
-> **Published preview: 1.0.0-rc2.** Install with `-AllowPrerelease`. Documentation on `main` also covers merged changes that are not yet in the Gallery; check [release availability](docs/release-status.md). Repository and package manifests use schema 2.
+> **Release candidate: 1.0.0-rc3.** Install with `-AllowPrerelease`. Documentation on `main` also covers merged changes that are not yet in the Gallery; check [release availability](docs/release-status.md). Repository and package manifests use schema 2.
 
 ![OSDStage — Your deployment. Ready before OOBE. Software and device configuration with optional USB caching.](docs/images/osdstage-banner.svg)
 

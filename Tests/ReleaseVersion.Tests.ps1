@@ -4,10 +4,10 @@ Describe 'Release identity' {
         $script:resolver = Join-Path $script:root 'build/Get-ReleaseVersion.ps1'
     }
     It 'resolves the real candidate consistently' {
-        $result = & $script:resolver -ExpectedVersion '1.0.0-rc2'
+        $result = & $script:resolver -ExpectedVersion '1.0.0-rc3'
         $result.ModuleVersion | Should -Be '1.0.0'
-        $result.Version | Should -Be '1.0.0-rc2'
-        $result.Tag | Should -Be 'v1.0.0-rc2'
+        $result.Version | Should -Be '1.0.0-rc3'
+        $result.Tag | Should -Be 'v1.0.0-rc3'
         $result.IsPrerelease | Should -BeTrue
     }
     It 'resolves stable releases without a suffix' {

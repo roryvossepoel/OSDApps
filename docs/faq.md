@@ -43,8 +43,6 @@ for updated content during full-Windows PreInstall. Fully offline deployment
 requires matching verified content in advance. Loading the module and preparing
 bootable OSDCloud media are separate from caching payloads.
 
-**Gallery RC1:** Company Portal and CMTrace Open still require pre-caching. Their automatic first-boot acquisition is included in RC2; see [release availability](release-status.md).
-
 ## Which commands belong on the preparation machine and which belong in WinPE?
 
 Use a **full Windows preparation machine** to install/save the module, build repository packages and run built-in `Sync-OSDStage*` commands. Use **WinPE on the target PC** for deployment staging after OSDCloud has applied Windows and before its first Windows boot.

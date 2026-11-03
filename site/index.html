@@ -7,19 +7,19 @@
       <p class="home-lead">Stage your apps and device settings after OSDCloud. OSDStage applies your choices during SetupComplete, before the first user signs in.</p>
       <div class="actions"><a class="button primary" href="get-started.html">Get started <span aria-hidden="true">→</span></a><a class="button secondary" href="catalog/index.html">Explore the catalog <span aria-hidden="true">↗</span></a></div>
       <ul class="home-facts" aria-label="Project highlights"><li>PowerShell</li><li>Optional USB cache</li><li>Open source</li></ul>
-      <a class="home-gallery" href="https://www.powershellgallery.com/packages/OSDStage/1.0.0-rc2">Available on PowerShell Gallery <span>1.0.0-rc2 preview ↗</span></a>
+      <a class="home-gallery" href="https://www.powershellgallery.com/packages/OSDStage/1.0.0-rc3">PowerShell Gallery <span>1.0.0-rc3 preview ↗</span></a>
     </div>
     <div class="deployment-preview" aria-label="Illustrative staging example">
       <div class="preview-title"><span><span class="brand-mark" aria-hidden="true"></span>OSDStage</span><small>Staging example</small></div>
       <div class="preview-stages" aria-label="Deployment phases"><span>01 · WinPE</span><span>02 · SetupComplete</span><span>03 · OOBE</span></div>
       <div class="preview-body">
         <div class="preview-code"><div><span class="terminal-dots" aria-hidden="true">● ● ●</span><span>PowerShell · after OSDCloud</span></div><pre><code># Choose what this device needs
-Add-OSDStageGoogleChromeEnterprise
+Add-OSDStageMicrosoft365Apps
 Add-OSDStageAdobeAcrobatUnified
 
 # Check before the first boot
 Test-OSDStageDeployment -ThrowOnFailure</code></pre></div>
-        <div class="preview-packages"><p class="preview-label">Your choices</p><div><span class="preview-check" aria-hidden="true">✓</span><span>Google Chrome Enterprise<small>Built-in app</small></span><span class="preview-status">Staged</span></div><div><span class="preview-check" aria-hidden="true">✓</span><span>Adobe Acrobat<small>Built-in app</small></span><span class="preview-status">Staged</span></div></div>
+        <div class="preview-packages"><p class="preview-label">Your choices</p><div><span class="preview-check" aria-hidden="true">✓</span><span>Microsoft 365 Apps<small>Built-in app</small></span><span class="preview-status">Staged</span></div><div><span class="preview-check" aria-hidden="true">✓</span><span>Adobe Acrobat<small>Built-in app</small></span><span class="preview-status">Staged</span></div></div>
         <div class="preview-summary"><span aria-hidden="true">↳</span><span>Staged in WinPE. Applied during SetupComplete.</span></div>
       </div>
     </div>
@@ -29,14 +29,10 @@ Test-OSDStageDeployment -ThrowOnFailure</code></pre></div>
     <div class="section-intro"><p class="eyebrow">How it works</p><h2 id="workflow-title">From Windows installation to OOBE.</h2><p>One flow. Your apps and configuration, applied before OOBE.</p></div>
     <ol class="workflow-steps">
       <li><span class="workflow-number" aria-hidden="true">01</span><p class="workflow-phase">OSDCloud · WinPE</p><h3>Install Windows</h3><p>Let OSDCloud apply Windows and complete its workflow.</p></li>
-      <li><span class="workflow-number" aria-hidden="true">02</span><p class="workflow-phase">OSDStage · WinPE</p><h3>Stage your choices</h3><p>Stage apps and configuration, then validate the deployment.</p></li>
+      <li><span class="workflow-number" aria-hidden="true">02</span><p class="workflow-phase">OSDStage · WinPE</p><h3>Stage your choices</h3><p>Stage apps and configuration, then validate. Connect an OSDCloud-labeled USB drive to automatically cache supported content for reuse.</p></li>
       <li><span class="workflow-number" aria-hidden="true">03</span><p class="workflow-phase">Restart → SetupComplete</p><h3>Apply automatically</h3><p>Restart into Windows. SetupComplete installs your apps and applies configuration before OOBE.</p></li>
       <li><span class="workflow-number" aria-hidden="true">04</span><p class="workflow-phase">OOBE</p><h3>Continue setup</h3><p>Continue with Windows setup or your Autopilot enrollment.</p></li>
     </ol>
-    <div class="workflow-notes">
-      <div><span class="workflow-note-icon" aria-hidden="true">↳</span><div><h3>Your choice of content</h3><p>Use built-in evergreen apps and configuration commands, or connect your own package repository.</p></div></div>
-      <div><span class="workflow-note-icon" aria-hidden="true">↻</span><div><h3>USB caching, automatically</h3><p>Connect a USB drive labeled <code>OSDCloud</code>. Supported content is cached automatically and reused when valid.</p></div></div>
-    </div>
     <a class="text-link" href="get-started.html">Follow the quick start <span aria-hidden="true">→</span></a>
   </section>
 
@@ -50,7 +46,7 @@ Test-OSDStageDeployment -ThrowOnFailure</code></pre></div>
   </section>
 
   <section class="home-section home-start" aria-labelledby="start-title">
-    <div><p class="eyebrow">Available on PowerShell Gallery</p><h2 id="start-title">Start small.<br> Build your own deployment.</h2><p>Install the preview and follow the WinPE quick start. Check release availability when upgrading from an earlier preview.</p><a class="button primary" href="get-started.html">Get started <span aria-hidden="true">→</span></a></div>
+    <div><p class="eyebrow">PowerShell Gallery</p><h2 id="start-title">Start small.<br> Build your own deployment.</h2><p>Install the preview and follow the WinPE quick start. Check release availability when upgrading from an earlier preview.</p><a class="button primary" href="get-started.html">Get started <span aria-hidden="true">→</span></a></div>
     <div class="home-install"><div class="code-block"><div class="code-heading"><span>Install the preview · PowerShell</span><button class="copy-code" type="button" aria-label="Copy module installation command">Copy</button></div><pre><code>Install-Module OSDStage -Repository PSGallery -AllowPrerelease</code></pre></div><div class="home-install-links"><a href="https://www.powershellgallery.com/packages/OSDStage">PowerShell Gallery ↗</a><a href="https://github.com/roryvossepoel/OSDStage/blob/main/docs/release-status.md">Release availability ↗</a></div></div>
   </section>
 </main><footer class="site-footer">

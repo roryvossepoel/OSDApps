@@ -2,11 +2,11 @@
 
 [Documentation](README.md) · [Investigation and acceptance #109](https://github.com/roryvossepoel/OSDStage/issues/109)
 
-This development feature is **not in Gallery 1.0.0-rc2**. Software update installation has
-succeeded inside SetupComplete on PC1. Manual driver installation and post-restart versions have also been verified on PC1.
-The current policy still needs full SetupComplete, cumulative-update, cancellation
-and Autopilot handoff acceptance.
-Use the reviewed test build, not the Gallery module, for the following commands.
+Windows Update staging is included in release candidate **1.0.0-rc3**, not RC2.
+See [release availability](release-status.md) for the exact package and publication links.
+Fresh x64 SetupComplete acceptance passed on PC1 on 3 November 2026, followed by
+normal OOBE completion to a regular-account desktop. Monthly cumulative updates,
+Autopilot enrollment, cancellation and additional hardware remain separate field coverage.
 
 For the next clean deployment, use the [pinned SetupComplete acceptance procedure](windows-update-acceptance.md).
 
@@ -274,8 +274,8 @@ The original stop-on-any-restart rule was too restrictive for this evidence.
 The corrected runtime retains the aggregate pending-restart flag while checking
 the actual WUA prerequisite before each next install. Tests cover continued
 installation with a later restart pending and deferral when WUA genuinely
-requires a restart first. The continuation result is recorded below; full
-SetupComplete acceptance of this policy remains pending.
+requires a restart first. The continuation result is recorded below; fresh SetupComplete acceptance
+subsequently passed on 3 November 2026.
 
 
 ### Continuation and post-restart evidence (2 November 2026)
@@ -311,3 +311,36 @@ References reviewed for this follow-up:
 - [Extension INF files](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/using-an-extension-inf-file)
 - [WUA history queries](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdatesearcher-queryhistory)
 - [WUA operation result codes](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/ne-wuapi-operationresultcode)
+
+### Fresh SetupComplete and desktop acceptance (3 November 2026)
+
+Source `c714ceba585eeb26ddad8ad5c8324f1b4595fc8a`, deployment
+`5a54004c-5e97-46f9-b237-dda969343b49`, completed 3/3 packages: 7-Zip,
+file configuration and Windows Update. There were no failed or skipped packages.
+The Windows Update report recorded `Phase=LastWithinSetupComplete`,
+`SelectionPolicy=QualityAndDriversV5`,
+`ExecutionPolicy=ContinueUntilRebootPrerequisiteV1`, `IncludeDrivers=True`,
+and 36 found/selected/installed updates in 265.3 seconds.
+`Status=Succeeded`, `Outcome=RebootRequired`, `RebootRequired=True`,
+`InstallationBlockedByReboot=False`, `RebootRequested=False`,
+`FurtherScanRequired=True`, with no error. The runner correctly treated exit
+3010 as success with a restart requirement. Windows remained 26H2, build
+26300.9711 (`ReleaseUnchanged=True`).
+
+Independent checks confirmed the same deployment ID, actual SetupComplete phase,
+Windows Update last in the queue, and the configuration marker written before
+updates. Normal OOBE completed to a desktop with a regular account; this device
+was not registered in Autopilot, so enrollment was not tested.
+
+Windows Settings subsequently offered seven updates: a newer Security platform
+KB5007651 (10.0.29680.1000 versus the pass's 10.0.29628.1000), four Realtek/Waves
+components, and Intel System titles 10.1.37.7 and 30.100.2417.30 already present
+in the original pass. The user installed these through Settings and restarted.
+The next scan showed up-to-date, with a separate preview offer; the two Intel
+titles did not recur. Their initial re-offer cause is unknown: titles alone do
+not establish identical update IDs/device targets. The green result includes
+this additional Settings round, not just the SetupComplete pass.
+
+BIOS 1.19.3 was already current from the preceding day's test and survived the
+Windows reinstall. This run is not new evidence of a firmware flash. Monthly
+cumulative Windows/.NET updates were not offered and remain untested in the field.

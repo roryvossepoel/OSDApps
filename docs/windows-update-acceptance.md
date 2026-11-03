@@ -136,9 +136,9 @@ failure and does not cause another pass.
 - Continue through the intended Autopilot handoff. A new read-only scan may offer
   additional driver components; zero remaining updates is not the one-pass contract.
 
-The manual OOBE test is already positive. This test closes the current-policy
-SetupComplete integration gap. Monthly Windows/.NET cumulative servicing,
+This pinned source procedure passed on PC1 on 3 November 2026; see the
+[recorded SetupComplete evidence](windows-update.md#fresh-setupcomplete-and-desktop-acceptance-3-november-2026). Monthly Windows/.NET cumulative servicing,
 cooperative timeout/cancellation and other hardware remain separate coverage
-items; this PC's current ESD does not prove those cases. Keep PR #111 in draft
-until the integration results have been reviewed. No Gallery release or merge is
-part of this test preparation.
+items; this PC's current ESD does not prove those cases. Autopilot enrollment
+also remains untested on this non-Autopilot device. This procedure pins the
+original test source; use the RC3 Gallery package for release-installation acceptance.

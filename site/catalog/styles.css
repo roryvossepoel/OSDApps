@@ -213,3 +213,9 @@ button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
  .row-details{padding:0 12px 12px}
  .pagination{gap:14px}
 }
+
+/* Explain the two sources without adding another large panel. */
+.catalog-sources{display:flex;flex-wrap:wrap;gap:8px 28px;margin:16px 0 24px;color:var(--muted);font-size:.88rem}
+.catalog-sources p{margin:0}.catalog-sources strong{color:var(--text);margin-right:6px}
+.catalog-sources>span{flex-basis:100%;font-size:.8rem}
+.card-footer .command{flex-basis:100%}

@@ -63,7 +63,7 @@ async function getJson(value,signal){
   }finally{clearTimeout(timer);signal?.removeEventListener("abort",abort)}
 }
 function normalizeBuiltIn(x){
-  if(!x||!text(x.Id))throw new Error("Built-in entry is missing Id.");
+  if(!x||!text(x.Id))throw new Error("Built-in component is missing Id.");
   const bundled=x.Acquisition==="BundledScript",phase=text(x.SyncPhase,"Unknown");
   const phaseLabel={None:"No download / cache",FullWindowsPreparation:"Full Windows preparation",FullWindowsPreInstall:"Full Windows PreInstall"}[phase]||phase;
   const description=bundled?"Included with OSDStage. Configuration is staged in WinPE and applied once during SetupComplete.":phase==="FullWindowsPreparation"?"Prepare the content in full Windows, then use the cache when staging in WinPE.":"Vendor download integration. Content acquisition follows the built-in's configuration and cache policy.";
@@ -71,6 +71,7 @@ function normalizeBuiltIn(x){
     id:x.Id,displayName:text(x.DisplayName,x.Id),source:"BuiltIn",vendor:text(x.Vendor),
     version:bundled?"Included with module":x.DefaultChannel?`Evergreen · ${x.DefaultChannel}`:"Evergreen",
     architectures:strings(x.Architectures).map(a=>a.toLowerCase()),packageType:packageType(x.PackageType),
+    commands:[text(x.AddCommand),...strings(x.AdditionalAddCommands)],
     syncPhase:phaseLabel,acquisition:text(x.Acquisition,"Unknown"),command:text(x.AddCommand),
     metadataUrl:BUILTINS_URL,packageUrl:"",iconUrl:safeUrl(x.IconUrl,BUILTINS_URL),description,aliases:[],certificateStore:""
   };
@@ -102,7 +103,7 @@ async function loadBuiltIns(){
   try{
     const rows=packagesFrom(await getJson(BUILTINS_URL));
     state.builtins=rows.map(normalizeBuiltIn);
-    status("builtinStatus",`${state.builtins.length} built-ins loaded`);
+    status("builtinStatus",`${state.builtins.length} built-in components loaded`);
   }catch(e){status("builtinStatus",`Built-in metadata could not be loaded: ${e.message}`,"error")}
   render();
 }
@@ -173,9 +174,9 @@ function filter(){
   state.page=1;
   const q=$("search").value.trim().toLowerCase(),src=$("sourceFilter").value,arch=$("archFilter").value,type=$("typeFilter").value;
   state.filtered=[...state.builtins,...state.repository]
-    .filter(x=>!src||x.source===src).filter(x=>!type||x.packageType===type)
+    .filter(x=>!src||x.source===src).filter(x=>!type||componentType(x)===type)
     .filter(x=>!arch||x.architectures.includes(arch)||x.architectures.includes("any"))
-    .filter(x=>!q||[x.id,x.displayName,x.vendor,x.version,x.syncPhase,x.acquisition,x.packageType,x.certificateStore,...x.aliases,...x.architectures].some(v=>String(v).toLowerCase().includes(q)))
+    .filter(x=>!q||[x.id,x.displayName,x.vendor,x.version,x.syncPhase,x.acquisition,x.packageType,x.certificateStore,componentType(x),x.command,...(x.commands||[]),...x.aliases,...x.architectures].some(v=>String(v).toLowerCase().includes(q)))
     .sort((a,b)=>a.displayName.localeCompare(b.displayName)||a.source.localeCompare(b.source));
   renderPage();
 }
@@ -183,17 +184,19 @@ function renderPage(){
   const total=state.filtered.length,size=state.pageSize==="all"?Math.max(total,1):state.pageSize;
   const pages=Math.max(1,Math.ceil(total/size));state.page=Math.min(Math.max(state.page,1),pages);
   const start=(state.page-1)*size,items=state.filtered.slice(start,start+size);
-  $("resultSummary").textContent=total?`${start+1}–${start+items.length} of ${total} entries`:"0 entries";
+  $("resultSummary").textContent=total?`${start+1}–${start+items.length} of ${total} components`:"0 components";
   $("pageSummary").textContent=total?`Page ${state.page} of ${pages}`:"No results";
   $("previousPage").disabled=state.page===1;$("nextPage").disabled=state.page===pages;
   $("tileView").setAttribute("aria-pressed",String(state.view==="tiles"));
   $("listView").setAttribute("aria-pressed",String(state.view==="list"));
   $("cards").className=state.view==="list"?"package-list":"cards";
-  $("cards").innerHTML=items.length?items.map(state.view==="list"?listRow:card).join(""):'<div class="panel empty-state">No entries match the current filters.</div>';
+  $("cards").innerHTML=items.length?items.map(state.view==="list"?listRow:card).join(""):'<div class="panel empty-state">No components match the current filters.</div>';
 }
 function changePage(delta){state.page+=delta;renderPage();document.querySelector(".results-toolbar").scrollIntoView({block:"start"})}
 function setView(view){state.view=view;saveView();renderPage()}
-function badges(x){return `<span class="badge ${x.source==="BuiltIn"?"builtin":"repository"}">${x.source==="BuiltIn"?"BUILT-IN":"REPOSITORY"}</span><span class="badge type">${esc(x.packageType)}</span>${x.architectures.map(a=>`<span class="badge arch">${esc(a)}</span>`).join("")}`}
+function componentType(x){return x.source==="BuiltIn"&&x.acquisition==="BundledScript"?"Configuration":x.packageType}
+function commandMarkup(x){return (x.commands||[x.command]).map(c=>`<span class="command" title="Starting point; additional parameters may be required.">${esc(c)}</span>`).join("")}
+function badges(x){return `<span class="badge ${x.source==="BuiltIn"?"builtin":"repository"}">${x.source==="BuiltIn"?"BUILT-IN":"YOUR REPOSITORY"}</span><span class="badge type">${esc(componentType(x))}</span>${x.architectures.map(a=>`<span class="badge arch">${esc(a)}</span>`).join("")}`}
 function listRow(x){
   return `<details class="package-row panel">
     <summary><div class="row-name"><div class="app-icon">${appIcon(x)}</div><div><span class="row-title">${esc(x.displayName)}</span><span class="app-subtitle">${esc(x.id)} · ${esc(x.vendor)}</span></div></div>
@@ -201,22 +204,24 @@ function listRow(x){
     </summary>
     <div class="row-details"><p class="description">${esc(x.description)}</p><p class="row-preparation">${esc(x.syncPhase)} · ${esc(x.acquisition)}</p>
       ${(x.warnings||[]).map(w=>`<p class="package-warning">${esc(w)}</p>`).join("")}
-      <div class="card-footer"><span class="command" title="Starting point; additional parameters may be required.">${esc(x.command)}</span>${link(x.metadataUrl,x.source==="BuiltIn"?"Built-in metadata":"Manifest JSON")}${link(x.packageUrl,"Package.zip")}</div>
+      <div class="card-footer">${commandMarkup(x)}${link(x.metadataUrl,x.source==="BuiltIn"?"Built-in definitions":"Manifest JSON")}${link(x.packageUrl,"Package.zip")}</div>
     </div></details>`;
 }
 
 function link(url,label){const href=safeUrl(url);return href?`<a href="${esc(href)}" target="_blank" rel="noreferrer">${esc(label)} ↗</a>`:""}
 function appIcon(x){
-  const fallback=`<span class="fallback-icon">${esc(initials(x.displayName))}</span>`,url=safeUrl(x.iconUrl);
-  return url?`<img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span class="fallback-icon" hidden>${esc(initials(x.displayName))}</span>`:fallback;
+  const icon={Font:"fonts",Certificate:"certificates",Driver:"drivers",Script:"script"}[x.packageType];
+  const fallback=icon?`<img class="type-icon" src="../metadata/icons/${icon}.svg" alt="">`:`<span class="fallback-icon">${esc(initials(x.displayName))}</span>`;
+  const url=safeUrl(x.iconUrl);
+  return url?`<img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span hidden>${fallback}</span>`:fallback;
 }
 function card(x){
   return `<article class="card panel">
     <div class="card-head"><div class="title-wrap"><div class="app-icon">${appIcon(x)}</div><div>
       <h2>${esc(x.displayName)}</h2><div class="app-subtitle">${esc(x.id)} · ${esc(x.vendor)}</div>
     </div></div><div class="badges">
-      <span class="badge ${x.source==="BuiltIn"?"builtin":"repository"}">${x.source==="BuiltIn"?"BUILT-IN":"REPOSITORY"}</span>
-      <span class="badge type">${esc(x.packageType)}</span>
+      <span class="badge ${x.source==="BuiltIn"?"builtin":"repository"}">${x.source==="BuiltIn"?"BUILT-IN":"YOUR REPOSITORY"}</span>
+      <span class="badge type">${esc(componentType(x))}</span>
       ${x.architectures.map(a=>`<span class="badge arch">${esc(a)}</span>`).join("")}
     </div></div>
     <div class="meta-grid">
@@ -226,8 +231,8 @@ function card(x){
     </div>
     <p class="description">${esc(x.description)}</p>
     ${(x.warnings||[]).map(w=>`<p class="package-warning">${esc(w)}</p>`).join("")}
-    <div class="card-footer"><span class="command" title="Command name or starting point; additional parameters may be required.">${esc(x.command)}</span>
-      ${link(x.metadataUrl,x.source==="BuiltIn"?"Built-in metadata":"Manifest JSON")}${link(x.packageUrl,"Package.zip")}
+    <div class="card-footer">${commandMarkup(x)}
+      ${link(x.metadataUrl,x.source==="BuiltIn"?"Built-in definitions":"Manifest JSON")}${link(x.packageUrl,"Package.zip")}
     </div>
   </article>`;
 }

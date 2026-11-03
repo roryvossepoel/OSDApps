@@ -1,4 +1,3 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Windows features">
-  <path fill="currentColor" d="M6 9l23-3v24H6V9zm27-3l25-4v28H33V6zM6 34h23v24L6 55V34zm27 0h25v28l-25-4V34z"/>
-  <path fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" d="M20 21h-7m3.5-3.5v7M47.5 45h7"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="Windows optional features" fill="none" stroke="#347665" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 17.5h7m-3.5-3.5v7"/>
 </svg>
