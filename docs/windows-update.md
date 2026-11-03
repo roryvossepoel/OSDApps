@@ -5,11 +5,17 @@
 Windows Update staging is included from **1.0.0-rc3**. RC4 also attempts the final
 update pass after an earlier individual package fails or is skipped.
 See [release availability](release-status.md) for the exact package and publication links.
-Fresh x64 SetupComplete acceptance passed on PC1 on 3 November 2026, followed by
-normal OOBE completion to a regular-account desktop. Monthly cumulative updates,
-Autopilot enrollment, cancellation and additional hardware remain separate field coverage.
+Published RC4 [Gallery acceptance on Dell and Surface](rc4-gallery-acceptance.md)
+passed on 3 November 2026. Both x64 devices completed the final Windows Update
+pass; the maintainer subsequently confirmed normal OOBE and first sign-in, with
+Autopilot/Intune proceeding normally where applicable. That operator confirmation
+is separate from the OSDStage execution reports. Monthly cumulative Windows/.NET
+servicing, cancellation and other hardware/architecture variants retain their
+explicit field-coverage limits.
 
-For the next clean deployment, use the [pinned SetupComplete acceptance procedure](windows-update-acceptance.md).
+For a current deployment, use the [published release candidate](release-status.md).
+The [pinned source procedure](windows-update-acceptance.md) is retained to reproduce
+the earlier development test.
 
 ## Stage in WinPE
 
@@ -348,6 +354,23 @@ this additional Settings round, not just the SetupComplete pass.
 BIOS 1.19.3 was already current from the preceding day's test and survived the
 Windows reinstall. This run is not new evidence of a firmware flash. Monthly
 cumulative Windows/.NET updates were not offered and remain untested in the field.
+
+### Published Gallery RC4 acceptance on Dell and Surface (3 November 2026)
+
+The two later [published-package runs](rc4-gallery-acceptance.md) each completed
+7-Zip, XPS Viewer and Windows Update in that order, with no failed or skipped
+packages. Dell installed 36/36 selected offers (3 software and 33 driver/firmware
+packages); Surface installed 4/4 (3 software and 1 driver). All update downloads
+and installations returned result code 2 and HRESULT 0. Neither pass requested a
+restart or changed the recorded Windows release. Dell required a later restart;
+Surface did not report that requirement. Both recommended a follow-up scan.
+
+The maintainer confirmed normal OOBE completion and first sign-in on both devices,
+with Autopilot/Intune proceeding normally where applicable. No enrollment audit,
+new post-restart firmware inventory or follow-up scan was supplied for these runs.
+Monthly cumulative Windows/.NET updates were not offered, so their physical
+servicing coverage remains open. These successful runs do not replace the
+automated failure/timeout coverage or imply acceptance of every device variant.
 
 ## Review updates in the delivery report
 
