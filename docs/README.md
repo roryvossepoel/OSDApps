@@ -2,7 +2,7 @@
 
 Choose the task you want to complete. Start with the online WinPE workflow; cache preparation is optional unless the deployment must work offline. The Windows Viewer inspects your deployment without changing it.
 
-**Published preview: RC2.** Check [release availability](release-status.md) when upgrading from RC1 or testing newer development changes.
+**Release candidate: RC3.** Check [release availability](release-status.md) when upgrading from RC1 or testing newer development changes.
 
 ## Start here
 
@@ -35,6 +35,7 @@ Choose the task you want to complete. Start with the online WinPE workflow; cach
 | [Certificates](certificate-staging.md), [drivers](driver-packages.md), [fonts](repository.md) | Typed repository payloads and machine-wide installation |
 | [Wi-Fi](wifi-staging.md) | WLAN XML or parameters, profile import and credential cleanup |
 | [Start/taskbar pins](desktop-settings.md) | Explicit pin lists and documented limitations |
+| [Windows Update](windows-update.md) (release candidate) | Final quality-update pass, optional drivers, reboot boundaries and test procedure |
 | [Windows features](windows-features.md), [capabilities](windows-capabilities.md), [inbox cleanup](windows-inbox-cleanup.md) | Enable/disable features, add/remove FoDs and remove explicitly selected inbox apps |
 | [Runtime and cleanup](runtime.md) | SetupComplete, PreInstall, Runner, machine-readable results, configuration, logs and failure handling |
 | [FAQ and troubleshooting](faq.md) | Environment mistakes, cache and network failures, trust checks, logs and upgrades |

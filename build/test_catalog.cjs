@@ -20,11 +20,14 @@ const tick=()=>new Promise(r=>setImmediate(r));
  const {node,requests,store,run}=setup();await tick();const count=builtin.Packages.length;
  assert.deepEqual(requests,[builtinUrl]);assert.equal(run('state.repository.length'),0);assert.equal(run('state.filtered.length'),count);
  assert.equal(node('resultSummary').textContent,`1–12 of ${count} components`);
- run('changePage(1)');assert.equal(node('resultSummary').textContent,`13–${count} of ${count} components`);assert.equal(node('nextPage').disabled,true);
+ run('changePage(1)');assert.equal(node('resultSummary').textContent,`13–${Math.min(24,count)} of ${count} components`);assert.equal(node('nextPage').disabled,count<=24);
+ while(!node('nextPage').disabled)run('changePage(1)');
+ assert.equal(node('resultSummary').textContent,`${Math.floor((count-1)/12)*12+1}–${count} of ${count} components`);
+ assert.equal(node('nextPage').disabled,true);
  node('search').value='StartPins';run('filter()');assert.equal(run('state.page'),1);assert.match(node('cards').innerHTML,/Add-OSDStageStartPins/);
  node('search').value='no-such-item';run('filter()');assert.equal(node('pageSummary').textContent,'No results');assert.equal(node('nextPage').disabled,true);
  node('search').value='';run('filter()');run('setView("list")');assert.equal(node('cards').className,'package-list');assert.equal(node('listView').attributes['aria-pressed'],'true');
- node('pageSize').value='24';node('pageSize').listeners.change();assert.equal((node('cards').innerHTML.match(/<details /g)||[]).length,count);
+ node('pageSize').value='24';node('pageSize').listeners.change();assert.equal((node('cards').innerHTML.match(/<details /g)||[]).length,Math.min(24,count));
  await run(`loadRepository(${JSON.stringify(catalog)})`);assert.equal(run('state.repository.length'),5);
  node('pageSize').value='all';node('pageSize').listeners.change();assert.equal(node('resultSummary').textContent,`1–${count+5} of ${count+5} components`);
  for(const type of ['App','Script','Font','Certificate','Driver']){node('sourceFilter').value='Repository';node('typeFilter').value=type;run('filter()');assert.equal(run('state.filtered.length'),1)}

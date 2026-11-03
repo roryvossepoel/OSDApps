@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-rc3
+
+- Third public release candidate, not GA. Includes Windows Update staging and the documentation/catalog improvements merged since RC2. The JSON/HTML delivery report is planned separately and is not included.
+- Add `Add-OSDStageWindowsUpdate`: one final native Windows Update scan/install pass after all apps and configuration. Eligible quality classifications cover applicable Windows, .NET, Defender and MSRT servicing; feature upgrades and recognized previews are excluded. Earlier failed/skipped packages suppress the pass.
+- Drivers remain disabled by default. `-IncludeDrivers` opts in to all WUA driver classes, including firmware and optional offers; `-DriverClass` narrows selection to the specified classes. Download all selected payloads before quiet installation. No update-source/policy changes or OSDCloud USB caching; Windows Update uses its configured infrastructure and may reuse its own cache.
+- Continue while a later restart is pending, stopping only when WUA requires a restart before the next installation. Report per-update outcomes and aggregate restart requirements; never request a reboot, schedule a retry or resume after OOBE. Success applies to this scan, not all possible future updates.
+- Fresh x64 SetupComplete acceptance on PC1, 3 November 2026: 3/3 packages succeeded (7-Zip, file configuration, Windows Update), with 36/36 updates installed in 265.3 seconds. Independent deployment/order/marker checks passed; Windows Update ran last, returned success with restart required (3010), requested no restart and left the Windows release unchanged. Normal OOBE completed to a regular-account desktop.
+- Seven further offers were installed through Windows Settings, followed by a normal restart and a green scan. Two same-version Intel titles did not recur; their initial re-offer cause is unproven. A newer Security platform and additional audio components were among the follow-up offers. BIOS 1.19.3 was already current from the previous test, so it is not fresh firmware-flash evidence for this run.
+- Earlier manual OOBE acceptance installed 29/29 driver offers, verified active firmware/network/audio/video versions after restart, and completed a later 10/10 component pass. Monthly cumulative Windows/.NET updates, Autopilot enrollment, cancellation and additional hardware remain separate field coverage; ARM64 has not been physically validated.
+- Improve catalog terminology and configuration icons, homepage examples and deployment flow. Website publication is separate from module publication.
+- Install with `Install-Module OSDStage -Repository PSGallery -RequiredVersion '1.0.0-rc3' -AllowPrerelease -Force`. RC versions share the numeric module folder `1.0.0`; use a fresh PowerShell session and verify the loaded prerelease label.
+
 ## 1.0.0-rc2
 
 - Second public release candidate. Not a GA release. Includes the tested changes merged after RC1; no repository schema, cache-path or command-name migration is required from RC1.

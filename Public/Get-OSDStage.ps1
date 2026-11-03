@@ -175,6 +175,7 @@ function Get-OSDStage {
     foreach ($builtIn in @(
         @{ Id='WindowsInboxCleanup'; DisplayName='Windows Inbox App Cleanup'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='WindowsFeatures'; DisplayName='Windows optional features'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
+        @{ Id='WindowsUpdate'; DisplayName='Windows Update (experimental)'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='WindowsCapabilities'; DisplayName='Windows capabilities (Features on Demand)'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='EnvironmentVariables'; DisplayName='Machine environment variables'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },
         @{ Id='FileSystem'; DisplayName='Files and directories'; Info=$null; PackageType='Script'; Version='1.0.0'; Architecture='any' },

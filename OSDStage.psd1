@@ -41,6 +41,7 @@
     'Add-OSDStageRegistryValue',
     'Add-OSDStageWindowsFeature',
     'Add-OSDStageWindowsCapability',
+    'Add-OSDStageWindowsUpdate',
     'Add-OSDStageDefaultAssociation',
     'Add-OSDStageEnvironmentVariable',
     'Add-OSDStageDirectory',
@@ -75,11 +76,11 @@
     AliasesToExport   = @()
     PrivateData = @{
         PSData = @{
-            Prerelease = 'rc2'
+            Prerelease = 'rc3'
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','AppDeployment','AppDeployment','ScriptDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','AppCache','AppPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDStage'
             LicenseUri = 'https://github.com/roryvossepoel/OSDStage/blob/main/LICENSE'
-            ReleaseNotes = 'OSDStage 1.0.0-rc2: automatic Company Portal and CMTrace acquisition and caching, ordered file and directory operations, and compact timestamped console output. Windows Update staging is not included.'
+            ReleaseNotes = 'OSDStage 1.0.0-rc3: one final Windows Update pass after apps and configuration, optional all-class drivers and firmware, explicit driver class selection, and per-update results without an automatic restart. SetupComplete acceptance passed on x64; later updates can remain after restart.'
             RequireLicenseAcceptance = $false
         }
     }

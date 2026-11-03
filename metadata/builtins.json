@@ -475,6 +475,24 @@
       "AdditionalAddCommands": [
         "Add-OSDStageRegistryValue"
       ]
+    },
+    {
+      "Id": "WindowsUpdate",
+      "DisplayName": "Windows Update (experimental)",
+      "Source": "BuiltIn",
+      "PackageType": "Script",
+      "Vendor": "OSDStage",
+      "Acquisition": "BundledScript",
+      "SyncPhase": "None",
+      "AddCommand": "Add-OSDStageWindowsUpdate",
+      "SyncCommand": null,
+      "Architectures": [
+        "any"
+      ],
+      "DefaultArchitecture": "any",
+      "CachePath": null,
+      "RepositoryAlternative": false,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDStage/main/metadata/icons/windowsfeatures.svg"
     }
   ]
 }

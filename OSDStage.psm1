@@ -1,6 +1,7 @@
 $moduleRoot = $PSScriptRoot
 . (Join-Path $moduleRoot 'Runtime\Invoke-OSDStageFileSystem.ps1')
 . (Join-Path $moduleRoot 'Runtime\Invoke-OSDStageWindowsCapabilities.ps1')
+. (Join-Path $moduleRoot 'Runtime\Invoke-OSDStageWindowsUpdate.ps1')
 . (Join-Path $moduleRoot 'Runtime\Invoke-OSDStageDefaultAssociations.ps1')
 . (Join-Path $moduleRoot 'Runtime\Invoke-OSDStageDesktopSettings.ps1')
 . (Join-Path $moduleRoot 'Runtime\Invoke-OSDStageServices.ps1')
@@ -61,6 +62,7 @@ Export-ModuleMember -Function @(
     'Add-OSDStageRegistryValue',
     'Add-OSDStageWindowsFeature',
     'Add-OSDStageWindowsCapability',
+    'Add-OSDStageWindowsUpdate',
     'Add-OSDStageDefaultAssociation',
     'Add-OSDStageEnvironmentVariable',
     'Add-OSDStageDirectory',

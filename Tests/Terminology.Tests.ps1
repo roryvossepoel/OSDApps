@@ -22,6 +22,8 @@ Describe 'Canonical OSDStage terminology' {
             $source = $source -replace ('(?i)' + $script:obsoleteTerm + '/(?:vnd\.github\+json|json|octet-stream)\b'), ''
             # These are mandatory PSHost API overrides, not OSDStage-owned terminology.
             $source = $source -replace ('Notify(Begin|End)' + $script:obsoleteTerm), ''
+            # The WUA session client identity is an external COM property.
+            $source = $source -replace ('\bClient' + $script:obsoleteTerm + 'ID\b'), ''
             # The Add-Type compiler output kind is a mandatory external API enum.
             $source = $source -replace ('\bConsole' + $script:obsoleteTerm + '\b'), ''
             # Windows taskbar XML uses these externally defined attribute names.
