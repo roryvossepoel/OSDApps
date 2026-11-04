@@ -22,7 +22,6 @@ $items = @(
     'Private'
     'Runtime'
     'README.md'
-    'CHANGELOG.md'
     'LICENSE'
 )
 
