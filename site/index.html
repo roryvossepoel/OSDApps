@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Stage software and device settings after OSDCloud, before OOBE. Practical instructions and a package catalog."><meta name="color-scheme" content="light"><title>Software and settings, ready before OOBE · OSDStage</title><link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48"><link rel="icon" href="assets/mark.svg" type="image/svg+xml" sizes="any"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="stylesheet" href="assets/site.css"><link rel="stylesheet" href="assets/home.css"><link rel="stylesheet" href="assets/report.css"><script defer src="assets/site.js"></script></head><body class="home-page"><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><div class="nav-wrap"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">▰</span>OSDStage</a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-navigation" aria-label="Open menu" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="nav-icon-menu" d="M4 6h16M4 12h16M4 18h16"/><path class="nav-icon-close" d="m6 6 12 12M6 18 18 6"/></svg></button><div class="nav-panel" id="site-navigation"><nav class="site-nav" aria-label="Main navigation"><a aria-current="page" href="index.html">Home</a><a href="get-started.html">Get started</a><a href="catalog/index.html">Catalog</a><a href="guides.html">Guides</a><a href="report.html">Report</a><a href="faq.html">FAQ</a></nav><a class="github-link" href="https://github.com/roryvossepoel/OSDStage">GitHub ↗</a></div></div></header><main id="main" class="home-main">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Stage selected apps, Windows updates and device configuration after Windows deployment and before OOBE."><meta name="color-scheme" content="light"><title>Software and settings, ready before OOBE · OSDStage</title><link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48"><link rel="icon" href="assets/mark.svg" type="image/svg+xml" sizes="any"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="stylesheet" href="assets/site.css"><link rel="stylesheet" href="assets/home.css"><link rel="stylesheet" href="assets/report.css"><script defer src="assets/site.js"></script></head><body class="home-page"><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><div class="nav-wrap"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">▰</span>OSDStage</a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-navigation" aria-label="Open menu" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="nav-icon-menu" d="M4 6h16M4 12h16M4 18h16"/><path class="nav-icon-close" d="m6 6 12 12M6 18 18 6"/></svg></button><div class="nav-panel" id="site-navigation"><nav class="site-nav" aria-label="Main navigation"><a aria-current="page" href="index.html">Home</a><a href="get-started.html">Get started</a><a href="catalog/index.html">Catalog</a><a href="guides.html">Guides</a><a href="report.html">Report</a><a href="faq.html">FAQ</a></nav><a class="github-link" href="https://github.com/roryvossepoel/OSDStage">GitHub ↗</a></div></div></header><main id="main" class="home-main">
   <section class="home-hero" aria-labelledby="hero-title">
     <div class="hero-copy">
       <p class="home-kicker"><span aria-hidden="true"></span>From Windows deployment to ready</p>
       <h1 id="hero-title">Windows deployed.<br><span>Make it yours.<br>Before OOBE.</span></h1>
-      <p class="home-lead">Stage your apps and device settings after OSDCloud. OSDStage applies your choices during SetupComplete, before the first user signs in.</p>
+      <p class="home-lead">Stage the apps, Windows updates and device configuration you choose after Windows deployment. OSDStage applies those choices during SetupComplete, before OOBE begins.</p>
       <div class="actions"><a class="button primary" href="get-started.html">Get started <span aria-hidden="true">→</span></a><a class="button secondary" href="catalog/index.html">Explore the catalog <span aria-hidden="true">↗</span></a></div>
       <ul class="home-facts" aria-label="Project highlights"><li>PowerShell</li><li>Optional USB cache</li><li>Offline delivery report</li><li>Open source</li></ul>
       <a class="home-gallery" href="https://www.powershellgallery.com/packages/OSDStage/1.0.0-rc4">PowerShell Gallery <span>1.0.0-rc4 preview ↗</span></a>
@@ -13,7 +13,7 @@
       <div class="preview-title"><span><span class="brand-mark" aria-hidden="true"></span>OSDStage</span><small>Staging example</small></div>
       <div class="preview-stages" aria-label="Deployment phases"><span>01 · WinPE</span><span>02 · SetupComplete</span><span>03 · OOBE</span></div>
       <div class="preview-body">
-        <div class="preview-code"><div><span class="terminal-dots" aria-hidden="true">● ● ●</span><span>PowerShell · after OSDCloud</span></div><pre><code># Choose what this device needs
+        <div class="preview-code"><div><span class="terminal-dots" aria-hidden="true">● ● ●</span><span>PowerShell · after Windows deployment</span></div><pre><code># Choose what this device needs
 Add-OSDStageMicrosoft365Apps
 Add-OSDStageAdobeAcrobatUnified
 
@@ -25,13 +25,42 @@ Test-OSDStageDeployment -ThrowOnFailure</code></pre></div>
     </div>
   </section>
 
+  <section class="home-section home-capabilities" aria-labelledby="why-title">
+    <div class="section-intro">
+      <p class="eyebrow">Why OSDStage</p>
+      <h2 id="why-title">Prepare more before the user takes over.</h2>
+      <p>OSDStage was created with Windows Autopilot device preparation in mind. Device preparation currently has no pre-provisioning mode; Microsoft lists pre-provisioning and self-deploying scenarios as future support. OSDStage does not replace enrollment. It simply lets a bare-metal deployment complete selected preparation work earlier.</p>
+    </div>
+    <div class="capability-grid">
+      <article class="capability">
+        <p class="capability-number">01 · Your selection</p>
+        <h3>Move selected work before OOBE.</h3>
+        <p>Choose the apps, Windows updates and device configuration that make sense for the device. Use OSDStage built-ins, packages from your own repository, or both.</p>
+        <div class="capability-sample"><span>Examples</span><strong>Apps · Windows Update · Registry · Services · Certificates · Files</strong></div>
+      </article>
+      <article class="capability">
+        <p class="capability-number">02 · Management stays separate</p>
+        <h3>Autopilot and Intune still do their job.</h3>
+        <p>OSDStage does not perform Microsoft Entra join, Intune enrollment or Autopilot registration. For managed devices, keep required apps assigned through Intune so their normal lifecycle still applies after resets or later deployments.</p>
+        <div class="capability-sample"><span>OSDStage</span><strong>Bare-metal preparation</strong><span>Intune / Autopilot</span><strong>Enrollment · policy · ongoing management</strong></div>
+      </article>
+      <article class="capability">
+        <p class="capability-number">03 · Deployment choice</p>
+        <h3>Designed around OSDCloud. Not tied to it.</h3>
+        <p>OSDCloud is the workflow OSDStage was designed around and the examples use it throughout. It is not a technical dependency: another deployment method can be used if Windows has already been applied and OSDStage can stage the target before its first boot.</p>
+        <div class="capability-sample"><span>Natural fit</span><strong>OSDCloud → OSDStage → SetupComplete</strong><span>Also possible</span><strong>Another Windows deployment method → OSDStage</strong></div>
+      </article>
+    </div>
+    <p class="reference-note">Microsoft documents pre-provisioning and self-deploying as future Windows Autopilot device preparation scenarios. <a href="https://learn.microsoft.com/en-us/autopilot/device-preparation/faq">Microsoft FAQ ↗</a> · Working with Device Association too? <a href="https://github.com/roryvossepoel/WindowsDeviceLink">Windows Device Link ↗</a></p>
+  </section>
+
   <section class="home-section workflow-panel" aria-labelledby="workflow-title">
     <div class="section-intro"><p class="eyebrow">How it works</p><h2 id="workflow-title">From Windows installation to OOBE.</h2><p>One flow. Your apps and configuration, applied before OOBE.</p></div>
     <ol class="workflow-steps">
-      <li><span class="workflow-number" aria-hidden="true">01</span><p class="workflow-phase">OSDCloud · WinPE</p><h3>Install Windows</h3><p>Let OSDCloud apply Windows and complete its workflow.</p></li>
+      <li><span class="workflow-number" aria-hidden="true">01</span><p class="workflow-phase">Windows deployment · WinPE</p><h3>Install Windows</h3><p>Apply Windows with OSDCloud or another deployment method. The examples use OSDCloud.</p></li>
       <li><span class="workflow-number" aria-hidden="true">02</span><p class="workflow-phase">OSDStage · WinPE</p><h3>Stage your choices</h3><p>Stage apps and configuration, then validate. Connect an OSDCloud-labeled USB drive to automatically cache supported content for reuse.</p></li>
       <li><span class="workflow-number" aria-hidden="true">03</span><p class="workflow-phase">Restart → SetupComplete</p><h3>Apply automatically</h3><p>Restart into Windows. SetupComplete installs your apps and applies configuration before OOBE.</p></li>
-      <li><span class="workflow-number" aria-hidden="true">04</span><p class="workflow-phase">OOBE</p><h3>Continue setup</h3><p>Review your delivery report, then continue with Windows setup or your Autopilot enrollment.</p></li>
+      <li><span class="workflow-number" aria-hidden="true">04</span><p class="workflow-phase">OOBE · enrollment</p><h3>Continue setup</h3><p>Review your delivery report, then continue with Windows setup, Autopilot device preparation, classic Autopilot or your own provisioning flow.</p></li>
     </ol>
     <a class="text-link" href="get-started.html">Follow the quick start <span aria-hidden="true">→</span></a>
   </section>
