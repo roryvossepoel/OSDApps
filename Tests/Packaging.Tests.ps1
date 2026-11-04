@@ -5,6 +5,14 @@ Describe 'Module package contents' {
         $script:builtModule = & (Join-Path $root 'build\Build-Module.ps1') -OutputPath $output
     }
 
+    AfterAll {
+        # Build-Module imports the package it just built. Restore the source
+        # module before Pester removes TestDrive so later test files do not
+        # reference a module whose format file no longer exists.
+        Remove-Module OSDStage -Force -ErrorAction SilentlyContinue
+        Import-Module (Join-Path $root 'OSDStage.psd1') -Force -ErrorAction Stop
+    }
+
     It 'ships the runtime built-in metadata used by the Viewer' {
         Test-Path -LiteralPath (Join-Path $script:builtModule.Path 'metadata\builtins.json') -PathType Leaf |
             Should -BeTrue
