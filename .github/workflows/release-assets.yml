@@ -112,12 +112,9 @@ jobs:
               throw "Release asset was not created: $assetPath"
           }
 
-          $hash = (Get-FileHash -LiteralPath $assetPath -Algorithm SHA256).Hash
           "asset_name=$assetName" >> $env:GITHUB_OUTPUT
           "asset_path=$assetPath" >> $env:GITHUB_OUTPUT
-          "asset_sha256=$hash" >> $env:GITHUB_OUTPUT
           Write-Host "Built $assetName"
-          Write-Host "SHA256 $hash"
 
       - name: Upload or verify release asset
         shell: pwsh
@@ -126,7 +123,6 @@ jobs:
           TAG: ${{ steps.release.outputs.tag }}
           ASSET_NAME: ${{ steps.asset.outputs.asset_name }}
           ASSET_PATH: ${{ steps.asset.outputs.asset_path }}
-          ASSET_SHA256: ${{ steps.asset.outputs.asset_sha256 }}
         run: |
           $ErrorActionPreference = 'Stop'
 
@@ -144,12 +140,37 @@ jobs:
               }
 
               $existing = Join-Path $verifyDir $env:ASSET_NAME
-              $existingHash = (Get-FileHash -LiteralPath $existing -Algorithm SHA256).Hash
-              if ($existingHash -ne $env:ASSET_SHA256) {
-                  throw "Release asset '$env:ASSET_NAME' already exists with different content. Existing assets are not overwritten."
+              $extractDir = Join-Path $verifyDir 'expanded'
+              Expand-Archive -LiteralPath $existing -DestinationPath $extractDir -Force
+
+              $expectedRoot = (Resolve-Path -LiteralPath './release-dist/OSDStage').Path
+              $existingRoot = Join-Path $extractDir 'OSDStage'
+              if (-not (Test-Path -LiteralPath $existingRoot -PathType Container)) {
+                  throw "Existing release asset '$env:ASSET_NAME' does not contain the expected OSDStage module folder."
               }
 
-              Write-Host "Release asset already exists and matches the tagged build: $env:ASSET_NAME"
+              $expectedFiles = @{}
+              foreach ($file in @(Get-ChildItem -LiteralPath $expectedRoot -Recurse -File)) {
+                  $relative = $file.FullName.Substring($expectedRoot.Length).TrimStart('\','/')
+                  $expectedFiles[$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+              }
+
+              $existingFiles = @{}
+              foreach ($file in @(Get-ChildItem -LiteralPath $existingRoot -Recurse -File)) {
+                  $relative = $file.FullName.Substring($existingRoot.Length).TrimStart('\','/')
+                  $existingFiles[$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+              }
+
+              if ($expectedFiles.Count -ne $existingFiles.Count) {
+                  throw "Release asset '$env:ASSET_NAME' already exists with different module content. Existing assets are not overwritten."
+              }
+              foreach ($relative in $expectedFiles.Keys) {
+                  if (-not $existingFiles.ContainsKey($relative) -or $existingFiles[$relative] -ne $expectedFiles[$relative]) {
+                      throw "Release asset '$env:ASSET_NAME' already exists with different module content at '$relative'. Existing assets are not overwritten."
+                  }
+              }
+
+              Write-Host "Release asset already exists and matches the tagged module contents: $env:ASSET_NAME"
               exit 0
           }
 
