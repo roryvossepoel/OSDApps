@@ -17,6 +17,15 @@ Describe 'Module package contents' {
             Should -Be 0
     }
 
+    It 'keeps repository-only release history out of the installed module' {
+        Test-Path -LiteralPath (Join-Path $script:builtModule.Path 'CHANGELOG.md') |
+            Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $script:builtModule.Path 'README.md') |
+            Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $script:builtModule.Path 'LICENSE') |
+            Should -BeTrue
+    }
+
     It 'keeps metadata packaging explicitly limited to runtime files' {
         $metadataFiles = @(
             Get-ChildItem -LiteralPath (Join-Path $script:builtModule.Path 'metadata') -Recurse -File |
