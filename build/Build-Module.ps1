@@ -21,9 +21,7 @@ $items = @(
     'Public'
     'Private'
     'Runtime'
-    'metadata'
     'README.md'
-    'CHANGELOG.md'
     'LICENSE'
 )
 
@@ -32,6 +30,22 @@ foreach ($item in $items) {
     if (Test-Path -LiteralPath $source) {
         Copy-Item -LiteralPath $source -Destination $moduleOutput -Recurse -Force
     }
+}
+
+# Package only runtime metadata. Website/catalog presentation assets such as
+# metadata/icons/*.svg remain in the repository and GitHub Pages build, but are
+# not required by the installed PowerShell module.
+$metadataOutput = Join-Path $moduleOutput 'metadata'
+New-Item -ItemType Directory -Path $metadataOutput -Force | Out-Null
+$runtimeMetadata = @(
+    'builtins.json'
+)
+foreach ($item in $runtimeMetadata) {
+    $source = Join-Path (Join-Path $root 'metadata') $item
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+        throw "Required runtime metadata is missing: $source"
+    }
+    Copy-Item -LiteralPath $source -Destination $metadataOutput -Force
 }
 
 $builtManifest = Join-Path $moduleOutput 'OSDStage.psd1'
