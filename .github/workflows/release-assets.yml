@@ -1,0 +1,160 @@
+name: Publish GitHub Release Module ZIP
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Existing release version to package, for example 1.0.0-rc4. Leave empty to use the manifest on main.'
+        required: false
+        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/release-assets.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: github-release-assets
+  cancel-in-progress: false
+
+jobs:
+  module_zip:
+    name: Attach module ZIP to existing release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Resolve existing release
+        id: release
+        shell: pwsh
+        env:
+          REQUESTED_VERSION: ${{ inputs.release_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $requested = [string]$env:REQUESTED_VERSION
+          if ([string]::IsNullOrWhiteSpace($requested)) {
+              $release = ./build/Get-ReleaseVersion.ps1
+          }
+          else {
+              $release = ./build/Get-ReleaseVersion.ps1 -ExpectedVersion $requested
+          }
+
+          "release_version=$($release.Version)" >> $env:GITHUB_OUTPUT
+          "tag=$($release.Tag)" >> $env:GITHUB_OUTPUT
+          Write-Host "Preparing module ZIP for existing release $($release.Tag)."
+
+      - name: Verify tag and GitHub release exist
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          git fetch --tags --force
+          git rev-parse --verify "refs/tags/$env:TAG^{commit}" *> $null
+          if ($LASTEXITCODE -ne 0) {
+              throw "Release tag '$env:TAG' does not exist."
+          }
+
+          gh release view $env:TAG --repo $env:GITHUB_REPOSITORY --json tagName *> $null
+          if ($LASTEXITCODE -ne 0) {
+              throw "GitHub release '$env:TAG' does not exist. This workflow only attaches assets to an existing release."
+          }
+
+      - name: Checkout immutable release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+          path: release-source
+          fetch-depth: 0
+
+      - name: Build tagged module
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.release_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          & ./release-source/build/Build-Module.ps1 -OutputPath ./release-dist | Format-List
+          $manifestPath = Join-Path $PWD 'release-dist\OSDStage\OSDStage.psd1'
+          Test-ModuleManifest -Path $manifestPath -ErrorAction Stop | Out-Null
+
+          $resolved = & ./release-source/build/Get-ReleaseVersion.ps1 -ManifestPath $manifestPath -ExpectedVersion $env:RELEASE_VERSION
+          if ($resolved.Version -ne $env:RELEASE_VERSION) {
+              throw "Built package version '$($resolved.Version)' does not match requested release '$env:RELEASE_VERSION'."
+          }
+
+      - name: Create deterministic release asset name
+        id: asset
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.release_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $assetName = "OSDStage-$env:RELEASE_VERSION.zip"
+          $assetPath = Join-Path $PWD $assetName
+          if (Test-Path -LiteralPath $assetPath) {
+              Remove-Item -LiteralPath $assetPath -Force
+          }
+
+          Compress-Archive -Path ./release-dist/OSDStage -DestinationPath $assetPath -CompressionLevel Optimal
+          if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf)) {
+              throw "Release asset was not created: $assetPath"
+          }
+
+          $hash = (Get-FileHash -LiteralPath $assetPath -Algorithm SHA256).Hash
+          "asset_name=$assetName" >> $env:GITHUB_OUTPUT
+          "asset_path=$assetPath" >> $env:GITHUB_OUTPUT
+          "asset_sha256=$hash" >> $env:GITHUB_OUTPUT
+          Write-Host "Built $assetName"
+          Write-Host "SHA256 $hash"
+
+      - name: Upload or verify release asset
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          ASSET_NAME: ${{ steps.asset.outputs.asset_name }}
+          ASSET_PATH: ${{ steps.asset.outputs.asset_path }}
+          ASSET_SHA256: ${{ steps.asset.outputs.asset_sha256 }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $assets = gh release view $env:TAG --repo $env:GITHUB_REPOSITORY --json assets --jq '.assets[].name'
+          if ($LASTEXITCODE -ne 0) {
+              throw "Could not inspect release assets for '$env:TAG'."
+          }
+
+          if (@($assets) -contains $env:ASSET_NAME) {
+              $verifyDir = Join-Path $env:RUNNER_TEMP 'release-asset-verify'
+              New-Item -ItemType Directory -Path $verifyDir -Force | Out-Null
+              gh release download $env:TAG --repo $env:GITHUB_REPOSITORY --pattern $env:ASSET_NAME --dir $verifyDir
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Could not download existing release asset '$env:ASSET_NAME' for verification."
+              }
+
+              $existing = Join-Path $verifyDir $env:ASSET_NAME
+              $existingHash = (Get-FileHash -LiteralPath $existing -Algorithm SHA256).Hash
+              if ($existingHash -ne $env:ASSET_SHA256) {
+                  throw "Release asset '$env:ASSET_NAME' already exists with different content. Existing assets are not overwritten."
+              }
+
+              Write-Host "Release asset already exists and matches the tagged build: $env:ASSET_NAME"
+              exit 0
+          }
+
+          gh release upload $env:TAG $env:ASSET_PATH --repo $env:GITHUB_REPOSITORY
+          if ($LASTEXITCODE -ne 0) {
+              throw "Uploading release asset '$env:ASSET_NAME' failed."
+          }
+          Write-Host "Uploaded $env:ASSET_NAME to $env:TAG."
