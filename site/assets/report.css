@@ -7,3 +7,12 @@
 /* Second review polish: keep report explanatory copy subordinate to headings and code. */
 .report-explainer>p{font-size:.9rem;line-height:1.7}
 @media(max-width:700px){.report-explainer>p{font-size:.88rem}}
+
+
+/* Final report polish: lift only the smallest metadata, not the body hierarchy. */
+.report-preview-body .preview-label{font-size:.68rem}
+.report-preview-metrics span{font-size:.72rem}
+.report-preview-row small{font-size:.72rem}
+.report-pill{font-size:.7rem}
+.report-format-note{font-size:.78rem!important}
+.report-preview-note{font-size:.8rem}
