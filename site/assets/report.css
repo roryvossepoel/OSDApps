@@ -16,3 +16,10 @@
 .report-pill{font-size:.7rem}
 .report-format-note{font-size:.78rem!important}
 .report-preview-note{font-size:.8rem}
+
+
+/* Final review polish: align report preview metadata with the rest of the homepage. */
+.report-preview-body .preview-label{font-size:.72rem}
+.report-preview-metrics span{font-size:.76rem}
+.report-preview-row{font-size:.84rem}
+.report-preview-row small{font-size:.76rem}
