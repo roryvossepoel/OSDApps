@@ -5,15 +5,14 @@
       <p class="home-kicker"><span aria-hidden="true"></span>From Windows deployment to ready</p>
       <h1 id="hero-title">Windows deployed.<br><span>Make it yours.<br>Before OOBE.</span></h1>
       <p class="home-lead">Stage the apps, Windows updates and device configuration you choose after Windows deployment. OSDStage applies those choices during SetupComplete, before OOBE begins.</p>
-      <div class="actions"><a class="button primary" href="get-started.html">Get started <span aria-hidden="true">→</span></a><a class="button secondary" href="catalog/index.html">Explore the catalog <span aria-hidden="true">↗</span></a></div>
+      <div class="actions"><a class="button primary" href="get-started.html">Get started <span aria-hidden="true">→</span></a><a class="button secondary" href="catalog/index.html">Explore the catalog <span aria-hidden="true">→</span></a></div>
       <ul class="home-facts" aria-label="Project highlights"><li>PowerShell</li><li>Optional USB cache</li><li>Offline delivery report</li><li>Open source</li></ul>
       <a class="home-gallery" href="https://www.powershellgallery.com/packages/OSDStage/1.0.0-rc4">PowerShell Gallery <span>1.0.0-rc4 preview ↗</span></a>
     </div>
     <div class="deployment-preview" aria-label="Illustrative staging example">
       <div class="preview-title"><span><span class="brand-mark" aria-hidden="true"></span>OSDStage</span><small>Staging example</small></div>
-      <div class="preview-flow" aria-label="Deployment flow"><span>Choose &amp; stage in WinPE</span><span aria-hidden="true">→</span><span>Install &amp; configure in SetupComplete</span><span aria-hidden="true">→</span><span>Continue to OOBE</span></div>
       <div class="preview-body">
-        <div class="preview-code"><div><span class="terminal-dots" aria-hidden="true">● ● ●</span><span>PowerShell · after Windows deployment</span></div><pre><code># Choose what this device needs
+        <div class="preview-code"><div><span class="terminal-dots" aria-hidden="true">● ● ●</span><span>PowerShell</span></div><pre><code># Choose what this device needs
 Add-OSDStageMicrosoft365Apps
 Add-OSDStageAdobeAcrobatUnified
 
@@ -44,15 +43,15 @@ Test-OSDStageDeployment -ThrowOnFailure</code></pre></div>
     </div>
   </section>
 
-<section class="home-section report-showcase" aria-labelledby="report-title"><div class="report-showcase-copy"><p class="eyebrow">Included in RC4 · Delivery report</p><h2 id="report-title">You staged it.<br><span>Now see what happened.</span></h2><p>Every deployment leaves a clear record. Open the offline HTML report to see what succeeded, what changed and what needs your attention.</p><ul class="report-benefits"><li><strong>Apps, with their source.</strong> See which apps came from built-in integrations and which came from your own repository.</li><li><strong>Details behind the result.</strong> Expand fonts, certificates, settings and file operations.</li><li><strong>An honest handover.</strong> See update results, restart requirements and evidence checks together.</li><li><strong>A result you can act on.</strong> Quickly spot what succeeded, what needs attention and what to check next.</li></ul><div class="actions"><a class="button primary" href="report.html">Discover the report <span aria-hidden="true">→</span></a><a class="text-link" href="examples/DeliveryReport.html">View example ↗</a></div><p class="report-format-note">Generated automatically · Offline HTML + structured JSON</p></div><div class="report-preview" aria-label="Illustrative delivery report, fictional data">
+<section class="home-section report-showcase" aria-labelledby="report-title"><div class="report-showcase-copy"><p class="eyebrow">Included in RC4 · Delivery report</p><h2 id="report-title">You staged it.<br><span>Now see what happened.</span></h2><p>Every deployment leaves a clear record. Open the offline HTML report to see what succeeded, what changed and what needs your attention.</p><ul class="report-benefits"><li><strong>Apps, with their source.</strong> See which apps came from built-in integrations and which came from your own repository.</li><li><strong>Details behind the result.</strong> Expand fonts, certificates, settings and file operations.</li><li><strong>An honest handover.</strong> See update results, restart requirements and evidence checks together.</li><li><strong>A result you can act on.</strong> Quickly spot what succeeded, what needs attention and what to check next.</li></ul><div class="actions"><a class="button primary" href="report.html">Discover the report <span aria-hidden="true">→</span></a><a class="text-link" href="examples/DeliveryReport.html">View example →</a></div><p class="report-format-note">Generated automatically · Offline HTML + structured JSON</p></div><div class="report-preview" aria-label="Illustrative delivery report, fictional data">
  <div class="report-preview-heading"><span><span class="brand-mark" aria-hidden="true"></span>Delivery report</span><span class="report-pill attention">Attention</span></div>
  <div class="report-preview-body"><p class="preview-label">Illustrative example · fictional data</p><h3>Deployment complete.<br><span>Your results.</span></h3><p class="report-preview-note">Execution succeeded. Restart required.</p>
- <div class="report-preview-metrics"><div><strong>7 / 7</strong><span>Packages succeeded</span></div><div><strong>6 min 00 sec</strong><span>Execution time</span></div></div>
+ <div class="report-preview-metrics"><div><strong>7 / 7</strong><span>Packages succeeded</span></div><div><strong>6 min 23 sec</strong><span>Execution time</span></div></div>
  <div class="report-preview-row"><span>Built-in apps<small>Microsoft 365 Apps · 7-Zip</small></span><span class="report-pill">Succeeded</span></div>
  <div class="report-preview-row"><span>Repository apps<small>Example business app</small></span><span class="report-pill">Succeeded</span></div>
  <div class="report-preview-row"><span>Configuration<small>Fonts · Certificates · Files</small></span><span class="report-pill">Matched</span></div>
  <div class="report-preview-row"><span>Windows Update<small>3 installed · follow-up scan required</small></span><span class="report-pill attention">Restart</span></div>
- </div><a class="report-preview-link" href="examples/DeliveryReport.html">Explore the example report <span aria-hidden="true">↗</span></a></div></section>
+ </div><a class="report-preview-link" href="examples/DeliveryReport.html">Explore the example report <span aria-hidden="true">→</span></a></div></section>
 
   <section class="home-section home-start" aria-labelledby="start-title">
     <div class="home-install"><div class="code-block"><div class="code-heading"><span>Install the preview · PowerShell</span><button class="copy-code" type="button" aria-label="Copy module installation command">Copy</button></div><pre><code>Install-Module OSDStage -Repository PSGallery -AllowPrerelease</code></pre></div><div class="home-install-links"><a href="https://www.powershellgallery.com/packages/OSDStage">PowerShell Gallery ↗</a><a href="https://github.com/roryvossepoel/OSDStage/blob/main/docs/release-status.md">Release availability ↗</a></div></div>
