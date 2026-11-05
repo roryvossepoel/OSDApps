@@ -121,3 +121,15 @@ body,.catalog-page{background:radial-gradient(ellipse 850px 540px at 85% 0%,#eaf
   .code-block pre{font-size:.76rem}
   .site-footer,.footer-links a{font-size:.82rem}
 }
+
+
+/* Second review polish: align header with homepage width and keep body copy compact. */
+@media(min-width:851px){
+  .nav-wrap{max-width:1328px;padding-left:32px;padding-right:32px}
+}
+.instruction p,.guide-body p{font-size:.93rem;line-height:1.7}
+.faq-list details>p{font-size:.93rem;line-height:1.7}
+@media(max-width:600px){
+  .nav-wrap{padding-left:20px;padding-right:20px}
+  .instruction p,.guide-body p,.faq-list details>p{font-size:.9rem}
+}
