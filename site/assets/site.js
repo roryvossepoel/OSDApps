@@ -215,4 +215,4 @@ function highlightPowerShell(code) {
   code.replaceChildren(fragment);
   code.dataset.highlighted = 'true';
 }
-document.querySelectorAll('.code-block pre code').forEach(highlightPowerShell);
+document.querySelectorAll('.code-block pre code, .preview-code pre code').forEach(highlightPowerShell);
