@@ -95,3 +95,18 @@
   .cache-main .cache-arrow-stage{display:none}
   .cache-optional{flex-wrap:wrap;text-align:center}
 }
+
+
+/* Second review polish: simplify the hero preview flow and footer weight. */
+.preview-flow{display:grid;grid-template-columns:auto 1fr auto 1fr auto;align-items:center;gap:10px;padding:11px 20px;border-bottom:1px solid #e6eee9;font-size:.74rem;font-weight:650;color:#60776b}
+.preview-flow>span:nth-child(even){height:1px;background:#bfd5ca;font-size:0;position:relative}
+.preview-flow>span:nth-child(even)::after{content:"";position:absolute;right:-1px;top:-3px;width:6px;height:6px;border-top:1.8px solid #2b7a60;border-right:1.8px solid #2b7a60;transform:rotate(45deg)}
+.preview-flow>span:first-child{color:#187358}
+.preview-summary{padding:11px 2px 0;font-size:.68rem;color:#718579}
+@media(max-width:600px){
+  .preview-flow{grid-template-columns:1fr;gap:5px;padding:10px 14px;font-size:.66rem}
+  .preview-flow>span:nth-child(even){width:1px;height:9px;justify-self:center;background:#bfd5ca}
+  .preview-flow>span:nth-child(even)::after{right:-3px;top:4px;transform:rotate(135deg)}
+  .preview-flow>span:not(:nth-child(even)){text-align:center}
+  .preview-summary{font-size:.62rem}
+}
