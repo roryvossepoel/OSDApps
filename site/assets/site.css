@@ -44,3 +44,80 @@ body,.catalog-page{background:radial-gradient(ellipse 850px 540px at 85% 0%,#eaf
   .nav-panel .github-link{display:block;margin:4px 0 0;padding:12px 14px;border-top:1px solid var(--edge);font-size:.95rem}
 }
 @media(max-width:600px){.nav-wrap{min-height:72px;padding-top:12px;padding-bottom:12px}}
+
+
+/* 1.0 site polish: readable metadata, clearer steps and shared utilities. */
+.eyebrow{font-size:.76rem}
+.where{font-size:.72rem;letter-spacing:.105em}
+.small-note{font-size:.84rem}
+.instruction p,.guide-body p{font-size:1rem;line-height:1.75}
+.reference-note{font-size:.86rem;line-height:1.7}
+.text-link{font-size:.94rem}
+.code-heading{font-size:.76rem;padding:9px 16px}
+.copy-code{font-size:.75rem;padding:4px 11px}
+.code-block pre{font-size:.84rem;line-height:1.85}
+.step-number{display:grid;place-items:center;width:42px;height:42px;padding:0;border-radius:10px;background:var(--accent);color:#fff;font-size:.86rem;font-weight:750;letter-spacing:.04em}
+.instruction{grid-template-columns:58px 1fr;gap:22px}
+.site-footer{font-size:.85rem}.footer-license{font-size:.76rem}.footer-links a{font-size:.84rem}
+
+/* Lightweight PowerShell syntax highlighting; copy still uses the original textContent. */
+.code-block .ps-cmdlet{color:#075e9a;font-weight:650}
+.code-block .ps-param{color:#7b4fa3}
+.code-block .ps-string{color:#8b4b12}
+.code-block .ps-comment{color:#698078;font-style:italic}
+.code-block .ps-variable{color:#9b3d66}
+.code-block .ps-keyword{color:#5f4aa8;font-weight:650}
+.code-block .ps-operator{color:#17715d;font-weight:700}
+
+/* Desktop header: logo | centered primary navigation | utility actions. */
+.header-actions{position:relative;display:flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--edge);border-radius:14px;background:#fff;box-shadow:0 8px 24px #17394b0a}
+.header-icon{display:inline-grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:10px;background:transparent;color:#547083}
+.header-icon:hover,.header-icon[aria-expanded="true"]{background:var(--wash);color:var(--accent);text-decoration:none}
+.header-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.header-actions .github-link{display:inline-grid;place-items:center;width:40px;height:40px;margin:0;padding:0;border-radius:10px;color:#547083}
+.header-actions .github-link:hover{background:var(--wash);color:var(--accent);text-decoration:none}
+.header-actions .github-link svg{width:21px;height:21px;fill:currentColor;stroke:none}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.share-popover{position:absolute;z-index:40;top:calc(100% + 10px);right:0;width:280px;padding:17px;border:1px solid var(--edge);border-radius:16px;background:#fff;box-shadow:0 18px 48px #17394b20;color:var(--ink)}
+.share-popover::before{content:"";position:absolute;top:-7px;right:56px;width:12px;height:12px;transform:rotate(45deg);background:#fff;border-left:1px solid var(--edge);border-top:1px solid var(--edge)}
+.share-popover h2{font-size:.96rem;letter-spacing:-.01em}
+.share-popover p{font-size:.8rem;line-height:1.5;margin:6px 0 12px}
+.share-options{display:grid;gap:3px}
+.share-option{display:flex;align-items:center;gap:10px;width:100%;padding:9px 8px;border:0;border-radius:9px;background:transparent;color:var(--ink);font-size:.82rem;font-weight:650;text-align:left}
+.share-option:hover{background:var(--wash);text-decoration:none}
+.share-option svg{width:20px;height:20px;padding:3px;border-radius:6px;background:#f2f5f6;fill:none;stroke:#60737f;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.share-separator{height:1px;margin:5px 0;background:var(--edge)}
+@media(min-width:851px){
+  .nav-panel{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px;margin-left:0}
+  .site-nav{justify-self:center;margin:0}
+  .nav-wrap{gap:28px}
+}
+@media(max-width:850px){
+  .header-actions{align-self:flex-start;margin:5px 0 2px}
+  .share-popover{left:0;right:auto}
+  .share-popover::before{left:18px;right:auto}
+}
+
+/* Catalog readability overrides. */
+.catalog-page .badge{min-height:30px;padding:5px 10px;font-size:.7rem;letter-spacing:.01em}
+.catalog-page .app-subtitle{font-size:.74rem}
+.catalog-page .meta-label{font-size:.66rem}
+.catalog-page .meta-value{font-size:.82rem}
+.catalog-page .description{font-size:.85rem;line-height:1.6}
+.catalog-page .card-footer{font-size:.8rem}
+.catalog-page .command{font-size:.78rem;padding:5px 8px}
+.catalog-page #resultSummary,.catalog-page .results-controls,.catalog-page .pagination{font-size:.85rem}
+.catalog-page .row-title{font-size:.94rem}
+.catalog-page .row-name .app-subtitle{font-size:.75rem}
+.catalog-page .row-version{font-size:.82rem}
+.row-chevron{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;color:var(--accent);transition:transform .15s,background-color .15s}
+.package-row summary:hover .row-chevron{background:var(--wash)}
+.row-chevron svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+@media(max-width:600px){
+  .eyebrow{font-size:.7rem}.where{font-size:.68rem}
+  .instruction{grid-template-columns:50px 1fr;gap:14px}
+  .step-number{width:40px;height:40px;font-size:.82rem}
+  .code-block pre{font-size:.76rem}
+  .site-footer,.footer-links a{font-size:.82rem}
+}
