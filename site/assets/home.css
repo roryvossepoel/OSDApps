@@ -163,3 +163,52 @@
   .cache-optional{grid-template-columns:auto 1fr;justify-content:center}
   .cache-optional small{grid-column:1/-1;justify-self:center}
 }
+
+
+/* Grid alignment polish: reuse one 2-column rhythm for report, CTA and footer. */
+.home-page .report-showcase,
+.home-start{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:64px;
+}
+.home-page .report-showcase{padding-bottom:50px}
+.home-start{padding:34px 0 10px}
+.home-start .home-install,
+.home-start .home-start-copy{min-width:0}
+
+.home-page .site-footer{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:64px;
+  align-items:start;
+  margin-top:54px;
+  padding-left:max(32px,calc((100% - 1264px)/2));
+  padding-right:max(32px,calc((100% - 1264px)/2));
+}
+.home-page .site-footer .footer-brand{justify-self:start}
+.home-page .site-footer .footer-links{
+  justify-self:stretch;
+  max-width:none;
+  justify-content:flex-start;
+  padding-top:8px;
+}
+
+@media(max-width:850px){
+  .home-page .report-showcase,
+  .home-start,
+  .home-page .site-footer{
+    grid-template-columns:1fr;
+    gap:30px;
+  }
+  .home-page .site-footer .footer-links{justify-content:flex-start}
+}
+@media(max-width:600px){
+  .home-page .report-showcase{padding-bottom:34px}
+  .home-start{padding-top:26px}
+  .home-page .site-footer{
+    margin-top:40px;
+    padding-left:20px;
+    padding-right:20px;
+    gap:20px;
+  }
+}
