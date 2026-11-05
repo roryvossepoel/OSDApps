@@ -286,3 +286,23 @@
   .capability-pills{gap:6px}
   .cache-optional{justify-content:center}
 }
+
+
+/* Final review polish: more breathing room and readable small metadata. */
+.workflow-panel{margin-bottom:68px}
+.preview-code .ps-comment{color:#9bc6b4}
+.preview-code .ps-cmdlet{color:#e4f5ed;font-weight:650}
+.preview-code .ps-param{color:#d6b8ef}
+.preview-code .ps-string{color:#efc98f}
+.preview-code .ps-variable{color:#f1b6c9}
+.preview-code .ps-keyword{color:#cab8eb}
+.preview-code .ps-operator{color:#9bd7c2}
+
+.home-capabilities .capability-sample>span{font-size:.75rem}
+.home-capabilities .capability-sample>strong{font-size:.82rem}
+.home-capabilities .cache-example{font-size:.75rem}
+.home-capabilities .cache-optional small{font-size:.75rem}
+.home-capabilities .capability .capability-note{font-size:.82rem!important;line-height:1.65}
+
+@media(max-width:850px){.workflow-panel{margin-bottom:48px}}
+@media(max-width:600px){.workflow-panel{margin-bottom:38px}}
