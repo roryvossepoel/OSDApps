@@ -12,26 +12,7 @@
 </head>
 <body class="catalog-page"><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><div class="nav-wrap"><a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">▰</span>OSDStage</a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-navigation" aria-label="Open menu" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="nav-icon-menu" d="M4 6h16M4 12h16M4 18h16"/><path class="nav-icon-close" d="m6 6 12 12M6 18 18 6"/></svg></button><div class="nav-panel" id="site-navigation"><nav class="site-nav" aria-label="Main navigation"><a href="../index.html">Home</a><a href="../get-started.html">Get started</a><a aria-current="page" href="../catalog/index.html">Catalog</a><a href="../guides.html">Guides</a><a href="../report.html">Report</a><a href="../faq.html">FAQ</a></nav><a class="github-link" href="https://github.com/roryvossepoel/OSDStage">GitHub ↗</a></div></div></header>
 <main class="shell" id="main">
-<div class="page-intro"><p class="eyebrow">Find your next command</p><h1>Apps and configuration.</h1><p class="lead">Explore what you can stage with OSDStage. Choose a component and find its PowerShell command.</p></div>  <section class="metrics">
-    <article class="metric panel">
-      <div class="metric-icon blue"><span data-icon="grid"></span></div>
-      <div><span>Total components</span><strong id="allCount">0</strong></div>
-    </article>
-    <article class="metric panel">
-      <div class="metric-icon purple"><span data-icon="cube"></span></div>
-      <div><span>Built-in components</span><strong id="builtinCount">0</strong></div>
-    </article>
-    <article class="metric panel">
-      <div class="metric-icon green"><span data-icon="database"></span></div>
-      <div><span>Repository packages</span><strong id="repoCount">0</strong></div>
-    </article>
-    <article class="metric panel">
-      <div class="metric-icon blue"><span data-icon="monitor"></span></div>
-      <div><span>Architectures</span><strong id="archCount">0</strong></div>
-    </article>
-  </section>
-
-  <div class="catalog-sources"><p><strong>Built-in</strong> App integrations and settings provided by OSDStage.</p><p><strong>Your repository</strong> Packages you create and host yourself.</p><span>This page helps you choose commands; it does not install anything.</span></div>
+<div class="page-intro"><p class="eyebrow">Find your next command</p><h1>Apps and configuration.</h1><p class="lead">Find the app, setting or command you want to stage.</p></div>
 
   <section class="panel toolbar">
     <div class="searchbox">
@@ -53,7 +34,20 @@
     </select>
   </section>
 
-  <section class="panel repository-bar" aria-label="Repository catalog">
+  <div class="catalog-summary" aria-label="Catalog summary">
+    <div class="catalog-counts">
+      <span><strong id="allCount">0</strong> components</span>
+      <span><strong id="builtinCount">0</strong> built-in</span>
+      <span><strong id="repoCount">0</strong> repository</span>
+    </div>
+    <div class="catalog-summary-actions">
+      <a href="../metadata/builtins.json" target="_blank" rel="noreferrer">Definitions JSON ↗</a>
+      <button id="repositoryToggle" type="button" aria-expanded="false" aria-controls="repositoryPanel">+ Add repository</button>
+    </div>
+  </div>
+  <span id="builtinStatus" class="inline-status catalog-global-status" role="status" aria-live="polite" hidden></span>
+
+  <section id="repositoryPanel" class="panel repository-bar" aria-label="Repository catalog" hidden>
     <form id="catalogForm" class="catalog-form">
       <label for="catalogUrl">Repository catalog URL <span class="optional">optional</span></label>
       <div class="catalog-inputs">
@@ -62,15 +56,12 @@
         <button id="clearRepository" type="button" title="Remove repository packages from this view" hidden>Clear</button>
       </div>
     </form>
+    <p id="repositoryHelp" class="catalog-help">Add your own packages using the URL of your repository’s <code>catalog.json</code>. HTTPS and CORS access are required. <a href="../faq.html">Help with repository loading →</a></p>
     <div class="source-meta">
-      <a href="../metadata/builtins.json" target="_blank" rel="noreferrer">Built-in definitions (JSON) ↗</a>
       <a id="repoLink" hidden></a>
-      <span id="builtinStatus" class="inline-status" role="status" aria-live="polite" hidden></span>
       <span id="repoStatus" class="inline-status" role="status" aria-live="polite" hidden></span>
     </div>
   </section>
-
-  <p id="repositoryHelp" class="catalog-help">Add your own packages using the URL of your repository’s <code>catalog.json</code>. HTTPS and CORS access are required. <a href="../faq.html">Help with repository loading →</a></p>
   <details id="loadErrors" class="panel load-errors" hidden>
     <summary>Repository warnings and errors</summary>
     <ul id="errorList"></ul>
