@@ -20,7 +20,9 @@ Decide which source types you need:
 | Repository packages | Publish your own catalog, manifests and packages; configure the catalog URL and use actual package IDs from that repository. |
 | Both | Add both types to the same ordered device queue. |
 
-For an online deployment, vendor/repository access must be available when acquisition occurs. A fully offline deployment requires complete content for the selected app variants **before** reboot; supported MSI/EXE files must still pass Windows signature and expected-publisher validation.
+For an online deployment, vendor/repository access must be available when acquisition occurs. Built-in app integrations are evergreen at deployment time: OSDStage resolves supported vendor content when acquisition runs rather than maintaining a fixed application version in the deployment workflow. A fully offline deployment requires complete content for the selected app variants **before** reboot; supported MSI/EXE files must still pass Windows signature and expected-publisher validation.
+
+If the same application is also managed by Intune or another MDM/application-management platform, keep it assigned there for lifecycle, reset and redeployment scenarios. Align that platform's detection logic with the version OSDStage can install; an exact-version rule pinned to an older release can incorrectly report a newer evergreen OSDStage installation as missing. OSDStage is designed and tested primarily around OSDCloud, Windows Autopilot and Microsoft Intune, but those products are not hard dependencies of the staging model.
 
 ## Choose your route
 
