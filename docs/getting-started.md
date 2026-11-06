@@ -2,11 +2,11 @@
 
 [Documentation](README.md) · [Examples](../Examples/README.md) · [Troubleshooting](faq.md)
 
-Run the Add commands in WinPE after OSDCloud. OSDStage prepares the queue; SetupComplete installs it before OOBE. A separate preparation PC is optional for online deployments.
+Run the Add commands in WinPE after Windows has been applied. The documented examples use OSDCloud because OSDStage was designed around that workflow, but OSDCloud is not a technical dependency. OSDStage prepares the queue; SetupComplete installs it before OOBE. A separate preparation PC is optional for online deployments.
 
 ## Before you start
 
-Run OSDStage after OSDCloud has applied the Windows image and before the first Windows boot. OSDStage does not replace Windows image deployment.
+Run OSDStage after the Windows image has been applied and before the first Windows boot. OSDStage does not replace Windows image deployment, Microsoft Entra join, Intune enrollment or Autopilot. OSDCloud is the primary documented companion workflow, but another deployment method can be used when it leaves a supported offline Windows target available for staging before first boot.
 
 OSDStage 1.0.0-rc4 is the current release candidate. Check [release availability](release-status.md) when upgrading from RC1 or testing newer development changes. Preview installation requires PowerShellGet 1.6 or later and `-AllowPrerelease`.
 
@@ -20,7 +20,9 @@ Decide which source types you need:
 | Repository packages | Publish your own catalog, manifests and packages; configure the catalog URL and use actual package IDs from that repository. |
 | Both | Add both types to the same ordered device queue. |
 
-For an online deployment, vendor/repository access must be available when acquisition occurs. A fully offline deployment requires complete content for the selected app variants **before** reboot; supported MSI/EXE files must still pass Windows signature and expected-publisher validation.
+For an online deployment, vendor/repository access must be available when acquisition occurs. Built-in app integrations are evergreen at deployment time: OSDStage resolves supported vendor content when acquisition runs rather than maintaining a fixed app version in the deployment workflow. A fully offline deployment requires complete content for the selected app variants **before** reboot; supported MSI/EXE files must still pass Windows signature and expected-publisher validation.
+
+If the same app is also managed by Intune or another MDM/app-management platform, keep it assigned there for lifecycle, reset and redeployment scenarios. Align that platform's detection logic with the version OSDStage can install; an exact-version rule pinned to an older release can incorrectly report a newer evergreen OSDStage app installation as missing. OSDStage is designed and tested primarily around OSDCloud, Windows Autopilot and Microsoft Intune, but those products are not hard dependencies of the staging model.
 
 ## Choose your route
 
@@ -58,7 +60,7 @@ before approving removals.
 
 ## 2. Target machine — stage in WinPE
 
-**Environment: WinPE, after OSDCloud has applied Windows and before the first Windows boot.** Run this phase on the target machine, not the preparation machine.
+**Environment: WinPE, after Windows has been applied and before the first Windows boot.** The examples use OSDCloud, but the staging contract is the same for another deployment method that exposes a supported offline Windows target. Run this phase on the target machine, not the preparation machine.
 
 Load the module from Gallery and add the intended apps. OSDStage discovers the offline Windows target automatically. Choose the appropriate workflow:
 

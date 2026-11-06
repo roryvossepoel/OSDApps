@@ -3,6 +3,34 @@ const BUILTINS_URL=new URL("../metadata/builtins.json",location.href).href;
 const state={builtins:[],repository:[],filtered:[],page:1,pageSize:12,view:"tiles"};
 const $=id=>document.getElementById(id);
 const TYPES=["App","Script","Font","Certificate","Driver"];
+const DOC_ROOT="https://github.com/roryvossepoel/OSDStage/blob/main/docs/";
+const DOC_URLS={
+  Microsoft365Apps:"microsoft-365-apps.md",
+  MicrosoftTeams:"microsoft-teams.md",
+  AdobeAcrobatUnified:"adobe-acrobat.md",
+  GoogleChromeEnterprise:"google-chrome.md",
+  MozillaFirefoxEnterprise:"mozilla-firefox.md",
+  CiscoWebex:"cisco-webex.md",
+  ZoomWorkplace:"zoom-workplace.md",
+  "7Zip":"7zip.md",
+  VisualStudioCode:"visual-studio-code.md",
+  VisualCRedist:"runtime-prerequisites.md",
+  DotNetRuntime:"runtime-prerequisites.md",
+  WindowsInboxCleanup:"windows-inbox-cleanup.md",
+  WindowsFeatures:"windows-features.md",
+  WindowsCapabilities:"windows-capabilities.md",
+  MicrosoftCompanyPortal:"microsoft-company-portal.md",
+  CMTraceOpen:"cmtrace-open.md",
+  WiFiProfiles:"wifi-staging.md",
+  Certificates:"certificate-staging.md",
+  EnvironmentVariables:"environment-variables.md",
+  FileSystem:"file-system.md",
+  Services:"services.md",
+  DesktopSettings:"desktop-settings.md",
+  DefaultAssociations:"default-associations.md",
+  RegistrySettings:"registry-staging.md",
+  WindowsUpdate:"windows-update.md"
+};
 let repositoryRequest=0,repositoryController;
 
 const ICONS={
@@ -66,14 +94,18 @@ function normalizeBuiltIn(x){
   if(!x||!text(x.Id))throw new Error("Built-in component is missing Id.");
   const bundled=x.Acquisition==="BundledScript",phase=text(x.SyncPhase,"Unknown");
   const phaseLabel={None:"No download / cache",FullWindowsPreparation:"Full Windows preparation",FullWindowsPreInstall:"Full Windows PreInstall"}[phase]||phase;
-  const description=bundled?"Included with OSDStage. Configuration is staged in WinPE and applied once during SetupComplete.":phase==="FullWindowsPreparation"?"Prepare the content in full Windows, then use the cache when staging in WinPE.":"Vendor download integration. Content acquisition follows the built-in's configuration and cache policy.";
+  const description=bundled
+    ?"Included with OSDStage. Configuration is staged in WinPE and applied once during SetupComplete."
+    :phase==="FullWindowsPreparation"
+      ?"Evergreen built-in integration. Prepare supported vendor content in full Windows, then reuse the verified cache during staging."
+      :"Evergreen built-in integration. During an online deployment, OSDStage resolves supported vendor content when acquisition runs; valid cached content can be reused.";
   return {
     id:x.Id,displayName:text(x.DisplayName,x.Id),source:"BuiltIn",vendor:text(x.Vendor),
     version:bundled?"Included with module":x.DefaultChannel?`Evergreen · ${x.DefaultChannel}`:"Evergreen",
     architectures:strings(x.Architectures).map(a=>a.toLowerCase()),packageType:packageType(x.PackageType),
     commands:[text(x.AddCommand),...strings(x.AdditionalAddCommands)],
     syncPhase:phaseLabel,acquisition:text(x.Acquisition,"Unknown"),command:text(x.AddCommand),
-    metadataUrl:BUILTINS_URL,packageUrl:"",iconUrl:safeUrl(x.IconUrl,BUILTINS_URL),description,aliases:[],certificateStore:""
+    metadataUrl:BUILTINS_URL,documentationUrl:DOC_ROOT+(DOC_URLS[x.Id]||"built-in-apps.md"),packageUrl:"",iconUrl:safeUrl(x.IconUrl,BUILTINS_URL),description,aliases:[],certificateStore:""
   };
 }
 function normalizeRepository(app,pkg,m,url){
@@ -103,7 +135,7 @@ async function loadBuiltIns(){
   try{
     const rows=packagesFrom(await getJson(BUILTINS_URL));
     state.builtins=rows.map(normalizeBuiltIn);
-    status("builtinStatus",`${state.builtins.length} built-in components loaded`);
+    status("builtinStatus","");
   }catch(e){status("builtinStatus",`Built-in metadata could not be loaded: ${e.message}`,"error")}
   render();
 }
@@ -163,8 +195,8 @@ function clearRepository(){
 function render(){
   const all=[...state.builtins,...state.repository];
   $("allCount").textContent=all.length;$("builtinCount").textContent=state.builtins.length;$("repoCount").textContent=state.repository.length;
+  $("repositoryToggle").textContent=state.repository.length?"Repository settings":"+ Add repository";
   const arches=[...new Set(all.flatMap(x=>x.architectures))].sort();
-  $("archCount").textContent=arches.filter(a=>a!=="any").length;
   const select=$("archFilter"),cur=select.value;
   select.innerHTML='<option value="">All architectures</option>'+arches.map(x=>`<option value="${esc(x)}">${x==="any"?"Architecture-independent":esc(x)}</option>`).join("");
   if(arches.includes(cur))select.value=cur;
@@ -200,11 +232,11 @@ function badges(x){return `<span class="badge ${x.source==="BuiltIn"?"builtin":"
 function listRow(x){
   return `<details class="package-row panel">
     <summary><div class="row-name"><div class="app-icon">${appIcon(x)}</div><div><span class="row-title">${esc(x.displayName)}</span><span class="app-subtitle">${esc(x.id)} · ${esc(x.vendor)}</span></div></div>
-      <span class="row-version">${esc(x.version)}</span><span class="badges">${badges(x)}</span><span class="row-chevron" aria-hidden="true">⌄</span>
+      <span class="row-version">${esc(x.version)}</span><span class="badges">${badges(x)}</span><span class="row-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"/></svg></span>
     </summary>
     <div class="row-details"><p class="description">${esc(x.description)}</p><p class="row-preparation">${esc(x.syncPhase)} · ${esc(x.acquisition)}</p>
       ${(x.warnings||[]).map(w=>`<p class="package-warning">${esc(w)}</p>`).join("")}
-      <div class="card-footer">${commandMarkup(x)}${link(x.metadataUrl,x.source==="BuiltIn"?"Built-in definitions":"Manifest JSON")}${link(x.packageUrl,"Package.zip")}</div>
+      <div class="card-footer">${commandMarkup(x)}${x.source==="BuiltIn"?link(x.documentationUrl,"View command documentation"):link(x.metadataUrl,"Manifest JSON")}${link(x.packageUrl,"Package.zip")}</div>
     </div></details>`;
 }
 
@@ -232,10 +264,17 @@ function card(x){
     <p class="description">${esc(x.description)}</p>
     ${(x.warnings||[]).map(w=>`<p class="package-warning">${esc(w)}</p>`).join("")}
     <div class="card-footer">${commandMarkup(x)}
-      ${link(x.metadataUrl,x.source==="BuiltIn"?"Built-in definitions":"Manifest JSON")}${link(x.packageUrl,"Package.zip")}
+      ${x.source==="BuiltIn"?link(x.documentationUrl,"View command documentation"):link(x.metadataUrl,"Manifest JSON")}${link(x.packageUrl,"Package.zip")}
     </div>
   </article>`;
 }
+const repositoryToggle=$("repositoryToggle"),repositoryPanel=$("repositoryPanel");
+function setRepositoryPanel(open){
+  repositoryPanel.hidden=!open;
+  repositoryToggle.setAttribute("aria-expanded",String(open));
+}
+repositoryToggle.addEventListener("click",()=>setRepositoryPanel(repositoryPanel.hidden));
+
 $("cards").addEventListener("error",e=>{if(e.target.tagName==="IMG"){const fallback=e.target.nextElementSibling;if(fallback)fallback.hidden=false;e.target.remove()}},true);
 $("catalogForm").addEventListener("submit",e=>{e.preventDefault();const u=$("catalogUrl").value.trim();if(u)loadRepository(u)});
 $("clearRepository").addEventListener("click",clearRepository);
@@ -250,4 +289,4 @@ restoreView();
 render();
 loadBuiltIns();
 const requestedCatalog=new URLSearchParams(location.search).get("catalog");
-if(requestedCatalog){$("catalogUrl").value=requestedCatalog;loadRepository(requestedCatalog)}
+if(requestedCatalog){$("catalogUrl").value=requestedCatalog;setRepositoryPanel(true);loadRepository(requestedCatalog)}

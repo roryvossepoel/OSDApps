@@ -219,3 +219,29 @@ button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
 .catalog-sources p{margin:0}.catalog-sources strong{color:var(--text);margin-right:6px}
 .catalog-sources>span{flex-basis:100%;font-size:.8rem}
 .card-footer .command{flex-basis:100%}
+
+
+/* 1.0 catalog polish: filters first, compact status, repository on demand. */
+.catalog-summary{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:8px 0 16px;padding:0 2px;color:var(--muted);font-size:.84rem}
+.catalog-counts{display:flex;align-items:center;flex-wrap:wrap;gap:7px 0}
+.catalog-counts span{display:inline-flex;align-items:baseline;gap:5px}
+.catalog-counts span+span::before{content:"·";margin:0 10px;color:#9aa9af}
+.catalog-counts strong{color:var(--text);font-size:.95rem}
+.catalog-summary-actions{display:flex;align-items:center;gap:14px;white-space:nowrap}
+.catalog-summary-actions a{font-size:.78rem;color:var(--muted)}
+.catalog-summary-actions button{padding:8px 12px;border-color:#c9ddda;background:#f2f8f6;color:#176b58;font-size:.8rem}
+.catalog-global-status{display:block;margin:-4px 0 14px;font-size:.8rem}
+.toolbar{margin-bottom:8px}
+.repository-bar{margin:8px 0 14px}
+.repository-bar .catalog-help{margin:10px 0 0}
+.package-row summary{grid-template-columns:minmax(0,1fr) minmax(120px,190px) minmax(200px,280px) 30px}
+.card-footer a{font-size:.8rem}
+@media(max-width:900px){
+  .package-row summary{grid-template-columns:minmax(0,1fr) auto 30px}
+}
+@media(max-width:640px){
+  .catalog-summary{align-items:flex-start;flex-direction:column;gap:10px}
+  .catalog-summary-actions{width:100%;justify-content:space-between}
+  .catalog-summary-actions a{white-space:normal}
+  .package-row summary{grid-template-columns:minmax(0,1fr) 30px}
+}
