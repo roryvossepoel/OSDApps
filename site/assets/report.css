@@ -23,3 +23,6 @@
 .report-preview-metrics span{font-size:.76rem}
 .report-preview-row{font-size:.84rem}
 .report-preview-row small{font-size:.76rem}
+
+/* Align the final report CTA link with the primary button. */
+.report-explainer .actions{align-items:center}
