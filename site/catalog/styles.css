@@ -250,3 +250,29 @@ button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
   .catalog-summary-actions a{white-space:normal}
   .package-row summary{grid-template-columns:minmax(0,1fr) 30px}
 }
+
+
+/* Respect the shared OSDStage theme selector in addition to system preference. */
+html[data-theme="light"] .catalog-page{
+  --bg:#fff;--panel:#fff;--panel-soft:#f6f8f9;--text:#182f3d;--muted:#60737f;--line:#dce5e8;
+  --blue:#176b58;--blue-soft:#edf5f1;--purple:#5a5489;--purple-soft:#f0eef8;
+  --green:#14634b;--green-soft:#edf6f1;--chip:#f0f4f5;--shadow:none
+}
+html[data-theme="dark"] .catalog-page{
+  --bg:#101b20;--panel:#142328;--panel-soft:#182a30;--text:#e8f0f2;--muted:#9fb0b7;--line:#294047;
+  --blue:#74c9b3;--blue-soft:#17342d;--purple:#c0b9e7;--purple-soft:#292741;
+  --green:#79cfb2;--green-soft:#173329;--chip:#1c2c32;--shadow:none;background:#101b20
+}
+@media(prefers-color-scheme:dark){
+  html:not([data-theme]) .catalog-page{
+    --bg:#101b20;--panel:#142328;--panel-soft:#182a30;--text:#e8f0f2;--muted:#9fb0b7;--line:#294047;
+    --blue:#74c9b3;--blue-soft:#17342d;--purple:#c0b9e7;--purple-soft:#292741;
+    --green:#79cfb2;--green-soft:#173329;--chip:#1c2c32;--shadow:none;background:#101b20
+  }
+}
+html[data-theme="dark"] .pagination-button{background:#16262c;border-color:#35505a}
+html[data-theme="dark"] .catalog-summary-actions button{background:#17342d;border-color:#315548;color:#8ed7c2}
+@media(prefers-color-scheme:dark){
+  html:not([data-theme]) .pagination-button{background:#16262c;border-color:#35505a}
+  html:not([data-theme]) .catalog-summary-actions button{background:#17342d;border-color:#315548;color:#8ed7c2}
+}
