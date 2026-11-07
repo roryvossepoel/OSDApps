@@ -1,6 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#2457A6"/>
-  <rect x="12" y="23" width="40" height="29" rx="5" fill="none" stroke="#FFFFFF" stroke-width="4"/>
-  <path d="M24 23v-6a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v6" fill="none" stroke="#FFFFFF" stroke-width="4"/>
-  <path d="M12 35h40M30 35v6h4v-6" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="74 81.5 110 110" fill="none" role="img" aria-label="Microsoft Intune Company Portal">
+  <title>Microsoft Intune Company Portal</title>
+  <!--Company Portal shapes extracted from icon11-community/Folder11/svg/microsoft_intune_company_portal.svg; folder removed.-->
+  <path d="M174.625 90H144.431V123.818H178.985V94.3594C178.985 91.9518 177.033 90 174.625 90Z" fill="#37C4F2" />
+  <path d="M178.985 123.818H144.431V141.463H178.985V123.818Z" fill="#1EA1E5" />
+  <path d="M144.431 158.372H174.625C177.033 158.372 178.985 156.42 178.985 154.013V141.463H144.431V158.372Z" fill="#0A86DA" />
+  <path d="M144.431 90H112.083V123.818H144.431V90Z" fill="#0D8ADB" />
+  <path d="M112.083 90H83.3594C80.9518 90 79 91.9518 79 94.3594V123.818H112.083V90Z" fill="#0863B3" />
+  <path d="M83.3594 158.372H144.431V123.818H112.083H79V154.012C79 156.42 80.9518 158.372 83.3594 158.372Z" fill="url(#paint2_linear_811_18389)" />
+  <circle cx="113.553" cy="127.126" r="16.1739" fill="url(#paint3_linear_811_18389)" />
+  <path d="M113.553 146.976C98.1239 146.976 85.6162 159.436 85.6162 174.806V182.273C85.6162 182.674 85.9415 182.999 86.3428 182.999H140.763C141.164 182.999 141.49 182.674 141.49 182.273V174.806C141.49 159.436 128.982 146.976 113.553 146.976Z" fill="url(#paint4_linear_811_18389)" />
+  <defs>
+    <linearGradient id="paint2_linear_811_18389" x1="79" y1="141.463" x2="144.431" y2="141.463" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#124686" />
+      <stop offset="1" stop-color="#163A75" />
+    </linearGradient>
+    <linearGradient id="paint3_linear_811_18389" x1="103.628" y1="114.628" x2="125.684" y2="141.094" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4DE3FD" />
+      <stop offset="1" stop-color="#1D9FE3" />
+    </linearGradient>
+    <linearGradient id="paint4_linear_811_18389" x1="96.41" y1="151.069" x2="117.232" y2="189.824" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4DE3FD" />
+      <stop offset="1" stop-color="#1D9FE3" />
+    </linearGradient>
+  </defs>
 </svg>
