@@ -439,7 +439,7 @@
     },
     {
       "Id": "DefaultAssociations",
-      "DisplayName": "Initial default apps",
+      "DisplayName": "Default file & protocol associations",
       "Source": "BuiltIn",
       "PackageType": "Script",
       "Vendor": "OSDStage",
