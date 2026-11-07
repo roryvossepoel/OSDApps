@@ -1,5 +1,25 @@
 "use strict";
 
+// Theme preference: system by default, with optional light/dark override.
+const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+const themeModes = ['system', 'light', 'dark'];
+const readThemePreference = () => {
+  try {
+    const saved = localStorage.getItem('osdstage.theme');
+    return themeModes.includes(saved) ? saved : 'system';
+  } catch { return 'system'; }
+};
+let themePreference = readThemePreference();
+const applyTheme = mode => {
+  themePreference = themeModes.includes(mode) ? mode : 'system';
+  if (themePreference === 'system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', themePreference);
+  document.documentElement.style.colorScheme = themePreference === 'system' ? 'light dark' : themePreference;
+  try { localStorage.setItem('osdstage.theme', themePreference); } catch {}
+};
+applyTheme(themePreference);
+
+
 // Keep the links visible without JavaScript; enhance the shared header only
 // after the toggle and panel are both available.
 const siteHeader = document.querySelector('.site-header');
@@ -98,6 +118,33 @@ if (existingGithubLink && !siteHeader.querySelector('.header-actions')) {
   const actions = document.createElement('div');
   actions.className = 'header-actions';
 
+  const themeButton = document.createElement('button');
+  themeButton.type = 'button';
+  themeButton.className = 'header-icon theme-button';
+  themeButton.setAttribute('aria-label', 'Theme: system');
+  themeButton.title = 'Theme: system';
+
+  const themeIcons = {
+    system: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M12 7v7M8.5 10.5h7"/></svg><span class="sr-only">Theme</span>',
+    light: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="sr-only">Theme</span>',
+    dark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8 8 0 0 1 8.8 4 8.6 8.6 0 1 0 20 15.2Z"/></svg><span class="sr-only">Theme</span>'
+  };
+  const syncThemeButton = () => {
+    themeButton.innerHTML = themeIcons[themePreference];
+    const label = 'Theme: ' + themePreference;
+    themeButton.setAttribute('aria-label', label + '. Activate to change.');
+    themeButton.title = label;
+  };
+  syncThemeButton();
+  themeButton.addEventListener('click', () => {
+    const next = themeModes[(themeModes.indexOf(themePreference) + 1) % themeModes.length];
+    applyTheme(next);
+    syncThemeButton();
+  });
+  themeMedia.addEventListener('change', () => {
+    if (themePreference === 'system') applyTheme('system');
+  });
+
   const shareButton = document.createElement('button');
   shareButton.type = 'button';
   shareButton.className = 'header-icon share-button';
@@ -131,7 +178,7 @@ if (existingGithubLink && !siteHeader.querySelector('.header-actions')) {
     </div>`;
 
   existingGithubLink.parentNode.insertBefore(actions, existingGithubLink);
-  actions.append(shareButton, existingGithubLink, popover);
+  actions.append(themeButton, shareButton, existingGithubLink, popover);
 
   const currentUrl = location.href;
   const currentTitle = document.title.replace(/ · OSDStage$/, '') || 'OSDStage';
