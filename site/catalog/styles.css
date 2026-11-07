@@ -176,10 +176,15 @@ button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
 .view-switch{display:flex;border:1px solid var(--line);border-radius:10px;padding:3px;background:var(--panel);gap:3px;margin-left:7px}
 .view-switch button{border:0;background:transparent;padding:6px 12px;border-radius:7px;font-size:.8rem;color:var(--muted)}
 .view-switch button[aria-pressed="true"]{background:var(--blue-soft);color:var(--blue)}
-.pagination{display:flex;justify-content:center;align-items:center;gap:22px;margin:22px 0 4px;font-size:.83rem}
-.pagination button{font-size:.8rem;padding:8px 12px}
-.pagination button:disabled{opacity:.4;cursor:default}
-#pageSummary{color:var(--muted)}
+.pagination{display:flex;justify-content:center;align-items:center;gap:18px;margin:24px 0 6px;font-size:.83rem}
+.pagination-button{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:108px;min-height:42px;padding:9px 34px;border:1px solid #cbd9e1;border-radius:12px;background:#f8fbfc;color:var(--text);font-size:.82rem;font-weight:700;box-shadow:0 1px 2px rgba(16,35,63,.03);transition:background-color .15s,border-color .15s,color .15s,transform .15s}
+.pagination-button svg{position:absolute;top:50%;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transform:translateY(-50%)}
+#previousPage svg{left:13px}
+#nextPage svg{right:13px}
+.pagination-button:not(:disabled):hover{background:var(--green-soft);border-color:#b6d8cc;color:var(--green);transform:translateY(-1px)}
+.pagination-button:not(:disabled):active{transform:translateY(0)}
+.pagination-button:disabled{opacity:.42;cursor:default;box-shadow:none}
+#pageSummary{min-width:88px;text-align:center;color:var(--muted);font-weight:600}
 .package-list{display:grid;gap:8px}
 .package-row{overflow:hidden;border-radius:12px;box-shadow:none}
 .package-row summary{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,190px) minmax(200px,280px) 16px;align-items:center;gap:16px;padding:12px 16px;cursor:pointer;list-style:none}
@@ -211,7 +216,7 @@ button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
  .package-row summary>.badges{grid-column:1;grid-row:2;justify-content:flex-start;padding-left:47px}
  .row-chevron{grid-column:2;grid-row:1}
  .row-details{padding:0 12px 12px}
- .pagination{gap:14px}
+ .pagination{gap:10px}.pagination-button{min-width:102px;padding:9px 31px}#previousPage svg{left:11px}#nextPage svg{right:11px}
 }
 
 /* Explain the two sources without adding another large panel. */
@@ -244,4 +249,30 @@ button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
   .catalog-summary-actions{width:100%;justify-content:space-between}
   .catalog-summary-actions a{white-space:normal}
   .package-row summary{grid-template-columns:minmax(0,1fr) 30px}
+}
+
+
+/* Respect the shared OSDStage theme selector in addition to system preference. */
+html[data-theme="light"] .catalog-page{
+  --bg:#fff;--panel:#fff;--panel-soft:#f6f8f9;--text:#182f3d;--muted:#60737f;--line:#dce5e8;
+  --blue:#176b58;--blue-soft:#edf5f1;--purple:#5a5489;--purple-soft:#f0eef8;
+  --green:#14634b;--green-soft:#edf6f1;--chip:#f0f4f5;--shadow:none
+}
+html[data-theme="dark"] .catalog-page{
+  --bg:#101b20;--panel:#142328;--panel-soft:#182a30;--text:#e8f0f2;--muted:#9fb0b7;--line:#294047;
+  --blue:#74c9b3;--blue-soft:#17342d;--purple:#c0b9e7;--purple-soft:#292741;
+  --green:#79cfb2;--green-soft:#173329;--chip:#1c2c32;--shadow:none;background:#101b20
+}
+@media(prefers-color-scheme:dark){
+  html:not([data-theme]) .catalog-page{
+    --bg:#101b20;--panel:#142328;--panel-soft:#182a30;--text:#e8f0f2;--muted:#9fb0b7;--line:#294047;
+    --blue:#74c9b3;--blue-soft:#17342d;--purple:#c0b9e7;--purple-soft:#292741;
+    --green:#79cfb2;--green-soft:#173329;--chip:#1c2c32;--shadow:none;background:#101b20
+  }
+}
+html[data-theme="dark"] .pagination-button{background:#16262c;border-color:#35505a}
+html[data-theme="dark"] .catalog-summary-actions button{background:#17342d;border-color:#315548;color:#8ed7c2}
+@media(prefers-color-scheme:dark){
+  html:not([data-theme]) .pagination-button{background:#16262c;border-color:#35505a}
+  html:not([data-theme]) .catalog-summary-actions button{background:#17342d;border-color:#315548;color:#8ed7c2}
 }

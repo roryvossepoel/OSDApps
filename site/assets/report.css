@@ -26,3 +26,32 @@
 
 /* Align the final report CTA link with the primary button. */
 .report-explainer .actions{align-items:center}
+
+
+/* Dark theme surfaces for delivery report pages and previews. */
+html[data-theme="dark"] .report-page{background:linear-gradient(135deg,#12251f,#122026 60%,#101b20)}
+html[data-theme="dark"] .report-features article,
+html[data-theme="dark"] .report-status-grid article,
+html[data-theme="dark"] .report-preview{background:#142328;border-color:#29443b}
+html[data-theme="dark"] .report-callout{background:linear-gradient(120deg,#173027,#162a2b);border-color:#315246}
+html[data-theme="dark"] .report-preview-metrics{background:#172c27;border-color:#29443b}
+html[data-theme="dark"] .report-preview-row{border-color:#294047}
+html[data-theme="dark"] .report-preview-link{background:#172824;border-color:#29443b}
+html[data-theme="dark"] .report-preview h3{color:#d9eee8}
+html[data-theme="dark"] .report-preview h3>span{color:#74c9b3}
+html[data-theme="dark"] .report-pill{background:#19382d;color:#8fd6bd}
+html[data-theme="dark"] .report-pill.attention{background:#43371f;color:#f1ce7c}
+@media(prefers-color-scheme:dark){
+  html:not([data-theme]) .report-page{background:linear-gradient(135deg,#12251f,#122026 60%,#101b20)}
+  html:not([data-theme]) .report-features article,
+  html:not([data-theme]) .report-status-grid article,
+  html:not([data-theme]) .report-preview{background:#142328;border-color:#29443b}
+  html:not([data-theme]) .report-callout{background:linear-gradient(120deg,#173027,#162a2b);border-color:#315246}
+  html:not([data-theme]) .report-preview-metrics{background:#172c27;border-color:#29443b}
+  html:not([data-theme]) .report-preview-row{border-color:#294047}
+  html:not([data-theme]) .report-preview-link{background:#172824;border-color:#29443b}
+  html:not([data-theme]) .report-preview h3{color:#d9eee8}
+  html:not([data-theme]) .report-preview h3>span{color:#74c9b3}
+  html:not([data-theme]) .report-pill{background:#19382d;color:#8fd6bd}
+  html:not([data-theme]) .report-pill.attention{background:#43371f;color:#f1ce7c}
+}
