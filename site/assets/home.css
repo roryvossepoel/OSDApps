@@ -306,3 +306,36 @@
 
 @media(max-width:850px){.workflow-panel{margin-bottom:48px}}
 @media(max-width:600px){.workflow-panel{margin-bottom:38px}}
+
+
+/* Dark theme surfaces for the homepage. */
+html[data-theme="dark"] .home-page .deployment-preview,
+html[data-theme="dark"] .home-page .capability,
+html[data-theme="dark"] .home-page .report-preview{background:#142328;border-color:#294047}
+html[data-theme="dark"] .home-page .home-capabilities{background:#12231f}
+html[data-theme="dark"] .home-page .capability-sample,
+html[data-theme="dark"] .home-page .report-preview-metrics,
+html[data-theme="dark"] .home-page .report-preview-link{background:#172c27;border-color:#29443b}
+html[data-theme="dark"] .home-page .preview-code{background:#111f24}
+html[data-theme="dark"] .home-page .preview-packages>div,
+html[data-theme="dark"] .home-page .report-preview-row{border-color:#294047}
+html[data-theme="dark"] .home-page .report-preview h3{color:#d9eee8}
+html[data-theme="dark"] .home-page .report-preview h3>span{color:#74c9b3}
+html[data-theme="dark"] .home-page .report-pill{background:#19382d;color:#8fd6bd}
+html[data-theme="dark"] .home-page .report-pill.attention{background:#43371f;color:#f1ce7c}
+@media(prefers-color-scheme:dark){
+  html:not([data-theme]) .home-page .deployment-preview,
+  html:not([data-theme]) .home-page .capability,
+  html:not([data-theme]) .home-page .report-preview{background:#142328;border-color:#294047}
+  html:not([data-theme]) .home-page .home-capabilities{background:#12231f}
+  html:not([data-theme]) .home-page .capability-sample,
+  html:not([data-theme]) .home-page .report-preview-metrics,
+  html:not([data-theme]) .home-page .report-preview-link{background:#172c27;border-color:#29443b}
+  html:not([data-theme]) .home-page .preview-code{background:#111f24}
+  html:not([data-theme]) .home-page .preview-packages>div,
+  html:not([data-theme]) .home-page .report-preview-row{border-color:#294047}
+  html:not([data-theme]) .home-page .report-preview h3{color:#d9eee8}
+  html:not([data-theme]) .home-page .report-preview h3>span{color:#74c9b3}
+  html:not([data-theme]) .home-page .report-pill{background:#19382d;color:#8fd6bd}
+  html:not([data-theme]) .home-page .report-pill.attention{background:#43371f;color:#f1ce7c}
+}
