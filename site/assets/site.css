@@ -194,3 +194,38 @@ html[data-theme="dark"] .share-popover::before{background:#142328}
 html[data-theme="dark"] .share-option svg{background:#1c3036;stroke:#9fb0b7}
 
 html[data-theme="light"]{--ink:#182f3d;--soft:#60737f;--accent:#146b5a;--edge:#d9e6e6;--paper:#fff;--wash:#eef6f4;background:#fff}
+
+
+/* Footer appearance selector. */
+.footer-theme{display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto}
+.footer-theme-label{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.footer-theme-options{display:inline-flex;gap:3px;padding:3px;border:1px solid var(--edge);border-radius:10px;background:color-mix(in srgb,var(--paper) 88%,transparent)}
+.footer-theme-options button{border:0;border-radius:7px;padding:6px 9px;background:transparent;color:var(--soft);font-size:.74rem;font-weight:650;line-height:1.3}
+.footer-theme-options button[aria-pressed="true"]{background:var(--wash);color:var(--accent)}
+.footer-theme-options button:hover{color:var(--ink)}
+@media(max-width:700px){
+  .site-footer{flex-wrap:wrap}
+  .footer-theme{width:100%;align-items:flex-start;margin-left:0}
+}
+
+/* Dark mode contrast and shared surfaces. */
+html[data-theme="dark"] .site-nav a{color:#92a7af}
+html[data-theme="dark"] .site-nav a[aria-current]{color:#dff2ec}
+html[data-theme="dark"] .site-nav a:hover{color:#dff2ec}
+html[data-theme="dark"] .header-actions{background:#142328;border-color:#294047}
+html[data-theme="dark"] .header-icon,
+html[data-theme="dark"] .header-actions .github-link{color:#8fa8b0}
+html[data-theme="dark"] .header-icon:hover,
+html[data-theme="dark"] .header-actions .github-link:hover{background:#1a3036;color:#9be0cc}
+html[data-theme="dark"] .footer-theme-options{background:#142328}
+@media(prefers-color-scheme:dark){
+  html:not([data-theme]) .site-nav a{color:#92a7af}
+  html:not([data-theme]) .site-nav a[aria-current]{color:#dff2ec}
+  html:not([data-theme]) .site-nav a:hover{color:#dff2ec}
+  html:not([data-theme]) .header-actions{background:#142328;border-color:#294047}
+  html:not([data-theme]) .header-icon,
+  html:not([data-theme]) .header-actions .github-link{color:#8fa8b0}
+  html:not([data-theme]) .header-icon:hover,
+  html:not([data-theme]) .header-actions .github-link:hover{background:#1a3036;color:#9be0cc}
+  html:not([data-theme]) .footer-theme-options{background:#142328}
+}
