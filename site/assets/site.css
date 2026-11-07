@@ -144,3 +144,53 @@ body,.catalog-page{background:radial-gradient(ellipse 850px 540px at 85% 0%,#eaf
 @media(prefers-reduced-motion:no-preference){
   .scroll-revealed{animation:section-enter .68s cubic-bezier(.2,.7,.2,1) both}
 }
+
+
+/* Theme system: system by default, with explicit light/dark overrides. */
+html{color-scheme:light dark}
+html[data-theme="light"]{color-scheme:light}
+html[data-theme="dark"]{color-scheme:dark}
+
+@media(prefers-color-scheme:dark){
+  html:not([data-theme]){--ink:#e8f0f2;--soft:#9fb0b7;--accent:#74c9b3;--edge:#294047;--paper:#101b20;--wash:#17272c;background:#101b20}
+}
+html[data-theme="dark"]{--ink:#e8f0f2;--soft:#9fb0b7;--accent:#74c9b3;--edge:#294047;--paper:#101b20;--wash:#17272c;background:#101b20}
+
+@media(prefers-color-scheme:dark){
+  html:not([data-theme]) body,
+  html:not([data-theme]) .catalog-page{background:radial-gradient(ellipse 850px 540px at 85% 0%,#14303a 0%,transparent 75%),radial-gradient(ellipse 650px 500px at 0% 300px,#163128 0%,transparent 80%),#101b20}
+  html:not([data-theme]) .site-header{background:#101b20ed}
+  html:not([data-theme]) .button.secondary,
+  html:not([data-theme]) .copy-code,
+  html:not([data-theme]) .header-actions,
+  html:not([data-theme]) .share-popover{background:#142328;color:var(--ink)}
+  html:not([data-theme]) .code-block{background:#111f24}
+  html:not([data-theme]) .code-heading{background:#17282d;color:#a9bbc1}
+  html:not([data-theme]) .code-block pre{color:#cde0e5}
+  html:not([data-theme]) .notice{background:#173027;border-color:#29473b;color:#b9d7cc}
+  html:not([data-theme]) .instruction code:not(pre code),
+  html:not([data-theme]) .guide-body code:not(pre code),
+  html:not([data-theme]) .reference-note code{background:#1b2a30}
+  html:not([data-theme]) .site-footer{background:linear-gradient(115deg,#142922,#14252d)}
+  html:not([data-theme]) .share-popover::before{background:#142328}
+  html:not([data-theme]) .share-option svg{background:#1c3036;stroke:#9fb0b7}
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .catalog-page{background:radial-gradient(ellipse 850px 540px at 85% 0%,#14303a 0%,transparent 75%),radial-gradient(ellipse 650px 500px at 0% 300px,#163128 0%,transparent 80%),#101b20}
+html[data-theme="dark"] .site-header{background:#101b20ed}
+html[data-theme="dark"] .button.secondary,
+html[data-theme="dark"] .copy-code,
+html[data-theme="dark"] .header-actions,
+html[data-theme="dark"] .share-popover{background:#142328;color:var(--ink)}
+html[data-theme="dark"] .code-block{background:#111f24}
+html[data-theme="dark"] .code-heading{background:#17282d;color:#a9bbc1}
+html[data-theme="dark"] .code-block pre{color:#cde0e5}
+html[data-theme="dark"] .notice{background:#173027;border-color:#29473b;color:#b9d7cc}
+html[data-theme="dark"] .instruction code:not(pre code),
+html[data-theme="dark"] .guide-body code:not(pre code),
+html[data-theme="dark"] .reference-note code{background:#1b2a30}
+html[data-theme="dark"] .site-footer{background:linear-gradient(115deg,#142922,#14252d)}
+html[data-theme="dark"] .share-popover::before{background:#142328}
+html[data-theme="dark"] .share-option svg{background:#1c3036;stroke:#9fb0b7}
+
+html[data-theme="light"]{--ink:#182f3d;--soft:#60737f;--accent:#146b5a;--edge:#d9e6e6;--paper:#fff;--wash:#eef6f4;background:#fff}
