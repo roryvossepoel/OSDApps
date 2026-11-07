@@ -118,33 +118,6 @@ if (existingGithubLink && !siteHeader.querySelector('.header-actions')) {
   const actions = document.createElement('div');
   actions.className = 'header-actions';
 
-  const themeButton = document.createElement('button');
-  themeButton.type = 'button';
-  themeButton.className = 'header-icon theme-button';
-  themeButton.setAttribute('aria-label', 'Theme: system');
-  themeButton.title = 'Theme: system';
-
-  const themeIcons = {
-    system: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M12 7v7M8.5 10.5h7"/></svg><span class="sr-only">Theme</span>',
-    light: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="sr-only">Theme</span>',
-    dark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8 8 0 0 1 8.8 4 8.6 8.6 0 1 0 20 15.2Z"/></svg><span class="sr-only">Theme</span>'
-  };
-  const syncThemeButton = () => {
-    themeButton.innerHTML = themeIcons[themePreference];
-    const label = 'Theme: ' + themePreference;
-    themeButton.setAttribute('aria-label', label + '. Activate to change.');
-    themeButton.title = label;
-  };
-  syncThemeButton();
-  themeButton.addEventListener('click', () => {
-    const next = themeModes[(themeModes.indexOf(themePreference) + 1) % themeModes.length];
-    applyTheme(next);
-    syncThemeButton();
-  });
-  themeMedia.addEventListener('change', () => {
-    if (themePreference === 'system') applyTheme('system');
-  });
-
   const shareButton = document.createElement('button');
   shareButton.type = 'button';
   shareButton.className = 'header-icon share-button';
@@ -178,7 +151,7 @@ if (existingGithubLink && !siteHeader.querySelector('.header-actions')) {
     </div>`;
 
   existingGithubLink.parentNode.insertBefore(actions, existingGithubLink);
-  actions.append(themeButton, shareButton, existingGithubLink, popover);
+  actions.append(shareButton, existingGithubLink, popover);
 
   const currentUrl = location.href;
   const currentTitle = document.title.replace(/ · OSDStage$/, '') || 'OSDStage';
@@ -236,6 +209,46 @@ if (existingGithubLink && !siteHeader.querySelector('.header-actions')) {
       shareButton.focus({preventScroll: true});
     }
   });
+}
+
+
+
+// Keep appearance controls out of the primary header. The footer offers
+// explicit System / Light / Dark choices and reflects the saved preference.
+const siteFooter = document.querySelector('.site-footer');
+if (siteFooter && !siteFooter.querySelector('.footer-theme')) {
+  const themeControl = document.createElement('div');
+  themeControl.className = 'footer-theme';
+  themeControl.setAttribute('role', 'group');
+  themeControl.setAttribute('aria-label', 'Appearance');
+  themeControl.innerHTML = `
+    <span class="footer-theme-label">Appearance</span>
+    <div class="footer-theme-options">
+      <button type="button" data-theme-mode="system">System</button>
+      <button type="button" data-theme-mode="light">Light</button>
+      <button type="button" data-theme-mode="dark">Dark</button>
+    </div>`;
+
+  const syncFooterTheme = () => {
+    themeControl.querySelectorAll('[data-theme-mode]').forEach(button => {
+      const selected = button.dataset.themeMode === themePreference;
+      button.setAttribute('aria-pressed', String(selected));
+    });
+  };
+
+  themeControl.addEventListener('click', event => {
+    const button = event.target.closest('[data-theme-mode]');
+    if (!button) return;
+    applyTheme(button.dataset.themeMode);
+    syncFooterTheme();
+  });
+
+  themeMedia.addEventListener('change', () => {
+    if (themePreference === 'system') applyTheme('system');
+  });
+
+  syncFooterTheme();
+  siteFooter.append(themeControl);
 }
 
 // Small dependency-free PowerShell highlighter for the site's short examples.
