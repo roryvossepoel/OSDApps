@@ -339,3 +339,68 @@ html[data-theme="dark"] .home-page .report-pill.attention{background:#43371f;col
   html:not([data-theme]) .home-page .report-pill{background:#19382d;color:#8fd6bd}
   html:not([data-theme]) .home-page .report-pill.attention{background:#43371f;color:#f1ce7c}
 }
+
+
+/* Dark mode homepage contrast and surfaces. */
+html[data-theme="dark"] .home-page{background:linear-gradient(145deg,#0f1b20 0%,#102126 36%,#122026 68%,#101b20 100%)}
+html[data-theme="dark"] .home-hero h1{color:#dce9e7}
+html[data-theme="dark"] .home-hero h1>span{background:linear-gradient(110deg,#75cdb5,#46d7bd);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+html[data-theme="dark"] .home-lead{color:#a4b7b8}
+html[data-theme="dark"] .home-kicker{background:#dfe9e8;color:#1a765f;border-color:#d2dfdd;box-shadow:none}
+html[data-theme="dark"] .home-page .button.secondary{background:#14272c;border-color:#547077;color:#e8f0f2}
+html[data-theme="dark"] .home-facts{color:#96aca7}
+html[data-theme="dark"] .home-gallery{color:#89a99e}
+html[data-theme="dark"] .home-gallery span{color:#74c9b3}
+html[data-theme="dark"] .preview-title{border-color:#2d4848}
+html[data-theme="dark"] .preview-title small{color:#8fb4aa}
+html[data-theme="dark"] .preview-packages{background:#142328;border-color:#2c4745}
+html[data-theme="dark"] .preview-label{color:#9eb6ad}
+html[data-theme="dark"] .preview-packages small{color:#9db0ab}
+html[data-theme="dark"] .preview-check{background:#19382d;color:#82d3b8}
+html[data-theme="dark"] .preview-status{background:#19382d;color:#8fd6bd}
+html[data-theme="dark"] .workflow-panel{background:linear-gradient(135deg,#142328,#13261f);border-color:#2e4b40;box-shadow:none}
+html[data-theme="dark"] .section-intro h2,
+html[data-theme="dark"] .home-start h2{color:#dce9e7}
+html[data-theme="dark"] .workflow-steps .workflow-phase{color:#7ed0b4}
+html[data-theme="dark"] .workflow-number{background:#257b62;border-color:#257b62}
+html[data-theme="dark"] .capability h3{color:#dce9e7}
+html[data-theme="dark"] .capability-number{color:#79cfb2}
+html[data-theme="dark"] .capability-pills span,
+html[data-theme="dark"] .cache-pill{background:#1b302b;border-color:#315046;color:#b9d3c9}
+html[data-theme="dark"] .cache-example{background:#152924;border-color:#2c4940;color:#9eb8ac}
+html[data-theme="dark"] .cache-example strong{background:#1b3b2e;color:#9ad8c2}
+html[data-theme="dark"] .home-install .code-block{background:#111f24}
+html[data-theme="dark"] .home-install .code-heading{background:#172a2e}
+html[data-theme="dark"] .home-page .site-footer{background:#142922}
+@media(prefers-color-scheme:dark){
+  html:not([data-theme]) .home-page{background:linear-gradient(145deg,#0f1b20 0%,#102126 36%,#122026 68%,#101b20 100%)}
+  html:not([data-theme]) .home-hero h1{color:#dce9e7}
+  html:not([data-theme]) .home-hero h1>span{background:linear-gradient(110deg,#75cdb5,#46d7bd);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  html:not([data-theme]) .home-lead{color:#a4b7b8}
+  html:not([data-theme]) .home-kicker{background:#dfe9e8;color:#1a765f;border-color:#d2dfdd;box-shadow:none}
+  html:not([data-theme]) .home-page .button.secondary{background:#14272c;border-color:#547077;color:#e8f0f2}
+  html:not([data-theme]) .home-facts{color:#96aca7}
+  html:not([data-theme]) .home-gallery{color:#89a99e}
+  html:not([data-theme]) .home-gallery span{color:#74c9b3}
+  html:not([data-theme]) .preview-title{border-color:#2d4848}
+  html:not([data-theme]) .preview-title small{color:#8fb4aa}
+  html:not([data-theme]) .preview-packages{background:#142328;border-color:#2c4745}
+  html:not([data-theme]) .preview-label{color:#9eb6ad}
+  html:not([data-theme]) .preview-packages small{color:#9db0ab}
+  html:not([data-theme]) .preview-check{background:#19382d;color:#82d3b8}
+  html:not([data-theme]) .preview-status{background:#19382d;color:#8fd6bd}
+  html:not([data-theme]) .workflow-panel{background:linear-gradient(135deg,#142328,#13261f);border-color:#2e4b40;box-shadow:none}
+  html:not([data-theme]) .section-intro h2,
+  html:not([data-theme]) .home-start h2{color:#dce9e7}
+  html:not([data-theme]) .workflow-steps .workflow-phase{color:#7ed0b4}
+  html:not([data-theme]) .workflow-number{background:#257b62;border-color:#257b62}
+  html:not([data-theme]) .capability h3{color:#dce9e7}
+  html:not([data-theme]) .capability-number{color:#79cfb2}
+  html:not([data-theme]) .capability-pills span,
+  html:not([data-theme]) .cache-pill{background:#1b302b;border-color:#315046;color:#b9d3c9}
+  html:not([data-theme]) .cache-example{background:#152924;border-color:#2c4940;color:#9eb8ac}
+  html:not([data-theme]) .cache-example strong{background:#1b3b2e;color:#9ad8c2}
+  html:not([data-theme]) .home-install .code-block{background:#111f24}
+  html:not([data-theme]) .home-install .code-heading{background:#172a2e}
+  html:not([data-theme]) .home-page .site-footer{background:#142922}
+}
